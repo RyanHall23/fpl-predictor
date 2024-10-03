@@ -24,7 +24,7 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
 
   return (
     <Grid container spacing={2} justifyContent="center">
-      <Grid item size={12}>
+      <Grid item size={10}>
         <Paper
           style={{
             background:
@@ -93,7 +93,7 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
           </Box>
         </Paper>
       </Grid>
-      <Grid item size={12}>
+      <Grid item size={10}>
         <Paper
           style={{
             backgroundColor: '#4caf50',
