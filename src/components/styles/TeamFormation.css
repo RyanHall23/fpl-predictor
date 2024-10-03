@@ -1,0 +1,14 @@
+.pitch {
+  background: repeating-linear-gradient(
+    0deg,
+    /* Change to 0deg for horizontal stripes */ #388e3c,
+    #388e3c 20px,
+    /* Widen the light green stripe */ #4caf50 20px,
+    #4caf50 40px /* Widen the dark green stripe */
+  );
+  padding: 16px; /* Add padding to the pitch */
+}
+
+.bench {
+  background-color: #4caf50;
+}
