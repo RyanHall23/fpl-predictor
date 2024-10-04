@@ -42,6 +42,9 @@ const useTeamData = () => {
               predicted_points: player.ep_next,
               code: player.code,
               last_name: player.web_name,
+              last_gw_points: player.event_points,
+              in_dreamteam: player.in_dreamteam,
+              total_points: player.total_points,
             };
 
             if (positions[index] > 11) {
