@@ -4,7 +4,7 @@ const useTeamData = () => {
   const [mainTeamData, setMainTeamData] = useState([]);
   const [benchTeamData, setBenchTeamData] = useState([]);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
-  const [toastMessage, setToastMessage] = useState('');
+  const [snackbarMessage, setsnackbarMessage] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -85,9 +85,9 @@ const useTeamData = () => {
           teamType
         );
         setSelectedPlayer(null);
-        setToastMessage('');
+        setsnackbarMessage('');
       } else {
-        setToastMessage(swapResult.error);
+        setsnackbarMessage(swapResult.error);
         setSelectedPlayer(null);
       }
     }
@@ -190,7 +190,7 @@ const useTeamData = () => {
   return {
     mainTeamData,
     benchTeamData,
-    toastMessage,
+    snackbarMessage,
     handlePlayerClick,
     calculateTotalPredictedPoints,
   };
