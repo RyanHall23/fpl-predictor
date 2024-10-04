@@ -33,7 +33,7 @@ const App = () => {
           </Box>
         </Typography>
         <Grid container spacing={2} justifyContent="center">
-          <Grid item md={10}>
+          <Grid md={10}>
             <Paper elevation={3} sx={{ padding: 1, marginTop: 1 }}>
               <TeamFormation
                 mainTeam={mainTeamData}

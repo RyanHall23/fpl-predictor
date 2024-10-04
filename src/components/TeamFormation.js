@@ -51,7 +51,7 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
 
   return (
     <Grid container spacing={2} justifyContent="center">
-      <Grid item size={10}>
+      <Grid size={10}>
         <Paper
           style={{
             background:
@@ -60,10 +60,10 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
         >
           <Box>
             <Grid container spacing={2} justifyContent="center">
-              <Grid item size={12}>
+              <Grid size={12}>
                 <Grid container spacing={2} justifyContent="center">
                   {goalkeepers.map((player, index) => (
-                    <Grid item size={12} key={player.name}>
+                    <Grid size={12} key={player.name}>
                       <PlayerCard
                         player={player}
                         onClick={() => onPlayerClick(player, 'main')}
@@ -74,10 +74,10 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
                   ))}
                 </Grid>
               </Grid>
-              <Grid item size={12}>
+              <Grid size={12}>
                 <Grid container spacing={2} justifyContent="center">
                   {defenders.map((player, index) => (
-                    <Grid item size={2.4} key={player.name}>
+                    <Grid size={2.4} key={player.name}>
                       <PlayerCard
                         player={player}
                         onClick={() => onPlayerClick(player, 'main')}
@@ -88,10 +88,10 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
                   ))}
                 </Grid>
               </Grid>
-              <Grid item size={12}>
+              <Grid size={12}>
                 <Grid container spacing={2} justifyContent="center">
                   {midfielders.map((player, index) => (
-                    <Grid item size={2.4} key={player.name}>
+                    <Grid size={2.4} key={player.name}>
                       <PlayerCard
                         player={player}
                         onClick={() => onPlayerClick(player, 'main')}
@@ -102,10 +102,10 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
                   ))}
                 </Grid>
               </Grid>
-              <Grid item size={12}>
+              <Grid size={12}>
                 <Grid container spacing={2} justifyContent="center">
                   {forwards.map((player, index) => (
-                    <Grid item size={2.4} key={player.name}>
+                    <Grid size={2.4} key={player.name}>
                       <PlayerCard
                         player={player}
                         onClick={() => onPlayerClick(player, 'main')}
@@ -120,7 +120,7 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
           </Box>
         </Paper>
       </Grid>
-      <Grid item size={10}>
+      <Grid size={10}>
         <Paper
           style={{
             backgroundColor: '#4caf50',
@@ -129,7 +129,7 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
           <Box>
             <Grid container spacing={2} justifyContent="center">
               {sortedBenchTeamData.map((player, index) => (
-                <Grid item size={3} key={player.name}>
+                <Grid size={3} key={player.name}>
                   <PlayerCard
                     player={player}
                     onClick={() => onPlayerClick(player, 'bench')}
