@@ -1,77 +1,74 @@
 import { useState, useEffect } from 'react';
 
-const mainTeam = [
-  { name: 'Mark Flekken', position: 'goalkeeper' },
-  { name: 'Gabriel dos Santos Magalhães', position: 'defender' },
-  { name: 'Ibrahima Konaté', position: 'defender' },
-  { name: 'Micky van de Ven', position: 'defender' },
-  { name: 'Bukayo Saka', position: 'midfielder' },
-  { name: 'Cole Palmer', position: 'midfielder' },
-  { name: 'Dwight McNeil', position: 'midfielder' },
-  { name: 'Emile Smith Rowe', position: 'midfielder' },
-  { name: 'Luis Díaz', position: 'midfielder' },
-  { name: 'Erling Haaland', position: 'forward' },
-  { name: 'Nicolas Jackson', position: 'forward' },
-];
-
-const benchTeam = [
-  { name: 'Danny Ward', position: 'goalkeeper' },
-  { name: 'Liam Delap', position: 'forward' },
-  { name: 'Noussair Mazraoui', position: 'defender' },
-  { name: 'Sepp van den Berg', position: 'defender' },
-];
-
 const useTeamData = () => {
-  const [mainTeamData, setMainTeamData] = useState(mainTeam);
-  const [benchTeamData, setBenchTeamData] = useState(benchTeam);
+  const [mainTeamData, setMainTeamData] = useState('');
+  const [benchTeamData, setBenchTeamData] = useState('');
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [toastMessage, setToastMessage] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // Fetch additional data from the new URL with dynamic parameters
+        const entryId = 9158; // Replace with dynamic value if needed
+        const eventId = 6; // Replace with dynamic value if needed
+        const fetchPlayerSquad = await fetch(
+          `http://localhost:5000/api/entry/${entryId}/event/${eventId}/picks`
+        );
+        const playerSquad = await fetchPlayerSquad.json();
+
+        // Extract elements and positions from the picks array
+        const elements = playerSquad.picks.map((pick) => pick.element);
+        const positions = playerSquad.picks.map((pick) => pick.position);
+        console.log(playerSquad);
+
         const response = await fetch(
           'http://localhost:5000/api/bootstrap-static'
         );
         const result = await response.json();
 
         const playersData = result.elements;
-        const playersDataMap = {};
+        const mainTeam = {};
+        const bench = {};
 
         console.log(playersData);
         playersData.forEach((player) => {
-          const playerName = `${player.first_name} ${player.second_name}`;
-          playersDataMap[playerName] = {
-            team: player.team,
-            position: player.element_type,
-            predicted_points: player.ep_next,
-            code: player.code,
-            last_name: player.web_name,
-            last_gw_points: player.event_points,
-            in_dreamteam: player.in_dreamteam,
-            total_points: player.total_points,
-          };
+          const index = elements.indexOf(player.id);
+          if (index !== -1) {
+            const playerName = `${player.first_name} ${player.second_name}`;
+            const playerData = {
+              team: player.team,
+              position: player.element_type,
+              predicted_points: player.ep_next,
+              code: player.code,
+              last_name: player.web_name,
+            };
+
+            if (positions[index] > 11) {
+              bench[playerName] = playerData;
+              setBenchTeamData((prevBench) => ({
+                ...prevBench,
+                [playerName]: playerData,
+              }));
+            } else {
+              mainTeam[playerName] = playerData;
+              setMainTeamData((prevMainTeam) => ({
+                ...prevMainTeam,
+                [playerName]: playerData,
+              }));
+            }
+
+            console.log(`Matched player: ${playerName}`);
+          }
         });
 
-        const updateTeamData = (team) => {
-          return team.map((player) => ({
-            ...player,
-            predicted_points:
-              playersDataMap[player.name]?.predicted_points || 0,
-            code: playersDataMap[player.name]?.code || 0,
-            last_name: playersDataMap[player.name]?.last_name || 'Not found',
-            last_gw_points: playersDataMap[player.name]?.last_gw_points || 0,
-            in_dreamteam: playersDataMap[player.name]?.in_dreamteam || false,
-            total_points: playersDataMap[player.name]?.total_points || 0,
-          }));
-        };
-
-        setMainTeamData(updateTeamData(mainTeam));
-        setBenchTeamData(updateTeamData(benchTeam));
+        console.log('Main Team:', mainTeam);
+        console.log('Bench:', bench);
       } catch (error) {
         console.error('Error fetching team data:', error);
       }
     };
+
     fetchData();
   }, []);
 
@@ -115,10 +112,7 @@ const useTeamData = () => {
   };
 
   const isValidSwap = (player1, player2) => {
-    if (
-      player1.position === 'goalkeeper' ||
-      player2.position === 'goalkeeper'
-    ) {
+    if (player1.position === 1 || player2.position === 1) {
       if (player1.position !== player2.position) {
         return {
           valid: false,
@@ -145,9 +139,9 @@ const useTeamData = () => {
       return counts;
     }, {});
 
-    const defenders = positionCounts['defender'] || 0;
-    const midfielders = positionCounts['midfielder'] || 0;
-    const forwards = positionCounts['forward'] || 0;
+    const defenders = positionCounts[2] || 0;
+    const midfielders = positionCounts[3] || 0;
+    const forwards = positionCounts[4] || 0;
 
     if (defenders < 3) {
       return {
@@ -172,19 +166,26 @@ const useTeamData = () => {
     if (!mainTeam || mainTeam.length === 0) return 0;
 
     // Find the player with the highest points
-    const captain = mainTeam.reduce(
-      (max, player) =>
-        parseFloat(player.predicted_points) > parseFloat(max.predicted_points)
-          ? player
-          : max,
-      mainTeam[0]
-    );
+    const captain = mainTeam
+      ? Object.values(mainTeam).reduce(
+          (max, player) =>
+            parseFloat(player.predicted_points) >
+            parseFloat(max.predicted_points)
+              ? player
+              : max,
+          Object.values(mainTeam)[0]
+        )
+      : null;
 
     // Calculate total points, doubling the captain's points
-    return mainTeam.reduce((total, player) => {
-      const points = parseFloat(player.predicted_points) || 0;
-      return total + (player === captain ? points * 2 : points);
-    }, 0);
+    const totalPoints = mainTeam
+      ? Object.values(mainTeam).reduce((total, player) => {
+          const points = parseFloat(player.predicted_points) || 0;
+          return total + (player === captain ? points * 2 : points);
+        }, 0)
+      : 0;
+
+    return totalPoints;
   };
 
   return {

@@ -4,23 +4,31 @@ import PlayerCard from './PlayerCard';
 import Grid from '@mui/material/Grid2';
 
 const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
-  const goalkeepers = mainTeam.filter(
-    (player) => player.position === 'goalkeeper'
-  );
-  const defenders = mainTeam.filter((player) => player.position === 'defender');
-  const midfielders = mainTeam.filter(
-    (player) => player.position === 'midfielder'
-  );
-  const forwards = mainTeam.filter((player) => player.position === 'forward');
+  const goalkeepers = mainTeam
+    ? Object.values(mainTeam).filter((player) => player.position === 1)
+    : [];
+  const defenders = mainTeam
+    ? Object.values(mainTeam).filter((player) => player.position === 2)
+    : [];
+  const midfielders = mainTeam
+    ? Object.values(mainTeam).filter((player) => player.position === 3)
+    : [];
+  const forwards = mainTeam
+    ? Object.values(mainTeam).filter((player) => player.position === 4)
+    : [];
+
+  const benchTeamData = benchTeam ? Object.values(benchTeam) : [];
 
   // Find the player with the highest points
-  const captain = mainTeam.reduce(
-    (max, player) =>
-      parseFloat(player.predicted_points) > parseFloat(max.predicted_points)
-        ? player
-        : max,
-    mainTeam[0]
-  );
+  const captain = mainTeam
+    ? Object.values(mainTeam).reduce(
+        (max, player) =>
+          parseFloat(player.predicted_points) > parseFloat(max.predicted_points)
+            ? player
+            : max,
+        Object.values(mainTeam)[0]
+      )
+    : null;
 
   return (
     <Grid container spacing={2} justifyContent="center">
@@ -101,7 +109,7 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
         >
           <Box>
             <Grid container spacing={2} justifyContent="center">
-              {benchTeam.map((player, index) => (
+              {benchTeamData.map((player, index) => (
                 <Grid item size={3} key={player.name}>
                   <PlayerCard
                     player={player}
