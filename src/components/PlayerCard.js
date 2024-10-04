@@ -101,7 +101,7 @@ const PlayerCard = ({ player, onClick, index, isCaptain, resetClick }) => {
         >
           <Avatar
             src={`//resources.premierleague.com/premierleague/photos/players/250x250/p${player.code}.png`}
-            alt={player.last_name}
+            alt={player.web_name}
             sx={{
               width: '100%',
               height: '100%',
@@ -131,7 +131,7 @@ const PlayerCard = ({ player, onClick, index, isCaptain, resetClick }) => {
               maxWidth: '100px',
             }}
           >
-            {player.last_name}
+            {player.web_name}
           </Typography>
           <Box
             sx={{

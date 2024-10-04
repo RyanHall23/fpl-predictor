@@ -20,7 +20,7 @@ const useTeamData = () => {
         // Extract elements and positions from the picks array
         const elements = playerSquad.picks.map((pick) => pick.element);
         const positions = playerSquad.picks.map((pick) => pick.position);
-        console.log(playerSquad);
+        //console.log(playerSquad);
 
         const response = await fetch(
           'http://localhost:5000/api/bootstrap-static'
@@ -31,7 +31,7 @@ const useTeamData = () => {
         const mainTeam = [];
         const bench = [];
 
-        console.log(playersData);
+        //console.log(playersData);
         playersData.forEach((player) => {
           const index = elements.indexOf(player.id);
           if (index !== -1) {
@@ -42,7 +42,7 @@ const useTeamData = () => {
               position: player.element_type,
               predicted_points: player.ep_next,
               code: player.code,
-              last_name: player.web_name,
+              web_name: player.web_name,
               last_gw_points: player.event_points,
               in_dreamteam: player.in_dreamteam,
               total_points: player.total_points,
@@ -54,7 +54,7 @@ const useTeamData = () => {
               mainTeam.push(playerData);
             }
 
-            console.log(`Matched player: ${playerName}`);
+            //console.log(`Matched player: ${playerName}`);
           }
         });
 
