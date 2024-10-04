@@ -5,19 +5,38 @@ import Grid from '@mui/material/Grid2';
 
 const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
   const goalkeepers = mainTeam
-    ? Object.values(mainTeam).filter((player) => player.position === 1)
+    ? Object.values(mainTeam)
+        .filter((player) => player.position === 1)
+        .sort((a, b) => b.predicted_points - a.predicted_points)
     : [];
   const defenders = mainTeam
-    ? Object.values(mainTeam).filter((player) => player.position === 2)
+    ? Object.values(mainTeam)
+        .filter((player) => player.position === 2)
+        .sort((a, b) => b.predicted_points - a.predicted_points)
     : [];
   const midfielders = mainTeam
-    ? Object.values(mainTeam).filter((player) => player.position === 3)
+    ? Object.values(mainTeam)
+        .filter((player) => player.position === 3)
+        .sort((a, b) => b.predicted_points - a.predicted_points)
     : [];
   const forwards = mainTeam
-    ? Object.values(mainTeam).filter((player) => player.position === 4)
+    ? Object.values(mainTeam)
+        .filter((player) => player.position === 4)
+        .sort((a, b) => b.predicted_points - a.predicted_points)
     : [];
 
   const benchTeamData = benchTeam ? Object.values(benchTeam) : [];
+
+  // Sort the bench team array
+  const sortedBenchTeamData = benchTeamData.sort((a, b) => {
+    if (a.position === 1 && b.position !== 1) {
+      return -1;
+    } else if (a.position !== 1 && b.position === 1) {
+      return 1;
+    } else {
+      return b.predicted_points - a.predicted_points;
+    }
+  });
 
   // Find the player with the highest points
   const captain = mainTeam
@@ -109,7 +128,7 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
         >
           <Box>
             <Grid container spacing={2} justifyContent="center">
-              {benchTeamData.map((player, index) => (
+              {sortedBenchTeamData.map((player, index) => (
                 <Grid item size={3} key={player.name}>
                   <PlayerCard
                     player={player}

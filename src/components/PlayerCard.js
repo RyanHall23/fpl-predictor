@@ -35,8 +35,8 @@ const PlayerCard = ({ player, onClick, index, isCaptain, resetClick }) => {
   return (
     <Card
       sx={{
-        width: '120px',
-        height: '140px', // Reduced height
+        width: '100px',
+        height: '130px',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -44,8 +44,8 @@ const PlayerCard = ({ player, onClick, index, isCaptain, resetClick }) => {
         backgroundColor: '#f5f5f5',
         borderRadius: '10px',
         boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-        padding: '8px', // Reduced padding
-        margin: '8px', // Reduced margin
+        padding: '8px',
+        margin: '8px',
         position: 'relative',
       }}
     >
@@ -63,7 +63,7 @@ const PlayerCard = ({ player, onClick, index, isCaptain, resetClick }) => {
             fontWeight: 'bold',
           }}
         >
-          Captain
+          C
         </Box>
       )}
       {player.in_dreamteam && (
@@ -73,12 +73,13 @@ const PlayerCard = ({ player, onClick, index, isCaptain, resetClick }) => {
             top: '5px',
             left: '5px',
             color: '#0000ff',
+            transform: 'scale(0.75)',
           }}
         />
       )}
       <CardContent
         sx={{
-          padding: '4px', // Reduced padding
+          padding: '4px',
           textAlign: 'center',
           display: 'flex',
           flexDirection: 'column',
@@ -89,8 +90,8 @@ const PlayerCard = ({ player, onClick, index, isCaptain, resetClick }) => {
       >
         <Box
           sx={{
-            width: '40px', // Reduced size
-            height: '40px', // Reduced size
+            width: '40px',
+            height: '40px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -121,7 +122,7 @@ const PlayerCard = ({ player, onClick, index, isCaptain, resetClick }) => {
           <Typography
             variant="body2"
             sx={{
-              fontSize: '12px', // Reduced font size
+              fontSize: '12px',
               fontWeight: 'bold',
               color: '#333',
               whiteSpace: 'nowrap',
@@ -132,28 +133,30 @@ const PlayerCard = ({ player, onClick, index, isCaptain, resetClick }) => {
           >
             {player.last_name}
           </Typography>
-          <Typography variant="body2" sx={{ fontSize: '10px', color: '#666' }}>
-            Predicted:{' '}
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '100%',
+              gap: '2px',
+            }}
+          >
             <Box component="span" sx={{ fontWeight: 'bold', color: '#000' }}>
               {predictedPoints.toFixed(1)}
             </Box>
-          </Typography>
-          <Typography variant="body2" sx={{ fontSize: '10px', color: '#666' }}>
-            Last gw:{' '}
-            <Box component="span" sx={{ fontWeight: 'bold', color: '#000' }}>
-              {player.last_gw_points}
-            </Box>
-          </Typography>
+          </Box>
         </Box>
         <Button
           onClick={handleClick}
           size="small"
           sx={{
-            marginTop: '5px', // Reduced margin
+            marginTop: '5px',
             backgroundColor: clicked ? '#ff4081' : '#3f51b5',
             color: '#fff',
             borderRadius: '20px',
-            padding: '3px 8px', // Reduced padding
+            padding: '3px 8px',
           }}
         >
           {clicked ? (

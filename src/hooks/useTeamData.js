@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 
 const useTeamData = () => {
-  const [mainTeamData, setMainTeamData] = useState('');
-  const [benchTeamData, setBenchTeamData] = useState('');
+  const [mainTeamData, setMainTeamData] = useState([]);
+  const [benchTeamData, setBenchTeamData] = useState([]);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [toastMessage, setToastMessage] = useState('');
 
@@ -28,8 +28,8 @@ const useTeamData = () => {
         const result = await response.json();
 
         const playersData = result.elements;
-        const mainTeam = {};
-        const bench = {};
+        const mainTeam = [];
+        const bench = [];
 
         console.log(playersData);
         playersData.forEach((player) => {
@@ -37,6 +37,7 @@ const useTeamData = () => {
           if (index !== -1) {
             const playerName = `${player.first_name} ${player.second_name}`;
             const playerData = {
+              name: playerName,
               team: player.team,
               position: player.element_type,
               predicted_points: player.ep_next,
@@ -48,22 +49,17 @@ const useTeamData = () => {
             };
 
             if (positions[index] > 11) {
-              bench[playerName] = playerData;
-              setBenchTeamData((prevBench) => ({
-                ...prevBench,
-                [playerName]: playerData,
-              }));
+              bench.push(playerData);
             } else {
-              mainTeam[playerName] = playerData;
-              setMainTeamData((prevMainTeam) => ({
-                ...prevMainTeam,
-                [playerName]: playerData,
-              }));
+              mainTeam.push(playerData);
             }
 
             console.log(`Matched player: ${playerName}`);
           }
         });
+
+        setMainTeamData(mainTeam);
+        setBenchTeamData(bench);
 
         console.log('Main Team:', mainTeam);
         console.log('Bench:', bench);
@@ -170,19 +166,19 @@ const useTeamData = () => {
 
     // Find the player with the highest points
     const captain = mainTeam
-      ? Object.values(mainTeam).reduce(
+      ? mainTeam.reduce(
           (max, player) =>
             parseFloat(player.predicted_points) >
             parseFloat(max.predicted_points)
               ? player
               : max,
-          Object.values(mainTeam)[0]
+          mainTeam[0]
         )
       : null;
 
     // Calculate total points, doubling the captain's points
     const totalPoints = mainTeam
-      ? Object.values(mainTeam).reduce((total, player) => {
+      ? mainTeam.reduce((total, player) => {
           const points = parseFloat(player.predicted_points) || 0;
           return total + (player === captain ? points * 2 : points);
         }, 0)
