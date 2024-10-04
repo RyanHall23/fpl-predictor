@@ -50,7 +50,9 @@ const PlayerCard = ({ player, onClick, index, isCaptain, resetClick }) => {
             {player.web_name}
           </Typography>
           <Box className="predicted-points">
-            <Box component="span">{predictedPoints.toFixed(1)}</Box>
+            <Typography variant="caption">
+              {predictedPoints.toFixed(0)}
+            </Typography>
           </Box>
         </Box>
         <Button
