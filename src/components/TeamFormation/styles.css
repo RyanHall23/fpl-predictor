@@ -1,0 +1,13 @@
+body .main-paper {
+  background: repeating-linear-gradient(
+    0deg,
+    #388e3c,
+    #388e3c 20px,
+    #4caf50 20px,
+    #4caf50 40px
+  );
+}
+
+body .bench-paper {
+  background-color: #4caf50;
+}

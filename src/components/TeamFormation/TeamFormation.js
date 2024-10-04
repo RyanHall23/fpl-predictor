@@ -1,7 +1,8 @@
 import React from 'react';
 import { Paper, Box } from '@mui/material';
-import PlayerCard from './PlayerCard';
+import PlayerCard from '../PlayerCard/PlayerCard';
 import Grid from '@mui/material/Grid2';
+import './styles.css';
 
 const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
   const goalkeepers = mainTeam
@@ -52,12 +53,7 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
   return (
     <Grid container spacing={2} justifyContent="center">
       <Grid size={10}>
-        <Paper
-          style={{
-            background:
-              'repeating-linear-gradient(0deg, #388e3c, #388e3c 20px, #4caf50 20px, #4caf50 40px)',
-          }}
-        >
+        <Paper className="main-paper">
           <Box>
             <Grid container spacing={2} justifyContent="center">
               <Grid size={12}>
@@ -121,11 +117,7 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
         </Paper>
       </Grid>
       <Grid size={10}>
-        <Paper
-          style={{
-            backgroundColor: '#4caf50',
-          }}
-        >
+        <Paper className="bench-paper">
           <Box>
             <Grid container spacing={2} justifyContent="center">
               {sortedBenchTeamData.map((player, index) => (

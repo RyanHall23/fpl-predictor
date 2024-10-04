@@ -1,18 +1,38 @@
-import React from 'react';
-import { Container, Typography, Box, Paper } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { Container, Typography, Box, Paper, Snackbar } from '@mui/material';
 import Grid from '@mui/material/Grid2';
-import TeamFormation from './components/TeamFormation';
-import Toast from './components/Toast';
+import TeamFormation from './components/TeamFormation/TeamFormation';
 import useTeamData from './hooks/useTeamData';
 
 const App = () => {
   const {
     mainTeamData,
     benchTeamData,
-    toastMessage,
+    snackbarMessage,
     handlePlayerClick,
     calculateTotalPredictedPoints,
   } = useTeamData();
+
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+
+  useEffect(() => {
+    if (snackbarMessage) {
+      setSnackbarOpen(true);
+    }
+  }, [snackbarMessage]);
+
+  const handleSnackbarClose = (event, reason) => {
+    setSnackbarOpen(false);
+  };
+
+  useEffect(() => {
+    if (snackbarOpen) {
+      const timer = setTimeout(() => {
+        setSnackbarOpen(false);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [snackbarOpen]);
 
   return (
     <Container>
@@ -44,7 +64,12 @@ const App = () => {
           </Grid>
         </Grid>
       </Box>
-      <Toast message={toastMessage} />
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+        message={snackbarMessage}
+      />
     </Container>
   );
 };
