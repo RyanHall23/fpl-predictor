@@ -13,7 +13,7 @@ const useTeamData = () => {
         const entryId = 9158; // Replace with dynamic value if needed
         const eventId = 6; // Replace with dynamic value if needed
         const fetchPlayerSquad = await fetch(
-          `http://localhost:5000/api/entry/${entryId}/event/${eventId}/picks`
+          `http://localhost:5000/api/entry/${entryId}/event/${eventId}/picks`,
         );
         const playerSquad = await fetchPlayerSquad.json();
 
@@ -23,7 +23,7 @@ const useTeamData = () => {
         //console.log(playerSquad);
 
         const response = await fetch(
-          'http://localhost:5000/api/bootstrap-static'
+          'http://localhost:5000/api/bootstrap-static',
         );
         const result = await response.json();
 
@@ -82,7 +82,7 @@ const useTeamData = () => {
           selectedPlayer.player,
           player,
           selectedPlayer.teamType,
-          teamType
+          teamType,
         );
         setSelectedPlayer(null);
         setsnackbarMessage('');
@@ -167,21 +167,21 @@ const useTeamData = () => {
     // Find the player with the highest points
     const captain = mainTeam
       ? mainTeam.reduce(
-          (max, player) =>
-            parseFloat(player.predicted_points) >
+        (max, player) =>
+          parseFloat(player.predicted_points) >
             parseFloat(max.predicted_points)
-              ? player
-              : max,
-          mainTeam[0]
-        )
+            ? player
+            : max,
+        mainTeam[0],
+      )
       : null;
 
     // Calculate total points, doubling the captain's points
     const totalPoints = mainTeam
       ? mainTeam.reduce((total, player) => {
-          const points = parseFloat(player.predicted_points) || 0;
-          return total + (player === captain ? points * 2 : points);
-        }, 0)
+        const points = parseFloat(player.predicted_points) || 0;
+        return total + (player === captain ? points * 2 : points);
+      }, 0)
       : 0;
 
     return totalPoints;

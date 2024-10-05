@@ -11,8 +11,9 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import StarIcon from '@mui/icons-material/Star';
 import './styles.css';
+import PropTypes from 'prop-types';
 
-const PlayerCard = ({ player, onClick, index, isCaptain, resetClick }) => {
+const PlayerCard = ({ player, onClick, isCaptain, resetClick }) => {
   const [clicked, setClicked] = useState(false);
 
   const handleClick = () => {
@@ -26,8 +27,6 @@ const PlayerCard = ({ player, onClick, index, isCaptain, resetClick }) => {
     }
   }, [resetClick]);
 
-  const isEven = index % 2 === 0;
-
   let predictedPoints = parseFloat(player.predicted_points) || 0;
   if (isCaptain) {
     predictedPoints *= 2;
@@ -35,44 +34,48 @@ const PlayerCard = ({ player, onClick, index, isCaptain, resetClick }) => {
 
   return (
     <Card className="player-card">
-      {isCaptain && <Box className="captain-badge">C</Box>}
-      {player.in_dreamteam && <StarIcon className="dreamteam-icon" />}
+      { isCaptain && <Box className="captain-badge">C</Box> }
+      { player.in_dreamteam && <StarIcon className="dreamteam-icon" /> }
       <CardContent className="card-content">
         <Box className="avatar-box">
           <Avatar
-            src={`//resources.premierleague.com/premierleague/photos/players/250x250/p${player.code}.png`}
-            alt={player.web_name}
+            src={ `//resources.premierleague.com/premierleague/photos/players/250x250/p${player.code}.png` }
+            alt={ player.web_name }
             className="avatar"
           />
         </Box>
         <Box className="player-info">
-          <Typography variant="body2" className="player-name">
-            {player.web_name}
+          <Typography
+            variant="body2" className="player-name">
+            { player.web_name }
           </Typography>
           <Box className="predicted-points">
             <Typography variant="caption">
-              {predictedPoints.toFixed(0)}
+              { predictedPoints.toFixed(0) }
             </Typography>
           </Box>
         </Box>
         <Button
-          onClick={handleClick}
+          onClick={ handleClick }
           size="small"
-          className={`action-button ${clicked ? 'clicked' : 'not-clicked'}`}
+          className={ `action-button ${clicked ? 'clicked' : 'not-clicked'}` }
         >
-          {clicked ? (
-            isEven ? (
-              <ArrowBackIcon />
-            ) : (
-              <ArrowForwardIcon />
-            )
-          ) : (
-            <ArrowForwardIcon />
-          )}
+          { clicked ? <ArrowBackIcon /> : <ArrowForwardIcon /> }
         </Button>
       </CardContent>
     </Card>
   );
+};
+PlayerCard.propTypes = {
+  player: PropTypes.shape({
+    web_name: PropTypes.string.isRequired,
+    predicted_points: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    in_dreamteam: PropTypes.bool,
+    code: PropTypes.number.isRequired,
+  }).isRequired,
+  onClick: PropTypes.func.isRequired,
+  isCaptain: PropTypes.bool,
+  resetClick: PropTypes.bool,
 };
 
 export default PlayerCard;
