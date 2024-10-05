@@ -4,14 +4,14 @@ const useTeamData = () => {
   const [mainTeamData, setMainTeamData] = useState([]);
   const [benchTeamData, setBenchTeamData] = useState([]);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
-  const [snackbarMessage, setsnackbarMessage] = useState('');
+  const [snackbarMessage, setSnackbarMessage] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         // Fetch additional data from the new URL with dynamic parameters
-        const entryId = 9158; // Replace with dynamic value if needed
-        const eventId = 6; // Replace with dynamic value if needed
+        const entryId = 9158; // Team ID
+        const eventId = 7; // Gameweek
         const fetchPlayerSquad = await fetch(
           `http://localhost:5000/api/entry/${entryId}/event/${eventId}/picks`,
         );
@@ -40,7 +40,7 @@ const useTeamData = () => {
               name: playerName,
               team: player.team,
               position: player.element_type,
-              predicted_points: player.ep_next,
+              predicted_points: Math.round(player.ep_next),
               code: player.code,
               web_name: player.web_name,
               last_gw_points: player.event_points,
@@ -85,9 +85,9 @@ const useTeamData = () => {
           teamType,
         );
         setSelectedPlayer(null);
-        setsnackbarMessage('');
+        setSnackbarMessage('');
       } else {
-        setsnackbarMessage(swapResult.error);
+        setSnackbarMessage(swapResult.error);
         setSelectedPlayer(null);
       }
     }
