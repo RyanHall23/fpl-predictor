@@ -51,7 +51,7 @@ const PlayerCard = ({ player, onClick, isCaptain, resetClick }) => {
           </Typography>
           <Box className="predicted-points">
             <Typography variant="caption">
-              { predictedPoints.toFixed(0) }
+              { predictedPoints }
             </Typography>
           </Box>
         </Box>

@@ -54,7 +54,7 @@ const App = () => {
           Total Predicted Points:{ " " }
           <Box component="span"
             sx={ { fontWeight: 'bold' } }>
-            { calculateTotalPredictedPoints(mainTeamData).toFixed(2) }
+            { calculateTotalPredictedPoints(mainTeamData) }
           </Box>
         </Typography>
         <Grid container
