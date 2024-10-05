@@ -21,7 +21,7 @@ const App = () => {
     }
   }, [snackbarMessage]);
 
-  const handleSnackbarClose = (event, reason) => {
+  const handleSnackbarClose = () => {
     setSnackbarOpen(false);
   };
 
@@ -37,38 +37,46 @@ const App = () => {
   return (
     <Container>
       <Box
-        sx={{
+        sx={ {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-        }}
+        } }
       >
-        <Typography variant="h4" align="center" gutterBottom>
+        <Typography variant="h4"
+          align="center"
+          gutterBottom>
           FPL Predictor
         </Typography>
-        <Typography variant="body1" align="center" gutterBottom>
-          Total Predicted Points:{' '}
-          <Box component="span" sx={{ fontWeight: 'bold' }}>
-            {calculateTotalPredictedPoints(mainTeamData).toFixed(2)}
+        <Typography variant="body1"
+          align="center"
+          gutterBottom>
+          Total Predicted Points:{ " " }
+          <Box component="span"
+            sx={ { fontWeight: 'bold' } }>
+            { calculateTotalPredictedPoints(mainTeamData).toFixed(2) }
           </Box>
         </Typography>
-        <Grid container spacing={2} justifyContent="center">
-          <Grid md={10}>
-            <Paper elevation={3} sx={{ padding: 1, marginTop: 1 }}>
+        <Grid container
+          spacing={ 2 }
+          justifyContent="center">
+          <Grid md={ 10 }>
+            <Paper elevation={ 3 }
+              sx={ { padding: 1, marginTop: 1 } }>
               <TeamFormation
-                mainTeam={mainTeamData}
-                benchTeam={benchTeamData}
-                onPlayerClick={handlePlayerClick}
+                mainTeam={ mainTeamData }
+                benchTeam={ benchTeamData }
+                onPlayerClick={ handlePlayerClick }
               />
             </Paper>
           </Grid>
         </Grid>
       </Box>
       <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={6000}
-        onClose={handleSnackbarClose}
-        message={snackbarMessage}
+        open={ snackbarOpen }
+        autoHideDuration={ 6000 }
+        onClose={ handleSnackbarClose }
+        message={ snackbarMessage }
       />
     </Container>
   );
