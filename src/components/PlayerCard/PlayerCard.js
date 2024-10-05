@@ -10,8 +10,8 @@ import {
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import StarIcon from '@mui/icons-material/Star';
-import './styles.css';
 import PropTypes from 'prop-types';
+import './styles.css';
 
 const PlayerCard = ({ player, onClick, isCaptain, resetClick }) => {
   const [clicked, setClicked] = useState(false);

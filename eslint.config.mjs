@@ -1,7 +1,8 @@
-import globals from 'globals';
+import React, { useState, useEffect } from 'react';
+import js from '@eslint/js';
 import pluginJs from '@eslint/js';
 import pluginReact from 'eslint-plugin-react';
-import js from '@eslint/js';
+import globals from 'globals';
 
 export default [
   {
