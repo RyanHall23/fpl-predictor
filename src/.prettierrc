@@ -4,5 +4,9 @@
     "jsxBracketSameLine": true,
     "tabWidth": 2,
     "printWidth": 80,
-    "bracketSpacing": true
+    "bracketSpacing": true,
+    "plugins": ["prettier-plugin-organize-imports"],
+    "importOrder": ["^react$", "^react/(.*)$", "^[./]"],
+    "importOrderSeparation": true,
+    "importOrderSortSpecifiers": true
   }
