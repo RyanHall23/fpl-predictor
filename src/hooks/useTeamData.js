@@ -1,31 +1,28 @@
 import { useState, useEffect } from 'react';
 
-const useTeamData = () => {
+const useTeamData = (entryId) => {
   const [mainTeamData, setMainTeamData] = useState([]);
   const [benchTeamData, setBenchTeamData] = useState([]);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [snackbarMessage, setSnackbarMessage] = useState('');
-  //const [currentEvent, setCurrentEvent] = useState(null); // Update the hook to store the current event
 
   useEffect(() => {
+    if (!entryId) return;
+
     const fetchData = async () => {
       try {
-        // Fetch the bootstrap-static data to get the current event
         const response = await fetch('http://localhost:5000/api/bootstrap-static');
         const result = await response.json();
     
-        // Find the current event
         const CurrentEvent = result.events.find(event => event.is_current === true);
         if (!CurrentEvent) {
           throw new Error('No current event found.');
         }
     
-        const entryId = 9158; // Team ID
-        const eventId = CurrentEvent.id; // Gameweek
+        const eventId = CurrentEvent.id;
         const fetchPlayerSquad = await fetch(`http://localhost:5000/api/entry/${entryId}/event/${eventId}/picks`);
         const playerSquad = await fetchPlayerSquad.json();
     
-        // Extract elements and positions from the picks array
         const elements = playerSquad.picks.map((pick) => pick.element);
         const positions = playerSquad.picks.map((pick) => pick.position);
     
@@ -68,7 +65,7 @@ const useTeamData = () => {
     };
 
     fetchData();
-  }, []);
+  }, [entryId]);
 
   const handlePlayerClick = (player, teamType) => {
     if (selectedPlayer === null) {
@@ -163,7 +160,6 @@ const useTeamData = () => {
   const calculateTotalPredictedPoints = (mainTeam) => {
     if (!mainTeam || mainTeam.length === 0) return 0;
 
-    // Find the player with the highest points
     const captain = mainTeam
       ? mainTeam.reduce(
         (max, player) =>
@@ -175,7 +171,6 @@ const useTeamData = () => {
       )
       : null;
 
-    // Calculate total points, doubling the captain's points
     const totalPoints = mainTeam
       ? mainTeam.reduce((total, player) => {
         const points = parseFloat(player.predictedPoints) || 0;
