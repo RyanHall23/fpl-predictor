@@ -5,33 +5,34 @@ const useTeamData = () => {
   const [benchTeamData, setBenchTeamData] = useState([]);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [snackbarMessage, setSnackbarMessage] = useState('');
+  //const [currentEvent, setCurrentEvent] = useState(null); // Update the hook to store the current event
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch additional data from the new URL with dynamic parameters
+        // Fetch the bootstrap-static data to get the current event
+        const response = await fetch('http://localhost:5000/api/bootstrap-static');
+        const result = await response.json();
+    
+        // Find the current event
+        const CurrentEvent = result.events.find(event => event.is_current === true);
+        if (!CurrentEvent) {
+          throw new Error('No current event found.');
+        }
+    
         const entryId = 9158; // Team ID
-        const eventId = 7; // Gameweek
-        const fetchPlayerSquad = await fetch(
-          `http://localhost:5000/api/entry/${entryId}/event/${eventId}/picks`,
-        );
+        const eventId = CurrentEvent.id; // Gameweek
+        const fetchPlayerSquad = await fetch(`http://localhost:5000/api/entry/${entryId}/event/${eventId}/picks`);
         const playerSquad = await fetchPlayerSquad.json();
-
+    
         // Extract elements and positions from the picks array
         const elements = playerSquad.picks.map((pick) => pick.element);
         const positions = playerSquad.picks.map((pick) => pick.position);
-        //console.log(playerSquad);
-
-        const response = await fetch(
-          'http://localhost:5000/api/bootstrap-static',
-        );
-        const result = await response.json();
-
+    
         const playersData = result.elements;
         const mainTeam = [];
         const bench = [];
-
-        //console.log(playersData);
+    
         playersData.forEach((player) => {
           const index = elements.indexOf(player.id);
           if (index !== -1) {
@@ -40,27 +41,25 @@ const useTeamData = () => {
               name: playerName,
               team: player.team,
               position: player.element_type,
-              predicted_points: Math.round(player.ep_next),
+              predictedPoints: Math.round(player.ep_next),
               code: player.code,
-              web_name: player.web_name,
-              last_gw_points: player.event_points,
-              in_dreamteam: player.in_dreamteam,
-              total_points: player.total_points,
+              webName: player.web_name,
+              lastGwPoints: player.event_points,
+              inDreamteam: player.in_dreamteam,
+              totalPoints: player.total_points
             };
-
+        
             if (positions[index] > 11) {
               bench.push(playerData);
             } else {
               mainTeam.push(playerData);
             }
-
-            //console.log(`Matched player: ${playerName}`);
           }
         });
-
+    
         setMainTeamData(mainTeam);
         setBenchTeamData(bench);
-
+    
         console.log('Main Team:', mainTeam);
         console.log('Bench:', bench);
       } catch (error) {
@@ -168,8 +167,8 @@ const useTeamData = () => {
     const captain = mainTeam
       ? mainTeam.reduce(
         (max, player) =>
-          parseFloat(player.predicted_points) >
-            parseFloat(max.predicted_points)
+          parseFloat(player.predictedPoints) >
+            parseFloat(max.predictedPoints)
             ? player
             : max,
         mainTeam[0],
@@ -179,7 +178,7 @@ const useTeamData = () => {
     // Calculate total points, doubling the captain's points
     const totalPoints = mainTeam
       ? mainTeam.reduce((total, player) => {
-        const points = parseFloat(player.predicted_points) || 0;
+        const points = parseFloat(player.predictedPoints) || 0;
         return total + (player === captain ? points * 2 : points);
       }, 0)
       : 0;
