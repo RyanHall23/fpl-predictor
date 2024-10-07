@@ -9,22 +9,22 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
   const goalkeepers = mainTeam
     ? Object.values(mainTeam)
       .filter((player) => player.position === 1)
-      .sort((a, b) => b.predicted_points - a.predicted_points)
+      .sort((a, b) => b.predictedPoints - a.predictedPoints)
     : [];
   const defenders = mainTeam
     ? Object.values(mainTeam)
       .filter((player) => player.position === 2)
-      .sort((a, b) => b.predicted_points - a.predicted_points)
+      .sort((a, b) => b.predictedPoints - a.predictedPoints)
     : [];
   const midfielders = mainTeam
     ? Object.values(mainTeam)
       .filter((player) => player.position === 3)
-      .sort((a, b) => b.predicted_points - a.predicted_points)
+      .sort((a, b) => b.predictedPoints - a.predictedPoints)
     : [];
   const forwards = mainTeam
     ? Object.values(mainTeam)
       .filter((player) => player.position === 4)
-      .sort((a, b) => b.predicted_points - a.predicted_points)
+      .sort((a, b) => b.predictedPoints - a.predictedPoints)
     : [];
 
   const benchTeamData = benchTeam ? Object.values(benchTeam) : [];
@@ -36,7 +36,7 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
     } else if (a.position !== 1 && b.position === 1) {
       return 1;
     } else {
-      return b.predicted_points - a.predicted_points;
+      return b.predictedPoints - a.predictedPoints;
     }
   });
 
@@ -44,7 +44,7 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
   const captain = mainTeam
     ? Object.values(mainTeam).reduce(
       (max, player) =>
-        parseFloat(player.predicted_points) > parseFloat(max.predicted_points)
+        parseFloat(player.predictedPoints) > parseFloat(max.predictedPoints)
           ? player
           : max,
       Object.values(mainTeam)[0],
