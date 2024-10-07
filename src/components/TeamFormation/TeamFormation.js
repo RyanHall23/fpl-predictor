@@ -138,8 +138,8 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
   );
 };
 TeamFormation.propTypes = {
-  mainTeam: PropTypes.object,
-  benchTeam: PropTypes.object,
+  mainTeam: PropTypes.array,
+  benchTeam: PropTypes.array,
   onPlayerClick: PropTypes.func.isRequired,
 };
 
