@@ -5,6 +5,79 @@ const useTeamData = (entryId) => {
   const [benchTeamData, setBenchTeamData] = useState([]);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [initialSquad, setInitialSquad] = useState([]);
+
+  useEffect(() => {
+    const fetchInitialSquad = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/bootstrap-static');
+        const result = await response.json();
+  
+        const CurrentEvent = result.events.find(event => event.is_current === true);
+        if (!CurrentEvent) {
+          throw new Error('No current event found.');
+        }
+  
+        const players = result.elements;
+  
+        // Separate players by position
+        const goalkeepers = players.filter(player => player.element_type === 1);
+        const defenders = players.filter(player => player.element_type === 2);
+        const midfielders = players.filter(player => player.element_type === 3);
+        const forwards = players.filter(player => player.element_type === 4);
+  
+        // Sort players by ep_next in descending order
+        goalkeepers.sort((a, b) => b.ep_next - a.ep_next);
+        defenders.sort((a, b) => b.ep_next - a.ep_next);
+        midfielders.sort((a, b) => b.ep_next - a.ep_next);
+        forwards.sort((a, b) => b.ep_next - a.ep_next);
+  
+        // Select top players for each position
+        const squad = [
+          ...goalkeepers.slice(0, 2), // 2 goalkeepers
+          ...defenders.slice(0, 5),   // 5 defenders
+          ...midfielders.slice(0, 5), // 5 midfielders
+          ...forwards.slice(0, 3)     // 3 forwards
+        ];
+  
+        // Split into initialTeam and initialBench
+        const initialTeam = [
+          ...goalkeepers.slice(0, 1), // 1 goalkeeper
+          ...defenders.slice(0, 3),   // 3 defenders
+          ...midfielders.slice(0, 3), // 3 midfielders
+          ...forwards.slice(0, 1)     // 1 forward
+        ];
+  
+        const initialBench = [
+          ...goalkeepers.slice(1, 2), // 1 goalkeeper
+          ...defenders.slice(3, 5),   // 2 defenders
+          ...midfielders.slice(3, 5), // 2 midfielders
+          ...forwards.slice(1, 3)     // 2 forwards
+        ];
+  
+        const formatPlayer = player => ({
+          name: `${player.first_name} ${player.second_name}`,
+          team: player.team,
+          position: player.element_type,
+          predictedPoints: Math.round(player.ep_next),
+          code: player.code,
+          webName: player.web_name,
+          lastGwPoints: player.event_points,
+          inDreamteam: player.in_dreamteam,
+          totalPoints: player.total_points
+        });
+  
+        setMainTeamData(initialTeam.map(formatPlayer));
+        setBenchTeamData(initialBench.map(formatPlayer));
+        console.log('Initial Team:', initialTeam);
+        console.log('Initial Bench:', initialBench);
+      } catch (error) {
+        console.error('Error fetching team data:', error);
+      }
+    };
+  
+    fetchInitialSquad();
+  }, []);
 
   useEffect(() => {
     if (!entryId) return;
