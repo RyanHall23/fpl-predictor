@@ -1,33 +1,40 @@
 import React from 'react';
-import PropTypes from 'prop-types';
-import { Paper, Box } from '@mui/material';
-import PlayerCard from '../PlayerCard/PlayerCard';
+import { Box, Paper, Typography } from '@mui/material';
 import Grid from '@mui/material/Grid2';
+import PropTypes from 'prop-types';
+import PlayerCard from '../PlayerCard/PlayerCard';
 import './styles.css';
 
 const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
   const goalkeepers = mainTeam
     ? Object.values(mainTeam)
-      .filter((player) => player.position === 1)
-      .sort((a, b) => b.predictedPoints - a.predictedPoints)
+        .filter((player) => player.position === 1)
+        .sort((a, b) => b.predictedPoints - a.predictedPoints)
     : [];
   const defenders = mainTeam
     ? Object.values(mainTeam)
-      .filter((player) => player.position === 2)
-      .sort((a, b) => b.predictedPoints - a.predictedPoints)
+        .filter((player) => player.position === 2)
+        .sort((a, b) => b.predictedPoints - a.predictedPoints)
     : [];
   const midfielders = mainTeam
     ? Object.values(mainTeam)
-      .filter((player) => player.position === 3)
-      .sort((a, b) => b.predictedPoints - a.predictedPoints)
+        .filter((player) => player.position === 3)
+        .sort((a, b) => b.predictedPoints - a.predictedPoints)
     : [];
   const forwards = mainTeam
     ? Object.values(mainTeam)
-      .filter((player) => player.position === 4)
-      .sort((a, b) => b.predictedPoints - a.predictedPoints)
+        .filter((player) => player.position === 4)
+        .sort((a, b) => b.predictedPoints - a.predictedPoints)
     : [];
 
   const benchTeamData = benchTeam ? Object.values(benchTeam) : [];
+
+  const positionLabels = {
+    1: 'GK',
+    2: 'DEF',
+    3: 'MID',
+    4: 'ATT',
+  };
 
   // Sort the bench team array
   const sortedBenchTeamData = benchTeamData.sort((a, b) => {
@@ -43,12 +50,12 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
   // Find the player with the highest points
   const captain = mainTeam
     ? Object.values(mainTeam).reduce(
-      (max, player) =>
-        parseFloat(player.predictedPoints) > parseFloat(max.predictedPoints)
-          ? player
-          : max,
-      Object.values(mainTeam)[0],
-    )
+        (max, player) =>
+          parseFloat(player.predictedPoints) > parseFloat(max.predictedPoints)
+            ? player
+            : max,
+        Object.values(mainTeam)[0],
+      )
     : null;
 
   return (
@@ -122,12 +129,20 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
           <Box>
             <Grid container spacing={ 2 } justifyContent='center'>
               { sortedBenchTeamData.map((player, index) => (
-                <Grid size={ 3 } key={ player.name }>
-                  <PlayerCard
-                    player={ player }
-                    onClick={ () => onPlayerClick(player, 'bench') }
-                    index={ index }
-                  />
+                <Grid item size={ 3 } key={ player.name }>
+                  <Box
+                    display='flex'
+                    flexDirection='column'
+                    alignItems='center'>
+                    <PlayerCard
+                      player={ player }
+                      onClick={ () => onPlayerClick(player, 'bench') }
+                      index={ index }
+                    />
+                    <Typography align='center' variant='subtitle1' mt={ 1 }>
+                      { positionLabels[player.position] }
+                    </Typography>
+                  </Box>
                 </Grid>
               )) }
             </Grid>
