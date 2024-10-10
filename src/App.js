@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { Container, Typography, Box, Paper, Snackbar } from '@mui/material';
+import React from 'react';
+import { Box, Container, Snackbar, Typography } from '@mui/material';
 import Grid from '@mui/material/Grid2';
-import TeamFormation from './components/TeamFormation/TeamFormation';
+import { useEffect, useState } from 'react';
 import Sidebar from './components/Sidebar/Sidebar';
+import TeamFormation from './components/TeamFormation/TeamFormation';
 import useTeamData from './hooks/useTeamData';
 
 const App = () => {
@@ -54,34 +55,23 @@ const App = () => {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-        } }
-      >
-        <Typography variant="h4"
-          align="center"
-          gutterBottom>
+        } }>
+        <Typography variant='h4' align='center' gutterBottom>
           FPL Predictor
         </Typography>
-        <Typography variant="body1"
-          align="center"
-          gutterBottom>
+        <Typography variant='body1' align='center' gutterBottom>
           Total Predicted Points:{ ' ' }
-          <Box component="span"
-            sx={ { fontWeight: 'bold' } }>
+          <Box component='span' sx={ { fontWeight: 'bold' } }>
             { calculateTotalPredictedPoints(mainTeamData) }
           </Box>
         </Typography>
-        <Grid container
-          spacing={ 2 }
-          justifyContent="center">
+        <Grid container spacing={ 2 } justifyContent='center'>
           <Grid md={ 10 }>
-            <Paper elevation={ 3 }
-              sx={ { padding: 1, marginTop: 1 } }>
-              <TeamFormation
-                mainTeam={ mainTeamData }
-                benchTeam={ benchTeamData }
-                onPlayerClick={ handlePlayerClick }
-              />
-            </Paper>
+            <TeamFormation
+              mainTeam={ mainTeamData }
+              benchTeam={ benchTeamData }
+              onPlayerClick={ handlePlayerClick }
+            />
           </Grid>
         </Grid>
       </Box>
