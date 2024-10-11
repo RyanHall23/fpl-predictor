@@ -33,31 +33,31 @@ const PlayerCard = ({ player, onClick, isCaptain, resetClick }) => {
   }
 
   return (
-    <Card className="player-card">
-      { isCaptain && <Box className="captain-badge">C</Box> }
-      { player.inDreamteam && <StarIcon className="dreamteam-icon" /> }
-      <CardContent className="card-content">
-        <Box className="avatar-box">
+    <Card className='player-card'>
+      { isCaptain && <Box className='captain-badge'>C</Box> }
+      { player.inDreamteam && <StarIcon className='dreamteam-icon' /> }
+      <CardContent className='card-content'>
+        <Box className='avatar-box'>
           <Avatar
             src={ `//resources.premierleague.com/premierleague/photos/players/250x250/p${player.code}.png` }
             alt={ player.webName }
-            className="avatar"
+            className='avatar'
           />
         </Box>
-        <Box className="player-info">
+        <Box className='player-info'>
           <Typography
-            variant="body2" className="player-name">
+            variant='body2' className='player-name'>
             { player.webName }
           </Typography>
-          <Box className="predicted-points">
-            <Typography variant="caption">
+          <Box className='predicted-points'>
+            <Typography variant='caption'>
               { predictedPoints }
             </Typography>
           </Box>
         </Box>
         <Button
           onClick={ handleClick }
-          size="small"
+          size='small'
           className={ `action-button ${clicked ? 'clicked' : 'not-clicked'}` }
         >
           { clicked ? <ArrowBackIcon /> : <ArrowForwardIcon /> }

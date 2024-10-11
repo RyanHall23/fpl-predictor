@@ -303,19 +303,19 @@ const useTeamData = (entryId) => {
 
     const captain = mainTeam
       ? mainTeam.reduce(
-          (max, player) =>
-            parseFloat(player.predictedPoints) > parseFloat(max.predictedPoints)
-              ? player
-              : max,
-          mainTeam[0],
-        )
+        (max, player) =>
+          parseFloat(player.predictedPoints) > parseFloat(max.predictedPoints)
+            ? player
+            : max,
+        mainTeam[0],
+      )
       : null;
 
     const totalPoints = mainTeam
       ? mainTeam.reduce((total, player) => {
-          const points = parseFloat(player.predictedPoints) || 0;
-          return total + (player === captain ? points * 2 : points);
-        }, 0)
+        const points = parseFloat(player.predictedPoints) || 0;
+        return total + (player === captain ? points * 2 : points);
+      }, 0)
       : 0;
 
     return totalPoints;
