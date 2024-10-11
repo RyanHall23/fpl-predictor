@@ -1,4 +1,3 @@
-import React, { useState, useEffect } from 'react';
 import js from '@eslint/js';
 import pluginJs from '@eslint/js';
 import pluginReact from 'eslint-plugin-react';
@@ -34,7 +33,11 @@ export default [
           when: 'always',
           children: true
         }
-      ]
+      ],
+      'object-curly-spacing': ['error', 'always'],
+      'quotes': ['error', 'single'],
+      'jsx-quotes': ['error', 'prefer-single'],
+      'eol-last': ['error', 'always']
     },
     settings: {
       react: {

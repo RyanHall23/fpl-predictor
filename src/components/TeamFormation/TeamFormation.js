@@ -8,23 +8,23 @@ import './styles.css';
 const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
   const goalkeepers = mainTeam
     ? Object.values(mainTeam)
-        .filter((player) => player.position === 1)
-        .sort((a, b) => b.predictedPoints - a.predictedPoints)
+      .filter((player) => player.position === 1)
+      .sort((a, b) => b.predictedPoints - a.predictedPoints)
     : [];
   const defenders = mainTeam
     ? Object.values(mainTeam)
-        .filter((player) => player.position === 2)
-        .sort((a, b) => b.predictedPoints - a.predictedPoints)
+      .filter((player) => player.position === 2)
+      .sort((a, b) => b.predictedPoints - a.predictedPoints)
     : [];
   const midfielders = mainTeam
     ? Object.values(mainTeam)
-        .filter((player) => player.position === 3)
-        .sort((a, b) => b.predictedPoints - a.predictedPoints)
+      .filter((player) => player.position === 3)
+      .sort((a, b) => b.predictedPoints - a.predictedPoints)
     : [];
   const forwards = mainTeam
     ? Object.values(mainTeam)
-        .filter((player) => player.position === 4)
-        .sort((a, b) => b.predictedPoints - a.predictedPoints)
+      .filter((player) => player.position === 4)
+      .sort((a, b) => b.predictedPoints - a.predictedPoints)
     : [];
 
   const benchTeamData = benchTeam ? Object.values(benchTeam) : [];
@@ -50,12 +50,12 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
   // Find the player with the highest points
   const captain = mainTeam
     ? Object.values(mainTeam).reduce(
-        (max, player) =>
-          parseFloat(player.predictedPoints) > parseFloat(max.predictedPoints)
-            ? player
-            : max,
-        Object.values(mainTeam)[0],
-      )
+      (max, player) =>
+        parseFloat(player.predictedPoints) > parseFloat(max.predictedPoints)
+          ? player
+          : max,
+      Object.values(mainTeam)[0],
+    )
     : null;
 
   return (

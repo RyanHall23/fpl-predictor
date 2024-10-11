@@ -18,15 +18,15 @@ const Sidebar = ({ entryId, setEntryId, handleEntryIdSubmit }) => {
   };
 
   const DrawerList = (
-    <Box sx={ { width: 250, padding: 2 } } role="presentation">
+    <Box sx={ { width: 250, padding: 2 } } role='presentation'>
       <TextField
-        label="Enter Team ID"
+        label='Enter Team ID'
         value={ entryId }
         onChange={ (e) => setEntryId(e.target.value) }
         fullWidth
         sx={ { marginBottom: 2 } }
       />
-      <Button variant="contained" onClick={ handleSubmit } fullWidth>
+      <Button variant='contained' onClick={ handleSubmit } fullWidth>
         Submit
       </Button>
     </Box>
