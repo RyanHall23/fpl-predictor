@@ -134,14 +134,14 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
                     display='flex'
                     flexDirection='column'
                     alignItems='center'>
+                    <Typography align='center' variant='subtitle1' mt={ 1 }>
+                      { positionLabels[player.position] }
+                    </Typography>
                     <PlayerCard
                       player={ player }
                       onClick={ () => onPlayerClick(player, 'bench') }
                       index={ index }
                     />
-                    <Typography align='center' variant='subtitle1' mt={ 1 }>
-                      { positionLabels[player.position] }
-                    </Typography>
                   </Box>
                 </Grid>
               )) }
