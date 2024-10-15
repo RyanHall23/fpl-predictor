@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 const useTeamData = (entryId) => {
   const [mainTeamData, setMainTeamData] = useState([]);
@@ -119,7 +119,7 @@ const useTeamData = (entryId) => {
     }
   };
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!entryId) return;
 
     try {
@@ -178,7 +178,7 @@ const useTeamData = (entryId) => {
     } catch (error) {
       console.error('Error fetching team data:', error);
     }
-  };
+  }, [entryId]); // Memoize fetchData with useCallback
 
   useEffect(() => {
     const fetchInitialSquad = async () => {
@@ -317,7 +317,7 @@ const useTeamData = (entryId) => {
 
   useEffect(() => {
     fetchData();
-  }, [entryId]);
+  }, [fetchData]); // Add fetchData to the dependency array
 
   const handlePlayerClick = (player, teamType) => {
     if (selectedPlayer === null) {

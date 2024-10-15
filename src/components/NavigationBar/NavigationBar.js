@@ -12,12 +12,26 @@ import {
 import './styles.css';
 
 const NavigationBar = ({ entryId, setEntryId, handleEntryIdSubmit, toggleTeamView, isHighestPredictedTeam }) => {
+  const [isSubmitted, setIsSubmitted] = React.useState(false);
+
   const handleSubmit = () => {
     handleEntryIdSubmit();
+    setIsSubmitted(true);
+    if (!isHighestPredictedTeam) {
+      toggleTeamView(); // Automatically switch to the user's team after submission
+    }
   };
 
-  const handleToggle = () => {
-    toggleTeamView();
+  const handleToggleMyTeam = () => {
+    if (isSubmitted && isHighestPredictedTeam) {
+      toggleTeamView();
+    }
+  };
+
+  const handleToggleHighestTeam = () => {
+    if (!isHighestPredictedTeam) {
+      toggleTeamView();
+    }
   };
 
   return (
@@ -57,10 +71,18 @@ const NavigationBar = ({ entryId, setEntryId, handleEntryIdSubmit, toggleTeamVie
             Submit
           </Button>
           <Button
-            onClick={ handleToggle }
+            onClick={ handleToggleMyTeam }
             sx={ { my: 2, color: 'white', display: 'block' } }
+            disabled={ !isSubmitted || !isHighestPredictedTeam }
           >
-            { isHighestPredictedTeam ? 'My Team' : 'Highest Team' }
+            My Team
+          </Button>
+          <Button
+            onClick={ handleToggleHighestTeam }
+            sx={ { my: 2, color: 'white', display: 'block' } }
+            disabled={ isHighestPredictedTeam }
+          >
+            Highest Team
           </Button>
         </Toolbar>
       </Container>
