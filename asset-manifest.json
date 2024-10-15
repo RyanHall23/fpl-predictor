@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/fpl-predictor/static/css/main.9047a26a.css",
+    "main.css": "/fpl-predictor/static/css/main.9ff7e800.css",
     "main.js": "/fpl-predictor/static/js/main.8caa9d21.js",
     "static/js/453.e1dc9d24.chunk.js": "/fpl-predictor/static/js/453.e1dc9d24.chunk.js",
     "index.html": "/fpl-predictor/index.html",
-    "main.9047a26a.css.map": "/fpl-predictor/static/css/main.9047a26a.css.map",
+    "main.9ff7e800.css.map": "/fpl-predictor/static/css/main.9ff7e800.css.map",
     "main.8caa9d21.js.map": "/fpl-predictor/static/js/main.8caa9d21.js.map",
     "453.e1dc9d24.chunk.js.map": "/fpl-predictor/static/js/453.e1dc9d24.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.9047a26a.css",
+    "static/css/main.9ff7e800.css",
     "static/js/main.8caa9d21.js"
   ]
 }
