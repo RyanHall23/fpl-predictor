@@ -16,6 +16,8 @@ const App = () => {
     snackbarMessage,
     handlePlayerClick,
     calculateTotalPredictedPoints,
+    toggleTeamView,
+    isHighestPredictedTeam,
   } = useTeamData(submittedEntryId);
 
   const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -49,8 +51,10 @@ const App = () => {
         entryId={ entryId }
         setEntryId={ setEntryId }
         handleEntryIdSubmit={ handleEntryIdSubmit }
+        toggleTeamView={ toggleTeamView }
+        isHighestPredictedTeam={ isHighestPredictedTeam }
       />
-      <Container sx={ { marginTop: '64px' } }>
+      <Container sx={ { marginTop: '4px' } }>
         <Box
           sx={ {
             display: 'flex',
