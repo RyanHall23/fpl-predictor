@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 const useTeamData = (entryId) => {
   const [mainTeamData, setMainTeamData] = useState([]);
