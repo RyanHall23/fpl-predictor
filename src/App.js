@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Container, Snackbar, Typography } from '@mui/material';
 import Grid from '@mui/material/Grid2';
 import { useEffect, useState } from 'react';
-import Sidebar from './components/Sidebar/Sidebar';
+import TopNavBar from './components/NavigationBar/NavigationBar';
 import TeamFormation from './components/TeamFormation/TeamFormation';
 import useTeamData from './hooks/useTeamData';
 
@@ -44,44 +44,47 @@ const App = () => {
   };
 
   return (
-    <Container>
-      <Sidebar
+    <>
+      <TopNavBar
         entryId={ entryId }
         setEntryId={ setEntryId }
         handleEntryIdSubmit={ handleEntryIdSubmit }
       />
-      <Box
-        sx={ {
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        } }>
-        <Typography variant='h4' align='center' gutterBottom>
-          FPL Predictor
-        </Typography>
-        <Typography variant='body1' align='center' gutterBottom>
-          Total Predicted Points:{ ' ' }
-          <Box component='span' sx={ { fontWeight: 'bold' } }>
-            { calculateTotalPredictedPoints(mainTeamData) }
-          </Box>
-        </Typography>
-        <Grid container spacing={ 2 } justifyContent='center'>
-          <Grid md={ 10 }>
-            <TeamFormation
-              mainTeam={ mainTeamData }
-              benchTeam={ benchTeamData }
-              onPlayerClick={ handlePlayerClick }
-            />
+      <Container sx={ { marginTop: '64px' } }>
+        <Box
+          sx={ {
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+          } }
+        >
+          <Typography variant='h4' align='center' gutterBottom>
+            FPL Predictor
+          </Typography>
+          <Typography variant='body1' align='center' gutterBottom>
+            Total Predicted Points:{ ' ' }
+            <Box component='span' sx={ { fontWeight: 'bold' } }>
+              { calculateTotalPredictedPoints(mainTeamData) }
+            </Box>
+          </Typography>
+          <Grid container spacing={ 2 } justifyContent='center'>
+            <Grid md={ 10 }>
+              <TeamFormation
+                mainTeam={ mainTeamData }
+                benchTeam={ benchTeamData }
+                onPlayerClick={ handlePlayerClick }
+              />
+            </Grid>
           </Grid>
-        </Grid>
-      </Box>
-      <Snackbar
-        open={ snackbarOpen }
-        autoHideDuration={ 6000 }
-        onClose={ handleSnackbarClose }
-        message={ snackbarMessage }
-      />
-    </Container>
+        </Box>
+        <Snackbar
+          open={ snackbarOpen }
+          autoHideDuration={ 6000 }
+          onClose={ handleSnackbarClose }
+          message={ snackbarMessage }
+        />
+      </Container>
+    </>
   );
 };
 
