@@ -1,12 +1,14 @@
 import * as React from 'react';
 import PropTypes from 'prop-types';
-import AppBar from '@mui/material/AppBar';
-import Box from '@mui/material/Box';
-import Toolbar from '@mui/material/Toolbar';
-import Typography from '@mui/material/Typography';
-import Container from '@mui/material/Container';
-import Button from '@mui/material/Button';
-import TextField from '@mui/material/TextField';
+import {
+  AppBar,
+  Box,
+  Toolbar,
+  Typography,
+  Container,
+  Button,
+  TextField
+} from '@mui/material';
 import './styles.css';
 
 const NavigationBar = ({ entryId, setEntryId, handleEntryIdSubmit, toggleTeamView, isHighestPredictedTeam }) => {
