@@ -5,6 +5,180 @@ const useTeamData = (entryId) => {
   const [benchTeamData, setBenchTeamData] = useState([]);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [isHighestPredictedTeam, setIsHighestPredictedTeam] = useState(false);
+
+  const fetchHighestPredictedTeam = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/bootstrap-static');
+      const result = await response.json();
+
+      const players = result.elements;
+
+      // Separate players by position
+      const goalkeepers = players.filter((player) => player.element_type === 1);
+      const defenders = players.filter((player) => player.element_type === 2);
+      const midfielders = players.filter((player) => player.element_type === 3);
+      const forwards = players.filter((player) => player.element_type === 4);
+
+      // Sort players by ep_next in descending order
+      goalkeepers.sort((a, b) => b.ep_next - a.ep_next);
+      defenders.sort((a, b) => b.ep_next - a.ep_next);
+      midfielders.sort((a, b) => b.ep_next - a.ep_next);
+      forwards.sort((a, b) => b.ep_next - a.ep_next);
+
+      // Select top players for each position
+      const squad = [
+        ...goalkeepers.slice(0, 2), // 2 goalkeepers
+        ...defenders.slice(0, 5), // 5 defenders
+        ...midfielders.slice(0, 5), // 5 midfielders
+        ...forwards.slice(0, 3), // 3 forwards
+      ];
+
+      // Sort squad by ep_next in descending order
+      squad.sort((a, b) => b.ep_next - a.ep_next);
+
+      const initialTeam = [];
+      const initialBench = [];
+
+      const positionLimits = {
+        1: { initial: 1, total: 1 }, // goalkeeper
+        2: { initial: 3, total: 5 }, // defender
+        3: { initial: 3, total: 5 }, // midfielder
+        4: { initial: 1, total: 3 }, // forward
+      };
+
+      const positionCounts = {
+        1: 0, // goalkeeper
+        2: 0, // defender
+        3: 0, // midfielder
+        4: 0, // forward
+      };
+
+      // Add one goalkeeper to the initial team
+      if (goalkeepers.length > 0) {
+        initialTeam.push(goalkeepers[0]);
+        positionCounts[1]++;
+      }
+
+      // Add one goalkeeper to the bench team
+      if (goalkeepers.length > 1) {
+        initialBench.push(goalkeepers[1]);
+      }
+
+      // Add outfield players to the initial team and bench team
+      for (const player of squad) {
+        const position = player.element_type;
+        if (position !== 1) {
+          // Explicitly exclude goalkeepers
+          if (
+            initialTeam.length < 11 &&
+            positionCounts[position] < positionLimits[position].initial
+          ) {
+            initialTeam.push(player);
+            positionCounts[position]++;
+          } else {
+            initialBench.push(player);
+          }
+        }
+      }
+
+      // Ensure the total count of players across both teams meets the requirements
+      while (initialTeam.length < 11) {
+        const player = initialBench.shift();
+        if (player.element_type !== 1) {
+          // Skip goalkeepers
+          initialTeam.push(player);
+          positionCounts[player.element_type]++;
+        }
+      }
+
+      // Ensure only three other players on the bench, excluding the goalkeeper
+      const outfieldBench = initialBench.filter(
+        (player) => player.element_type !== 1,
+      );
+      initialBench.length = 0; // Clear the bench
+      initialBench.push(goalkeepers[1]); // Re-add the goalkeeper
+      initialBench.push(...outfieldBench.slice(0, 3)); // Add only the first 3 outfield players
+
+      const formatPlayer = (player) => ({
+        name: `${player.first_name} ${player.second_name}`,
+        team: player.team,
+        position: player.element_type,
+        predictedPoints: Math.round(player.ep_next),
+        code: player.code,
+        webName: player.web_name,
+        lastGwPoints: player.event_points,
+        inDreamteam: player.in_dreamteam,
+        totalPoints: player.total_points,
+      });
+
+      setMainTeamData(initialTeam.map(formatPlayer));
+      setBenchTeamData(initialBench.map(formatPlayer));
+    } catch (error) {
+      console.error('Error fetching highest predicted team data:', error);
+    }
+  };
+
+  const fetchData = async () => {
+    if (!entryId) return;
+
+    try {
+      const response = await fetch('http://localhost:5000/api/bootstrap-static');
+      const result = await response.json();
+
+      const CurrentEvent = result.events.find(
+        (event) => event.is_current === true,
+      );
+      if (!CurrentEvent) {
+        throw new Error('No current event found.');
+      }
+
+      const eventId = CurrentEvent.id;
+      const fetchPlayerSquad = await fetch(
+        `http://localhost:5000/api/entry/${entryId}/event/${eventId}/picks`,
+      );
+      const playerSquad = await fetchPlayerSquad.json();
+
+      const elements = playerSquad.picks.map((pick) => pick.element);
+      const positions = playerSquad.picks.map((pick) => pick.position);
+
+      const playersData = result.elements;
+      const mainTeam = [];
+      const bench = [];
+
+      playersData.forEach((player) => {
+        const index = elements.indexOf(player.id);
+        if (index !== -1) {
+          const playerName = `${player.first_name} ${player.second_name}`;
+          const playerData = {
+            name: playerName,
+            team: player.team,
+            position: player.element_type,
+            predictedPoints: Math.round(player.ep_next),
+            code: player.code,
+            webName: player.web_name,
+            lastGwPoints: player.event_points,
+            inDreamteam: player.in_dreamteam,
+            totalPoints: player.total_points,
+          };
+
+          if (positions[index] > 11) {
+            bench.push(playerData);
+          } else {
+            mainTeam.push(playerData);
+          }
+        }
+      });
+
+      setMainTeamData(mainTeam);
+      setBenchTeamData(bench);
+
+      console.log('Main Team:', mainTeam);
+      console.log('Bench:', bench);
+    } catch (error) {
+      console.error('Error fetching team data:', error);
+    }
+  };
 
   useEffect(() => {
     const fetchInitialSquad = async () => {
@@ -142,69 +316,6 @@ const useTeamData = (entryId) => {
   }, []);
 
   useEffect(() => {
-    if (!entryId) return;
-
-    const fetchData = async () => {
-      try {
-        const response = await fetch(
-          'http://localhost:5000/api/bootstrap-static',
-        );
-        const result = await response.json();
-
-        const CurrentEvent = result.events.find(
-          (event) => event.is_current === true,
-        );
-        if (!CurrentEvent) {
-          throw new Error('No current event found.');
-        }
-
-        const eventId = CurrentEvent.id;
-        const fetchPlayerSquad = await fetch(
-          `http://localhost:5000/api/entry/${entryId}/event/${eventId}/picks`,
-        );
-        const playerSquad = await fetchPlayerSquad.json();
-
-        const elements = playerSquad.picks.map((pick) => pick.element);
-        const positions = playerSquad.picks.map((pick) => pick.position);
-
-        const playersData = result.elements;
-        const mainTeam = [];
-        const bench = [];
-
-        playersData.forEach((player) => {
-          const index = elements.indexOf(player.id);
-          if (index !== -1) {
-            const playerName = `${player.first_name} ${player.second_name}`;
-            const playerData = {
-              name: playerName,
-              team: player.team,
-              position: player.element_type,
-              predictedPoints: Math.round(player.ep_next),
-              code: player.code,
-              webName: player.web_name,
-              lastGwPoints: player.event_points,
-              inDreamteam: player.in_dreamteam,
-              totalPoints: player.total_points,
-            };
-
-            if (positions[index] > 11) {
-              bench.push(playerData);
-            } else {
-              mainTeam.push(playerData);
-            }
-          }
-        });
-
-        setMainTeamData(mainTeam);
-        setBenchTeamData(bench);
-
-        console.log('Main Team:', mainTeam);
-        console.log('Bench:', bench);
-      } catch (error) {
-        console.error('Error fetching team data:', error);
-      }
-    };
-
     fetchData();
   }, [entryId]);
 
@@ -321,12 +432,24 @@ const useTeamData = (entryId) => {
     return totalPoints;
   };
 
+  const toggleTeamView = () => {
+    setIsHighestPredictedTeam((prev) => !prev);
+    if (!isHighestPredictedTeam) {
+      fetchHighestPredictedTeam();
+    } else {
+      // Re-fetch user's team data
+      fetchData();
+    }
+  };
+
   return {
     mainTeamData,
     benchTeamData,
     snackbarMessage,
     handlePlayerClick,
     calculateTotalPredictedPoints,
+    toggleTeamView,
+    isHighestPredictedTeam,
   };
 };
 
