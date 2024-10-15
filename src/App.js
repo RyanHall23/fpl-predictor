@@ -1,14 +1,19 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Container, Snackbar, Typography } from '@mui/material';
 import Grid from '@mui/material/Grid2';
-import { useEffect, useState } from 'react';
 import TopNavBar from './components/NavigationBar/NavigationBar';
 import TeamFormation from './components/TeamFormation/TeamFormation';
+import Login from './components/Login/Login';
+import SignUp from './components/SignUp/SignUp';
 import useTeamData from './hooks/useTeamData';
 
 const App = () => {
   const [entryId, setEntryId] = useState('');
   const [submittedEntryId, setSubmittedEntryId] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [showAuthForm, setShowAuthForm] = useState(false);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
 
   const {
     mainTeamData,
@@ -19,8 +24,6 @@ const App = () => {
     toggleTeamView,
     isHighestPredictedTeam,
   } = useTeamData(submittedEntryId);
-
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
 
   useEffect(() => {
     if (snackbarMessage) {
@@ -45,6 +48,24 @@ const App = () => {
     setSubmittedEntryId(entryId);
   };
 
+  const handleLogin = () => {
+    setIsAuthenticated(true);
+    setShowAuthForm(false);
+  };
+
+  const handleSignUp = () => {
+    setIsSignUp(false);
+    setShowAuthForm(false);
+  };
+
+  const handleToggleAuthForm = () => {
+    setShowAuthForm((prev) => !prev);
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+  };
+
   return (
     <>
       <TopNavBar
@@ -53,41 +74,53 @@ const App = () => {
         handleEntryIdSubmit={ handleEntryIdSubmit }
         toggleTeamView={ toggleTeamView }
         isHighestPredictedTeam={ isHighestPredictedTeam }
+        onLoginClick={ () => { setIsSignUp(false); handleToggleAuthForm(); } }
+        onSignUpClick={ () => { setIsSignUp(true); handleToggleAuthForm(); } }
+        onLogoutClick={ handleLogout }
       />
-      <Container sx={ { marginTop: '4px' } }>
-        <Box
-          sx={ {
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-          } }
-        >
-          <Typography variant='h4' align='center' gutterBottom>
-            FPL Predictor
-          </Typography>
-          <Typography variant='body1' align='center' gutterBottom>
-            Total Predicted Points:{ ' ' }
-            <Box component='span' sx={ { fontWeight: 'bold' } }>
-              { calculateTotalPredictedPoints(mainTeamData) }
-            </Box>
-          </Typography>
-          <Grid container spacing={ 2 } justifyContent='center'>
-            <Grid md={ 10 }>
-              <TeamFormation
-                mainTeam={ mainTeamData }
-                benchTeam={ benchTeamData }
-                onPlayerClick={ handlePlayerClick }
-              />
+      { showAuthForm && (
+        isSignUp ? (
+          <SignUp onSignUp={ handleSignUp } />
+        ) : (
+          <Login onLogin={ handleLogin } onToggle={ handleToggleAuthForm } />
+        )
+      ) }
+      { isAuthenticated && (
+        <Container sx={ { marginTop: '4px' } }>
+          <Box
+            sx={ {
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+            } }
+          >
+            <Typography variant='h4' align='center' gutterBottom>
+              FPL Predictor
+            </Typography>
+            <Typography variant='body1' align='center' gutterBottom>
+              Total Predicted Points:{ ' ' }
+              <Box component='span' sx={ { fontWeight: 'bold' } }>
+                { calculateTotalPredictedPoints(mainTeamData) }
+              </Box>
+            </Typography>
+            <Grid container spacing={ 2 } justifyContent='center'>
+              <Grid md={ 10 }>
+                <TeamFormation
+                  mainTeam={ mainTeamData }
+                  benchTeam={ benchTeamData }
+                  onPlayerClick={ handlePlayerClick }
+                />
+              </Grid>
             </Grid>
-          </Grid>
-        </Box>
-        <Snackbar
-          open={ snackbarOpen }
-          autoHideDuration={ 6000 }
-          onClose={ handleSnackbarClose }
-          message={ snackbarMessage }
-        />
-      </Container>
+          </Box>
+          <Snackbar
+            open={ snackbarOpen }
+            autoHideDuration={ 6000 }
+            onClose={ handleSnackbarClose }
+            message={ snackbarMessage }
+          />
+        </Container>
+      ) }
     </>
   );
 };

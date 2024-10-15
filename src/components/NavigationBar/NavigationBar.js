@@ -7,12 +7,24 @@ import {
   Typography,
   Container,
   Button,
-  TextField
+  TextField,
+  IconButton,
+  Avatar
 } from '@mui/material';
 import './styles.css';
 
-const NavigationBar = ({ entryId, setEntryId, handleEntryIdSubmit, toggleTeamView, isHighestPredictedTeam }) => {
+const NavigationBar = ({
+  entryId,
+  setEntryId,
+  handleEntryIdSubmit,
+  toggleTeamView,
+  isHighestPredictedTeam,
+  onLoginClick,
+  onSignUpClick,
+  onLogoutClick
+}) => {
   const [isSubmitted, setIsSubmitted] = React.useState(false);
+  const [isAuthenticated, setIsAuthenticated] = React.useState(!!localStorage.getItem('token'));
 
   const handleSubmit = () => {
     handleEntryIdSubmit();
@@ -32,6 +44,12 @@ const NavigationBar = ({ entryId, setEntryId, handleEntryIdSubmit, toggleTeamVie
     if (!isHighestPredictedTeam) {
       toggleTeamView();
     }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    setIsAuthenticated(false);
+    onLogoutClick();
   };
 
   return (
@@ -84,6 +102,18 @@ const NavigationBar = ({ entryId, setEntryId, handleEntryIdSubmit, toggleTeamVie
           >
             Highest Team
           </Button>
+          <Box sx={ { flexGrow: 1 } } />
+          <IconButton edge='start' color='inherit' aria-label='menu'>
+            <Avatar alt='User Avatar' src='/static/images/avatar/1.jpg' />
+          </IconButton>
+          { !isAuthenticated ? (
+            <>
+              <Button color='inherit' onClick={ onLoginClick }>Login</Button>
+              <Button color='inherit' onClick={ onSignUpClick }>Sign Up</Button>
+            </>
+          ) : (
+            <Button color='inherit' onClick={ handleLogout }>Logout</Button>
+          ) }
         </Toolbar>
       </Container>
     </AppBar>
@@ -96,6 +126,9 @@ NavigationBar.propTypes = {
   handleEntryIdSubmit: PropTypes.func.isRequired,
   toggleTeamView: PropTypes.func.isRequired,
   isHighestPredictedTeam: PropTypes.bool.isRequired,
+  onLoginClick: PropTypes.func.isRequired,
+  onSignUpClick: PropTypes.func.isRequired,
+  onLogoutClick: PropTypes.func.isRequired,
 };
 
 export default NavigationBar;
