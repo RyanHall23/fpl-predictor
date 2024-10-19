@@ -11,9 +11,26 @@
 }
 
 .toolbar-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  flex-wrap: wrap; /* Allow wrapping */
+}
+
+.title {
   flex-grow: 1;
+}
+
+.nav-actions {
   display: flex;
   align-items: center;
+  gap: 16px;
+  flex-wrap: wrap; /* Allow wrapping */
+}
+
+.nav-button {
+  margin: 0 8px; /* Add margin for spacing */
 }
 
 .text-field {
@@ -22,15 +39,6 @@
   border-radius: 4px;
 }
 
-.text-field .MuiInputBase-input {
-  padding: 10px 12px;
-}
-
-.submit-button {
-  background-color: var(--secondary-color);
-  color: var(--white-color);
-}
-
-.submit-button:hover {
-  background-color: var(--hover-color);
+.username {
+  margin-right: 8px;
 }

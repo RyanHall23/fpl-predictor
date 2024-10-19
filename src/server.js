@@ -10,7 +10,7 @@ const port = 5000;
 app.use(cors());
 app.use(bodyParser.json());
 
-const users = [{ username: 'user', password: 'password', team: { mainTeam: [], benchTeam: [] } }];
+const users = [{ username: 'user', password: 'password', team: { mainTeam: [], benchTeam: [] }, teamId: '123' }];
 const secret = 'your_jwt_secret';
 
 // User authentication routes
@@ -26,13 +26,22 @@ app.post('/api/login', (req, res) => {
 });
 
 app.post('/api/signup', (req, res) => {
-  const { username, password } = req.body;
-  const userExists = users.some((u) => u.username === username);
-  if (userExists) {
-    return res.status(400).json({ error: 'User already exists' });
+  const { username, password, teamId } = req.body;
+
+  // Check if the username already exists
+  const existingUser = users.find((u) => u.username === username);
+  if (existingUser) {
+    return res.status(400).json({ error: 'Username already taken' });
   }
-  users.push({ username, password, team: { mainTeam: [], benchTeam: [] } });
-  res.json({ success: true });
+
+  // Create a new user
+  const newUser = { username, password, team: { mainTeam: [], benchTeam: [] }, teamId };
+  users.push(newUser);
+
+  // Generate a token
+  const token = jwt.sign({ username }, secret, { expiresIn: '1h' });
+
+  res.json({ token });
 });
 
 app.get('/api/team', (req, res) => {
@@ -90,5 +99,5 @@ app.get('/api/element-summary/:playerId', async (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`Proxy server running on http://localhost:${port}`);
+  console.log(`Server running on http://localhost:${port}`);
 });

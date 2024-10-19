@@ -14,6 +14,7 @@ const App = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [showAuthForm, setShowAuthForm] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [username, setUsername] = useState(localStorage.getItem('username') || '');
 
   const {
     mainTeamData,
@@ -51,11 +52,13 @@ const App = () => {
   const handleLogin = () => {
     setIsAuthenticated(true);
     setShowAuthForm(false);
+    setUsername(localStorage.getItem('username'));
   };
 
   const handleSignUp = () => {
-    setIsSignUp(false);
+    setIsAuthenticated(true);
     setShowAuthForm(false);
+    setUsername(localStorage.getItem('username'));
   };
 
   const handleToggleAuthForm = () => {
@@ -64,6 +67,8 @@ const App = () => {
 
   const handleLogout = () => {
     setIsAuthenticated(false);
+    localStorage.removeItem('token');
+    localStorage.removeItem('username');
   };
 
   return (
@@ -77,6 +82,8 @@ const App = () => {
         onLoginClick={ () => { setIsSignUp(false); handleToggleAuthForm(); } }
         onSignUpClick={ () => { setIsSignUp(true); handleToggleAuthForm(); } }
         onLogoutClick={ handleLogout }
+        isAuthenticated={ isAuthenticated }
+        username={ username }
       />
       { showAuthForm && (
         isSignUp ? (
@@ -85,42 +92,40 @@ const App = () => {
           <Login onLogin={ handleLogin } onToggle={ handleToggleAuthForm } />
         )
       ) }
-      { isAuthenticated && (
-        <Container sx={ { marginTop: '4px' } }>
-          <Box
-            sx={ {
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-            } }
-          >
-            <Typography variant='h4' align='center' gutterBottom>
-              FPL Predictor
-            </Typography>
-            <Typography variant='body1' align='center' gutterBottom>
-              Total Predicted Points:{ ' ' }
-              <Box component='span' sx={ { fontWeight: 'bold' } }>
-                { calculateTotalPredictedPoints(mainTeamData) }
-              </Box>
-            </Typography>
-            <Grid container spacing={ 2 } justifyContent='center'>
-              <Grid md={ 10 }>
-                <TeamFormation
-                  mainTeam={ mainTeamData }
-                  benchTeam={ benchTeamData }
-                  onPlayerClick={ handlePlayerClick }
-                />
-              </Grid>
+      <Container sx={ { marginTop: '4px' } }>
+        <Box
+          sx={ {
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+          } }
+        >
+          <Typography variant='h4' align='center' gutterBottom>
+            FPL Predictor
+          </Typography>
+          <Typography variant='body1' align='center' gutterBottom>
+            Total Predicted Points:{ ' ' }
+            <Box component='span' sx={ { fontWeight: 'bold' } }>
+              { calculateTotalPredictedPoints(mainTeamData) }
+            </Box>
+          </Typography>
+          <Grid container spacing={ 2 } justifyContent='center'>
+            <Grid md={ 10 }>
+              <TeamFormation
+                mainTeam={ mainTeamData }
+                benchTeam={ benchTeamData }
+                onPlayerClick={ handlePlayerClick }
+              />
             </Grid>
-          </Box>
-          <Snackbar
-            open={ snackbarOpen }
-            autoHideDuration={ 6000 }
-            onClose={ handleSnackbarClose }
-            message={ snackbarMessage }
-          />
-        </Container>
-      ) }
+          </Grid>
+        </Box>
+        <Snackbar
+          open={ snackbarOpen }
+          autoHideDuration={ 6000 }
+          onClose={ handleSnackbarClose }
+          message={ snackbarMessage }
+        />
+      </Container>
     </>
   );
 };
