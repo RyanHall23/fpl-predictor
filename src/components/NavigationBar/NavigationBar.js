@@ -1,101 +1,108 @@
-import * as React from 'react';
+import React from 'react';
 import PropTypes from 'prop-types';
-import {
-  AppBar,
-  Box,
-  Toolbar,
-  Typography,
-  Container,
-  Button,
-  TextField
-} from '@mui/material';
-import './styles.css';
+import { AppBar, Toolbar, Typography, Button, Avatar, Menu, MenuItem, TextField } from '@mui/material';
+import { deepPurple } from '@mui/material/colors';
+import './styles.css'; // Ensure you have the styles imported
 
-const NavigationBar = ({ entryId, setEntryId, handleEntryIdSubmit, toggleTeamView, isHighestPredictedTeam }) => {
-  const [isSubmitted, setIsSubmitted] = React.useState(false);
+const NavigationBar = ({
+  entryId,
+  setEntryId,
+  handleEntryIdSubmit,
+  toggleTeamView,
+  isHighestPredictedTeam,
+  onLoginClick,
+  onSignUpClick,
+  onLogoutClick,
+  isAuthenticated,
+  username,
+}) => {
+  const [anchorEl, setAnchorEl] = React.useState(null);
 
-  const handleSubmit = () => {
-    handleEntryIdSubmit();
-    setIsSubmitted(true);
-    if (!isHighestPredictedTeam) {
-      toggleTeamView(); // Automatically switch to the user's team after submission
-    }
+  const handleAvatarClick = (event) => {
+    setAnchorEl(event.currentTarget);
   };
 
-  const handleToggleMyTeam = () => {
-    if (isSubmitted && isHighestPredictedTeam) {
-      toggleTeamView();
-    }
+  const handleMenuClose = () => {
+    setAnchorEl(null);
   };
 
-  const handleToggleHighestTeam = () => {
-    if (!isHighestPredictedTeam) {
-      toggleTeamView();
-    }
-  };
+  const storedUsername = localStorage.getItem('username'); // Retrieve username from local storage
 
   return (
-    <AppBar position='static'>
-      <Container maxWidth='xl'>
-        <Toolbar disableGutters>
-          <Typography
-            variant='h6'
-            noWrap
-            component='a'
-            href='#'
-            sx={ {
-              mr: 2,
-              display: { xs: 'none', md: 'flex' },
-              fontFamily: 'monospace',
-              fontWeight: 700,
-              letterSpacing: '.3rem',
-              color: 'inherit',
-              textDecoration: 'none',
-            } }
-          >
-            LOGO
-          </Typography>
-          <Box sx={ { flexGrow: 1, maxWidth: '150px' } }>
-            <TextField
-              value={ entryId }
-              onChange={ (e) => setEntryId(e.target.value) }
-              fullWidth
-              className='text-field'
-              inputProps={ { maxLength: 10 } }
-            />
-          </Box>
+    <AppBar position='static' className='app-bar'>
+      <Toolbar className='toolbar-box'>
+        <Typography variant='h6' className='title'>
+          FPL Predictor
+        </Typography>
+        <div className='nav-actions'>
+          <TextField
+            label='Entry ID'
+            value={ entryId }
+            onChange={ (e) => setEntryId(e.target.value) }
+            className='text-field'
+          />
           <Button
-            onClick={ handleSubmit }
-            sx={ { my: 2, color: 'white', display: 'block' } }
+            variant='contained'
+            color='secondary'
+            onClick={ handleEntryIdSubmit }
+            className='nav-button'
           >
             Submit
           </Button>
           <Button
-            onClick={ handleToggleMyTeam }
-            sx={ { my: 2, color: 'white', display: 'block' } }
-            disabled={ !isSubmitted || !isHighestPredictedTeam }
+            variant='contained'
+            color='secondary'
+            onClick={ toggleTeamView }
+            className='nav-button'
           >
-            My Team
+            { isHighestPredictedTeam ? 'View My Team' : 'View Predicted Team' }
           </Button>
-          <Button
-            onClick={ handleToggleHighestTeam }
-            sx={ { my: 2, color: 'white', display: 'block' } }
-            disabled={ isHighestPredictedTeam }
-          >
-            Highest Team
-          </Button>
-        </Toolbar>
-      </Container>
+          { isAuthenticated ? (
+            <>
+              <Typography variant='body1' className='username'>
+                { `Welcome, ${storedUsername || username}` }
+              </Typography>
+              <Avatar
+                sx={ { bgcolor: deepPurple[500] } }
+                onClick={ handleAvatarClick }
+              >
+                { (storedUsername || username).charAt(0).toUpperCase() }
+              </Avatar>
+              <Menu
+                anchorEl={ anchorEl }
+                open={ Boolean(anchorEl) }
+                onClose={ handleMenuClose }
+              >
+                <MenuItem onClick={ onLogoutClick }>Logout</MenuItem>
+              </Menu>
+            </>
+          ) : (
+            <>
+              <Button color='inherit' onClick={ onLoginClick } className='nav-button'>
+                Login
+              </Button>
+              <Button color='inherit' onClick={ onSignUpClick } className='nav-button'>
+                Sign Up
+              </Button>
+            </>
+          ) }
+        </div>
+      </Toolbar>
     </AppBar>
   );
 };
 
 NavigationBar.propTypes = {
-  entryId: PropTypes.string.isRequired,
+  entryId: PropTypes.string,
   setEntryId: PropTypes.func.isRequired,
   handleEntryIdSubmit: PropTypes.func.isRequired,
   toggleTeamView: PropTypes.func.isRequired,
   isHighestPredictedTeam: PropTypes.bool.isRequired,
+  onLoginClick: PropTypes.func.isRequired,
+  onSignUpClick: PropTypes.func.isRequired,
+  onLogoutClick: PropTypes.func.isRequired,
+  isAuthenticated: PropTypes.bool.isRequired,
+  username: PropTypes.string,
 };
 
 export default NavigationBar;

@@ -1,14 +1,20 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Container, Snackbar, Typography } from '@mui/material';
 import Grid from '@mui/material/Grid2';
-import { useEffect, useState } from 'react';
 import TopNavBar from './components/NavigationBar/NavigationBar';
 import TeamFormation from './components/TeamFormation/TeamFormation';
+import Login from './components/Login/Login';
+import SignUp from './components/SignUp/SignUp';
 import useTeamData from './hooks/useTeamData';
 
 const App = () => {
   const [entryId, setEntryId] = useState('');
   const [submittedEntryId, setSubmittedEntryId] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [showAuthForm, setShowAuthForm] = useState(false);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [username, setUsername] = useState(localStorage.getItem('username') || '');
 
   const {
     mainTeamData,
@@ -19,8 +25,6 @@ const App = () => {
     toggleTeamView,
     isHighestPredictedTeam,
   } = useTeamData(submittedEntryId);
-
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
 
   useEffect(() => {
     if (snackbarMessage) {
@@ -45,6 +49,28 @@ const App = () => {
     setSubmittedEntryId(entryId);
   };
 
+  const handleLogin = () => {
+    setIsAuthenticated(true);
+    setShowAuthForm(false);
+    setUsername(localStorage.getItem('username'));
+  };
+
+  const handleSignUp = () => {
+    setIsAuthenticated(true);
+    setShowAuthForm(false);
+    setUsername(localStorage.getItem('username'));
+  };
+
+  const handleToggleAuthForm = () => {
+    setShowAuthForm((prev) => !prev);
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    localStorage.removeItem('token');
+    localStorage.removeItem('username');
+  };
+
   return (
     <>
       <TopNavBar
@@ -53,7 +79,19 @@ const App = () => {
         handleEntryIdSubmit={ handleEntryIdSubmit }
         toggleTeamView={ toggleTeamView }
         isHighestPredictedTeam={ isHighestPredictedTeam }
+        onLoginClick={ () => { setIsSignUp(false); handleToggleAuthForm(); } }
+        onSignUpClick={ () => { setIsSignUp(true); handleToggleAuthForm(); } }
+        onLogoutClick={ handleLogout }
+        isAuthenticated={ isAuthenticated }
+        username={ username }
       />
+      { showAuthForm && (
+        isSignUp ? (
+          <SignUp onSignUp={ handleSignUp } />
+        ) : (
+          <Login onLogin={ handleLogin } onToggle={ handleToggleAuthForm } />
+        )
+      ) }
       <Container sx={ { marginTop: '4px' } }>
         <Box
           sx={ {
