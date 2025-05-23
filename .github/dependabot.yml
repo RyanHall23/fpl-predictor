@@ -1,0 +1,13 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/" # Location of package.json
+    schedule:
+      interval: "daily" # or "weekly", "monthly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+    # Optionally, enable auto-merge for patch/minor updates:
+    # (Requires GitHub repo settings to allow auto-merge)
+    # allow:
+    #   - dependency-type: "all"
