@@ -66,16 +66,18 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
             <Grid container spacing={ 2 } justifyContent='center'>
               <Grid size={ 12 }>
                 <Grid container spacing={ 2 } justifyContent='center'>
-                  { goalkeepers.map((player, index) => (
-                    <Grid size={ 12 } key={ player.name }>
-                      <PlayerCard
-                        player={ player }
-                        onClick={ () => onPlayerClick(player, 'main') }
-                        index={ index }
-                        isCaptain={ player === captain }
-                      />
-                    </Grid>
-                  )) }
+                  <Grid container spacing={ 2 } justifyContent='center' alignItems='center'>
+                    { goalkeepers.map((player, index) => (
+                      <Grid item key={ player.name } xs={ 12 } sm={ 6 } md={ 4 } lg={ 3 } xl={ 2 }>
+                        <PlayerCard
+                          player={ player }
+                          onClick={ () => onPlayerClick(player, 'main') }
+                          index={ index }
+                          isCaptain={ player === captain }
+                        />
+                      </Grid>
+                    )) }
+                  </Grid>
                 </Grid>
               </Grid>
               <Grid size={ 12 }>
