@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Container, Snackbar, Typography } from '@mui/material';
-import Grid from '@mui/material/Grid2';
+import Grid from '@mui/material/Grid';
 import { useEffect, useState } from 'react';
 import TopNavBar from './components/NavigationBar/NavigationBar';
 import TeamFormation from './components/TeamFormation/TeamFormation';
