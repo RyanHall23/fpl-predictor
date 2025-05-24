@@ -39,7 +39,11 @@ const PlayerCard = ({ player, onClick, isCaptain, resetClick }) => {
       <CardContent className='card-content'>
         <Box className='avatar-box'>
           <Avatar
-            src={ `//resources.premierleague.com/premierleague/photos/players/250x250/p${player.code}.png` }
+            src={
+              player.position === 5
+                ? `//resources.premierleague.com/premierleague/photos/managers/250x250/man${parseInt(player.code, 10) - 100000000 + 1}.png`
+                : `//resources.premierleague.com/premierleague/photos/players/250x250/p${player.code}.png`
+            }
             alt={ player.webName }
             className='avatar'
           />
@@ -55,23 +59,27 @@ const PlayerCard = ({ player, onClick, isCaptain, resetClick }) => {
             </Typography>
           </Box>
         </Box>
-        <Button
-          onClick={ handleClick }
-          size='small'
-          className={ `action-button ${clicked ? 'clicked' : 'not-clicked'}` }
-        >
-          { clicked ? <ArrowBackIcon /> : <ArrowForwardIcon /> }
-        </Button>
+        { player.position !== 5 && (
+          <Button
+            onClick={ handleClick }
+            size='small'
+            className={ `action-button ${clicked ? 'clicked' : 'not-clicked'}` }
+          >
+            { clicked ? <ArrowBackIcon /> : <ArrowForwardIcon /> }
+          </Button>
+        ) }
       </CardContent>
     </Card>
   );
 };
+
 PlayerCard.propTypes = {
   player: PropTypes.shape({
     webName: PropTypes.string.isRequired,
     predictedPoints: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     inDreamteam: PropTypes.bool,
     code: PropTypes.number.isRequired,
+    position: PropTypes.number.isRequired,
   }).isRequired,
   onClick: PropTypes.func.isRequired,
   isCaptain: PropTypes.bool,
