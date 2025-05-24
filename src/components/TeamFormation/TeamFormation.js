@@ -34,17 +34,22 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
     2: 'DEF',
     3: 'MID',
     4: 'ATT',
+    5: 'MAN'
   };
 
   // Sort the bench team array
   const sortedBenchTeamData = benchTeamData.sort((a, b) => {
+    if (a.position === 5 && b.position !== 5) {
+      return -1;
+    } else if (a.position !== 5 && b.position === 5) {
+      return 1;
+    }
     if (a.position === 1 && b.position !== 1) {
       return -1;
     } else if (a.position !== 1 && b.position === 1) {
       return 1;
-    } else {
-      return b.predictedPoints - a.predictedPoints;
     }
+    return b.predictedPoints - a.predictedPoints;
   });
 
   // Find the player with the highest points
@@ -131,7 +136,7 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
           <Box>
             <Grid container spacing={ 2 } justifyContent='center'>
               { sortedBenchTeamData.map((player, index) => (
-                <Grid item size={ 3 } key={ player.name }>
+                <Grid item size={ 2 } key={ player.name }>
                   <Box
                     display='flex'
                     flexDirection='column'
@@ -154,6 +159,7 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
     </Grid>
   );
 };
+
 TeamFormation.propTypes = {
   mainTeam: PropTypes.array,
   benchTeam: PropTypes.array,
