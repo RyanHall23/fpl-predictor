@@ -14,25 +14,27 @@ const positionLabels = {
 };
 
 const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
-  // Find the player with the highest points (captain)
+  // Find the player with the highest points (captain, excluding manager)
   const captain = mainTeam && mainTeam.length
-    ? mainTeam.reduce(
+    ? mainTeam.filter(p => p.position !== 5).reduce(
         (max, player) =>
           parseFloat(player.predictedPoints) > parseFloat(max.predictedPoints)
             ? player
             : max,
-        mainTeam[0],
+        mainTeam.filter(p => p.position !== 5)[0],
       )
     : null;
 
-  // Group main team by position
+  // Manager is always first in mainTeam
+  const manager = mainTeam && mainTeam[0] && mainTeam[0].position === 5 ? mainTeam[0] : null;
   const gks = mainTeam.filter(p => p.position === 1);
+
   const defs = mainTeam.filter(p => p.position === 2);
   const mids = mainTeam.filter(p => p.position === 3);
   const atts = mainTeam.filter(p => p.position === 4);
 
   // For the bench: manager first, then GK, then outfield
-  const manager = benchTeam && benchTeam.find(p => p.position === 5);
+  const benchManager = benchTeam && benchTeam.find(p => p.position === 5);
   const benchGK = benchTeam && benchTeam.find(p => p.position === 1);
   const benchOutfield = benchTeam
     ? benchTeam.filter(p => p.position !== 1 && p.position !== 5)
@@ -43,18 +45,31 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
       <Grid size={ 10 }>
         <Paper className='main-paper'>
           <Box>
-            { /* GK row */ }
-            <Grid container spacing={ 2 } justifyContent='center'>
+            { /* GK and Manager row, centered together */ }
+            <Grid container justifyContent='center' alignItems='center' spacing={ 2 }>
               { gks.map((player, index) => (
-                <Grid item xs={ 12 } sm={ 6 } md={ 4 } lg={ 3 } xl={ 2 } key={ player.code || player.name }>
+                <Grid item key={ player.code || player.name }>
                   <PlayerCard
                     player={ player }
                     onClick={ () => onPlayerClick(player, 'main') }
-                    index={ index }
+                    index={ index + 1 }
                     isCaptain={ player === captain }
                   />
                 </Grid>
               )) }
+              { manager && (
+                <Grid container justifyContent='center' alignItems='center' spacing={ 2 }>
+                  <Box display='flex' flexDirection='column' alignItems='center'>
+                    <Typography align='center' variant='subtitle1'>
+                    </Typography>
+                    <PlayerCard
+                      player={ manager }
+                      onClick={ () => onPlayerClick(manager, 'main') }
+                      index={ 0 }
+                    />
+                  </Box>
+                </Grid>
+              ) }
             </Grid>
             { /* DEF row */ }
             <Grid container spacing={ 2 } justifyContent='center'>
@@ -63,7 +78,7 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
                   <PlayerCard
                     player={ player }
                     onClick={ () => onPlayerClick(player, 'main') }
-                    index={ index }
+                    index={ index + 1 + gks.length }
                     isCaptain={ player === captain }
                   />
                 </Grid>
@@ -76,7 +91,7 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
                   <PlayerCard
                     player={ player }
                     onClick={ () => onPlayerClick(player, 'main') }
-                    index={ index }
+                    index={ index + 1 + gks.length + defs.length }
                     isCaptain={ player === captain }
                   />
                 </Grid>
@@ -89,7 +104,7 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
                   <PlayerCard
                     player={ player }
                     onClick={ () => onPlayerClick(player, 'main') }
-                    index={ index }
+                    index={ index + 1 + gks.length + defs.length + mids.length }
                     isCaptain={ player === captain }
                   />
                 </Grid>
@@ -102,16 +117,16 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
         <Paper className='bench-paper'>
           <Box>
             <Grid container spacing={ 2 } justifyContent='center'>
-              { /* Manager first */ }
-              { manager && (
-                <Grid item xs={ 6 } sm={ 4 } md={ 2 } key={ manager.code || manager.name }>
+              { /* Bench manager first */ }
+              { benchManager && (
+                <Grid item xs={ 6 } sm={ 4 } md={ 2 } key={ benchManager.code || benchManager.name }>
                   <Box display='flex' flexDirection='column' alignItems='center'>
                     <Typography align='center' variant='subtitle1' mt={ 1 }>
-                      { positionLabels[manager.position] }
+                      { positionLabels[benchManager.position] }
                     </Typography>
                     <PlayerCard
-                      player={ manager }
-                      onClick={ () => onPlayerClick(manager, 'bench') }
+                      player={ benchManager }
+                      onClick={ () => onPlayerClick(benchManager, 'bench') }
                       index={ 0 }
                     />
                   </Box>

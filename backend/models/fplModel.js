@@ -28,32 +28,59 @@ const buildHighestPredictedTeam = (players) => {
   const selectedDefenders = defenders.slice(0, 5);     // 3 main, 2 bench
   const selectedMidfielders = midfielders.slice(0, 5); // 3 main, 2 bench
   const selectedForwards = forwards.slice(0, 3);       // 1 main, 2 bench
+  const selectedManagers = managers.slice(0, 2);       // 1 main, 1 bench
 
-  // Build main team and bench
-  const mainTeam = [
+  // Build main team (manager in first slot)
+  let mainTeam = [
+    selectedManagers[0],              // 1 Manager (main team, top right)
     selectedGoalkeepers[0],           // 1 GK
     ...selectedDefenders.slice(0, 3), // 3 DEF
     ...selectedMidfielders.slice(0, 3), // 3 MID
     selectedForwards[0],              // 1 FWD
   ];
 
-  // Fill up to 11 players in main team with highest ep_next from remaining DEF/MID/FWD
-  const remaining = [
+  // Fill up to 12 players in main team with highest ep_next from remaining DEF/MID/FWD
+  let remaining = [
     ...selectedDefenders.slice(3),    // 2 DEF
     ...selectedMidfielders.slice(3),  // 2 MID
     ...selectedForwards.slice(1),     // 2 FWD
   ].sort((a, b) => b.ep_next - a.ep_next);
 
-  while (mainTeam.length < 11 && remaining.length) {
+  while (mainTeam.length < 12 && remaining.length) {
     mainTeam.push(remaining.shift());
   }
 
-  // Bench: 1 GK, rest of DEF/MID/FWD not in main team, and highest manager (only one)
+  // Sort each position in mainTeam by points before returning (except manager stays first)
+  const gks = mainTeam.filter(p => p && p.element_type === 1).sort((a, b) => b.ep_next - a.ep_next);
+  const defs = mainTeam.filter(p => p && p.element_type === 2).sort((a, b) => b.ep_next - a.ep_next);
+  const mids = mainTeam.filter(p => p && p.element_type === 3).sort((a, b) => b.ep_next - a.ep_next);
+  const atts = mainTeam.filter(p => p && p.element_type === 4).sort((a, b) => b.ep_next - a.ep_next);
+
+  mainTeam = [
+    selectedManagers[0], // manager always first
+    ...gks,
+    ...defs,
+    ...mids,
+    ...atts,
+  ].filter(Boolean);
+
+  // Bench: 1 GK, rest of DEF/MID/FWD not in main team, and second highest manager
+  const benchGK = selectedGoalkeepers[1] ? [selectedGoalkeepers[1]] : [];
+  const benchOutfield = remaining.sort((a, b) => b.ep_next - a.ep_next);
+  const benchManager = selectedManagers[1] ? [selectedManagers[1]] : [];
+
+  // Sort each position in bench by points before returning
+  const benchDefs = benchOutfield.filter(p => p.element_type === 2).sort((a, b) => b.ep_next - a.ep_next);
+  const benchMids = benchOutfield.filter(p => p.element_type === 3).sort((a, b) => b.ep_next - a.ep_next);
+  const benchAtts = benchOutfield.filter(p => p.element_type === 4).sort((a, b) => b.ep_next - a.ep_next);
+
   const bench = [
-    selectedGoalkeepers[1], // 1 GK
-    ...remaining,           // 4 players to make bench 5 total
-    managers[0]             // 1 manager (highest ep_next)
-  ].filter(Boolean);        // Remove undefined if not enough players
+    ...benchManager,
+    ...benchGK,
+    ...benchDefs,
+    ...benchMids,
+    ...benchAtts,
+  ].filter(Boolean);
 
   return { mainTeam, bench };
 };
