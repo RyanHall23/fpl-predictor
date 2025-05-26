@@ -45,6 +45,9 @@ const App = () => {
     setSubmittedEntryId(entryId);
   };
 
+  // Provide a no-op function if handlePlayerClick is not defined
+  const safeHandlePlayerClick = handlePlayerClick || (() => {});
+
   return (
     <>
       <TopNavBar
@@ -76,7 +79,7 @@ const App = () => {
               <TeamFormation
                 mainTeam={ mainTeamData }
                 benchTeam={ benchTeamData }
-                onPlayerClick={ handlePlayerClick }
+                onPlayerClick={ safeHandlePlayerClick }
               />
             </Grid>
           </Grid>
