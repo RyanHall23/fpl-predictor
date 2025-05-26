@@ -33,11 +33,13 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
   const mids = mainTeam.filter(p => p.position === 3);
   const atts = mainTeam.filter(p => p.position === 4);
 
-  // For the bench: manager first, then GK, then outfield
+  // For the bench: manager first, then GK, then outfield by points
   const benchManager = benchTeam && benchTeam.find(p => p.position === 5);
   const benchGK = benchTeam && benchTeam.find(p => p.position === 1);
   const benchOutfield = benchTeam
-    ? benchTeam.filter(p => p.position !== 1 && p.position !== 5)
+    ? benchTeam
+        .filter(p => p.position !== 1 && p.position !== 5)
+        .sort((a, b) => (b.predictedPoints || 0) - (a.predictedPoints || 0))
     : [];
 
   return (
