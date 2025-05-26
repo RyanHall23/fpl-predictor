@@ -30,4 +30,4 @@ yarn-error.log*
 /**/node_modules/
 
 # Ignore specific cache and lint files
-/frontend/node_modules/.cache/.eslintcache
+/frontend/node_modules/.cache/
