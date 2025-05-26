@@ -5,128 +5,112 @@ import PropTypes from 'prop-types';
 import PlayerCard from '../PlayerCard/PlayerCard';
 import './styles.css';
 
+const positionLabels = {
+  1: 'GK',
+  2: 'DEF',
+  3: 'MID',
+  4: 'ATT',
+  5: 'MAN'
+};
+
 const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
-  const goalkeepers = mainTeam
-    ? Object.values(mainTeam)
-      .filter((player) => player.position === 1)
-      .sort((a, b) => b.predictedPoints - a.predictedPoints)
-    : [];
-  const defenders = mainTeam
-    ? Object.values(mainTeam)
-      .filter((player) => player.position === 2)
-      .sort((a, b) => b.predictedPoints - a.predictedPoints)
-    : [];
-  const midfielders = mainTeam
-    ? Object.values(mainTeam)
-      .filter((player) => player.position === 3)
-      .sort((a, b) => b.predictedPoints - a.predictedPoints)
-    : [];
-  const forwards = mainTeam
-    ? Object.values(mainTeam)
-      .filter((player) => player.position === 4)
-      .sort((a, b) => b.predictedPoints - a.predictedPoints)
-    : [];
-
-  const benchTeamData = benchTeam ? Object.values(benchTeam) : [];
-
-  const positionLabels = {
-    1: 'GK',
-    2: 'DEF',
-    3: 'MID',
-    4: 'ATT',
-    5: 'MAN'
-  };
-
-  // Sort the bench team array
-  const sortedBenchTeamData = benchTeamData.sort((a, b) => {
-    if (a.position === 5 && b.position !== 5) {
-      return -1;
-    } else if (a.position !== 5 && b.position === 5) {
-      return 1;
-    }
-    if (a.position === 1 && b.position !== 1) {
-      return -1;
-    } else if (a.position !== 1 && b.position === 1) {
-      return 1;
-    }
-    return b.predictedPoints - a.predictedPoints;
-  });
-
-  // Find the player with the highest points
-  const captain = mainTeam
-    ? Object.values(mainTeam).reduce(
-      (max, player) =>
-        parseFloat(player.predictedPoints) > parseFloat(max.predictedPoints)
-          ? player
-          : max,
-      Object.values(mainTeam)[0],
-    )
+  // Find the player with the highest points (captain, excluding manager)
+  const captain = mainTeam && mainTeam.length
+    ? mainTeam.filter(p => p.position !== 5).reduce(
+        (max, player) =>
+          parseFloat(player.predictedPoints) > parseFloat(max.predictedPoints)
+            ? player
+            : max,
+        mainTeam.filter(p => p.position !== 5)[0],
+      )
     : null;
+
+  // Manager is always first in mainTeam
+  const manager = mainTeam && mainTeam[0] && mainTeam[0].position === 5 ? mainTeam[0] : null;
+  const gks = mainTeam.filter(p => p.position === 1);
+
+  const defs = mainTeam.filter(p => p.position === 2);
+  const mids = mainTeam.filter(p => p.position === 3);
+  const atts = mainTeam.filter(p => p.position === 4);
+
+  // For the bench: manager first, then GK, then outfield by points
+  const benchManager = benchTeam && benchTeam.find(p => p.position === 5);
+  const benchGK = benchTeam && benchTeam.find(p => p.position === 1);
+  const benchOutfield = benchTeam
+    ? benchTeam
+        .filter(p => p.position !== 1 && p.position !== 5)
+        .sort((a, b) => (b.predictedPoints || 0) - (a.predictedPoints || 0))
+    : [];
 
   return (
     <Grid container spacing={ 2 } justifyContent='center'>
       <Grid size={ 10 }>
         <Paper className='main-paper'>
           <Box>
+            { /* GK and Manager row, centered together */ }
+            <Grid container justifyContent='center' alignItems='center' spacing={ 2 }>
+              { gks.map((player, index) => (
+                <Grid item key={ player.code || player.name }>
+                  <PlayerCard
+                    player={ player }
+                    onClick={ () => onPlayerClick(player, 'main') }
+                    index={ index + 1 }
+                    isCaptain={ player === captain }
+                  />
+                </Grid>
+              )) }
+              { manager && (
+                <Grid container justifyContent='center' alignItems='center' spacing={ 2 }>
+                  <Box display='flex' flexDirection='column' alignItems='center'>
+                    <Typography align='center' variant='subtitle1'>
+                    </Typography>
+                    <PlayerCard
+                      player={ manager }
+                      onClick={ () => onPlayerClick(manager, 'main') }
+                      index={ 0 }
+                    />
+                  </Box>
+                </Grid>
+              ) }
+            </Grid>
+            { /* DEF row */ }
             <Grid container spacing={ 2 } justifyContent='center'>
-              <Grid size={ 12 }>
-                <Grid container spacing={ 2 } justifyContent='center'>
-                  <Grid container spacing={ 2 } justifyContent='center' alignItems='center'>
-                    { goalkeepers.map((player, index) => (
-                      <Grid item key={ player.name } xs={ 12 } sm={ 6 } md={ 4 } lg={ 3 } xl={ 2 }>
-                        <PlayerCard
-                          player={ player }
-                          onClick={ () => onPlayerClick(player, 'main') }
-                          index={ index }
-                          isCaptain={ player === captain }
-                        />
-                      </Grid>
-                    )) }
-                  </Grid>
+              { defs.map((player, index) => (
+                <Grid item xs={ 12 } sm={ 6 } md={ 4 } lg={ 3 } xl={ 2 } key={ player.code || player.name }>
+                  <PlayerCard
+                    player={ player }
+                    onClick={ () => onPlayerClick(player, 'main') }
+                    index={ index + 1 + gks.length }
+                    isCaptain={ player === captain }
+                  />
                 </Grid>
-              </Grid>
-              <Grid size={ 12 }>
-                <Grid container spacing={ 2 } justifyContent='center'>
-                  { defenders.map((player, index) => (
-                    <Grid size={ 2.4 } key={ player.name }>
-                      <PlayerCard
-                        player={ player }
-                        onClick={ () => onPlayerClick(player, 'main') }
-                        index={ index }
-                        isCaptain={ player === captain }
-                      />
-                    </Grid>
-                  )) }
+              )) }
+            </Grid>
+            { /* MID row */ }
+            <Grid container spacing={ 2 } justifyContent='center'>
+              { mids.map((player, index) => (
+                <Grid item xs={ 12 } sm={ 6 } md={ 4 } lg={ 3 } xl={ 2 } key={ player.code || player.name }>
+                  <PlayerCard
+                    player={ player }
+                    onClick={ () => onPlayerClick(player, 'main') }
+                    index={ index + 1 + gks.length + defs.length }
+                    isCaptain={ player === captain }
+                  />
                 </Grid>
-              </Grid>
-              <Grid size={ 12 }>
-                <Grid container spacing={ 2 } justifyContent='center'>
-                  { midfielders.map((player, index) => (
-                    <Grid size={ 2.4 } key={ player.name }>
-                      <PlayerCard
-                        player={ player }
-                        onClick={ () => onPlayerClick(player, 'main') }
-                        index={ index }
-                        isCaptain={ player === captain }
-                      />
-                    </Grid>
-                  )) }
+              )) }
+            </Grid>
+            { /* ATT row */ }
+            <Grid container spacing={ 2 } justifyContent='center'>
+              { atts.map((player, index) => (
+                <Grid item xs={ 12 } sm={ 6 } md={ 4 } lg={ 3 } xl={ 2 } key={ player.code || player.name }>
+                  <PlayerCard
+                    player={ player }
+                    onClick={ () => onPlayerClick(player, 'main') }
+                    index={ index + 1 + gks.length + defs.length + mids.length }
+                    isCaptain={ player === captain }
+                  />
                 </Grid>
-              </Grid>
-              <Grid size={ 12 }>
-                <Grid container spacing={ 2 } justifyContent='center'>
-                  { forwards.map((player, index) => (
-                    <Grid size={ 2.4 } key={ player.name }>
-                      <PlayerCard
-                        player={ player }
-                        onClick={ () => onPlayerClick(player, 'main') }
-                        index={ index }
-                        isCaptain={ player === captain }
-                      />
-                    </Grid>
-                  )) }
-                </Grid>
-              </Grid>
+              )) }
             </Grid>
           </Box>
         </Paper>
@@ -135,19 +119,47 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
         <Paper className='bench-paper'>
           <Box>
             <Grid container spacing={ 2 } justifyContent='center'>
-              { sortedBenchTeamData.map((player, index) => (
-                <Grid item size={ 2 } key={ player.name }>
-                  <Box
-                    display='flex'
-                    flexDirection='column'
-                    alignItems='center'>
+              { /* Bench manager first */ }
+              { benchManager && (
+                <Grid item xs={ 6 } sm={ 4 } md={ 2 } key={ benchManager.code || benchManager.name }>
+                  <Box display='flex' flexDirection='column' alignItems='center'>
+                    <Typography align='center' variant='subtitle1' mt={ 1 }>
+                      { positionLabels[benchManager.position] }
+                    </Typography>
+                    <PlayerCard
+                      player={ benchManager }
+                      onClick={ () => onPlayerClick(benchManager, 'bench') }
+                      index={ 0 }
+                    />
+                  </Box>
+                </Grid>
+              ) }
+              { /* Bench GK second */ }
+              { benchGK && (
+                <Grid item xs={ 6 } sm={ 4 } md={ 2 } key={ benchGK.code || benchGK.name }>
+                  <Box display='flex' flexDirection='column' alignItems='center'>
+                    <Typography align='center' variant='subtitle1' mt={ 1 }>
+                      { positionLabels[benchGK.position] }
+                    </Typography>
+                    <PlayerCard
+                      player={ benchGK }
+                      onClick={ () => onPlayerClick(benchGK, 'bench') }
+                      index={ 1 }
+                    />
+                  </Box>
+                </Grid>
+              ) }
+              { /* Outfield bench players */ }
+              { benchOutfield.map((player, index) => (
+                <Grid item xs={ 6 } sm={ 4 } md={ 2 } key={ player.code || player.name }>
+                  <Box display='flex' flexDirection='column' alignItems='center'>
                     <Typography align='center' variant='subtitle1' mt={ 1 }>
                       { positionLabels[player.position] }
                     </Typography>
                     <PlayerCard
                       player={ player }
                       onClick={ () => onPlayerClick(player, 'bench') }
-                      index={ index }
+                      index={ index + 2 }
                     />
                   </Box>
                 </Grid>

@@ -17,8 +17,8 @@ const NavigationBar = ({ entryId, setEntryId, handleEntryIdSubmit, toggleTeamVie
   const handleSubmit = () => {
     handleEntryIdSubmit();
     setIsSubmitted(true);
-    if (!isHighestPredictedTeam) {
-      toggleTeamView(); // Automatically switch to the user's team after submission
+    if (isHighestPredictedTeam) {
+      toggleTeamView();
     }
   };
 
