@@ -59,15 +59,13 @@ const PlayerCard = ({ player, onClick, isCaptain, resetClick }) => {
             </Typography>
           </Box>
         </Box>
-        { player.position !== 5 && (
-          <Button
-            onClick={ handleClick }
-            size='small'
-            className={ `action-button ${clicked ? 'clicked' : 'not-clicked'}` }
-          >
-            { clicked ? <ArrowBackIcon /> : <ArrowForwardIcon /> }
-          </Button>
-        ) }
+        <Button
+          onClick={ handleClick }
+          size='small'
+          className={ `action-button ${clicked ? 'clicked' : 'not-clicked'}` }
+        >
+          { clicked ? <ArrowBackIcon /> : <ArrowForwardIcon /> }
+        </Button>
       </CardContent>
     </Card>
   );
