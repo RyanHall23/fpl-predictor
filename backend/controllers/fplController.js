@@ -32,7 +32,6 @@ const getElementSummary = async (req, res) => {
   }
 };
 
-// New: Get predicted team
 const getPredictedTeam = async (req, res) => {
   try {
     const data = await fplModel.fetchBootstrapStatic();
