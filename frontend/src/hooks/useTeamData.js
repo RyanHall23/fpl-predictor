@@ -6,7 +6,7 @@ const useTeamData = (entryId) => {
   const [benchTeamData, setBenchTeamData] = useState([]);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [isHighestPredictedTeam, setIsHighestPredictedTeam] = useState(false);
+  const [isHighestPredictedTeam, setIsHighestPredictedTeam] = useState(true);
 
   // Fetch the highest predicted team from the backend
   const fetchHighestPredictedTeam = async () => {
@@ -30,6 +30,12 @@ const useTeamData = (entryId) => {
       console.error('Error fetching highest predicted team data:', error);
     }
   };
+  
+  useEffect(() => {
+    if (isHighestPredictedTeam) {
+      fetchHighestPredictedTeam();
+    }
+  }, [isHighestPredictedTeam]);
 
   // Fetch the user's actual team
   const fetchData = useCallback(async () => {
