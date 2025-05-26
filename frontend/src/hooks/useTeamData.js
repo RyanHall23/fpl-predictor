@@ -37,75 +37,44 @@ const useTeamData = (entryId) => {
     }
   }, [isHighestPredictedTeam]);
 
-  // Fetch the user's actual team
+  // Fetch the user's actual team (already sorted/grouped by backend)
   const fetchData = useCallback(async () => {
     if (!entryId) return;
 
     try {
-      const response = await axios.get('/api/bootstrap-static');
-      const result = response.data;
-
-      const CurrentEvent = result.events.find(
-        (event) => event.is_current === true,
-      );
-      if (!CurrentEvent) {
-        throw new Error('No current event found.');
-      }
-
+      // Get current event
+      const bootstrap = await axios.get('/api/bootstrap-static');
+      const CurrentEvent = bootstrap.data.events.find((event) => event.is_current === true);
+      if (!CurrentEvent) throw new Error('No current event found.');
       const eventId = CurrentEvent.id;
-      const picksResponse = await axios.get(
-        `/api/entry/${entryId}/event/${eventId}/picks`
-      );
-      const playerSquad = picksResponse.data;
 
-      const elements = playerSquad.picks.map((pick) => pick.element);
-      const positions = playerSquad.picks.map((pick) => pick.position);
+      // Fetch sorted user team from backend
+      const response = await axios.get(`/api/entry/${entryId}/event/${eventId}/team`);
+      const { mainTeam, bench } = response.data;
 
-      const playersData = result.elements;
-      const mainTeam = [];
-      const bench = [];
-
-      playersData.forEach((player) => {
-        const index = elements.indexOf(player.id);
-        if (index !== -1) {
-          const playerName = `${player.first_name} ${player.second_name}`;
-          const playerData = {
-            name: playerName,
-            team: player.team,
-            position: player.element_type,
-            predictedPoints: Math.round(player.ep_next),
-            code: player.code,
-            webName: player.web_name,
-            lastGwPoints: player.event_points,
-            inDreamteam: player.in_dreamteam,
-            totalPoints: player.total_points,
-          };
-
-          if (positions[index] > 11) {
-            bench.push(playerData);
-          } else {
-            mainTeam.push(playerData);
-          }
-        }
+      const formatPlayer = (player) => ({
+        name: `${player.first_name} ${player.second_name}`,
+        team: player.team,
+        position: player.element_type,
+        predictedPoints: Math.round(player.ep_next),
+        code: player.code,
+        webName: player.web_name,
+        lastGwPoints: player.event_points,
+        inDreamteam: player.in_dreamteam,
+        totalPoints: player.total_points,
       });
 
-      setMainTeamData(mainTeam);
-      setBenchTeamData(bench);
-
-      // Optionally log for debugging
-      // console.log('Main Team:', mainTeam);
-      // console.log('Bench:', bench);
+      setMainTeamData(mainTeam.map(formatPlayer));
+      setBenchTeamData(bench.map(formatPlayer));
     } catch (error) {
       console.error('Error fetching team data:', error);
     }
   }, [entryId]);
 
-  // Fetch user's team on mount and when entryId changes
   useEffect(() => {
     if (!isHighestPredictedTeam) {
       fetchData();
     }
-     
   }, [fetchData, isHighestPredictedTeam]);
 
   // Handle player selection and swapping (only for user's team)
@@ -156,6 +125,15 @@ const useTeamData = (entryId) => {
         return {
           valid: false,
           error: 'Goalkeepers can only be swapped with other goalkeepers.',
+        };
+      }
+    }
+    
+    if (player1.position === 5 || player2.position === 5) {
+      if (player1.position !== player2.position) {
+        return {
+          valid: false,
+          error: 'Managers can only be swapped with other managers.',
         };
       }
     }

@@ -47,9 +47,28 @@ const getPredictedTeam = async (req, res) => {
   }
 };
 
+// ...existing code...
+const getUserTeam = async (req, res) => {
+  const { entryId, eventId } = req.params;
+  try {
+    const bootstrap = await fplModel.fetchBootstrapStatic();
+    const picksData = await fplModel.fetchPlayerPicks(entryId, eventId);
+    const players = bootstrap.elements.map((p) => ({
+      ...p,
+      ep_next: parseFloat(p.ep_next) || 0,
+    }));
+    const { mainTeam, bench } = fplModel.buildUserTeam(players, picksData.picks);
+    res.json({ mainTeam, bench });
+  } catch (error) {
+    console.error('Error building user team:', error);
+    res.status(500).json({ error: 'Error building user team' });
+  }
+};
+
 module.exports = {
   getBootstrapStatic,
   getPlayerPicks,
   getElementSummary,
   getPredictedTeam,
+  getUserTeam
 };
