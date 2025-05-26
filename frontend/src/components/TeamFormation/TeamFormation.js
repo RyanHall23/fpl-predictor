@@ -50,7 +50,7 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
             { /* GK and Manager row, centered together */ }
             <Grid container justifyContent='center' alignItems='center' spacing={ 2 }>
               { gks.map((player, index) => (
-                <Grid item key={ player.code || player.name }>
+                <Grid key={ player.code || player.name }>
                   <PlayerCard
                     player={ player }
                     onClick={ () => onPlayerClick(player, 'main') }
@@ -76,7 +76,7 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
             { /* DEF row */ }
             <Grid container spacing={ 2 } justifyContent='center'>
               { defs.map((player, index) => (
-                <Grid item xs={ 12 } sm={ 6 } md={ 4 } lg={ 3 } xl={ 2 } key={ player.code || player.name }>
+                <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3, xl: 2 }} key={ player.code || player.name }>
                   <PlayerCard
                     player={ player }
                     onClick={ () => onPlayerClick(player, 'main') }
@@ -89,7 +89,7 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
             { /* MID row */ }
             <Grid container spacing={ 2 } justifyContent='center'>
               { mids.map((player, index) => (
-                <Grid item xs={ 12 } sm={ 6 } md={ 4 } lg={ 3 } xl={ 2 } key={ player.code || player.name }>
+                <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3, xl: 2 }} key={ player.code || player.name }>
                   <PlayerCard
                     player={ player }
                     onClick={ () => onPlayerClick(player, 'main') }
@@ -102,7 +102,7 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
             { /* ATT row */ }
             <Grid container spacing={ 2 } justifyContent='center'>
               { atts.map((player, index) => (
-                <Grid item xs={ 12 } sm={ 6 } md={ 4 } lg={ 3 } xl={ 2 } key={ player.code || player.name }>
+                <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3, xl: 2 }} key={ player.code || player.name }>
                   <PlayerCard
                     player={ player }
                     onClick={ () => onPlayerClick(player, 'main') }
@@ -121,7 +121,7 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
             <Grid container spacing={ 2 } justifyContent='center'>
               { /* Bench manager first */ }
               { benchManager && (
-                <Grid item xs={ 6 } sm={ 4 } md={ 2 } key={ benchManager.code || benchManager.name }>
+                <Grid size={{ xs: 6, sm: 4, md: 2 }} key={ benchManager.code || benchManager.name }>
                   <Box display='flex' flexDirection='column' alignItems='center'>
                     <Typography align='center' variant='subtitle1' mt={ 1 }>
                       { positionLabels[benchManager.position] }
@@ -136,7 +136,7 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
               ) }
               { /* Bench GK second */ }
               { benchGK && (
-                <Grid item xs={ 6 } sm={ 4 } md={ 2 } key={ benchGK.code || benchGK.name }>
+                <Grid size={{ xs: 6, sm: 4, md: 2 }} key={ benchGK.code || benchGK.name }>
                   <Box display='flex' flexDirection='column' alignItems='center'>
                     <Typography align='center' variant='subtitle1' mt={ 1 }>
                       { positionLabels[benchGK.position] }
@@ -151,7 +151,7 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick }) => {
               ) }
               { /* Outfield bench players */ }
               { benchOutfield.map((player, index) => (
-                <Grid item xs={ 6 } sm={ 4 } md={ 2 } key={ player.code || player.name }>
+                <Grid size={{ xs: 6, sm: 4, md: 2 }} key={ player.code || player.name }>
                   <Box display='flex' flexDirection='column' alignItems='center'>
                     <Typography align='center' variant='subtitle1' mt={ 1 }>
                       { positionLabels[player.position] }

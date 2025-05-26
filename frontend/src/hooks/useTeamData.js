@@ -102,24 +102,67 @@ const useTeamData = (entryId) => {
         }
       };
 
-  const swapPlayers = (player1, player2, teamType1, teamType2) => {
-    const fromTeam1 = teamType1 === 'bench' ? benchTeamData : mainTeamData;
-    const fromTeam2 = teamType2 === 'bench' ? benchTeamData : mainTeamData;
+const swapPlayers = (player1, player2, teamType1, teamType2) => {
+  console.log('Attempting swap:', player1, player2, teamType1, teamType2);
+  const fromTeam1 = teamType1 === 'bench' ? benchTeamData : mainTeamData;
+  const fromTeam2 = teamType2 === 'bench' ? benchTeamData : mainTeamData;
 
-    const index1 = fromTeam1.findIndex((p) => p.name === player1.name);
-    const index2 = fromTeam2.findIndex((p) => p.name === player2.name);
+  const index1 = fromTeam1.findIndex((p) => p.name === player1.name);
+  const index2 = fromTeam2.findIndex((p) => p.name === player2.name);
 
-    if (index1 !== -1 && index2 !== -1) {
-      [fromTeam1[index1], fromTeam2[index2]] = [
-        fromTeam2[index2],
-        fromTeam1[index1],
-      ];
-      setMainTeamData([...mainTeamData]);
-      setBenchTeamData([...benchTeamData]);
+  console.log('Indexes found:', index1, index2);
+
+  if (index1 !== -1 && index2 !== -1) {
+    // Create new arrays to avoid mutating state directly
+    const newMainTeam = [...mainTeamData];
+    const newBenchTeam = [...benchTeamData];
+
+    if (teamType1 === 'bench') {
+      newBenchTeam[index1] = player2;
+    } else {
+      newMainTeam[index1] = player2;
     }
-  };
 
-  const isValidSwap = (player1, player2) => {
+    if (teamType2 === 'bench') {
+      newBenchTeam[index2] = player1;
+    } else {
+      newMainTeam[index2] = player1;
+    }
+
+    setMainTeamData(newMainTeam);
+    setBenchTeamData(newBenchTeam);
+
+    console.log('Swap successful');
+  } else {
+    console.log('Swap failed: player not found');
+  }
+};
+
+const isValidSwap = (player1, player2) => {
+    console.log('Validating swap:', player1, player2);
+    // Only allow manager swaps if both are managers (position === 5)
+    if (player1.position === 5 || player2.position === 5) {
+      if (player1.position === 5 && player2.position === 5) {
+        // Allow manager-for-manager swap only
+        return { valid: true, error: '' };
+      } else {
+        // Disallow swapping manager with any non-manager
+        return {
+          valid: false,
+          error: 'Managers can only be swapped with other managers.',
+        };
+      }
+    }
+
+    // Disallow swapping managers with non-managers
+    if (player1.position === 5 || player2.position === 5) {
+      return {
+        valid: false,
+        error: 'Managers can only be swapped with other managers.',
+      };
+    }
+
+    // Goalkeeper swap rule
     if (player1.position === 1 || player2.position === 1) {
       if (player1.position !== player2.position) {
         return {
@@ -128,16 +171,8 @@ const useTeamData = (entryId) => {
         };
       }
     }
-    
-    if (player1.position === 5 || player2.position === 5) {
-      if (player1.position !== player2.position) {
-        return {
-          valid: false,
-          error: 'Managers can only be swapped with other managers.',
-        };
-      }
-    }
 
+    // Normal swap logic for outfield players
     const tempMainTeam = [...mainTeamData];
     const tempBenchTeam = [...benchTeamData];
 
