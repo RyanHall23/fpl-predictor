@@ -238,7 +238,6 @@ const isValidSwap = (player1, player2) => {
     return totalPoints;
   };
 
-  // Toggle between user's team and highest predicted team
   const toggleTeamView = () => {
     setIsHighestPredictedTeam((prev) => !prev);
     if (!isHighestPredictedTeam) {
