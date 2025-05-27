@@ -45,7 +45,6 @@ const App = () => {
     setSubmittedEntryId(entryId);
   };
 
-  // Provide a no-op function if handlePlayerClick is not defined
   const safeHandlePlayerClick = handlePlayerClick || (() => {});
 
   return (

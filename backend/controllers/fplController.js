@@ -47,7 +47,6 @@ const getPredictedTeam = async (req, res) => {
   }
 };
 
-// ...existing code...
 const getUserTeam = async (req, res) => {
   const { entryId, eventId } = req.params;
   try {

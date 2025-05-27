@@ -32,11 +32,11 @@ const buildHighestPredictedTeam = (players) => {
 
   // Build main team (manager in first slot)
   let mainTeam = [
-    selectedManagers[0],              // 1 Manager (main team, top right)
-    selectedGoalkeepers[0],           // 1 GK
-    ...selectedDefenders.slice(0, 3), // 3 DEF
+    selectedManagers[0],                // 1 Manager (main team, top right)
+    selectedGoalkeepers[0],             // 1 GK
+    ...selectedDefenders.slice(0, 3),   // 3 DEF
     ...selectedMidfielders.slice(0, 3), // 3 MID
-    selectedForwards[0],              // 1 FWD
+    selectedForwards[0],                // 1 FWD
   ];
 
   // Fill up to 12 players in main team with highest ep_next from remaining DEF/MID/FWD
@@ -126,11 +126,11 @@ const buildUserTeam = (players, picks) => {
 
   // Build main team (manager in first slot)
   let mainTeam = [
-    selectedManagers[0],              // 1 Manager (main team, top right)
-    selectedGoalkeepers[0],           // 1 GK
-    ...selectedDefenders.slice(0, 3), // 3 DEF
+    selectedManagers[0],                // 1 Manager (main team, top right)
+    selectedGoalkeepers[0],             // 1 GK
+    ...selectedDefenders.slice(0, 3),   // 3 DEF
     ...selectedMidfielders.slice(0, 3), // 3 MID
-    selectedForwards[0],              // 1 FWD
+    selectedForwards[0],                // 1 FWD
   ];
 
   // Fill up to 12 players in main team with highest ep_next from remaining DEF/MID/FWD
