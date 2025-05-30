@@ -74,7 +74,7 @@ const App = () => {
             </Box>
           </Typography>
           <Grid container spacing={ 2 } justifyContent='center'>
-            <Grid size={{ md: 10 }}>
+            <Grid size={ { md: 10 } }>
               <TeamFormation
                 mainTeam={ mainTeamData }
                 benchTeam={ benchTeamData }

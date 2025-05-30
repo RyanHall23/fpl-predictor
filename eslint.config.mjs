@@ -1,48 +1,51 @@
-import js from '@eslint/js';
-import pluginJs from '@eslint/js';
-import pluginReact from 'eslint-plugin-react';
-import globals from 'globals';
+import js from "@eslint/js";
+import pluginJs from "@eslint/js";
+import pluginReact from "eslint-plugin-react";
+import pluginPrettier from "eslint-plugin-prettier";
+import configPrettier from "eslint-config-prettier";
+import globals from "globals";
 
 export default [
   {
-    files: [
-      '**/*.{js,mjs,cjs,jsx}'
-    ]
+    files: ["**/*.{js,mjs,cjs,jsx}"],
   },
   {
     languageOptions: {
       globals: {
         ...globals.browser,
-        ...globals.node
-      }
-    }
+        ...globals.node,
+      },
+    },
   },
   pluginJs.configs.recommended,
   pluginReact.configs.flat.recommended,
   js.configs.recommended,
+  configPrettier,
   {
     plugins: {
-      react: pluginReact
+      react: pluginReact,
+      prettier: pluginPrettier,
     },
     rules: {
-      'no-unused-vars': 'warn',
-      'no-undef': 'warn',
-      'react/jsx-curly-spacing': [
-        'error',
+      "prettier/prettier": "warn",
+      "no-unused-vars": "warn",
+      "no-undef": "warn",
+      "react/jsx-curly-spacing": [
+        "error",
         {
-          when: 'always',
-          children: true
-        }
+          when: "always",
+          children: true,
+        },
       ],
-      'object-curly-spacing': ['error', 'always'],
-      'quotes': ['error', 'single'],
-      'jsx-quotes': ['error', 'prefer-single'],
-      'eol-last': ['error', 'always']
+      "object-curly-spacing": ["error", "always"],
+      quotes: ["error", "single"],
+      "jsx-quotes": ["error", "prefer-single"],
+      "eol-last": ["error", "always"],
     },
     settings: {
       react: {
-        version: 'detect'
-      }
-    }
-  }
+        version: "detect",
+      },
+    },
+  },
 ];
