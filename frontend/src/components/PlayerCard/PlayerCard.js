@@ -1,16 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import StarIcon from '@mui/icons-material/Star';
 import {
+  Avatar,
+  Box,
+  Button,
   Card,
   CardContent,
   Typography,
-  Button,
-  Box,
-  Avatar,
 } from '@mui/material';
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import StarIcon from '@mui/icons-material/Star';
 import PropTypes from 'prop-types';
+import { useEffect, useState } from 'react';
 import './styles.css';
 
 const PlayerCard = ({ player, onClick, isCaptain, resetClick }) => {
@@ -49,21 +49,17 @@ const PlayerCard = ({ player, onClick, isCaptain, resetClick }) => {
           />
         </Box>
         <Box className='player-info'>
-          <Typography
-            variant='body2' className='player-name'>
+          <Typography variant='body2' className='player-name'>
             { player.webName }
           </Typography>
           <Box className='predicted-points'>
-            <Typography variant='caption'>
-              { predictedPoints }
-            </Typography>
+            <Typography variant='caption'>{ predictedPoints }</Typography>
           </Box>
         </Box>
         <Button
           onClick={ handleClick }
           size='small'
-          className={ `action-button ${clicked ? 'clicked' : 'not-clicked'}` }
-        >
+          className={ `action-button ${clicked ? 'clicked' : 'not-clicked'}` }>
           { clicked ? <ArrowBackIcon /> : <ArrowForwardIcon /> }
         </Button>
       </CardContent>

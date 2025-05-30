@@ -1,17 +1,23 @@
-import * as React from 'react';
-import PropTypes from 'prop-types';
 import {
   AppBar,
   Box,
+  Button,
+  Container,
+  TextField,
   Toolbar,
   Typography,
-  Container,
-  Button,
-  TextField
 } from '@mui/material';
+import PropTypes from 'prop-types';
+import * as React from 'react';
 import './styles.css';
 
-const NavigationBar = ({ entryId, setEntryId, handleEntryIdSubmit, toggleTeamView, isHighestPredictedTeam }) => {
+const NavigationBar = ({
+  entryId,
+  setEntryId,
+  handleEntryIdSubmit,
+  toggleTeamView,
+  isHighestPredictedTeam,
+}) => {
   const [isSubmitted, setIsSubmitted] = React.useState(false);
 
   const handleSubmit = () => {
@@ -51,8 +57,7 @@ const NavigationBar = ({ entryId, setEntryId, handleEntryIdSubmit, toggleTeamVie
               letterSpacing: '.3rem',
               color: 'inherit',
               textDecoration: 'none',
-            } }
-          >
+            } }>
             LOGO
           </Typography>
           <Box sx={ { flexGrow: 1, maxWidth: '150px' } }>
@@ -66,22 +71,19 @@ const NavigationBar = ({ entryId, setEntryId, handleEntryIdSubmit, toggleTeamVie
           </Box>
           <Button
             onClick={ handleSubmit }
-            sx={ { my: 2, color: 'white', display: 'block' } }
-          >
+            sx={ { my: 2, color: 'white', display: 'block' } }>
             Submit
           </Button>
           <Button
             onClick={ handleToggleMyTeam }
             sx={ { my: 2, color: 'white', display: 'block' } }
-            disabled={ !isSubmitted || !isHighestPredictedTeam }
-          >
+            disabled={ !isSubmitted || !isHighestPredictedTeam }>
             My Team
           </Button>
           <Button
             onClick={ handleToggleHighestTeam }
             sx={ { my: 2, color: 'white', display: 'block' } }
-            disabled={ isHighestPredictedTeam }
-          >
+            disabled={ isHighestPredictedTeam }>
             Highest Team
           </Button>
         </Toolbar>
