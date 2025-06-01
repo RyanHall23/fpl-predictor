@@ -74,6 +74,12 @@ const App = () => {
               { calculateTotalPredictedPoints(mainTeamData) }
             </Box>
           </Typography>
+          <Typography variant='body1' align='center' gutterBottom>
+            Bench Points:{ ' ' }
+            <Box component='span' sx={ { fontWeight: 'bold' } }>
+              { calculateTotalPredictedPoints(benchTeamData) }
+            </Box>
+          </Typography>
           <Grid container spacing={ 2 } justifyContent='center'>
             <Grid size={ { md: 10 } }>
               <TeamFormation

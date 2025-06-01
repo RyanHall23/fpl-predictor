@@ -219,29 +219,37 @@ const isValidSwap = (player1, player2, teamType1, teamType2) => {
   return { valid: true, error: '' };
 };
 
-  // Calculate total predicted points for the main team
-  const calculateTotalPredictedPoints = (mainTeam) => {
-    if (!mainTeam || mainTeam.length === 0) return 0;
+// Calculate total predicted points for a team
+// Automatically double captain's points if team is main team (length > 5)
+const calculateTotalPredictedPoints = (team) => {
+  if (!team || team.length === 0) return 0;
 
-    const captain = mainTeam
-      ? mainTeam.reduce(
-          (max, player) =>
-            parseFloat(player.predictedPoints) > parseFloat(max.predictedPoints)
-              ? player
-              : max,
-          mainTeam[0],
-        )
-      : null;
+  // If team is main team (more than 5 players), double captain's points
+  const isMainTeam = team.length > 5;
+  console.log(team.length)
 
-    const totalPoints = mainTeam
-      ? mainTeam.reduce((total, player) => {
-          const points = parseFloat(player.predictedPoints) || 0;
-          return total + (player === captain ? points * 2 : points);
-        }, 0)
-      : 0;
+  let captain = null;
+  if (isMainTeam) {
+    // Exclude manager (position 5) from captain selection
+    captain = team
+      .filter(player => player.position !== 5)
+      .reduce(
+        (max, player) =>
+          parseFloat(player.predictedPoints) > parseFloat(max.predictedPoints)
+            ? player
+            : max,
+        team.filter(player => player.position !== 5)[0],
+      );
+  }
 
-    return totalPoints;
-  };
+  return team.reduce((total, player) => {
+    const points = parseFloat(player.predictedPoints) || 0;
+    if (isMainTeam && player === captain) {
+      return total + points * 2;
+    }
+    return total + points;
+  }, 0);
+};
 
   const toggleTeamView = () => {
     setIsHighestPredictedTeam((prev) => !prev);
