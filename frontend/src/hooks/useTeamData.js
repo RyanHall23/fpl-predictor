@@ -257,6 +257,7 @@ const isValidSwap = (player1, player2) => {
     calculateTotalPredictedPoints,
     toggleTeamView,
     isHighestPredictedTeam,
+    selectedPlayer,
   };
 };
 

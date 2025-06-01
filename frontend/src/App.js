@@ -18,6 +18,7 @@ const App = () => {
     calculateTotalPredictedPoints,
     toggleTeamView,
     isHighestPredictedTeam,
+    selectedPlayer,
   } = useTeamData(submittedEntryId);
 
   const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -74,11 +75,12 @@ const App = () => {
             </Box>
           </Typography>
           <Grid container spacing={ 2 } justifyContent='center'>
-            <Grid size={{ md: 10 }}>
+            <Grid size={ { md: 10 } }>
               <TeamFormation
                 mainTeam={ mainTeamData }
                 benchTeam={ benchTeamData }
                 onPlayerClick={ safeHandlePlayerClick }
+                selectedPlayer={ selectedPlayer }
               />
             </Grid>
           </Grid>

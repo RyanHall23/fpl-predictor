@@ -13,19 +13,11 @@ import StarIcon from '@mui/icons-material/Star';
 import PropTypes from 'prop-types';
 import './styles.css';
 
-const PlayerCard = ({ player, onClick, isCaptain, resetClick }) => {
-  const [clicked, setClicked] = useState(false);
-
-  const handleClick = () => {
-    setClicked(true);
-    onClick();
-  };
-
-  useEffect(() => {
-    if (resetClick) {
-      setClicked(false);
-    }
-  }, [resetClick]);
+const PlayerCard = ({ player, onClick, isCaptain, selectedPlayer, teamType }) => {
+  const isSelected =
+    selectedPlayer &&
+    selectedPlayer.player.code === player.code &&
+    selectedPlayer.teamType === teamType;
 
   let predictedPoints = parseFloat(player.predictedPoints) || 0;
   if (isCaptain) {
@@ -60,13 +52,13 @@ const PlayerCard = ({ player, onClick, isCaptain, resetClick }) => {
           </Box>
         </Box>
         { player.user_team && (
-          <IconButton 
-            onClick={ handleClick }
+          <IconButton
+            onClick={ onClick }
             size='small'
-            className={ `action-button ${clicked ? 'clicked' : 'not-clicked'}` }
+            className={ `action-button ${isSelected ? 'clicked' : 'not-clicked'}` }
           >
-            { clicked ? <ArrowBackIcon /> : <ArrowForwardIcon /> }
-          </IconButton >
+            { isSelected ? <ArrowBackIcon /> : <ArrowForwardIcon /> }
+          </IconButton>
         ) }
       </CardContent>
     </Card>
@@ -74,7 +66,7 @@ const PlayerCard = ({ player, onClick, isCaptain, resetClick }) => {
 };
 
 PlayerCard.propTypes = {
-  player: PropTypes.shape({
+  player: PropTypes.exact({
     webName: PropTypes.string.isRequired,
     predictedPoints: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     inDreamteam: PropTypes.bool,
@@ -84,7 +76,14 @@ PlayerCard.propTypes = {
   }).isRequired,
   onClick: PropTypes.func.isRequired,
   isCaptain: PropTypes.bool,
-  resetClick: PropTypes.bool,
+  selectedPlayer: PropTypes.shape({
+    player: PropTypes.shape({
+      webName: PropTypes.string.isRequired,
+      code: PropTypes.number.isRequired,
+    }).isRequired,
+    teamType: PropTypes.any,
+  }),
+  teamType: PropTypes.any,
 };
 
 export default PlayerCard;
