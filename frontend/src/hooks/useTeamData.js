@@ -23,6 +23,7 @@ const useTeamData = (entryId) => {
         lastGwPoints: player.event_points,
         inDreamteam: player.in_dreamteam,
         totalPoints: player.total_points,
+        user_team: false
       });
       setMainTeamData(mainTeam.map(formatPlayer));
       setBenchTeamData(bench.map(formatPlayer));
@@ -62,6 +63,7 @@ const useTeamData = (entryId) => {
         lastGwPoints: player.event_points,
         inDreamteam: player.in_dreamteam,
         totalPoints: player.total_points,
+        user_team: true
       });
 
       setMainTeamData(mainTeam.map(formatPlayer));

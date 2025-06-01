@@ -55,17 +55,19 @@ const PlayerCard = ({ player, onClick, isCaptain, resetClick }) => {
           </Typography>
           <Box className='predicted-points'>
             <Typography variant='caption'>
-              { predictedPoints }
+              { predictedPoints } pts
             </Typography>
           </Box>
         </Box>
-        <Button
-          onClick={ handleClick }
-          size='small'
-          className={ `action-button ${clicked ? 'clicked' : 'not-clicked'}` }
-        >
-          { clicked ? <ArrowBackIcon /> : <ArrowForwardIcon /> }
-        </Button>
+        { player.user_team && (
+          <Button
+            onClick={ handleClick }
+            size='small'
+            className={ `action-button ${clicked ? 'clicked' : 'not-clicked'}` }
+          >
+            { clicked ? <ArrowBackIcon /> : <ArrowForwardIcon /> }
+          </Button>
+        ) }
       </CardContent>
     </Card>
   );
@@ -78,6 +80,7 @@ PlayerCard.propTypes = {
     inDreamteam: PropTypes.bool,
     code: PropTypes.number.isRequired,
     position: PropTypes.number.isRequired,
+    user_team: PropTypes.bool
   }).isRequired,
   onClick: PropTypes.func.isRequired,
   isCaptain: PropTypes.bool,
