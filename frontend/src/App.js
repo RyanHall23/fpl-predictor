@@ -13,7 +13,7 @@ const App = () => {
   const {
     mainTeamData,
     benchTeamData,
-    snackbarMessage,
+    snackbar,
     handlePlayerClick,
     calculateTotalPredictedPoints,
     toggleTeamView,
@@ -24,10 +24,10 @@ const App = () => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
 
   useEffect(() => {
-    if (snackbarMessage) {
+    if (snackbar.message) {
       setSnackbarOpen(true);
     }
-  }, [snackbarMessage]);
+  }, [snackbar]);
 
   const handleSnackbarClose = () => {
     setSnackbarOpen(false);
@@ -86,10 +86,11 @@ const App = () => {
           </Grid>
         </Box>
         <Snackbar
+          key={ snackbar.key }
           open={ snackbarOpen }
           autoHideDuration={ 6000 }
           onClose={ handleSnackbarClose }
-          message={ snackbarMessage }
+          message={ snackbar.message }
         />
       </Container>
     </>

@@ -5,7 +5,7 @@ const useTeamData = (entryId) => {
   const [mainTeamData, setMainTeamData] = useState([]);
   const [benchTeamData, setBenchTeamData] = useState([]);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbar, setSnackbar] = useState({ message: '', key: 0 });
   const [isHighestPredictedTeam, setIsHighestPredictedTeam] = useState(true);
 
   // Fetch the highest predicted team from the backend
@@ -96,10 +96,10 @@ const useTeamData = (entryId) => {
               teamType,
             );
             setSelectedPlayer(null);
-            setSnackbarMessage('');
+            setSnackbar({ message: '', key: Date.now() });
           } else {
-            setSnackbarMessage(swapResult.error);
             setSelectedPlayer(null);
+            setSnackbar({ message: swapResult.error, key: Date.now() });
           }
         }
       };
@@ -252,7 +252,7 @@ const isValidSwap = (player1, player2) => {
   return {
     mainTeamData,
     benchTeamData,
-    snackbarMessage,
+    snackbar,
     handlePlayerClick,
     calculateTotalPredictedPoints,
     toggleTeamView,
