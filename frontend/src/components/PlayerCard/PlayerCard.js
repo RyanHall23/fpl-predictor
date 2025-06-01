@@ -3,7 +3,7 @@ import {
   Card,
   CardContent,
   Typography,
-  Button,
+  IconButton,
   Box,
   Avatar,
 } from '@mui/material';
@@ -60,13 +60,13 @@ const PlayerCard = ({ player, onClick, isCaptain, resetClick }) => {
           </Box>
         </Box>
         { player.user_team && (
-          <Button
+          <IconButton 
             onClick={ handleClick }
             size='small'
             className={ `action-button ${clicked ? 'clicked' : 'not-clicked'}` }
           >
             { clicked ? <ArrowBackIcon /> : <ArrowForwardIcon /> }
-          </Button>
+          </IconButton >
         ) }
       </CardContent>
     </Card>
