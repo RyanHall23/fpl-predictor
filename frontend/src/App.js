@@ -13,20 +13,21 @@ const App = () => {
   const {
     mainTeamData,
     benchTeamData,
-    snackbarMessage,
+    snackbar,
     handlePlayerClick,
     calculateTotalPredictedPoints,
     toggleTeamView,
     isHighestPredictedTeam,
+    selectedPlayer,
   } = useTeamData(submittedEntryId);
 
   const [snackbarOpen, setSnackbarOpen] = useState(false);
 
   useEffect(() => {
-    if (snackbarMessage) {
+    if (snackbar.message) {
       setSnackbarOpen(true);
     }
-  }, [snackbarMessage]);
+  }, [snackbar]);
 
   const handleSnackbarClose = () => {
     setSnackbarOpen(false);
@@ -73,21 +74,29 @@ const App = () => {
               { calculateTotalPredictedPoints(mainTeamData) }
             </Box>
           </Typography>
+          <Typography variant='body1' align='center' gutterBottom>
+            Bench Points:{ ' ' }
+            <Box component='span' sx={ { fontWeight: 'bold' } }>
+              { calculateTotalPredictedPoints(benchTeamData) }
+            </Box>
+          </Typography>
           <Grid container spacing={ 2 } justifyContent='center'>
-            <Grid size={{ md: 10 }}>
+            <Grid size={ { md: 10 } }>
               <TeamFormation
                 mainTeam={ mainTeamData }
                 benchTeam={ benchTeamData }
                 onPlayerClick={ safeHandlePlayerClick }
+                selectedPlayer={ selectedPlayer }
               />
             </Grid>
           </Grid>
         </Box>
         <Snackbar
+          key={ snackbar.key }
           open={ snackbarOpen }
           autoHideDuration={ 6000 }
           onClose={ handleSnackbarClose }
-          message={ snackbarMessage }
+          message={ snackbar.message }
         />
       </Container>
     </>
