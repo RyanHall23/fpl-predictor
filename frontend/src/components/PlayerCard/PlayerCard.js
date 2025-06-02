@@ -3,7 +3,7 @@ import {
   Card,
   CardContent,
   Typography,
-  Button,
+  IconButton,
   Box,
   Avatar,
 } from '@mui/material';
@@ -13,19 +13,11 @@ import StarIcon from '@mui/icons-material/Star';
 import PropTypes from 'prop-types';
 import './styles.css';
 
-const PlayerCard = ({ player, onClick, isCaptain, resetClick }) => {
-  const [clicked, setClicked] = useState(false);
-
-  const handleClick = () => {
-    setClicked(true);
-    onClick();
-  };
-
-  useEffect(() => {
-    if (resetClick) {
-      setClicked(false);
-    }
-  }, [resetClick]);
+const PlayerCard = ({ player, onClick, isCaptain, selectedPlayer, teamType }) => {
+  const isSelected =
+    selectedPlayer &&
+    selectedPlayer.player.code === player.code &&
+    selectedPlayer.teamType === teamType;
 
   let predictedPoints = parseFloat(player.predictedPoints) || 0;
   if (isCaptain) {
@@ -55,33 +47,43 @@ const PlayerCard = ({ player, onClick, isCaptain, resetClick }) => {
           </Typography>
           <Box className='predicted-points'>
             <Typography variant='caption'>
-              { predictedPoints }
+              { predictedPoints } pts
             </Typography>
           </Box>
         </Box>
-        <Button
-          onClick={ handleClick }
-          size='small'
-          className={ `action-button ${clicked ? 'clicked' : 'not-clicked'}` }
-        >
-          { clicked ? <ArrowBackIcon /> : <ArrowForwardIcon /> }
-        </Button>
+        { player.user_team && (
+          <IconButton
+            onClick={ onClick }
+            size='small'
+            className={ `action-button ${isSelected ? 'clicked' : 'not-clicked'}` }
+          >
+            { isSelected ? <ArrowBackIcon /> : <ArrowForwardIcon /> }
+          </IconButton>
+        ) }
       </CardContent>
     </Card>
   );
 };
 
 PlayerCard.propTypes = {
-  player: PropTypes.shape({
+  player: PropTypes.exact({
     webName: PropTypes.string.isRequired,
     predictedPoints: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     inDreamteam: PropTypes.bool,
     code: PropTypes.number.isRequired,
     position: PropTypes.number.isRequired,
+    user_team: PropTypes.bool
   }).isRequired,
   onClick: PropTypes.func.isRequired,
   isCaptain: PropTypes.bool,
-  resetClick: PropTypes.bool,
+  selectedPlayer: PropTypes.shape({
+    player: PropTypes.shape({
+      webName: PropTypes.string.isRequired,
+      code: PropTypes.number.isRequired,
+    }).isRequired,
+    teamType: PropTypes.any,
+  }),
+  teamType: PropTypes.any,
 };
 
 export default PlayerCard;
