@@ -111,11 +111,11 @@ const buildUserTeam = (players, picks) => {
     .filter(Boolean);
 
   // Filter and sort by predicted points
-  const goalkeepers = pickedPlayers.filter((p) => p.element_type === 1 && p.ep_next > 0).sort((a, b) => b.ep_next - a.ep_next);
-  const defenders = pickedPlayers.filter((p) => p.element_type === 2 && p.ep_next > 0).sort((a, b) => b.ep_next - a.ep_next);
-  const midfielders = pickedPlayers.filter((p) => p.element_type === 3 && p.ep_next > 0).sort((a, b) => b.ep_next - a.ep_next);
-  const forwards = pickedPlayers.filter((p) => p.element_type === 4 && p.ep_next > 0).sort((a, b) => b.ep_next - a.ep_next);
-  const managers = pickedPlayers.filter((p) => p.element_type === 5 && p.ep_next > 0).sort((a, b) => b.ep_next - a.ep_next);
+  const goalkeepers = pickedPlayers.filter((p) => p.element_type === 1).sort((a, b) => b.ep_next - a.ep_next);
+  const defenders = pickedPlayers.filter((p) => p.element_type === 2).sort((a, b) => b.ep_next - a.ep_next);
+  const midfielders = pickedPlayers.filter((p) => p.element_type === 3).sort((a, b) => b.ep_next - a.ep_next);
+  const forwards = pickedPlayers.filter((p) => p.element_type === 4).sort((a, b) => b.ep_next - a.ep_next);
+  const managers = pickedPlayers.filter((p) => p.element_type === 5).sort((a, b) => b.ep_next - a.ep_next);
 
   // Select correct number for each position
   const selectedGoalkeepers = goalkeepers.slice(0, 2); // 1 main, 1 bench

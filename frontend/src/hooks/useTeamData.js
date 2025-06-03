@@ -1,12 +1,13 @@
 import { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 
-const useTeamData = (entryId) => {
+const useTeamData = (entryId, isHighestPredictedTeamInit = true) => {
   const [mainTeamData, setMainTeamData] = useState([]);
   const [benchTeamData, setBenchTeamData] = useState([]);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [snackbar, setSnackbar] = useState({ message: '', key: 0 });
-  const [isHighestPredictedTeam, setIsHighestPredictedTeam] = useState(true);
+  const [isHighestPredictedTeam, setIsHighestPredictedTeam] = useState(isHighestPredictedTeamInit);
+  const [teamName, setTeamName] = useState('');
 
   // Fetch the highest predicted team from the backend
   const fetchHighestPredictedTeam = async () => {
@@ -51,7 +52,7 @@ const useTeamData = (entryId) => {
 
       // Fetch sorted user team from backend
       const response = await axios.get(`/api/entry/${entryId}/event/${eventId}/team`);
-      const { mainTeam, bench } = response.data;
+      const { mainTeam, bench, teamName: fetchedTeamName } = response.data; // <-- Destructure teamName
 
       const formatPlayer = (player) => ({
         name: `${player.first_name} ${player.second_name}`,
@@ -68,7 +69,9 @@ const useTeamData = (entryId) => {
 
       setMainTeamData(mainTeam.map(formatPlayer));
       setBenchTeamData(bench.map(formatPlayer));
+      setTeamName(fetchedTeamName || '');
     } catch (error) {
+      setTeamName('');
       console.error('Error fetching team data:', error);
     }
   }, [entryId]);
@@ -226,7 +229,6 @@ const calculateTotalPredictedPoints = (team) => {
 
   // If team is main team (more than 5 players), double captain's points
   const isMainTeam = team.length > 5;
-  console.log(team.length)
 
   let captain = null;
   if (isMainTeam) {
@@ -269,6 +271,7 @@ const calculateTotalPredictedPoints = (team) => {
     toggleTeamView,
     isHighestPredictedTeam,
     selectedPlayer,
+    teamName
   };
 };
 
