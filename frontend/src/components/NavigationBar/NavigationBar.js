@@ -118,13 +118,21 @@ const NavigationBar = ({
           <Box sx={ { display: 'flex', alignItems: 'center', maxWidth: '250px', mx: 2 } }>
             <TextField
               value={ entryId }
-              onChange={ (e) => setEntryId(e.target.value) }
+              onChange={ (e) => {
+                // Only allow numbers
+                const val = e.target.value.replace(/\D/g, '');
+                setEntryId(val);
+              } }
               fullWidth
               className='text-field'
-              inputProps={ { maxLength: 10 } }
               size='small'
-              label='Search Team ID'
               variant='outlined'
+              slotProps={ {
+                input: {
+                  inputMode: 'numeric',
+                  pattern: '[0-9]*'
+                }
+              } }
             />
             <Button
               onClick={ handleEntryIdSubmit }
