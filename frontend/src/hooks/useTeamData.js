@@ -229,7 +229,6 @@ const calculateTotalPredictedPoints = (team) => {
 
   // If team is main team (more than 5 players), double captain's points
   const isMainTeam = team.length > 5;
-  console.log(team.length)
 
   let captain = null;
   if (isMainTeam) {

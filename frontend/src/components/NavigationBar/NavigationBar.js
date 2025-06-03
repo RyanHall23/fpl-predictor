@@ -13,6 +13,7 @@ import {
   DialogContent,
   DialogActions
 } from '@mui/material';
+import axios from 'axios';
 import './styles.css';
 
 const TEAM_VIEW = {
@@ -37,8 +38,6 @@ const NavigationBar = ({
   const [authForm, setAuthForm] = React.useState({ username: '', password: '', teamid: '' });
   const [authError, setAuthError] = React.useState('');
   const [user, setUser] = React.useState(null);
-
-  console.log(searchedTeamName);
 
   const handleAuthOpen = (mode) => {
     setAuthMode(mode);
