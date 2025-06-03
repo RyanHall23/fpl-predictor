@@ -59,11 +59,27 @@ const NavigationBar = ({
         ? authForm
         : { username: authForm.username, password: authForm.password };
       const res = await axios.post(url, payload);
-      setUser({ username: res.data.username, teamid: res.data.teamid });
-      setAuthOpen(false);
-      setAuthError('');
-      if (typeof handleUserLogin === 'function') {
-        handleUserLogin(res.data.teamid, res.data.username);
+
+      // If registering, automatically log in after successful registration
+      if (authMode === 'register') {
+        // Immediately log in with the same credentials
+        const loginRes = await axios.post('/api/auth/login', {
+          username: authForm.username,
+          password: authForm.password,
+        });
+        setUser({ username: loginRes.data.username, teamid: loginRes.data.teamid });
+        setAuthOpen(false);
+        setAuthError('');
+        if (typeof handleUserLogin === 'function') {
+          handleUserLogin(loginRes.data.teamid, loginRes.data.username);
+        }
+      } else {
+        setUser({ username: res.data.username, teamid: res.data.teamid });
+        setAuthOpen(false);
+        setAuthError('');
+        if (typeof handleUserLogin === 'function') {
+          handleUserLogin(res.data.teamid, res.data.username);
+        }
       }
     } catch (err) {
       setAuthError(err.response?.data?.error || 'Auth failed');
