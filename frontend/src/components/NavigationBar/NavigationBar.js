@@ -7,12 +7,22 @@ import {
   Typography,
   Container,
   Button,
-  TextField
+  TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
+import axios from 'axios';
 import './styles.css';
 
 const NavigationBar = ({ entryId, setEntryId, handleEntryIdSubmit, toggleTeamView, isHighestPredictedTeam }) => {
   const [isSubmitted, setIsSubmitted] = React.useState(false);
+  const [authOpen, setAuthOpen] = React.useState(false);
+  const [authMode, setAuthMode] = React.useState('login'); // or 'register'
+  const [authForm, setAuthForm] = React.useState({ username: '', password: '', teamid: '' });
+  const [authError, setAuthError] = React.useState('');
+  const [user, setUser] = React.useState(null);
 
   const handleSubmit = () => {
     handleEntryIdSubmit();
@@ -22,17 +32,33 @@ const NavigationBar = ({ entryId, setEntryId, handleEntryIdSubmit, toggleTeamVie
     }
   };
 
-  const handleToggleMyTeam = () => {
-    if (isSubmitted && isHighestPredictedTeam) {
-      toggleTeamView();
+  const handleAuthOpen = (mode) => {
+    setAuthMode(mode);
+    setAuthForm({ username: '', password: '', teamid: '' });
+    setAuthError('');
+    setAuthOpen(true);
+  };
+
+  const handleAuthClose = () => setAuthOpen(false);
+
+  const handleAuthChange = (e) => setAuthForm({ ...authForm, [e.target.name]: e.target.value });
+
+  const handleAuthSubmit = async () => {
+    try {
+      const url = `/api/auth/${authMode}`;
+      const payload = authMode === 'register'
+        ? authForm
+        : { username: authForm.username, password: authForm.password };
+      const res = await axios.post(url, payload);
+      setUser({ username: res.data.username, teamid: res.data.teamid });
+      setAuthOpen(false);
+      setAuthError('');
+    } catch (err) {
+      setAuthError(err.response?.data?.error || 'Auth failed');
     }
   };
 
-  const handleToggleHighestTeam = () => {
-    if (!isHighestPredictedTeam) {
-      toggleTeamView();
-    }
-  };
+  const handleLogout = () => setUser(null);
 
   return (
     <AppBar position='static'>
@@ -64,28 +90,74 @@ const NavigationBar = ({ entryId, setEntryId, handleEntryIdSubmit, toggleTeamVie
               inputProps={ { maxLength: 10 } }
             />
           </Box>
-          <Button
-            onClick={ handleSubmit }
-            sx={ { my: 2, color: 'white', display: 'block' } }
-          >
+          <Button onClick={ handleSubmit } sx={ { my: 2, color: 'white', display: 'block' } }>
             Submit
           </Button>
           <Button
-            onClick={ handleToggleMyTeam }
+            onClick={ () => { if (isSubmitted && isHighestPredictedTeam) toggleTeamView(); } }
             sx={ { my: 2, color: 'white', display: 'block' } }
             disabled={ !isSubmitted || !isHighestPredictedTeam }
           >
             My Team
           </Button>
           <Button
-            onClick={ handleToggleHighestTeam }
+            onClick={ () => { if (!isHighestPredictedTeam) toggleTeamView(); } }
             sx={ { my: 2, color: 'white', display: 'block' } }
             disabled={ isHighestPredictedTeam }
           >
             Highest Team
           </Button>
+          { user ? (
+            <>
+              <Typography sx={ { ml: 2, mr: 1 } }>{ user.username }</Typography>
+              <Button color='inherit' onClick={ handleLogout }>Logout</Button>
+            </>
+          ) : (
+            <>
+              <Button color='inherit' onClick={ () => handleAuthOpen('login') }>Login</Button>
+              <Button color='inherit' onClick={ () => handleAuthOpen('register') }>Register</Button>
+            </>
+          ) }
         </Toolbar>
       </Container>
+      <Dialog open={ authOpen } onClose={ handleAuthClose }>
+        <DialogTitle>{ authMode === 'login' ? 'Login' : 'Register' }</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin='dense'
+            label='Username'
+            name='username'
+            fullWidth
+            value={ authForm.username }
+            onChange={ handleAuthChange }
+          />
+          <TextField
+            margin='dense'
+            label='Password'
+            name='password'
+            type='password'
+            fullWidth
+            value={ authForm.password }
+            onChange={ handleAuthChange }
+          />
+          { authMode === 'register' && (
+            <TextField
+              margin='dense'
+              label='Team ID'
+              name='teamid'
+              fullWidth
+              value={ authForm.teamid }
+              onChange={ handleAuthChange }
+            />
+          ) }
+          { authError && <Typography color='error'>{ authError }</Typography> }
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={ handleAuthClose }>Cancel</Button>
+          <Button onClick={ handleAuthSubmit }>{ authMode === 'login' ? 'Login' : 'Register' }</Button>
+        </DialogActions>
+      </Dialog>
     </AppBar>
   );
 };
