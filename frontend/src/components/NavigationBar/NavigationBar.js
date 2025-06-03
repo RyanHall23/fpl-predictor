@@ -7,14 +7,11 @@ import {
   Typography,
   Container,
   Button,
-  TextField,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions
+  TextField
 } from '@mui/material';
 import axios from 'axios';
 import './styles.css';
+import AuthDialog from '../AuthDialog/AuthDialog';
 
 const TEAM_VIEW = {
   SEARCHED: 'searched',
@@ -187,44 +184,15 @@ const NavigationBar = ({
           </Box>
         </Toolbar>
       </Container>
-      <Dialog open={ authOpen } onClose={ handleAuthClose }>
-        <DialogTitle>{ authMode === 'login' ? 'Login' : 'Register' }</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin='dense'
-            label='Username'
-            name='username'
-            fullWidth
-            value={ authForm.username }
-            onChange={ handleAuthChange }
-          />
-          <TextField
-            margin='dense'
-            label='Password'
-            name='password'
-            type='password'
-            fullWidth
-            value={ authForm.password }
-            onChange={ handleAuthChange }
-          />
-          { authMode === 'register' && (
-            <TextField
-              margin='dense'
-              label='Team ID'
-              name='teamid'
-              fullWidth
-              value={ authForm.teamid }
-              onChange={ handleAuthChange }
-            />
-          ) }
-          { authError && <Typography color='error'>{ authError }</Typography> }
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={ handleAuthClose }>Cancel</Button>
-          <Button onClick={ handleAuthSubmit }>{ authMode === 'login' ? 'Login' : 'Register' }</Button>
-        </DialogActions>
-      </Dialog>
+      <AuthDialog
+        open={ authOpen }
+        mode={ authMode }
+        form={ authForm }
+        error={ authError }
+        onClose={ handleAuthClose }
+        onChange={ handleAuthChange }
+        onSubmit={ handleAuthSubmit }
+      />
     </AppBar>
   );
 };
