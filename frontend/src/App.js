@@ -26,7 +26,10 @@ const App = () => {
     toggleTeamView,
     isHighestPredictedTeam,
     selectedPlayer,
-  } = useTeamData(currentEntryId, teamView === TEAM_VIEW.HIGHEST);
+  } = useTeamData(
+    currentEntryId,
+    teamView === TEAM_VIEW.HIGHEST
+  );
 
   const [snackbarOpen, setSnackbarOpen] = useState(false);
 
@@ -47,6 +50,9 @@ const App = () => {
   const handleSearchedEntryIdSubmit = () => {
     setCurrentEntryId(searchedEntryId);
     setTeamView(TEAM_VIEW.SEARCHED);
+    if (isHighestPredictedTeam) {
+      toggleTeamView();
+    }
   };
 
   // When user logs in, set userEntryId, username, and switch to My Team
