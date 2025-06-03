@@ -16,21 +16,28 @@ import {
 import axios from 'axios';
 import './styles.css';
 
-const NavigationBar = ({ entryId, setEntryId, handleEntryIdSubmit, toggleTeamView, isHighestPredictedTeam }) => {
-  const [isSubmitted, setIsSubmitted] = React.useState(false);
+const TEAM_VIEW = {
+  SEARCHED: 'searched',
+  USER: 'user',
+  HIGHEST: 'highest'
+};
+
+const NavigationBar = ({
+  entryId,
+  setEntryId,
+  handleEntryIdSubmit,
+  handleUserLogin,
+  teamView,
+  onSwitchTeamView,
+  userTeamId,
+  isHighestPredictedTeam,
+  toggleTeamView
+}) => {
   const [authOpen, setAuthOpen] = React.useState(false);
   const [authMode, setAuthMode] = React.useState('login'); // or 'register'
   const [authForm, setAuthForm] = React.useState({ username: '', password: '', teamid: '' });
   const [authError, setAuthError] = React.useState('');
   const [user, setUser] = React.useState(null);
-
-  const handleSubmit = () => {
-    handleEntryIdSubmit();
-    setIsSubmitted(true);
-    if (isHighestPredictedTeam) {
-      toggleTeamView();
-    }
-  };
 
   const handleAuthOpen = (mode) => {
     setAuthMode(mode);
@@ -43,6 +50,7 @@ const NavigationBar = ({ entryId, setEntryId, handleEntryIdSubmit, toggleTeamVie
 
   const handleAuthChange = (e) => setAuthForm({ ...authForm, [e.target.name]: e.target.value });
 
+  // When user logs in, call parent handler to update App.js state and switch to user's team
   const handleAuthSubmit = async () => {
     try {
       const url = `/api/auth/${authMode}`;
@@ -53,12 +61,20 @@ const NavigationBar = ({ entryId, setEntryId, handleEntryIdSubmit, toggleTeamVie
       setUser({ username: res.data.username, teamid: res.data.teamid });
       setAuthOpen(false);
       setAuthError('');
+      if (typeof handleUserLogin === 'function') {
+        handleUserLogin(res.data.teamid);
+      }
     } catch (err) {
       setAuthError(err.response?.data?.error || 'Auth failed');
     }
   };
 
-  const handleLogout = () => setUser(null);
+  const handleLogout = () => {
+    setUser(null);
+    if (typeof handleUserLogin === 'function') {
+      handleUserLogin('');
+    }
+  };
 
   return (
     <AppBar position='static'>
@@ -79,34 +95,46 @@ const NavigationBar = ({ entryId, setEntryId, handleEntryIdSubmit, toggleTeamVie
               textDecoration: 'none',
             } }
           >
-            LOGO
+            FPL Predictor
           </Typography>
-          <Box sx={ { flexGrow: 1, maxWidth: '150px' } }>
+          { /* Searched Team input */ }
+          <Box sx={ { flexGrow: 1, maxWidth: '150px', mx: 2 } }>
             <TextField
               value={ entryId }
               onChange={ (e) => setEntryId(e.target.value) }
               fullWidth
               className='text-field'
               inputProps={ { maxLength: 10 } }
+              size='small'
+              label='Search Team ID'
+              variant='outlined'
             />
           </Box>
-          <Button onClick={ handleSubmit } sx={ { my: 2, color: 'white', display: 'block' } }>
-            Submit
-          </Button>
           <Button
-            onClick={ () => { if (isSubmitted && isHighestPredictedTeam) toggleTeamView(); } }
+            onClick={ handleEntryIdSubmit }
             sx={ { my: 2, color: 'white', display: 'block' } }
-            disabled={ !isSubmitted || !isHighestPredictedTeam }
+            variant={ teamView === TEAM_VIEW.SEARCHED ? 'contained' : 'outlined' }
+            color='secondary'
           >
-            My Team
+            Searched Team
           </Button>
-          <Button
-            onClick={ () => { if (!isHighestPredictedTeam) toggleTeamView(); } }
-            sx={ { my: 2, color: 'white', display: 'block' } }
-            disabled={ isHighestPredictedTeam }
-          >
-            Highest Team
-          </Button>
+          <Box sx={ { display: 'flex', gap: 1, ml: 2 } }>
+            <Button
+              variant={ teamView === TEAM_VIEW.USER ? 'contained' : 'outlined' }
+              color='secondary'
+              onClick={ () => onSwitchTeamView(TEAM_VIEW.USER) }
+              disabled={ !userTeamId }
+            >
+              My Team
+            </Button>
+            <Button
+              variant={ teamView === TEAM_VIEW.HIGHEST ? 'contained' : 'outlined' }
+              color='secondary'
+              onClick={ () => onSwitchTeamView(TEAM_VIEW.HIGHEST) }
+            >
+              Highest Team
+            </Button>
+          </Box>
           { user ? (
             <>
               <Typography sx={ { ml: 2, mr: 1 } }>{ user.username }</Typography>
@@ -166,8 +194,12 @@ NavigationBar.propTypes = {
   entryId: PropTypes.string.isRequired,
   setEntryId: PropTypes.func.isRequired,
   handleEntryIdSubmit: PropTypes.func.isRequired,
-  toggleTeamView: PropTypes.func.isRequired,
+  handleUserLogin: PropTypes.func.isRequired,
+  teamView: PropTypes.string.isRequired,
+  onSwitchTeamView: PropTypes.func.isRequired,
+  userTeamId: PropTypes.string.isRequired,
   isHighestPredictedTeam: PropTypes.bool.isRequired,
+  toggleTeamView: PropTypes.func.isRequired,
 };
 
 export default NavigationBar;
