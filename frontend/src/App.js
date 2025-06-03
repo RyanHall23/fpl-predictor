@@ -113,22 +113,19 @@ const App = () => {
       />
       <Container sx={ { marginTop: '4px' } }>
         <Box sx={ { display: 'flex', flexDirection: 'column', alignItems: 'center' } }>
-          <Typography variant='h4' align='center' gutterBottom>
-            FPL Predictor
-          </Typography>
           { teamView === TEAM_VIEW.SEARCHED && !searchedEntryId ? (
-            <Typography variant='body1' align='center' color='textSecondary' sx={ { mt: 4 } }>
-              Enter a Team ID above and click "Searched Team" to view a team's predicted points.
+            <Typography variant='h6' align='center' color='textSecondary' sx={ { mt: 4 } }>
+              Enter a Team ID above and click "Search" to view a team's predicted points.
             </Typography>
           ) : (
             <>
-              <Typography variant='body1' align='center' gutterBottom>
+              <Typography variant='h6' align='center' gutterBottom>
                 Total Predicted Points:{ ' ' }
                 <Box component='span' sx={ { fontWeight: 'bold' } }>
                   { calculateTotalPredictedPoints(mainTeamData) }
                 </Box>
               </Typography>
-              <Typography variant='body1' align='center' gutterBottom>
+              <Typography variant='h6' align='center' gutterBottom>
                 Bench Points:{ ' ' }
                 <Box component='span' sx={ { fontWeight: 'bold' } }>
                   { calculateTotalPredictedPoints(benchTeamData) }
