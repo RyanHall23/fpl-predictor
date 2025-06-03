@@ -30,6 +30,7 @@ const NavigationBar = ({
   teamView,
   onSwitchTeamView,
   userTeamId,
+  username,
   isHighestPredictedTeam,
   toggleTeamView
 }) => {
@@ -62,7 +63,7 @@ const NavigationBar = ({
       setAuthOpen(false);
       setAuthError('');
       if (typeof handleUserLogin === 'function') {
-        handleUserLogin(res.data.teamid);
+        handleUserLogin(res.data.teamid, res.data.username);
       }
     } catch (err) {
       setAuthError(err.response?.data?.error || 'Auth failed');
@@ -97,8 +98,8 @@ const NavigationBar = ({
           >
             FPL Predictor
           </Typography>
-          { /* Searched Team input */ }
-          <Box sx={ { flexGrow: 1, maxWidth: '150px', mx: 2 } }>
+          { /* Searched Team input and Search button */ }
+          <Box sx={ { display: 'flex', alignItems: 'center', maxWidth: '250px', mx: 2 } }>
             <TextField
               value={ entryId }
               onChange={ (e) => setEntryId(e.target.value) }
@@ -109,6 +110,14 @@ const NavigationBar = ({
               label='Search Team ID'
               variant='outlined'
             />
+            <Button
+              onClick={ handleEntryIdSubmit }
+              sx={ { ml: 1 } }
+              variant='contained'
+              color='secondary'
+            >
+              Search
+            </Button>
           </Box>
           <Button
             onClick={ handleEntryIdSubmit }
@@ -119,14 +128,16 @@ const NavigationBar = ({
             Searched Team
           </Button>
           <Box sx={ { display: 'flex', gap: 1, ml: 2 } }>
-            <Button
-              variant={ teamView === TEAM_VIEW.USER ? 'contained' : 'outlined' }
-              color='secondary'
-              onClick={ () => onSwitchTeamView(TEAM_VIEW.USER) }
-              disabled={ !userTeamId }
-            >
-              My Team
-            </Button>
+            { username && (
+              <Button
+                variant={ teamView === TEAM_VIEW.USER ? 'contained' : 'outlined' }
+                color='secondary'
+                onClick={ () => onSwitchTeamView(TEAM_VIEW.USER) }
+                disabled={ !userTeamId }
+              >
+                { `${username}'s Team` }
+              </Button>
+            ) }
             <Button
               variant={ teamView === TEAM_VIEW.HIGHEST ? 'contained' : 'outlined' }
               color='secondary'
@@ -135,17 +146,20 @@ const NavigationBar = ({
               Highest Team
             </Button>
           </Box>
-          { user ? (
-            <>
-              <Typography sx={ { ml: 2, mr: 1 } }>{ user.username }</Typography>
-              <Button color='inherit' onClick={ handleLogout }>Logout</Button>
-            </>
-          ) : (
-            <>
-              <Button color='inherit' onClick={ () => handleAuthOpen('login') }>Login</Button>
-              <Button color='inherit' onClick={ () => handleAuthOpen('register') }>Register</Button>
-            </>
-          ) }
+          { /* Right side: login/logout/user */ }
+          <Box sx={ { ml: 'auto', display: 'flex', alignItems: 'center' } }>
+            { user ? (
+              <>
+                <Typography sx={ { ml: 2, mr: 1 } }>{ user.username }</Typography>
+                <Button color='inherit' onClick={ handleLogout }>Logout</Button>
+              </>
+            ) : (
+              <>
+                <Button color='inherit' onClick={ () => handleAuthOpen('login') }>Login</Button>
+                <Button color='inherit' onClick={ () => handleAuthOpen('register') }>Register</Button>
+              </>
+            ) }
+          </Box>
         </Toolbar>
       </Container>
       <Dialog open={ authOpen } onClose={ handleAuthClose }>
@@ -200,6 +214,7 @@ NavigationBar.propTypes = {
   userTeamId: PropTypes.string.isRequired,
   isHighestPredictedTeam: PropTypes.bool.isRequired,
   toggleTeamView: PropTypes.func.isRequired,
+  username: PropTypes.string.isRequired,
 };
 
 export default NavigationBar;

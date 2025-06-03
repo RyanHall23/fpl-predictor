@@ -15,6 +15,7 @@ const App = () => {
   const [userEntryId, setUserEntryId] = useState('');
   const [currentEntryId, setCurrentEntryId] = useState('');
   const [teamView, setTeamView] = useState(TEAM_VIEW.HIGHEST);
+  const [username, setUsername] = useState('');
 
   const {
     mainTeamData,
@@ -48,9 +49,10 @@ const App = () => {
     setTeamView(TEAM_VIEW.SEARCHED);
   };
 
-  // When user logs in, set userEntryId and switch to My Team
-  const handleUserLogin = (teamid) => {
+  // When user logs in, set userEntryId, username, and switch to My Team
+  const handleUserLogin = (teamid, usernameFromNav) => {
     setUserEntryId(teamid);
+    setUsername(usernameFromNav || '');
     setCurrentEntryId(teamid);
     setTeamView(TEAM_VIEW.USER);
     // If currently showing highest team, switch to user team
@@ -92,6 +94,7 @@ const App = () => {
         teamView={ teamView }
         onSwitchTeamView={ handleSwitchTeamView }
         userTeamId={ userEntryId }
+        username={ username }
         isHighestPredictedTeam={ isHighestPredictedTeam }
         toggleTeamView={ toggleTeamView }
       />
