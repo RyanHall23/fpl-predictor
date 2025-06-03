@@ -34,19 +34,33 @@ server.js: Backend server code.
     cd fpl-predictor
     ```
 
-2. Install the dependencies:
+2. Install dependencies for all parts (root, frontend, backend):
     ```sh
     npm install
+    cd backend && npm install
+    cd ../frontend && npm install
+    cd ..
     ```
 
 ### Running the Application
 
-1. Start the development server:
+You can start both the backend and frontend together from the root directory:
+
+```sh
+npm start
+```
+
+- This will run the backend on [http://localhost:5000](http://localhost:5000) and the frontend on [http://localhost:3000](http://localhost:3000).
+
+**Alternatively, to run them separately:**
+
+- Start the backend:
     ```sh
+    cd backend
     npm start
     ```
-
-2. Start the backend server:
+- In a new terminal, start the frontend:
     ```sh
-    npm run start-server
+    cd frontend
+    npm start
     ```
