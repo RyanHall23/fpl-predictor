@@ -70,12 +70,6 @@ const getUserTeam = async (req, res) => {
       teamName = '';
     }
 
-    console.log(`User team for entry ${entryId} at event ${eventId}:`, {
-      mainTeam,
-      bench,
-      teamName,
-    });
-
     res.json({ mainTeam, bench, teamName });
   } catch (error) {
     console.error('Error building user team:', error);
