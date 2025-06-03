@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Box, Typography, Grid, Snackbar } from '@mui/material';
 import NavigationBar from './components/NavigationBar/NavigationBar';
+import Container from '@mui/material/Container';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import Grid from '@mui/material/Grid';
+import Snackbar from '@mui/material/Snackbar';
 import TeamFormation from './components/TeamFormation/TeamFormation';
 import useTeamData from './hooks/useTeamData';
 
@@ -17,6 +21,7 @@ const App = () => {
   const [currentEntryId, setCurrentEntryId] = useState('');
   const [teamView, setTeamView] = useState(TEAM_VIEW.HIGHEST);
   const [username, setUsername] = useState('');
+  const [searchedTeamName, setSearchedTeamName] = useState('');
 
   const {
     mainTeamData,
@@ -27,6 +32,7 @@ const App = () => {
     toggleTeamView,
     isHighestPredictedTeam,
     selectedPlayer,
+    teamName // <-- get from useTeamData
   } = useTeamData(
     currentEntryId,
     teamView === TEAM_VIEW.HIGHEST
@@ -47,9 +53,19 @@ const App = () => {
     }
   }, [snackbarOpen]);
 
+  // Update searchedTeamName when teamName changes and in searched view
+  useEffect(() => {
+    if (teamView === TEAM_VIEW.SEARCHED && teamName) {
+      setSearchedTeamName(teamName);
+    } else if (teamView === TEAM_VIEW.SEARCHED && !teamName) {
+      setSearchedTeamName('');
+    }
+  }, [teamName, teamView]);
+
   // Handle submit for searched team
   const handleSearchedEntryIdSubmit = () => {
-    setCurrentEntryId(searchedEntryId);
+    setSearchedEntryId(pendingSearchId);
+    setCurrentEntryId(pendingSearchId);
     setTeamView(TEAM_VIEW.SEARCHED);
     if (isHighestPredictedTeam) {
       toggleTeamView();
@@ -78,7 +94,11 @@ const App = () => {
       setCurrentEntryId(userEntryId);
       if (isHighestPredictedTeam) toggleTeamView();
     } else if (view === TEAM_VIEW.SEARCHED) {
-      setCurrentEntryId(searchedEntryId);
+      if (searchedEntryId) {
+        setCurrentEntryId(searchedEntryId);
+      } else {
+        setCurrentEntryId('');
+      }
       if (isHighestPredictedTeam) toggleTeamView();
     }
   };
@@ -97,12 +117,7 @@ const App = () => {
       <NavigationBar
         entryId={ pendingSearchId }
         setEntryId={ setPendingSearchId }
-        handleEntryIdSubmit={ () => {
-          setSearchedEntryId(pendingSearchId);
-          setCurrentEntryId(pendingSearchId);
-          setTeamView(TEAM_VIEW.SEARCHED);
-          if (isHighestPredictedTeam) toggleTeamView();
-        } }
+        handleEntryIdSubmit={ handleSearchedEntryIdSubmit }
         handleUserLogin={ handleUserLogin }
         teamView={ teamView }
         onSwitchTeamView={ handleSwitchTeamView }
@@ -110,14 +125,11 @@ const App = () => {
         username={ username }
         isHighestPredictedTeam={ isHighestPredictedTeam }
         toggleTeamView={ toggleTeamView }
+        searchedTeamName={ searchedTeamName }
       />
       <Container sx={ { marginTop: '4px' } }>
         <Box sx={ { display: 'flex', flexDirection: 'column', alignItems: 'center' } }>
-          { teamView === TEAM_VIEW.SEARCHED && !searchedEntryId ? (
-            <Typography variant='h6' align='center' color='textSecondary' sx={ { mt: 4 } }>
-              Enter a Team ID above and click "Search" to view a team's predicted points.
-            </Typography>
-          ) : (
+          { teamView === TEAM_VIEW.SEARCHED && !searchedEntryId ? null : (
             <>
               <Typography variant='h6' align='center' gutterBottom>
                 Total Predicted Points:{ ' ' }

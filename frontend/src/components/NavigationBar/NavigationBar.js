@@ -13,7 +13,6 @@ import {
   DialogContent,
   DialogActions
 } from '@mui/material';
-import axios from 'axios';
 import './styles.css';
 
 const TEAM_VIEW = {
@@ -31,14 +30,15 @@ const NavigationBar = ({
   onSwitchTeamView,
   userTeamId,
   username,
-  isHighestPredictedTeam,
-  toggleTeamView
+  searchedTeamName
 }) => {
   const [authOpen, setAuthOpen] = React.useState(false);
   const [authMode, setAuthMode] = React.useState('login'); // or 'register'
   const [authForm, setAuthForm] = React.useState({ username: '', password: '', teamid: '' });
   const [authError, setAuthError] = React.useState('');
   const [user, setUser] = React.useState(null);
+
+  console.log(searchedTeamName);
 
   const handleAuthOpen = (mode) => {
     setAuthMode(mode);
@@ -149,7 +149,9 @@ const NavigationBar = ({
             variant={ teamView === TEAM_VIEW.SEARCHED ? 'contained' : 'outlined' }
             color='secondary'
           >
-            Searched Team
+            { searchedTeamName
+              ? `${searchedTeamName}'s Team`
+              : 'View Team' }
           </Button>
           <Box sx={ { display: 'flex', gap: 1, ml: 2 } }>
             { username && (
@@ -239,6 +241,7 @@ NavigationBar.propTypes = {
   isHighestPredictedTeam: PropTypes.bool.isRequired,
   toggleTeamView: PropTypes.func.isRequired,
   username: PropTypes.string.isRequired,
+  searchedTeamName: PropTypes.string
 };
 
 export default NavigationBar;
