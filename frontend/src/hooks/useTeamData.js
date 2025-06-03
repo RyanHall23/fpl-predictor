@@ -1,83 +1,42 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 
+const defaultTeamData = []; // or whatever your empty state is
+
 const useTeamData = (entryId) => {
-  const [mainTeamData, setMainTeamData] = useState([]);
-  const [benchTeamData, setBenchTeamData] = useState([]);
-  const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const [mainTeamData, setMainTeamData] = useState(defaultTeamData);
+  const [benchTeamData, setBenchTeamData] = useState(defaultTeamData);
   const [snackbar, setSnackbar] = useState({ message: '', key: 0 });
-  const [isHighestPredictedTeam, setIsHighestPredictedTeam] = useState(true);
+  const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const [isHighestPredictedTeam, setIsHighestPredictedTeam] = useState(false);
 
-  // Fetch the highest predicted team from the backend
-  const fetchHighestPredictedTeam = async () => {
-    try {
-      const response = await axios.get('/api/predicted-team');
-      const { mainTeam, bench } = response.data;
-      const formatPlayer = (player) => ({
-        name: `${player.first_name} ${player.second_name}`,
-        team: player.team,
-        position: player.element_type,
-        predictedPoints: Math.round(player.ep_next),
-        code: player.code,
-        webName: player.web_name,
-        lastGwPoints: player.event_points,
-        inDreamteam: player.in_dreamteam,
-        totalPoints: player.total_points,
-        user_team: false
-      });
-      setMainTeamData(mainTeam.map(formatPlayer));
-      setBenchTeamData(bench.map(formatPlayer));
-    } catch (error) {
-      console.error('Error fetching highest predicted team data:', error);
-    }
-  };
-  
   useEffect(() => {
-    if (isHighestPredictedTeam) {
-      fetchHighestPredictedTeam();
+    if (!entryId) {
+      setMainTeamData(defaultTeamData);
+      setBenchTeamData(defaultTeamData);
+      setIsHighestPredictedTeam(false);
+      setSelectedPlayer(null);
+      return;
     }
-  }, [isHighestPredictedTeam]);
 
-  // Fetch the user's actual team (already sorted/grouped by backend)
-  const fetchData = useCallback(async () => {
-    if (!entryId) return;
+    // Fetch team data as before
+    const fetchData = async () => {
+      try {
+        // Your API call here
+        const res = await axios.get(`/api/predicted-team?entryId=${entryId}`);
+        setMainTeamData(res.data.mainTeam || defaultTeamData);
+        setBenchTeamData(res.data.benchTeam || defaultTeamData);
+        setIsHighestPredictedTeam(res.data.isHighestPredictedTeam || false);
+      } catch (err) {
+        setSnackbar({ message: 'Failed to load team data', key: new Date().getTime() });
+        setMainTeamData(defaultTeamData);
+        setBenchTeamData(defaultTeamData);
+        setIsHighestPredictedTeam(false);
+      }
+    };
 
-    try {
-      // Get current event
-      const bootstrap = await axios.get('/api/bootstrap-static');
-      const CurrentEvent = bootstrap.data.events.find((event) => event.is_current === true);
-      if (!CurrentEvent) throw new Error('No current event found.');
-      const eventId = CurrentEvent.id;
-
-      // Fetch sorted user team from backend
-      const response = await axios.get(`/api/entry/${entryId}/event/${eventId}/team`);
-      const { mainTeam, bench } = response.data;
-
-      const formatPlayer = (player) => ({
-        name: `${player.first_name} ${player.second_name}`,
-        team: player.team,
-        position: player.element_type,
-        predictedPoints: Math.round(player.ep_next),
-        code: player.code,
-        webName: player.web_name,
-        lastGwPoints: player.event_points,
-        inDreamteam: player.in_dreamteam,
-        totalPoints: player.total_points,
-        user_team: true
-      });
-
-      setMainTeamData(mainTeam.map(formatPlayer));
-      setBenchTeamData(bench.map(formatPlayer));
-    } catch (error) {
-      console.error('Error fetching team data:', error);
-    }
+    fetchData();
   }, [entryId]);
-
-  useEffect(() => {
-    if (!isHighestPredictedTeam) {
-      fetchData();
-    }
-  }, [fetchData, isHighestPredictedTeam]);
 
   // Handle player selection and swapping (only for user's team)
   const handlePlayerClick = isHighestPredictedTeam
