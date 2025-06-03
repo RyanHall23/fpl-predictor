@@ -12,6 +12,7 @@ const TEAM_VIEW = {
 
 const App = () => {
   const [searchedEntryId, setSearchedEntryId] = useState('');
+  const [pendingSearchId, setPendingSearchId] = useState(''); // For input box
   const [userEntryId, setUserEntryId] = useState('');
   const [currentEntryId, setCurrentEntryId] = useState('');
   const [teamView, setTeamView] = useState(TEAM_VIEW.HIGHEST);
@@ -83,9 +84,10 @@ const App = () => {
   };
 
   // Keep currentEntryId in sync when searchedEntryId or userEntryId changes and in the right view
-  useEffect(() => {
-    if (teamView === TEAM_VIEW.SEARCHED) setCurrentEntryId(searchedEntryId);
-  }, [searchedEntryId, teamView]);
+  // useEffect(() => {
+  //   if (teamView === TEAM_VIEW.SEARCHED) setCurrentEntryId(searchedEntryId);
+  // }, [searchedEntryId, teamView]);
+
   useEffect(() => {
     if (teamView === TEAM_VIEW.USER) setCurrentEntryId(userEntryId);
   }, [userEntryId, teamView]);
@@ -93,9 +95,14 @@ const App = () => {
   return (
     <>
       <NavigationBar
-        entryId={ searchedEntryId }
-        setEntryId={ setSearchedEntryId }
-        handleEntryIdSubmit={ handleSearchedEntryIdSubmit }
+        entryId={ pendingSearchId }
+        setEntryId={ setPendingSearchId }
+        handleEntryIdSubmit={ () => {
+          setSearchedEntryId(pendingSearchId);
+          setCurrentEntryId(pendingSearchId);
+          setTeamView(TEAM_VIEW.SEARCHED);
+          if (isHighestPredictedTeam) toggleTeamView();
+        } }
         handleUserLogin={ handleUserLogin }
         teamView={ teamView }
         onSwitchTeamView={ handleSwitchTeamView }
