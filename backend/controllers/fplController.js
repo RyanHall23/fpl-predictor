@@ -1,4 +1,5 @@
 const fplModel = require('../models/fplModel');
+const axios = require('axios');
 
 const getBootstrapStatic = async (req, res) => {
   try {
@@ -57,7 +58,25 @@ const getUserTeam = async (req, res) => {
       ep_next: parseFloat(p.ep_next) || 0,
     }));
     const { mainTeam, bench } = fplModel.buildUserTeam(players, picksData.picks);
-    res.json({ mainTeam, bench });
+
+    // Fetch the entry info for the team name
+    let teamName = '';
+    try {
+      const entryRes = await axios.get(`https://fantasy.premierleague.com/api/entry/${entryId}/`);
+      if (entryRes.data.player_first_name) {
+        teamName = `${entryRes.data.player_first_name} ${entryRes.data.player_last_name}`;
+      }
+    } catch (e) {
+      teamName = '';
+    }
+
+    console.log(`User team for entry ${entryId} at event ${eventId}:`, {
+      mainTeam,
+      bench,
+      teamName,
+    });
+
+    res.json({ mainTeam, bench, teamName });
   } catch (error) {
     console.error('Error building user team:', error);
     res.status(500).json({ error: 'Error building user team' });
@@ -69,5 +88,5 @@ module.exports = {
   getPlayerPicks,
   getElementSummary,
   getPredictedTeam,
-  getUserTeam
+  getUserTeam,
 };
