@@ -129,7 +129,11 @@ const App = () => {
       />
       <Container sx={ { marginTop: '4px' } }>
         <Box sx={ { display: 'flex', flexDirection: 'column', alignItems: 'center' } }>
-          { teamView === TEAM_VIEW.SEARCHED && !searchedEntryId ? null : (
+          { teamView === TEAM_VIEW.SEARCHED && !searchedEntryId ? (
+            <Typography variant='h6' align='center' color='textSecondary' sx={ { mt: 4 } }>
+              Enter a Team ID above and click "Search" to view a team's predicted points.
+            </Typography>
+          ) : (
             <>
               <Typography variant='h6' align='center' gutterBottom>
                 Total Predicted Points:{ ' ' }
