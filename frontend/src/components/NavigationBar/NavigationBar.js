@@ -147,7 +147,7 @@ const NavigationBar = ({
           >
             { searchedTeamName
               ? `${searchedTeamName}'s Team`
-              : 'View Team' }
+              : 'View Your Team' }
           </Button>
           <Box sx={ { display: 'flex', gap: 1, ml: 2 } }>
             { username && (
