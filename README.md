@@ -11,20 +11,28 @@ This project is guided by GitHub Copilot, an AI-powered coding assistant that he
 The main goal of this project is to create a model that can accurately predict the points that players will score in the Fantasy Premier League. This can help fantasy football managers make better decisions when selecting their teams.
 
 ## Project Structure
-src/: Contains the source code for the frontend.
-components/: React components.
-hooks/: Custom React hooks.
-services/: Services for API calls.
-utils/: Utility functions.
-public/: Public assets and the index.html file.
-server.js: Backend server code.
 
-## Getting Started
+backend/           # Express.js backend (API, authentication, MongoDB models)
+  controllers/     # Backend controllers (business logic)
+  models/          # Mongoose models and FPL data logic
+  routes/          # Express route definitions
+  server.js        # Backend entry point
 
-### Prerequisites
+frontend/          # React frontend (UI)
+  public/          # Static assets and index.html
+  src/             # Source code for React app
+    components/    # React components
+    hooks/         # Custom React hooks
+    App.js         # Main React app
+    index.js       # React entry point
 
-- Node.js (v14 or higher)
-- npm (v6 or higher)
+package.json       # Root scripts for running both frontend and backend together
+
+## Prerequisites
+
+- Node.js (v14 or higher, recommended v18+)
+- npm (v6 or higher, recommended v8+)
+- MongoDB (running locally on default port 27017)
 
 ### Installation
 
