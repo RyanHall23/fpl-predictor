@@ -12,6 +12,7 @@ The main goal of this project is to create a model that can accurately predict t
 
 ## Project Structure
 
+```
 backend/           # Express.js backend (API, authentication, MongoDB models)
   controllers/     # Backend controllers (business logic)
   models/          # Mongoose models and FPL data logic
@@ -27,6 +28,7 @@ frontend/          # React frontend (UI)
     index.js       # React entry point
 
 package.json       # Root scripts for running both frontend and backend together
+```
 
 ## Prerequisites
 
