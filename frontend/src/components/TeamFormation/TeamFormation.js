@@ -43,92 +43,101 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick, selectedPlayer }) =
     : [];
 
   return (
-    <Grid container spacing={ 2 } justifyContent='center'>
-      <Grid size={ 10 }>
-        <Paper className='main-paper'>
-          <Box>
-            { /* GK and Manager row, centered together */ }
-            <Grid container justifyContent='center' alignItems='center' spacing={ 2 }>
-              { gks.map((player, index) => (
-                <Grid key={ player.code || player.name }>
-                  <PlayerCard
-                    player={ player }
-                    onClick={ () => onPlayerClick(player, 'main') }
-                    index={ index + 1 }
-                    isCaptain={ player === captain }
-                    selectedPlayer={ selectedPlayer }
-                    teamType='main'
-                  />
-                </Grid>
-              )) }
-              { manager && (
-                <Grid container justifyContent='center' alignItems='center' spacing={ 2 }>
-                  <Box display='flex' flexDirection='column' alignItems='center'>
-                    <Typography align='center' variant='subtitle1'>
-                    </Typography>
+    <Grid container spacing={2}>
+      <Grid container item xs={12} justifyContent="center" alignItems="flex-start">
+        {/* Sidebar for Manager */}
+        {manager && (
+          <Grid item xs={12} sm={3} md={2}>
+            <Paper className="manager-sidebar" elevation={3} style={{ height: '100%', padding: 16 }}>
+              <Box display="flex" flexDirection="column" alignItems="center">
+                <Typography align="center" variant="subtitle1" gutterBottom>
+                  Manager
+                </Typography>
+                <PlayerCard
+                  player={manager}
+                  onClick={() => onPlayerClick(manager, 'main')}
+                  index={0}
+                  selectedPlayer={selectedPlayer}
+                  teamType="main"
+                />
+              </Box>
+            </Paper>
+          </Grid>
+        )}
+
+        {/* Main pitch */}
+        <Grid item xs={12} sm={manager ? 9 : 12} md={manager ? 8 : 10}>
+          <Paper className="main-paper">
+            <Box>
+              {/* GK row, centered */}
+              <Grid container justifyContent="center" alignItems="center" spacing={2}>
+                {gks.map((player, index) => (
+                  <Grid key={player.code || player.name}>
                     <PlayerCard
-                      player={ manager }
-                      onClick={ () => onPlayerClick(manager, 'main') }
-                      index={ 0 }
-                      selectedPlayer={ selectedPlayer }
-                      teamType='main'
+                      player={player}
+                      onClick={() => onPlayerClick(player, 'main')}
+                      index={index + 1}
+                      isCaptain={player === captain}
+                      selectedPlayer={selectedPlayer}
+                      teamType="main"
                     />
-                  </Box>
-                </Grid>
-              ) }
-            </Grid>
-            { /* DEF row */ }
-            <Grid container spacing={ 2 } justifyContent='center'>
-              { defs.map((player, index) => (
-                <Grid size={ { xs: 12, sm: 6, md: 4, lg: 3, xl: 2 } } key={ player.code || player.name }>
-                  <PlayerCard
-                    player={ player }
-                    onClick={ () => onPlayerClick(player, 'main') }
-                    index={ index + 1 + gks.length }
-                    isCaptain={ player === captain }
-                    selectedPlayer={ selectedPlayer }
-                    teamType='main'
-                  />
-                </Grid>
-              )) }
-            </Grid>
-            { /* MID row */ }
-            <Grid container spacing={ 2 } justifyContent='center'>
-              { mids.map((player, index) => (
-                <Grid size={ { xs: 12, sm: 6, md: 4, lg: 3, xl: 2 } } key={ player.code || player.name }>
-                  <PlayerCard
-                    player={ player }
-                    onClick={ () => onPlayerClick(player, 'main') }
-                    index={ index + 1 + gks.length + defs.length }
-                    isCaptain={ player === captain }
-                    selectedPlayer={ selectedPlayer }
-                    teamType='main'
-                  />
-                </Grid>
-              )) }
-            </Grid>
-            { /* ATT row */ }
-            <Grid container spacing={ 2 } justifyContent='center'>
-              { atts.map((player, index) => (
-                <Grid size={ { xs: 12, sm: 6, md: 4, lg: 3, xl: 2 } } key={ player.code || player.name }>
-                  <PlayerCard
-                    player={ player }
-                    onClick={ () => onPlayerClick(player, 'main') }
-                    index={ index + 1 + gks.length + defs.length + mids.length }
-                    isCaptain={ player === captain }
-                    selectedPlayer={ selectedPlayer }
-                    teamType='main'
-                  />
-                </Grid>
-              )) }
-            </Grid>
-          </Box>
-        </Paper>
+                  </Grid>
+                ))}
+              </Grid>
+              {/* DEF row */}
+              <Grid container spacing={2} justifyContent="center">
+                {defs.map((player, index) => (
+                  <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3, xl: 2 }} key={player.code || player.name}>
+                    <PlayerCard
+                      player={player}
+                      onClick={() => onPlayerClick(player, 'main')}
+                      index={index + 1 + gks.length}
+                      isCaptain={player === captain}
+                      selectedPlayer={selectedPlayer}
+                      teamType="main"
+                    />
+                  </Grid>
+                ))}
+              </Grid>
+              {/* MID row */}
+              <Grid container spacing={2} justifyContent="center">
+                {mids.map((player, index) => (
+                  <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3, xl: 2 }} key={player.code || player.name}>
+                    <PlayerCard
+                      player={player}
+                      onClick={() => onPlayerClick(player, 'main')}
+                      index={index + 1 + gks.length + defs.length}
+                      isCaptain={player === captain}
+                      selectedPlayer={selectedPlayer}
+                      teamType="main"
+                    />
+                  </Grid>
+                ))}
+              </Grid>
+              {/* ATT row */}
+              <Grid container spacing={2} justifyContent="center">
+                {atts.map((player, index) => (
+                  <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3, xl: 2 }} key={player.code || player.name}>
+                    <PlayerCard
+                      player={player}
+                      onClick={() => onPlayerClick(player, 'main')}
+                      index={index + 1 + gks.length + defs.length + mids.length}
+                      isCaptain={player === captain}
+                      selectedPlayer={selectedPlayer}
+                      teamType="main"
+                    />
+                  </Grid>
+                ))}
+              </Grid>
+            </Box>
+          </Paper>
+        </Grid>
       </Grid>
-      <Grid size={ 10 }>
-        <Paper className='bench-paper'>
+      {/* Bench remains unchanged */}
+      <Grid item xs={12}>
+        <Paper className="bench-paper">
           <Box>
-            <Grid container spacing={ 2 } justifyContent='center'>
+            <Grid container spacing={2} justifyContent="center">
               { /* Bench manager first */ }
               { benchManager && (
                 <Grid size={ { xs: 6, sm: 4, md: 2 } } key={ benchManager.code || benchManager.name }>
