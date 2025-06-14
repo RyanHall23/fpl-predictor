@@ -37,6 +37,8 @@ const UserProfilePane = ({ entryId }) => {
   const displayedInvitational = showAllInvitational ? invitationalLeagues : invitationalLeagues.slice(0, MAX_LEAGUES_DISPLAYED);
   const displayedGeneral = showAllGeneral ? generalLeagues : generalLeagues.slice(0, MAX_LEAGUES_DISPLAYED);
 
+  const formatNumber = n => (n == null ? 'N/A' : n.toLocaleString());
+
   return (
     <Paper sx={{ p: 2, minWidth: 250 }}>
       <Typography variant='h6' gutterBottom>
@@ -44,9 +46,10 @@ const UserProfilePane = ({ entryId }) => {
       </Typography>
       <Typography variant='subtitle2'>Team: {profile.entry.name}</Typography>
       <Divider sx={{ my: 1 }} />
-      <Typography variant='body1'>Total Points: <b>{profile.totalPoints}</b></Typography>
+      <Typography variant='body1'>Total Points: <b>{formatNumber(profile.totalPoints)}</b></Typography>
+      <Typography variant='body1'>Future GW: <b>{profile.futurePoints || 'N/A'}</b></Typography>
       <Typography variant='body1'>
-        Overall Rank: <b>{profile.entry.summary_overall_rank || 'N/A'}</b>
+        Overall Rank: <b>{formatNumber(profile.entry.summary_overall_rank)}</b>
       </Typography>
       <Divider sx={{ my: 1 }} />
 
@@ -64,7 +67,7 @@ const UserProfilePane = ({ entryId }) => {
               primary={l.name}
               secondary={
                 <>
-                  Rank: {l.entry_rank}{' '}
+                  Rank: {formatNumber(l.entry_rank)}{' '}
                   {getRankChangeIcon(l.entry_rank, l.entry_last_rank)}
                 </>
               }
@@ -96,7 +99,7 @@ const UserProfilePane = ({ entryId }) => {
               primary={l.name}
               secondary={
                 <>
-                  Rank: {l.entry_rank}{' '}
+                  Rank: {formatNumber(l.entry_rank)}{' '}
                   {getRankChangeIcon(l.entry_rank, l.entry_last_rank)}
                 </>
               }
