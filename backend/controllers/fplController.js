@@ -77,7 +77,6 @@ const getUserTeam = async (req, res) => {
   }
 };
 
-// ...existing code...
 const getUserProfile = async (req, res) => {
   const { entryId } = req.params;
   try {
@@ -88,7 +87,6 @@ const getUserProfile = async (req, res) => {
     const futureEvent = historyRes.data.future?.[0] || null;
     const futurePoints = futureEvent ? futureEvent.event : null;
 
-    // Extract classic leagues
     const classicLeagues = entryRes.data.leagues.classic.map(l => ({
       id: l.id,
       name: l.name,
@@ -110,9 +108,6 @@ const getUserProfile = async (req, res) => {
       cup_qualified: l.cup_qualified,
     }));
 
-    // Log league details
-    console.log('Classic Leagues:', classicLeagues);
-
     res.json({
       entry: entryRes.data,
       totalPoints,
@@ -124,7 +119,6 @@ const getUserProfile = async (req, res) => {
     res.status(500).json({ error: 'Error fetching user profile' });
   }
 };
-// ...existing code...
 
 module.exports = {
   getBootstrapStatic,

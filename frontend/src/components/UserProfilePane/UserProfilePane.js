@@ -5,6 +5,7 @@ import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import RemoveIcon from '@mui/icons-material/Remove';
 import axios from 'axios';
+import './styles.css';
 
 const getRankChangeIcon = (current, last) => {
   if (last == null || current == null) return <RemoveIcon sx={{ color: 'grey.500', fontSize: 18, verticalAlign: 'middle' }} />;
@@ -28,7 +29,7 @@ const UserProfilePane = ({ entryId }) => {
   }, [entryId]);
 
   if (!entryId) return null;
-  if (!profile) return <Paper sx={{ p: 2, minWidth: 250 }}>Loading profile...</Paper>;
+  if (!profile) return <Paper className='user-profile-pane'>Loading profile...</Paper>;
 
   const classicLeagues = profile.classicLeagues || [];
   const invitationalLeagues = classicLeagues.filter(l => l.league_type !== 's');
@@ -40,7 +41,7 @@ const UserProfilePane = ({ entryId }) => {
   const formatNumber = n => (n == null ? 'N/A' : n.toLocaleString());
 
   return (
-    <Paper sx={{ p: 2, minWidth: 250 }}>
+    <Paper className='user-profile-pane' elevation={4}>
       <Typography variant='h6' gutterBottom>
         {profile.entry.player_first_name} {profile.entry.player_last_name}
       </Typography>
@@ -77,8 +78,9 @@ const UserProfilePane = ({ entryId }) => {
       {invitationalLeagues.length > MAX_LEAGUES_DISPLAYED && (
         <Button
           size="small"
+          variant="outlined"
           onClick={() => setShowAllInvitational(v => !v)}
-          sx={{ mb: 1 }}
+          sx={{ mb: 1, borderColor: '#fff', color: '#fff' }}
         >
           {showAllInvitational ? 'Show Less' : 'Show All'}
         </Button>
@@ -109,8 +111,9 @@ const UserProfilePane = ({ entryId }) => {
       {generalLeagues.length > MAX_LEAGUES_DISPLAYED && (
         <Button
           size="small"
+          variant="outlined"
           onClick={() => setShowAllGeneral(v => !v)}
-          sx={{ mb: 1 }}
+          sx={{ mb: 1, borderColor: '#fff', color: '#fff' }}
         >
           {showAllGeneral ? 'Show Less' : 'Show All'}
         </Button>
