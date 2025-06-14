@@ -47,7 +47,6 @@ const UserProfilePane = ({ entryId }) => {
       <Typography variant='subtitle2'>Team: {profile.entry.name}</Typography>
       <Divider sx={{ my: 1 }} />
       <Typography variant='body1'>Total Points: <b>{formatNumber(profile.totalPoints)}</b></Typography>
-      <Typography variant='body1'>Future GW: <b>{profile.futurePoints || 'N/A'}</b></Typography>
       <Typography variant='body1'>
         Overall Rank: <b>{formatNumber(profile.entry.summary_overall_rank)}</b>
       </Typography>
