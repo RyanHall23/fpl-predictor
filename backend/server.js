@@ -20,6 +20,7 @@ app.get('/api/entry/:entryId/event/:eventId/picks', fplController.getPlayerPicks
 app.get('/api/element-summary/:playerId', fplController.getElementSummary);
 app.get('/api/predicted-team', fplController.getPredictedTeam);
 app.get('/api/entry/:entryId/event/:eventId/team', fplController.getUserTeam);
+app.get('/api/entry/:entryId/profile', fplController.getUserProfile);
 
 app.listen(port, () => {
   console.log(`Proxy server running on http://localhost:${port}`);

@@ -7,6 +7,7 @@ import Grid from '@mui/material/Grid';
 import Snackbar from '@mui/material/Snackbar';
 import TeamFormation from './components/TeamFormation/TeamFormation';
 import useTeamData from './hooks/useTeamData';
+import UserProfilePane from './components/UserProfilePane/UserProfilePane';
 
 const TEAM_VIEW = {
   SEARCHED: 'searched',
@@ -128,37 +129,48 @@ const App = () => {
         searchedTeamName={ searchedTeamName }
       />
       <Container sx={ { marginTop: '4px' } }>
-        <Box sx={ { display: 'flex', flexDirection: 'column', alignItems: 'center' } }>
-          { teamView === TEAM_VIEW.SEARCHED && !searchedEntryId ? (
-            <Typography variant='h6' align='center' color='textSecondary' sx={ { mt: 4 } }>
-              Enter a Team ID above and click "Search" to view a team's predicted points.
-            </Typography>
-          ) : (
-            <>
-              <Typography variant='h6' align='center' gutterBottom>
-                Total Predicted Points:{ ' ' }
-                <Box component='span' sx={ { fontWeight: 'bold' } }>
-                  { calculateTotalPredictedPoints(mainTeamData) }
-                </Box>
+        <Box sx={ { display: 'flex', flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'center' } }>
+          <Box sx={ { flex: 1, maxWidth: '900px' } }>
+            { teamView === TEAM_VIEW.SEARCHED && !searchedEntryId ? (
+              <Typography variant='h6' align='center' color='textSecondary' sx={ { mt: 4 } }>
+                Enter a Team ID above and click "Search" to view a team's predicted points.
               </Typography>
-              <Typography variant='h6' align='center' gutterBottom>
-                Bench Points:{ ' ' }
-                <Box component='span' sx={ { fontWeight: 'bold' } }>
-                  { calculateTotalPredictedPoints(benchTeamData) }
-                </Box>
-              </Typography>
-              <Grid container spacing={ 2 } justifyContent='center'>
-                <Grid item md={ 10 }>
-                  <TeamFormation
-                    mainTeam={ mainTeamData }
-                    benchTeam={ benchTeamData }
-                    onPlayerClick={ handlePlayerClick || (() => {}) }
-                    selectedPlayer={ selectedPlayer }
-                  />
+            ) : (
+              <>
+                <Typography variant='h6' align='center' gutterBottom>
+                  Total Predicted Points:{ ' ' }
+                  <Box component='span' sx={ { fontWeight: 'bold' } }>
+                    { calculateTotalPredictedPoints(mainTeamData) }
+                  </Box>
+                </Typography>
+                <Typography variant='h6' align='center' gutterBottom>
+                  Bench Points:{ ' ' }
+                  <Box component='span' sx={ { fontWeight: 'bold' } }>
+                    { calculateTotalPredictedPoints(benchTeamData) }
+                  </Box>
+                </Typography>
+                <Grid container spacing={ 2 } justifyContent='center'>
+                  <Grid item md={ 10 }>
+                    <TeamFormation
+                      mainTeam={ mainTeamData }
+                      benchTeam={ benchTeamData }
+                      onPlayerClick={ handlePlayerClick || (() => {}) }
+                      selectedPlayer={ selectedPlayer }
+                    />
+                  </Grid>
                 </Grid>
-              </Grid>
-            </>
-          ) }
+              </>
+            ) }
+          </Box>
+          <Box
+            sx={{
+              ml: 2,
+              marginTop: '76px',
+              minWidth: 250,
+            }}
+          >
+            <UserProfilePane entryId={currentEntryId} />
+          </Box>
         </Box>
         <Snackbar
           key={ snackbar.key }
