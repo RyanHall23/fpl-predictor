@@ -1,0 +1,31 @@
+.MuiPaper-root.user-profile-pane {
+background: linear-gradient(135deg, #23272f 0%, #281455 100%);
+  color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(106, 27, 154, 0.12);
+  min-width: 250px;
+  padding: 20px 16px;
+}
+
+.MuiPaper-root.user-profile-pane .MuiTypography-h6,
+.MuiPaper-root.user-profile-pane .MuiTypography-subtitle2 {
+  color: #fff;
+}
+
+.MuiPaper-root.user-profile-pane .MuiDivider-root {
+  background-color: #fff3;
+}
+
+.MuiPaper-root.user-profile-pane .MuiListItemText-primary,
+.MuiPaper-root.user-profile-pane .MuiListItemText-secondary {
+  color: #fff;
+}
+
+.MuiPaper-root.user-profile-pane .MuiButton-root {
+  color: #fff;
+  border-color: #fff;
+}
+
+.MuiPaper-root.user-profile-pane .MuiButton-root:hover {
+  background-color: #eca6ff;
+}
