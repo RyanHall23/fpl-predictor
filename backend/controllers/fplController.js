@@ -77,10 +77,60 @@ const getUserTeam = async (req, res) => {
   }
 };
 
+// ...existing code...
+const getUserProfile = async (req, res) => {
+  const { entryId } = req.params;
+  try {
+    const entryRes = await axios.get(`https://fantasy.premierleague.com/api/entry/${entryId}/`);
+    const historyRes = await axios.get(`https://fantasy.premierleague.com/api/entry/${entryId}/history/`);
+
+    const totalPoints = historyRes.data.current.reduce((sum, gw) => sum + gw.points, 0);
+    const futureEvent = historyRes.data.future?.[0] || null;
+    const futurePoints = futureEvent ? futureEvent.event : null;
+
+    // Extract classic leagues
+    const classicLeagues = entryRes.data.leagues.classic.map(l => ({
+      id: l.id,
+      name: l.name,
+      entry_rank: l.entry_rank,
+      entry_last_rank: l.entry_last_rank,
+      created: l.created,
+      closed: l.closed,
+      rank: l.rank,
+      max_entries: l.max_entries,
+      league_type: l.league_type,
+      scoring: l.scoring,
+      admin_entry: l.admin_entry,
+      start_event: l.start_event,
+      entry_can_admin: l.entry_can_admin,
+      entry_can_leave: l.entry_can_leave,
+      entry_can_invite: l.entry_can_invite,
+      has_cup: l.has_cup,
+      cup_league: l.cup_league,
+      cup_qualified: l.cup_qualified,
+    }));
+
+    // Log league details
+    console.log('Classic Leagues:', classicLeagues);
+
+    res.json({
+      entry: entryRes.data,
+      totalPoints,
+      futurePoints,
+      classicLeagues,
+    });
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ error: 'Error fetching user profile' });
+  }
+};
+// ...existing code...
+
 module.exports = {
   getBootstrapStatic,
   getPlayerPicks,
   getElementSummary,
   getPredictedTeam,
   getUserTeam,
+  getUserProfile
 };
