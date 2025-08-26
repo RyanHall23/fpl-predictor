@@ -7,6 +7,6 @@
     "start-frontend": "cd frontend && npm start"
   },
   "devDependencies": {
-    "concurrently": "^9.2.0"
+    "concurrently": "^9.2.1"
   }
 }
