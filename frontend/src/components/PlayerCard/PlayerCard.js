@@ -28,17 +28,25 @@ const PlayerCard = ({ player, onClick, isCaptain, selectedPlayer, teamType }) =>
     <Card className='player-card'>
       { isCaptain && <Box className='captain-badge'>C</Box> }
       { player.inDreamteam && <StarIcon className='dreamteam-icon' /> }
+      { console.log(player.code, player.webName) }
       <CardContent className='card-content'>
         <Box className='avatar-box'>
-          <Avatar
+        <Avatar sx={ { bgcolor: '#fff', width: 50, height: 96 } }>
+          <img
             src={
               player.position === 5
                 ? `//resources.premierleague.com/premierleague/photos/managers/250x250/man${parseInt(player.code, 10) - 100000000 + 1}.png`
-                : `//resources.premierleague.com/premierleague/photos/players/250x250/p${player.code}.png`
+                : `//resources.premierleague.com/premierleague25/photos/players/110x140/${player.code}.png`
             }
             alt={ player.webName }
-            className='avatar'
+            style={ {
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+              objectPosition: 'center 22px' // move image down 20px
+            } }
           />
+        </Avatar>
         </Box>
         <Box className='player-info'>
           <Typography
