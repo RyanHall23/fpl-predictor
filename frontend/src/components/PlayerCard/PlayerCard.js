@@ -43,7 +43,7 @@ const PlayerCard = ({ player, onClick, isCaptain, selectedPlayer, teamType }) =>
               width: '100%',
               height: '100%',
               objectFit: 'contain',
-              objectPosition: 'center 22px' // move image down 20px
+              objectPosition: 'center 22px'
             } }
           />
         </Avatar>
