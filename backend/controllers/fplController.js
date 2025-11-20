@@ -79,6 +79,12 @@ const getUserTeam = async (req, res) => {
 
 const getUserProfile = async (req, res) => {
   const { entryId } = req.params;
+
+  // Validate that entryId is a string of digits only (positive integer)
+  if (!/^\d+$/.test(entryId)) {
+    return res.status(400).json({ error: 'Invalid entryId format' });
+  }
+
   try {
     const entryRes = await axios.get(`https://fantasy.premierleague.com/api/entry/${entryId}/`);
     const historyRes = await axios.get(`https://fantasy.premierleague.com/api/entry/${entryId}/history/`);
