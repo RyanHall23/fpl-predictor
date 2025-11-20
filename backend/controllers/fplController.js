@@ -13,6 +13,10 @@ const getBootstrapStatic = async (req, res) => {
 
 const getPlayerPicks = async (req, res) => {
   const { entryId, eventId } = req.params;
+  // Validate entryId and eventId are positive integers
+  if (!/^\d+$/.test(entryId) || !/^\d+$/.test(eventId)) {
+    return res.status(400).json({ error: 'Invalid entryId or eventId' });
+  }
   try {
     const data = await fplModel.fetchPlayerPicks(entryId, eventId);
     res.json(data);
@@ -24,6 +28,10 @@ const getPlayerPicks = async (req, res) => {
 
 const getElementSummary = async (req, res) => {
   const { playerId } = req.params;
+  // Validate playerId is a positive integer
+  if (!/^\d+$/.test(playerId)) {
+    return res.status(400).json({ error: 'Invalid playerId' });
+  }
   try {
     const data = await fplModel.fetchElementSummary(playerId);
     res.json(data);
@@ -50,6 +58,10 @@ const getPredictedTeam = async (req, res) => {
 
 const getUserTeam = async (req, res) => {
   const { entryId, eventId } = req.params;
+  // Validate entryId and eventId are positive integers
+  if (!/^\d+$/.test(entryId) || !/^\d+$/.test(eventId)) {
+    return res.status(400).json({ error: 'Invalid entryId or eventId' });
+  }
   try {
     const bootstrap = await fplModel.fetchBootstrapStatic();
     const picksData = await fplModel.fetchPlayerPicks(entryId, eventId);
