@@ -117,39 +117,46 @@ const fetchElementSummary = async (playerId) => {
   return response.data;
 };
 
-const buildHighestPredictedTeam = (players) => {
-  // Enrich players with a computed expected points field (fallback safe)
-  const enriched = players.map(p => ({ ...p, computed_ep_next: computeExpectedPoints(p) }));
+const buildTeam = (players, picks = null) => {
+  // If picks are provided, filter the players to include only the picked players
+  const pickedPlayers = picks 
+    ? picks.map((pick) => {
+        const player = players.find(p => p.id === pick.element);
+        if (!player) return null;
+        return {
+          ...player,
+          ep_next: parseFloat(player.ep_next) || 0,
+        };
+      }).filter(Boolean)
+    : players;
 
-  // Filter and sort by predicted points (use computed_ep_next where possible)
-  const goalkeepers = enriched.filter((p) => p.element_type === 1 && getEpValue(p) > 0)
-    .sort((a, b) => getEpValue(b) - getEpValue(a));
-  const defenders = enriched.filter((p) => p.element_type === 2 && getEpValue(p) > 0)
-    .sort((a, b) => getEpValue(b) - getEpValue(a));
-  const midfielders = enriched.filter((p) => p.element_type === 3 && getEpValue(p) > 0)
-    .sort((a, b) => getEpValue(b) - getEpValue(a));
-  const forwards = enriched.filter((p) => p.element_type === 4 && getEpValue(p) > 0)
-    .sort((a, b) => getEpValue(b) - getEpValue(a));
-  const managers = enriched.filter((p) => p.element_type === 5 && getEpValue(p) > 0)
-    .sort((a, b) => getEpValue(b) - getEpValue(a));
+  // Enrich picked players with computed expected points
+  const enriched = pickedPlayers.map(p => ({ ...p, computed_ep_next: computeExpectedPoints(p) }));
 
-  // Select correct number for each position
-  const selectedGoalkeepers = goalkeepers.slice(0, 2); // 1 main, 1 bench
-  const selectedDefenders = defenders.slice(0, 5);     // 3 main, 2 bench
-  const selectedMidfielders = midfielders.slice(0, 5); // 3 main, 2 bench
-  const selectedForwards = forwards.slice(0, 3);       // 1 main, 2 bench
-  const selectedManagers = managers.slice(0, 2);       // 1 main, 1 bench
+  // Sort players by position and expected points (from highest to lowest)
+  const goalkeepers = enriched.filter((p) => p.element_type === 1).sort((a, b) => getEpValue(b) - getEpValue(a));
+  const defenders = enriched.filter((p) => p.element_type === 2).sort((a, b) => getEpValue(b) - getEpValue(a));
+  const midfielders = enriched.filter((p) => p.element_type === 3).sort((a, b) => getEpValue(b) - getEpValue(a));
+  const forwards = enriched.filter((p) => p.element_type === 4).sort((a, b) => getEpValue(b) - getEpValue(a));
+  const managers = enriched.filter((p) => p.element_type === 5).sort((a, b) => getEpValue(b) - getEpValue(a));
 
-  // Build main team (manager in first slot)
+  // Select top players per position
+  const selectedGoalkeepers = goalkeepers.slice(0, 2);  // 1 main, 1 bench
+  const selectedDefenders = defenders.slice(0, 5);      // 3 main, 2 bench
+  const selectedMidfielders = midfielders.slice(0, 5);  // 3 main, 2 bench
+  const selectedForwards = forwards.slice(0, 3);        // 1 main, 2 bench
+  const selectedManagers = managers.slice(0, 2);        // 1 main, 1 bench
+
+  // Build the main team
   let mainTeam = [
-    selectedManagers[0],
-    selectedGoalkeepers[0],
-    ...selectedDefenders.slice(0, 3),
-    ...selectedMidfielders.slice(0, 3),
-    selectedForwards[0],
+    selectedManagers[0],  // Manager
+    selectedGoalkeepers[0],  // Starting GK
+    ...selectedDefenders.slice(0, 3),  // Starting DEF
+    ...selectedMidfielders.slice(0, 3),  // Starting MID
+    selectedForwards[0],  // Starting Forward
   ];
 
-  // Fill up to 12 players in main team with highest ep_next from remaining DEF/MID/FWD
+  // Fill up the remaining slots on the main team with the next highest points players
   let remaining = [
     ...selectedDefenders.slice(3),
     ...selectedMidfielders.slice(3),
@@ -160,25 +167,26 @@ const buildHighestPredictedTeam = (players) => {
     mainTeam.push(remaining.shift());
   }
 
+  // Sort main team by position and expected points
   const gks = mainTeam.filter(p => p && p.element_type === 1).sort((a, b) => getEpValue(b) - getEpValue(a));
   const defs = mainTeam.filter(p => p && p.element_type === 2).sort((a, b) => getEpValue(b) - getEpValue(a));
   const mids = mainTeam.filter(p => p && p.element_type === 3).sort((a, b) => getEpValue(b) - getEpValue(a));
   const atts = mainTeam.filter(p => p && p.element_type === 4).sort((a, b) => getEpValue(b) - getEpValue(a));
 
   mainTeam = [
-    selectedManagers[0],
+    selectedManagers[0],  // Manager
     ...gks,
     ...defs,
     ...mids,
     ...atts,
   ].filter(Boolean);
 
-  // Bench: 1 GK, rest of DEF/MID/FWD not in main team, and second highest manager
+  // Bench: 1 GK, remaining DEF/MID/FWD, and second manager
   const benchGK = selectedGoalkeepers[1] ? [selectedGoalkeepers[1]] : [];
   const benchOutfield = remaining.sort((a, b) => getEpValue(b) - getEpValue(a));
   const benchManager = selectedManagers[1] ? [selectedManagers[1]] : [];
 
-  // Sort each position in bench by points before returning
+  // Sort each position in bench by points
   const benchDefs = benchOutfield.filter(p => p.element_type === 2).sort((a, b) => getEpValue(b) - getEpValue(a));
   const benchMids = benchOutfield.filter(p => p.element_type === 3).sort((a, b) => getEpValue(b) - getEpValue(a));
   const benchAtts = benchOutfield.filter(p => p.element_type === 4).sort((a, b) => getEpValue(b) - getEpValue(a));
@@ -194,94 +202,12 @@ const buildHighestPredictedTeam = (players) => {
   return { mainTeam, bench };
 };
 
-/**
- * Format and strictly select/sort a user's team by highest predicted points per position,
- * regardless of pick order, just like buildHighestPredictedTeam.
- */
-/**
- * Format and strictly select/sort a user's team by highest predicted points per position,
- * using the same logic as buildHighestPredictedTeam, but only from the user's actual picks.
- */
+const buildHighestPredictedTeam = (players) => {
+  return buildTeam(players, null);
+};
+
 const buildUserTeam = (players, picks) => {
-  const playerMap = {};
-  players.forEach((p) => { playerMap[p.id] = p; });
-
-  const pickedPlayers = picks
-    .map((pick) => {
-      const player = playerMap[pick.element];
-      if (!player) return null;
-      return {
-        ...player,
-        ep_next: parseFloat(player.ep_next) || 0,
-      };
-    })
-    .filter(Boolean);
-
-  // Enrich picked players with computed expected points
-  const enriched = pickedPlayers.map(p => ({ ...p, computed_ep_next: computeExpectedPoints(p) }));
-
-  const goalkeepers = enriched.filter((p) => p.element_type === 1).sort((a, b) => getEpValue(b) - getEpValue(a));
-  const defenders = enriched.filter((p) => p.element_type === 2).sort((a, b) => getEpValue(b) - getEpValue(a));
-  const midfielders = enriched.filter((p) => p.element_type === 3).sort((a, b) => getEpValue(b) - getEpValue(a));
-  const forwards = enriched.filter((p) => p.element_type === 4).sort((a, b) => getEpValue(b) - getEpValue(a));
-  const managers = enriched.filter((p) => p.element_type === 5).sort((a, b) => getEpValue(b) - getEpValue(a));
-
-  const selectedGoalkeepers = goalkeepers.slice(0, 2);
-  const selectedDefenders = defenders.slice(0, 5);
-  const selectedMidfielders = midfielders.slice(0, 5);
-  const selectedForwards = forwards.slice(0, 3);
-  const selectedManagers = managers.slice(0, 2);
-
-  let mainTeam = [
-    selectedManagers[0],
-    selectedGoalkeepers[0],
-    ...selectedDefenders.slice(0, 3),
-    ...selectedMidfielders.slice(0, 3),
-    selectedForwards[0],
-  ];
-
-  let remaining = [
-    ...selectedDefenders.slice(3),
-    ...selectedMidfielders.slice(3),
-    ...selectedForwards.slice(1),
-  ].sort((a, b) => getEpValue(b) - getEpValue(a));
-
-  while (mainTeam.length < 12 && remaining.length) {
-    mainTeam.push(remaining.shift());
-  }
-
-  const gks = mainTeam.filter(p => p && p.element_type === 1).sort((a, b) => getEpValue(b) - getEpValue(a));
-  const defs = mainTeam.filter(p => p && p.element_type === 2).sort((a, b) => getEpValue(b) - getEpValue(a));
-  const mids = mainTeam.filter(p => p && p.element_type === 3).sort((a, b) => getEpValue(b) - getEpValue(a));
-  const atts = mainTeam.filter(p => p && p.element_type === 4).sort((a, b) => getEpValue(b) - getEpValue(a));
-
-  mainTeam = [
-    selectedManagers[0],
-    ...gks,
-    ...defs,
-    ...mids,
-    ...atts,
-  ].filter(Boolean);
-
-  // Bench: 1 GK, rest of DEF/MID/FWD not in main team, and second highest manager
-  const benchGK = selectedGoalkeepers[1] ? [selectedGoalkeepers[1]] : [];
-  const benchOutfield = remaining.sort((a, b) => getEpValue(b) - getEpValue(a));
-  const benchManager = selectedManagers[1] ? [selectedManagers[1]] : [];
-
-  // Sort each position in bench by points before returning
-  const benchDefs = benchOutfield.filter(p => p.element_type === 2).sort((a, b) => getEpValue(b) - getEpValue(a));
-  const benchMids = benchOutfield.filter(p => p.element_type === 3).sort((a, b) => getEpValue(b) - getEpValue(a));
-  const benchAtts = benchOutfield.filter(p => p.element_type === 4).sort((a, b) => getEpValue(b) - getEpValue(a));
-
-  const bench = [
-    ...benchManager,
-    ...benchGK,
-    ...benchDefs,
-    ...benchMids,
-    ...benchAtts,
-  ].filter(Boolean);
-
-  return { mainTeam, bench };
+  return buildTeam(players, picks);
 };
 
 module.exports = {
