@@ -48,7 +48,6 @@ const computeHeadToHead = (player, upcomingOpponentId = null) => {
  * ep_next value if the derived stats are not available.
  */
 const computeExpectedPoints = (player) => {
-  // try several common property names; falls back to 0
   const num = (v) => {
     if (v == null) return 0;
     const n = parseFloat(v);
@@ -60,43 +59,50 @@ const computeExpectedPoints = (player) => {
   const cleanSheets = num(player.clean_sheets ?? player.cleanSheets ?? player.clean_sheet ?? 0);
   const defensiveContrib = num(player.defensive_contrib ?? player.def ?? player.def_contrib ?? 0);
 
-  // Prefer computed head2head from attached element-summary if available,
-  // falling back to any existing h2h field on the player object.
   const computedH2H = computeHeadToHead(player);
-  const head2head = computedH2H > 0
-    ? computedH2H
-    : num(player.h2h ?? player.head2head ?? 0);
+  const head2head = computedH2H > 0 ? computedH2H : num(player.h2h ?? player.head2head ?? 0);
 
-  console.log(`Computing expected points for ${player.web_name || player.name || 'unknown'}: xG=${xG}, xA=${xA}, CS=${cleanSheets}, DEF=${defensiveContrib}, H2H=${head2head}`);
-
-  // Weights (adjustable)
-  const W_XG = 4.0;
-  const W_XA = 3.0;
-  const W_CS = 3.0;
-  const W_DEF = 1.5;
-  const W_H2H = 1.0;
-
-  // Build a raw score
-  let rawScore = xG * W_XG + xA * W_XA + cleanSheets * W_CS + defensiveContrib * W_DEF + head2head * W_H2H;
-
-  // If rawScore is zero (no advanced stats), fall back to ep_next if present
   const baseEp = num(player.ep_next ?? player.ep_next_raw ?? player.ep ?? 0);
 
-  if (rawScore <= 0) {
-    return Number(baseEp.toFixed(2));
-  }
+  // Debug
+  console.log(`EP model for ${player.web_name || player.name || 'unknown'} — xG:${xG} xA:${xA} CS:${cleanSheets} DEF:${defensiveContrib} H2H:${head2head} baseEp:${baseEp}`);
 
-  // Blend model score with base ep to keep values on typical FPL points scale.
-  // You can tune the blend ratio as needed; current is 60% model, 40% base.
-  const MODEL_WEIGHT = 0.6;
-  const BASE_WEIGHT = 0.4;
+  // Weights (reduced model influence so we don't push values below base)
+  const W_XG = 3.0;
+  const W_XA = 2.0;
+  const W_CS = 2.0;
+  const W_DEF = 1.0;
+  const W_H2H = 0.8;
 
-  // Normalize rawScore roughly to expected points scale:
-  // use a simple heuristic: scale by 1.0 / (max of xG/xA typical ranges)
-  // (this is intentionally simple — replace with a trained scaler if available)
-  const normalizedScore = rawScore / Math.max(1, xG + xA + cleanSheets + defensiveContrib + head2head);
+  let rawScore = xG * W_XG + xA * W_XA + cleanSheets * W_CS + defensiveContrib * W_DEF + head2head * W_H2H;
 
-  const computed = normalizedScore * 3.0 * MODEL_WEIGHT + baseEp * BASE_WEIGHT;
+  // If no advanced stats, return base ep_next
+  if (rawScore <= 0) return Number(baseEp.toFixed(2));
+
+  // Blend settings: keep baseEp dominant, small model uplift
+  const MODEL_WEIGHT = 0.35;
+  const BASE_WEIGHT = 0.65;
+
+  // Conservative normalization
+  const featureSum = xG + xA + cleanSheets + defensiveContrib + head2head;
+  const denom = Math.max(1, featureSum); // avoid tiny denom
+  const normalizedScore = rawScore / denom;
+
+  const MULTIPLIER = 1.2;
+  let modelContribution = normalizedScore * MULTIPLIER * MODEL_WEIGHT;
+
+  // Compose computed value
+  let computed = baseEp * BASE_WEIGHT + modelContribution + baseEp * (1 - BASE_WEIGHT - MODEL_WEIGHT);
+  // The extra term above ensures we don't unintentionally downscale baseEp when modelContribution is tiny.
+  // (effectively computed >= baseEp unless modelContribution is negative, which it isn't here)
+
+  // Enforce floor: never return less than baseEp
+  computed = Math.max(computed, baseEp);
+
+  // Cap uplift to avoid huge jumps
+  const MAX_UPLIFT = 4;
+  computed = Math.min(computed, baseEp + MAX_UPLIFT);
+
   return Number(Math.max(0, computed).toFixed(2));
 };
 
