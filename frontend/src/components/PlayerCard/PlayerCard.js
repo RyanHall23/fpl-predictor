@@ -12,8 +12,10 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import StarIcon from '@mui/icons-material/Star';
 import PropTypes from 'prop-types';
 import './styles.css';
+import TransferPlayer from '../TransferPlayer/TransferPlayer';
 
-const PlayerCard = ({ player, onClick, isCaptain, selectedPlayer, teamType }) => {
+const PlayerCard = ({ player, isCaptain, selectedPlayer, teamType, team, allPlayers, onTransfer }) => {
+  const [dialogOpen, setDialogOpen] = useState(false);
   const isSelected =
     selectedPlayer &&
     selectedPlayer.player.code === player.code &&
@@ -28,25 +30,24 @@ const PlayerCard = ({ player, onClick, isCaptain, selectedPlayer, teamType }) =>
     <Card className='player-card'>
       { isCaptain && <Box className='captain-badge'>C</Box> }
       { player.inDreamteam && <StarIcon className='dreamteam-icon' /> }
-      { console.log(player.code, player.webName) }
       <CardContent className='card-content'>
         <Box className='avatar-box'>
-        <Avatar sx={ { bgcolor: '#fff', width: 50, height: 96 } }>
-          <img
-            src={
-              player.position === 5
-                ? `//resources.premierleague.com/premierleague/photos/managers/250x250/man${parseInt(player.code, 10) - 100000000 + 1}.png`
-                : `//resources.premierleague.com/premierleague25/photos/players/110x140/${player.code}.png`
-            }
-            alt={ player.webName }
-            style={ {
-              width: '100%',
-              height: '100%',
-              objectFit: 'contain',
-              objectPosition: 'center 22px'
-            } }
-          />
-        </Avatar>
+          <Avatar sx={ { bgcolor: '#fff', width: 50, height: 96 } }>
+            <img
+              src={
+                player.position === 5
+                  ? `//resources.premierleague.com/premierleague/photos/managers/250x250/man${parseInt(player.code, 10) - 100000000 + 1}.png`
+                  : `//resources.premierleague.com/premierleague25/photos/players/110x140/${player.code}.png`
+              }
+              alt={ player.webName }
+              style={ {
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
+                objectPosition: 'center 22px'
+              } }
+            />
+          </Avatar>
         </Box>
         <Box className='player-info'>
           <Typography
@@ -59,14 +60,16 @@ const PlayerCard = ({ player, onClick, isCaptain, selectedPlayer, teamType }) =>
             </Typography>
           </Box>
         </Box>
-        { player.user_team && (
-          <IconButton
-            onClick={ onClick }
-            size='small'
-            className={ `action-button ${isSelected ? 'clicked' : 'not-clicked'}` }
-          >
-            { isSelected ? <ArrowBackIcon /> : <ArrowForwardIcon /> }
-          </IconButton>
+        { /* Transfer/Sub Button below player info */ }
+        { player.user_team && team && allPlayers && onTransfer && (
+          <Box sx={ { mt: 1 } }>
+            <TransferPlayer
+              team={ team }
+              allPlayers={ allPlayers }
+              playerOut={ player }
+              onTransfer={ onTransfer }
+            />
+          </Box>
         ) }
       </CardContent>
     </Card>
@@ -82,7 +85,6 @@ PlayerCard.propTypes = {
     position: PropTypes.number.isRequired,
     user_team: PropTypes.bool
   }).isRequired,
-  onClick: PropTypes.func.isRequired,
   isCaptain: PropTypes.bool,
   selectedPlayer: PropTypes.shape({
     player: PropTypes.shape({
@@ -92,6 +94,9 @@ PlayerCard.propTypes = {
     teamType: PropTypes.any,
   }),
   teamType: PropTypes.any,
+  team: PropTypes.array,
+  allPlayers: PropTypes.array,
+  onTransfer: PropTypes.func,
 };
 
 export default PlayerCard;
