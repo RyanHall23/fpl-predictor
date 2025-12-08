@@ -28,11 +28,13 @@ const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut }) => {
     // Defensive: FPL API sometimes uses element_type for position
     const getPosition = (p) => p.position ?? p.element_type;
     const playerOutPosition = getPosition(playerOut);
-    // Only allow transfer to same position, and not already in team
+    // Prevent duplicates: exclude any player already in the team by id or code
+    const teamIds = new Set(team.map(tp => tp.id ?? tp.code));
     const availablePlayers = allPlayers.filter(
         (p) =>
             getPosition(p) === playerOutPosition &&
-            !team.some((tp) => getId(tp) === getId(p)) &&
+            !teamIds.has(p.id) &&
+            !teamIds.has(p.code) &&
             getId(p) !== getId(playerOut)
     );
     // DEBUG: Uncomment to see why options may be empty
