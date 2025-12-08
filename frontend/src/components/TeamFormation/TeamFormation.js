@@ -13,7 +13,7 @@ const positionLabels = {
   5: 'MAN'
 };
 
-const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick, selectedPlayer }) => {
+const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick, selectedPlayer, team, allPlayers, onTransfer }) => {
   // Find the player with the highest points (captain, excluding manager)
   const captain = mainTeam && mainTeam.length
     ? mainTeam.filter(p => p.position !== 5).reduce(
@@ -53,11 +53,12 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick, selectedPlayer }) =
                 <Grid key={ player.code || player.name }>
                   <PlayerCard
                     player={ player }
-                    onClick={ () => onPlayerClick(player, 'main') }
-                    index={ index + 1 }
                     isCaptain={ player === captain }
                     selectedPlayer={ selectedPlayer }
                     teamType='main'
+                    team={team}
+                    allPlayers={allPlayers}
+                    onTransfer={onTransfer}
                   />
                 </Grid>
               )) }
@@ -68,10 +69,12 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick, selectedPlayer }) =
                     </Typography>
                     <PlayerCard
                       player={ manager }
-                      onClick={ () => onPlayerClick(manager, 'main') }
-                      index={ 0 }
+                      isCaptain={ manager === captain }
                       selectedPlayer={ selectedPlayer }
                       teamType='main'
+                      team={team}
+                      allPlayers={allPlayers}
+                      onTransfer={onTransfer}
                     />
                   </Box>
                 </Grid>
@@ -83,11 +86,12 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick, selectedPlayer }) =
                 <Grid size={ { xs: 12, sm: 6, md: 4, lg: 3, xl: 2 } } key={ player.code || player.name }>
                   <PlayerCard
                     player={ player }
-                    onClick={ () => onPlayerClick(player, 'main') }
-                    index={ index + 1 + gks.length }
                     isCaptain={ player === captain }
                     selectedPlayer={ selectedPlayer }
                     teamType='main'
+                    team={team}
+                    allPlayers={allPlayers}
+                    onTransfer={onTransfer}
                   />
                 </Grid>
               )) }
@@ -98,11 +102,12 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick, selectedPlayer }) =
                 <Grid size={ { xs: 12, sm: 6, md: 4, lg: 3, xl: 2 } } key={ player.code || player.name }>
                   <PlayerCard
                     player={ player }
-                    onClick={ () => onPlayerClick(player, 'main') }
-                    index={ index + 1 + gks.length + defs.length }
                     isCaptain={ player === captain }
                     selectedPlayer={ selectedPlayer }
                     teamType='main'
+                    team={team}
+                    allPlayers={allPlayers}
+                    onTransfer={onTransfer}
                   />
                 </Grid>
               )) }
@@ -113,11 +118,12 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick, selectedPlayer }) =
                 <Grid size={ { xs: 12, sm: 6, md: 4, lg: 3, xl: 2 } } key={ player.code || player.name }>
                   <PlayerCard
                     player={ player }
-                    onClick={ () => onPlayerClick(player, 'main') }
-                    index={ index + 1 + gks.length + defs.length + mids.length }
                     isCaptain={ player === captain }
                     selectedPlayer={ selectedPlayer }
                     teamType='main'
+                    team={team}
+                    allPlayers={allPlayers}
+                    onTransfer={onTransfer}
                   />
                 </Grid>
               )) }
@@ -138,10 +144,12 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick, selectedPlayer }) =
                     </Typography>
                     <PlayerCard
                       player={ benchManager }
-                      onClick={ () => onPlayerClick(benchManager, 'bench') }
-                      index={ 0 }
+                      isCaptain={ false }
                       selectedPlayer={ selectedPlayer }
                       teamType='bench'
+                      team={team}
+                      allPlayers={allPlayers}
+                      onTransfer={onTransfer}
                     />
                   </Box>
                 </Grid>
@@ -155,10 +163,12 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick, selectedPlayer }) =
                     </Typography>
                     <PlayerCard
                       player={ benchGK }
-                      onClick={ () => onPlayerClick(benchGK, 'bench') }
-                      index={ 1 }
+                      isCaptain={ false }
                       selectedPlayer={ selectedPlayer }
                       teamType='bench'
+                      team={team}
+                      allPlayers={allPlayers}
+                      onTransfer={onTransfer}
                     />
                   </Box>
                 </Grid>
@@ -172,10 +182,12 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick, selectedPlayer }) =
                     </Typography>
                     <PlayerCard
                       player={ player }
-                      onClick={ () => onPlayerClick(player, 'bench') }
-                      index={ index + 2 }
+                      isCaptain={ false }
                       selectedPlayer={ selectedPlayer }
                       teamType='bench'
+                      team={team}
+                      allPlayers={allPlayers}
+                      onTransfer={onTransfer}
                     />
                   </Box>
                 </Grid>
