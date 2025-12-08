@@ -166,37 +166,22 @@ const App = () => {
                       team={ [...mainTeamData, ...benchTeamData] }
                       allPlayers={ allPlayers }
                       onTransfer={ (playerOut, playerIn) => {
-                        // Swap the ids and relevant fields of playerOut and playerIn in the correct team, preserving all other fields
-                        const swapPlayers = (teamArr) => {
+                        // Prevent duplicate: do not allow transfer if playerIn is already in main or bench team
+                        const playerInExists = [...mainTeamData, ...benchTeamData].some(p => p.code === playerIn.code);
+                        if (playerInExists) {
+                          // Optionally, show a snackbar or error here
+                          return;
+                        }
+                        // Replace OUT player with IN player in the correct team array only
+                        const replacePlayer = (teamArr) => {
                           const idxOut = teamArr.findIndex(p => p.code === playerOut.code);
-                          const idxIn = teamArr.findIndex(p => p.code === playerIn.code);
-                          if (idxOut === -1 && idxIn === -1) return teamArr;
+                          if (idxOut === -1) return teamArr;
                           const newArr = [...teamArr];
-                          if (idxOut !== -1 && idxIn !== -1) {
-                            // Swap only the id/code and relevant fields, not the entire object
-                            const outPlayer = { ...newArr[idxOut] };
-                            const inPlayer = { ...newArr[idxIn] };
-                            // Swap all fields except user_team
-                            Object.keys(outPlayer).forEach(key => {
-                              if (key !== 'user_team') {
-                                const temp = outPlayer[key];
-                                outPlayer[key] = inPlayer[key];
-                                inPlayer[key] = temp;
-                              }
-                            });
-                            newArr[idxOut] = outPlayer;
-                            newArr[idxIn] = inPlayer;
-                          } else if (idxOut !== -1) {
-                            // Only playerOut is in this team: replace with playerIn
-                            newArr[idxOut] = { ...playerIn, user_team: true };
-                          } else if (idxIn !== -1) {
-                            // Only playerIn is in this team: replace with playerOut
-                            newArr[idxIn] = { ...playerOut, user_team: true };
-                          }
+                          newArr[idxOut] = { ...playerIn, user_team: true };
                           return newArr;
                         };
-                        setMainTeamData(swapPlayers(mainTeamData));
-                        setBenchTeamData(swapPlayers(benchTeamData));
+                        setMainTeamData(replacePlayer(mainTeamData));
+                        setBenchTeamData(replacePlayer(benchTeamData));
                       } }
                     />
                   </Grid>
