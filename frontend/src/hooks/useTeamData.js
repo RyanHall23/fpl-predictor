@@ -153,6 +153,14 @@ const swapPlayers = (player1, player2, teamType1, teamType2) => {
 };
 
 const isValidSwap = (player1, player2, teamType1, teamType2) => {
+  // Don't allow swaps within the same zone
+  if (teamType1 === teamType2) {
+    return {
+      valid: false,
+      error: 'Players can only be swapped between the starting squad and the bench.',
+    };
+  }
+
   // Only allow manager swaps if both are managers (position === 5)
   if (player1.position === 5 || player2.position === 5) {
     if (player1.position === 5 && player2.position === 5) {
