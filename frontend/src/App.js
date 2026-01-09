@@ -123,7 +123,7 @@ const App = () => {
   }, [userEntryId, teamView]);
 
   return (
-    <Box sx={{ minHeight: '100vh', backgroundColor: theme.palette.background.default }}>
+    <Box sx={ { minHeight: '100vh', backgroundColor: theme.palette.background.default } }>
       <NavigationBar
         entryId={ pendingSearchId }
         setEntryId={ setPendingSearchId }
