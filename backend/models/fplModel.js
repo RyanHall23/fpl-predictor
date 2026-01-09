@@ -64,9 +64,6 @@ const computeExpectedPoints = (player) => {
 
   const baseEp = num(player.ep_next ?? player.ep_next_raw ?? player.ep ?? 0);
 
-  // Debug
-  console.log(`EP model for ${player.web_name || player.name || 'unknown'} — xG:${xG} xA:${xA} CS:${cleanSheets} DEF:${defensiveContrib} H2H:${head2head} baseEp:${baseEp}`);
-
   // Weights (reduced model influence so we don't push values below base)
   const W_XG = 3.0;
   const W_XA = 2.0;
