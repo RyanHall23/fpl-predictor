@@ -271,7 +271,9 @@ const calculateTotalPredictedPoints = (team) => {
     toggleTeamView,
     isHighestPredictedTeam,
     selectedPlayer,
-    teamName
+    teamName,
+    setMainTeamData,
+    setBenchTeamData
   };
 };
 

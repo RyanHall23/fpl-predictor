@@ -13,7 +13,7 @@ const positionLabels = {
   5: 'MAN'
 };
 
-const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick, selectedPlayer }) => {
+const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, onTransfer }) => {
   // Find the player with the highest points (captain, excluding manager)
   const captain = mainTeam && mainTeam.length
     ? mainTeam.filter(p => p.position !== 5).reduce(
@@ -49,15 +49,16 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick, selectedPlayer }) =
           <Box>
             { /* GK and Manager row, centered together */ }
             <Grid container justifyContent='center' alignItems='center' spacing={ 2 }>
-              { gks.map((player, index) => (
+              { gks.map((player) => (
                 <Grid key={ player.code || player.name }>
                   <PlayerCard
                     player={ player }
-                    onClick={ () => onPlayerClick(player, 'main') }
-                    index={ index + 1 }
                     isCaptain={ player === captain }
                     selectedPlayer={ selectedPlayer }
                     teamType='main'
+                    team={ team }
+                    allPlayers={ allPlayers }
+                    onTransfer={ onTransfer }
                   />
                 </Grid>
               )) }
@@ -68,10 +69,12 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick, selectedPlayer }) =
                     </Typography>
                     <PlayerCard
                       player={ manager }
-                      onClick={ () => onPlayerClick(manager, 'main') }
-                      index={ 0 }
+                      isCaptain={ manager === captain }
                       selectedPlayer={ selectedPlayer }
                       teamType='main'
+                      team={ team }
+                      allPlayers={ allPlayers }
+                      onTransfer={ onTransfer }
                     />
                   </Box>
                 </Grid>
@@ -79,45 +82,48 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick, selectedPlayer }) =
             </Grid>
             { /* DEF row */ }
             <Grid container spacing={ 2 } justifyContent='center'>
-              { defs.map((player, index) => (
+              { defs.map((player) => (
                 <Grid size={ { xs: 12, sm: 6, md: 4, lg: 3, xl: 2 } } key={ player.code || player.name }>
                   <PlayerCard
                     player={ player }
-                    onClick={ () => onPlayerClick(player, 'main') }
-                    index={ index + 1 + gks.length }
                     isCaptain={ player === captain }
                     selectedPlayer={ selectedPlayer }
                     teamType='main'
+                    team={ team }
+                    allPlayers={ allPlayers }
+                    onTransfer={ onTransfer }
                   />
                 </Grid>
               )) }
             </Grid>
             { /* MID row */ }
             <Grid container spacing={ 2 } justifyContent='center'>
-              { mids.map((player, index) => (
+              { mids.map((player) => (
                 <Grid size={ { xs: 12, sm: 6, md: 4, lg: 3, xl: 2 } } key={ player.code || player.name }>
                   <PlayerCard
                     player={ player }
-                    onClick={ () => onPlayerClick(player, 'main') }
-                    index={ index + 1 + gks.length + defs.length }
                     isCaptain={ player === captain }
                     selectedPlayer={ selectedPlayer }
                     teamType='main'
+                    team={ team }
+                    allPlayers={ allPlayers }
+                    onTransfer={ onTransfer }
                   />
                 </Grid>
               )) }
             </Grid>
             { /* ATT row */ }
             <Grid container spacing={ 2 } justifyContent='center'>
-              { atts.map((player, index) => (
+              { atts.map((player) => (
                 <Grid size={ { xs: 12, sm: 6, md: 4, lg: 3, xl: 2 } } key={ player.code || player.name }>
                   <PlayerCard
                     player={ player }
-                    onClick={ () => onPlayerClick(player, 'main') }
-                    index={ index + 1 + gks.length + defs.length + mids.length }
                     isCaptain={ player === captain }
                     selectedPlayer={ selectedPlayer }
                     teamType='main'
+                    team={ team }
+                    allPlayers={ allPlayers }
+                    onTransfer={ onTransfer }
                   />
                 </Grid>
               )) }
@@ -138,10 +144,12 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick, selectedPlayer }) =
                     </Typography>
                     <PlayerCard
                       player={ benchManager }
-                      onClick={ () => onPlayerClick(benchManager, 'bench') }
-                      index={ 0 }
+                      isCaptain={ false }
                       selectedPlayer={ selectedPlayer }
                       teamType='bench'
+                      team={ team }
+                      allPlayers={ allPlayers }
+                      onTransfer={ onTransfer }
                     />
                   </Box>
                 </Grid>
@@ -155,16 +163,18 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick, selectedPlayer }) =
                     </Typography>
                     <PlayerCard
                       player={ benchGK }
-                      onClick={ () => onPlayerClick(benchGK, 'bench') }
-                      index={ 1 }
+                      isCaptain={ false }
                       selectedPlayer={ selectedPlayer }
                       teamType='bench'
+                      team={ team }
+                      allPlayers={ allPlayers }
+                      onTransfer={ onTransfer }
                     />
                   </Box>
                 </Grid>
               ) }
               { /* Outfield bench players */ }
-              { benchOutfield.map((player, index) => (
+              { benchOutfield.map((player) => (
                 <Grid size={ { xs: 6, sm: 4, md: 2 } } key={ player.code || player.name }>
                   <Box display='flex' flexDirection='column' alignItems='center'>
                     <Typography align='center' variant='subtitle1' mt={ 1 }>
@@ -172,10 +182,12 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick, selectedPlayer }) =
                     </Typography>
                     <PlayerCard
                       player={ player }
-                      onClick={ () => onPlayerClick(player, 'bench') }
-                      index={ index + 2 }
+                      isCaptain={ false }
                       selectedPlayer={ selectedPlayer }
                       teamType='bench'
+                      team={ team }
+                      allPlayers={ allPlayers }
+                      onTransfer={ onTransfer }
                     />
                   </Box>
                 </Grid>
@@ -191,11 +203,13 @@ const TeamFormation = ({ mainTeam, benchTeam, onPlayerClick, selectedPlayer }) =
 TeamFormation.propTypes = {
   mainTeam: PropTypes.array,
   benchTeam: PropTypes.array,
-  onPlayerClick: PropTypes.func.isRequired,
   selectedPlayer: PropTypes.shape({
     player: PropTypes.object,
     teamType: PropTypes.string,
   }),
+  team: PropTypes.any,
+  allPlayers: PropTypes.any,
+  onTransfer: PropTypes.func,
 };
 
 export default TeamFormation;
