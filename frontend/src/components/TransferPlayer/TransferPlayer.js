@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import Button from '@mui/material/Button';
-import ButtonGroup from '@mui/material/ButtonGroup';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -10,13 +9,11 @@ import TextField from '@mui/material/TextField';
 import Autocomplete from '@mui/material/Autocomplete';
 import ListItem from '@mui/material/ListItem';
 import ListItemText from '@mui/material/ListItemText';
-import IconButton from '@mui/material/IconButton';
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { useTheme } from '@mui/material/styles';
 
-// props: team, allPlayers, onTransfer, playerOut
-const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut }) => {
-    const [dialogOpen, setDialogOpen] = useState(false);
+// props: team, allPlayers, onTransfer, playerOut, open, onClose
+const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut, open, onClose }) => {
+    const theme = useTheme();
     const [selectedIn, setSelectedIn] = useState(null);
 
     // Defensive: handle missing playerOut
@@ -29,50 +26,46 @@ const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut }) => {
     const playerOutPosition = getPosition(playerOut);
     // Prevent duplicates: exclude any player already in the team by id or code
     const teamIds = new Set(team.map(tp => tp.id ?? tp.code));
-    const availablePlayers = allPlayers.filter(
-        (p) =>
-            getPosition(p) === playerOutPosition &&
-            !teamIds.has(p.id) &&
-            !teamIds.has(p.code) &&
-            getId(p) !== getId(playerOut)
-    );
-
-    const handleOpenDialog = () => {
-        setDialogOpen(true);
-        setSelectedIn(null);
-    };
+    const availablePlayers = allPlayers
+        .filter(
+            (p) =>
+                getPosition(p) === playerOutPosition &&
+                !teamIds.has(p.id) &&
+                !teamIds.has(p.code) &&
+                getId(p) !== getId(playerOut)
+        )
+        .sort((a, b) => {
+            const ptsA = parseFloat(a.ep_next) || 0;
+            const ptsB = parseFloat(b.ep_next) || 0;
+            return ptsB - ptsA; // Descending order
+        });
 
     const handleCloseDialog = () => {
-        setDialogOpen(false);
+        setSelectedIn(null);
+        if (onClose) onClose();
     };
 
     const handleTransfer = () => {
         if (playerOut && selectedIn) {
             onTransfer(playerOut, selectedIn);
-            setDialogOpen(false);
+            handleCloseDialog();
         }
     };
 
     return (
-        <>
-            <ButtonGroup variant='contained'>
-                <IconButton
-                    onClick={ handleOpenDialog }
-                    size='small'
-                    className='action-button'
-                >
-                    <ArrowForwardIcon />
-                </IconButton>
-                <IconButton
-                    disabled
-                    size='small'
-                    className='action-button'
-                >
-                    <ArrowBackIcon />
-                </IconButton>
-            </ButtonGroup>
-            <Dialog open={ dialogOpen } onClose={ handleCloseDialog }>
-                <DialogTitle>Transfer Player</DialogTitle>
+        <Dialog 
+            open={ open || false } 
+            onClose={ handleCloseDialog }
+                PaperProps={ {
+                    sx: {
+                        background: theme.palette.mode === 'dark' 
+                            ? 'linear-gradient(135deg, #23272f 0%, #281455 100%)'
+                            : 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
+                        borderRadius: '12px',
+                    }
+                } }
+            >
+                <DialogTitle sx={ { color: theme.palette.text.primary } }>Transfer Player</DialogTitle>
                 <DialogContent>
                     { /* Player Out: fixed, not a dropdown */ }
                     <ListItem>
@@ -87,19 +80,21 @@ const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut }) => {
                         renderInput={ (params) => <TextField { ...params } label='Player In' margin='normal' /> }
                         renderOption={ (props, option) => (
                             <ListItem { ...props } key={ option.id }>
-                                <ListItemText primary={ option.web_name || option.webName || option.name } secondary={ option.position } />
+                                <ListItemText 
+                                    primary={ option.web_name || option.webName || option.name } 
+                                    secondary={ `${option.ep_next || 0} pts • ${option.opponent || 'TBD'}` } 
+                                />
                             </ListItem>
                         ) }
                     />
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={ handleCloseDialog }>Cancel</Button>
+                <DialogActions sx={ { pb: 2, px: 3 } }>
+                    <Button onClick={ handleCloseDialog } variant='outlined'>Cancel</Button>
                     <Button onClick={ handleTransfer } disabled={ !selectedIn } variant='contained' color='primary'>
                         Confirm Transfer
                     </Button>
                 </DialogActions>
             </Dialog>
-        </>
     );
 };
 
@@ -114,6 +109,8 @@ TransferPlayer.propTypes = {
         position: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
         element_type: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     }).isRequired,
+    open: PropTypes.bool,
+    onClose: PropTypes.func,
 };
 
 export default TransferPlayer;

@@ -5,6 +5,7 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Grid from '@mui/material/Grid';
 import Snackbar from '@mui/material/Snackbar';
+import { useTheme } from '@mui/material/styles';
 import TeamFormation from './components/TeamFormation/TeamFormation';
 import useTeamData from './hooks/useTeamData';
 import useAllPlayers from './hooks/useAllPlayers';
@@ -18,6 +19,7 @@ const TEAM_VIEW = {
 };
 
 const App = () => {
+  const theme = useTheme();
   const [searchedEntryId, setSearchedEntryId] = useState('');
   const [pendingSearchId, setPendingSearchId] = useState(''); // For input box
   const [userEntryId, setUserEntryId] = useState('');
@@ -121,7 +123,7 @@ const App = () => {
   }, [userEntryId, teamView]);
 
   return (
-    <>
+    <Box sx={ { minHeight: '100vh', backgroundColor: theme.palette.background.default } }>
       <NavigationBar
         entryId={ pendingSearchId }
         setEntryId={ setPendingSearchId }
@@ -165,6 +167,7 @@ const App = () => {
                       selectedPlayer={ selectedPlayer }
                       team={ [...mainTeamData, ...benchTeamData] }
                       allPlayers={ allPlayers }
+                      isHighestPredictedTeam={ isHighestPredictedTeam }
                       onTransfer={ (playerOut, playerIn) => {
                         // Prevent duplicate: do not allow transfer if playerIn is already in main or bench team
                         const playerInExists = [...mainTeamData, ...benchTeamData].some(p => p.code === playerIn.code);
@@ -187,6 +190,10 @@ const App = () => {
                           inDreamteam: fullPlayerIn.inDreamteam ?? fullPlayerIn.in_dreamteam ?? false,
                           totalPoints: fullPlayerIn.totalPoints ?? fullPlayerIn.total_points ?? 0,
                           code: fullPlayerIn.code,
+                          team: fullPlayerIn.team,
+                          teamCode: fullPlayerIn.teamCode ?? fullPlayerIn.team_code,
+                          opponent: fullPlayerIn.opponent ?? fullPlayerIn.opponent_short ?? 'TBD',
+                          is_home: fullPlayerIn.is_home,
                         };
                         // Determine which team the playerOut is in, and only update that team
                         const mainIdx = mainTeamData.findIndex(p => p.code === playerOut.code);
@@ -225,7 +232,7 @@ const App = () => {
           message={ snackbar.message }
         />
       </Container>
-    </>
+    </Box>
   );
 };
 

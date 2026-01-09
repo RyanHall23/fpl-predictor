@@ -17,6 +17,7 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true) => {
       const formatPlayer = (player) => ({
         name: `${player.first_name} ${player.second_name}`,
         team: player.team,
+        teamCode: player.team_code,
         position: player.element_type,
         predictedPoints: Math.round(player.ep_next),
         code: player.code,
@@ -24,7 +25,9 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true) => {
         lastGwPoints: player.event_points,
         inDreamteam: player.in_dreamteam,
         totalPoints: player.total_points,
-        user_team: false
+        user_team: false,
+        opponent: player.opponent_short || 'TBD',
+        is_home: player.is_home
       });
       setMainTeamData(mainTeam.map(formatPlayer));
       setBenchTeamData(bench.map(formatPlayer));
@@ -57,6 +60,7 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true) => {
       const formatPlayer = (player) => ({
         name: `${player.first_name} ${player.second_name}`,
         team: player.team,
+        teamCode: player.team_code,
         position: player.element_type,
         predictedPoints: Math.round(player.ep_next),
         code: player.code,
@@ -64,7 +68,9 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true) => {
         lastGwPoints: player.event_points,
         inDreamteam: player.in_dreamteam,
         totalPoints: player.total_points,
-        user_team: true
+        user_team: true,
+        opponent: player.opponent_short || 'TBD',
+        is_home: player.is_home
       });
 
       setMainTeamData(mainTeam.map(formatPlayer));
@@ -85,29 +91,64 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true) => {
   // Handle player selection and swapping (only for user's team)
   const handlePlayerClick = isHighestPredictedTeam
   ? undefined
-  : (player, teamType) => {
+  : async (player, teamType) => {
       if (selectedPlayer === null) {
         setSelectedPlayer({ player, teamType });
       } else {
-        const swapResult = isValidSwap(
-          selectedPlayer.player,
-          player,
-          selectedPlayer.teamType,
-          teamType
-        );
+        // If clicking the same player, deselect them
+        if (selectedPlayer.player.code === player.code) {
+          setSelectedPlayer(null);
+          setSnackbar({ message: '', key: Date.now() });
+          return;
+        }
+        
+        // Use backend validation as authoritative
+        try {
+          const response = await axios.post('/api/validate-swap', {
+            player1: selectedPlayer.player,
+            player2: player,
+            teamType1: selectedPlayer.teamType,
+            teamType2: teamType,
+            mainTeam: mainTeamData,
+            benchTeam: benchTeamData
+          });
 
-        if (swapResult.valid) {
-          swapPlayers(
+          if (response.data.valid) {
+            swapPlayers(
+              selectedPlayer.player,
+              player,
+              selectedPlayer.teamType,
+              teamType,
+            );
+            setSelectedPlayer(null);
+            setSnackbar({ message: '', key: Date.now() });
+          } else {
+            setSelectedPlayer(null);
+            setSnackbar({ message: response.data.error, key: Date.now() });
+          }
+        } catch (error) {
+          console.error('Error validating swap:', error);
+          // Fallback to client-side validation if backend fails
+          const swapResult = isValidSwap(
             selectedPlayer.player,
             player,
             selectedPlayer.teamType,
-            teamType,
+            teamType
           );
-          setSelectedPlayer(null);
-          setSnackbar({ message: '', key: Date.now() });
-        } else {
-          setSelectedPlayer(null);
-          setSnackbar({ message: swapResult.error, key: Date.now() });
+
+          if (swapResult.valid) {
+            swapPlayers(
+              selectedPlayer.player,
+              player,
+              selectedPlayer.teamType,
+              teamType,
+            );
+            setSelectedPlayer(null);
+            setSnackbar({ message: '', key: Date.now() });
+          } else {
+            setSelectedPlayer(null);
+            setSnackbar({ message: swapResult.error, key: Date.now() });
+          }
         }
       }
     };
@@ -149,6 +190,14 @@ const swapPlayers = (player1, player2, teamType1, teamType2) => {
 };
 
 const isValidSwap = (player1, player2, teamType1, teamType2) => {
+  // Don't allow swaps within the same zone
+  if (teamType1 === teamType2) {
+    return {
+      valid: false,
+      error: 'Players can only be swapped between the starting squad and the bench.',
+    };
+  }
+
   // Only allow manager swaps if both are managers (position === 5)
   if (player1.position === 5 || player2.position === 5) {
     if (player1.position === 5 && player2.position === 5) {

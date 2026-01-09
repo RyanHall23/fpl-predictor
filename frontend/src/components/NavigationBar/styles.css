@@ -16,19 +16,48 @@
   align-items: center;
 }
 
+/* Dark mode - default */
 .text-field {
   margin-right: 16px;
-  background-color: var(--white-color);
+  background-color: rgba(255, 255, 255, 0.15);
   border-radius: 4px;
+  transition: all 0.3s ease;
 }
 
 .text-field .MuiInputBase-input {
   padding: 10px 12px;
+  color: #ffffff;
+}
+
+.text-field .MuiOutlinedInput-notchedOutline {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.text-field:hover .MuiOutlinedInput-notchedOutline {
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.text-field.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: #ab47bc;
+}
+
+/* Light mode */
+html[data-mui-color-scheme='light'] .text-field {
+  background-color: rgba(255, 255, 255, 0.95);
+}
+
+html[data-mui-color-scheme='light'] .text-field .MuiInputBase-input {
+  color: #212121;
+}
+
+html[data-mui-color-scheme='light'] .text-field .MuiOutlinedInput-notchedOutline {
+  border-color: rgba(0, 0, 0, 0.23);
 }
 
 .submit-button {
   background-color: var(--secondary-color);
   color: var(--white-color);
+  transition: all 0.3s ease;
 }
 
 .submit-button:hover {

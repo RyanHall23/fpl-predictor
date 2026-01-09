@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, Paper, Typography } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import Grid from '@mui/material/Grid';
 import PropTypes from 'prop-types';
 import PlayerCard from '../PlayerCard/PlayerCard';
@@ -13,7 +14,8 @@ const positionLabels = {
   5: 'MAN'
 };
 
-const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, onTransfer }) => {
+const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, onTransfer, isHighestPredictedTeam, onPlayerClick }) => {
+  const theme = useTheme();
   // Find the player with the highest points (captain, excluding manager)
   const captain = mainTeam && mainTeam.length
     ? mainTeam.filter(p => p.position !== 5).reduce(
@@ -59,6 +61,10 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                     team={ team }
                     allPlayers={ allPlayers }
                     onTransfer={ onTransfer }
+                    showTransferButtons={ !isHighestPredictedTeam }
+                    onPlayerClick={ onPlayerClick }
+                    mainTeamData={ mainTeam }
+                    benchTeamData={ benchTeam }
                   />
                 </Grid>
               )) }
@@ -75,6 +81,10 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                       team={ team }
                       allPlayers={ allPlayers }
                       onTransfer={ onTransfer }
+                      showTransferButtons={ !isHighestPredictedTeam }
+                      onPlayerClick={ onPlayerClick }
+                      mainTeamData={ mainTeam }
+                      benchTeamData={ benchTeam }
                     />
                   </Box>
                 </Grid>
@@ -83,7 +93,7 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
             { /* DEF row */ }
             <Grid container spacing={ 2 } justifyContent='center'>
               { defs.map((player) => (
-                <Grid size={ { xs: 12, sm: 6, md: 4, lg: 3, xl: 2 } } key={ player.code || player.name }>
+                <Grid key={ player.code || player.name }>
                   <PlayerCard
                     player={ player }
                     isCaptain={ player === captain }
@@ -92,6 +102,10 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                     team={ team }
                     allPlayers={ allPlayers }
                     onTransfer={ onTransfer }
+                    showTransferButtons={ !isHighestPredictedTeam }
+                    onPlayerClick={ onPlayerClick }
+                    mainTeamData={ mainTeam }
+                    benchTeamData={ benchTeam }
                   />
                 </Grid>
               )) }
@@ -99,7 +113,7 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
             { /* MID row */ }
             <Grid container spacing={ 2 } justifyContent='center'>
               { mids.map((player) => (
-                <Grid size={ { xs: 12, sm: 6, md: 4, lg: 3, xl: 2 } } key={ player.code || player.name }>
+                <Grid key={ player.code || player.name }>
                   <PlayerCard
                     player={ player }
                     isCaptain={ player === captain }
@@ -108,6 +122,10 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                     team={ team }
                     allPlayers={ allPlayers }
                     onTransfer={ onTransfer }
+                    showTransferButtons={ !isHighestPredictedTeam }
+                    onPlayerClick={ onPlayerClick }
+                    mainTeamData={ mainTeam }
+                    benchTeamData={ benchTeam }
                   />
                 </Grid>
               )) }
@@ -115,7 +133,7 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
             { /* ATT row */ }
             <Grid container spacing={ 2 } justifyContent='center'>
               { atts.map((player) => (
-                <Grid size={ { xs: 12, sm: 6, md: 4, lg: 3, xl: 2 } } key={ player.code || player.name }>
+                <Grid key={ player.code || player.name }>
                   <PlayerCard
                     player={ player }
                     isCaptain={ player === captain }
@@ -124,6 +142,10 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                     team={ team }
                     allPlayers={ allPlayers }
                     onTransfer={ onTransfer }
+                    showTransferButtons={ !isHighestPredictedTeam }
+                    onPlayerClick={ onPlayerClick }
+                    mainTeamData={ mainTeam }
+                    benchTeamData={ benchTeam }
                   />
                 </Grid>
               )) }
@@ -137,7 +159,7 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
             <Grid container spacing={ 2 } justifyContent='center'>
               { /* Bench manager first */ }
               { benchManager && (
-                <Grid size={ { xs: 6, sm: 4, md: 2 } } key={ benchManager.code || benchManager.name }>
+                <Grid key={ benchManager.code || benchManager.name }>
                   <Box display='flex' flexDirection='column' alignItems='center'>
                     <Typography align='center' variant='subtitle1' mt={ 1 }>
                       { positionLabels[benchManager.position] }
@@ -150,13 +172,17 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                       team={ team }
                       allPlayers={ allPlayers }
                       onTransfer={ onTransfer }
+                      showTransferButtons={ !isHighestPredictedTeam }
+                      onPlayerClick={ onPlayerClick }
+                      mainTeamData={ mainTeam }
+                      benchTeamData={ benchTeam }
                     />
                   </Box>
                 </Grid>
               ) }
               { /* Bench GK second */ }
               { benchGK && (
-                <Grid size={ { xs: 6, sm: 4, md: 2 } } key={ benchGK.code || benchGK.name }>
+                <Grid key={ benchGK.code || benchGK.name }>
                   <Box display='flex' flexDirection='column' alignItems='center'>
                     <Typography align='center' variant='subtitle1' mt={ 1 }>
                       { positionLabels[benchGK.position] }
@@ -169,13 +195,17 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                       team={ team }
                       allPlayers={ allPlayers }
                       onTransfer={ onTransfer }
+                      showTransferButtons={ !isHighestPredictedTeam }
+                      onPlayerClick={ onPlayerClick }
+                      mainTeamData={ mainTeam }
+                      benchTeamData={ benchTeam }
                     />
                   </Box>
                 </Grid>
               ) }
               { /* Outfield bench players */ }
               { benchOutfield.map((player) => (
-                <Grid size={ { xs: 6, sm: 4, md: 2 } } key={ player.code || player.name }>
+                <Grid key={ player.code || player.name }>
                   <Box display='flex' flexDirection='column' alignItems='center'>
                     <Typography align='center' variant='subtitle1' mt={ 1 }>
                       { positionLabels[player.position] }
@@ -188,6 +218,10 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                       team={ team }
                       allPlayers={ allPlayers }
                       onTransfer={ onTransfer }
+                      showTransferButtons={ !isHighestPredictedTeam }
+                      onPlayerClick={ onPlayerClick }
+                      mainTeamData={ mainTeam }
+                      benchTeamData={ benchTeam }
                     />
                   </Box>
                 </Grid>
@@ -210,6 +244,8 @@ TeamFormation.propTypes = {
   team: PropTypes.any,
   allPlayers: PropTypes.any,
   onTransfer: PropTypes.func,
+  isHighestPredictedTeam: PropTypes.bool,
+  onPlayerClick: PropTypes.func,
 };
 
 export default TeamFormation;

@@ -8,11 +8,15 @@ export default function useAllPlayers() {
 
   useEffect(() => {
     setLoading(true);
-    axios.get('/api/bootstrap-static')
+    axios.get('/api/bootstrap-static/enriched')
       .then(res => {
         setAllPlayers(res.data.elements.map(player => ({
           ...player,
           name: `${player.first_name} ${player.second_name}`,
+          webName: player.web_name,
+          position: player.element_type,
+          opponent: player.opponent_short || 'TBD',
+          teamCode: player.team_code,
           photo: player.code ? `//resources.premierleague.com/premierleague25/photos/players/110x140/${player.code}.png` : undefined
         })));
         setLoading(false);
