@@ -8,8 +8,7 @@ import {
   Grid
 } from '@mui/material';
 import StarIcon from '@mui/icons-material/Star';
-import SwapVertIcon from '@mui/icons-material/SwapVert';
-import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
+import SyncIcon from '@mui/icons-material/Sync';
 import PropTypes from 'prop-types';
 import './styles.css';
 import TransferPlayer from '../TransferPlayer/TransferPlayer';
@@ -81,18 +80,25 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
                     onPlayerClick(player, teamType);
                   }
                 } }
+                sx={ { padding: '4px !important' } }
               >
-                <SwapVertIcon fontSize='small' />
+                <SyncIcon sx={ { fontSize: 28 } } className='sync-icon' />
               </IconButton>
             </Grid>
             <Grid size={ 6 }>
               <IconButton
                 size='small'
-                className='action-button-small'
+                className='action-button-small transfer-button'
                 title='Transfer'
                 onClick={ () => setTransferDialogOpen(true) }
+                sx={ { padding: '4px !important' } }
               >
-                <CompareArrowsIcon fontSize='small' />
+                <Box className='transfer-arrows-icon'>
+                  <svg width='28' height='28' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                    <path d='M3 8 L12 8 L12 6 L18 10 L12 14 L12 12 L3 12 Z' fill='#4caf50' />
+                    <path d='M21 16 L12 16 L12 18 L6 14 L12 10 L12 12 L21 12 Z' fill='#f44336' />
+                  </svg>
+                </Box>
               </IconButton>
             </Grid>
           </Grid>

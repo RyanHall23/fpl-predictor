@@ -176,7 +176,7 @@ html[data-mui-color-scheme='light'] body .info-label {
 
 body .action-button-small {
   width: 100%;
-  padding: 4px;
+  padding: 2px !important;
   color: #ab47bc !important;
   border-radius: 4px;
   transition: all 0.3s ease;
@@ -189,13 +189,36 @@ body .action-button-small:hover {
 
 body .action-button-small.substitute-button {
   background: linear-gradient(135deg, rgba(42, 45, 58, 0.6) 0%, rgba(31, 34, 41, 0.6) 100%);
-  color: #9c4dcc !important;
+  color: #ffffff !important;
   border: 1px solid rgba(156, 77, 204, 0.3);
 }
 
 body .action-button-small.substitute-button:hover {
   background: linear-gradient(135deg, rgba(42, 45, 58, 0.8) 0%, rgba(31, 34, 41, 0.8) 100%);
   border-color: rgba(156, 77, 204, 0.5);
+}
+
+body .action-button-small.transfer-button {
+  background: linear-gradient(135deg, rgba(42, 45, 58, 0.6) 0%, rgba(31, 34, 41, 0.6) 100%);
+  color: #ab47bc !important;
+  border: 1px solid rgba(171, 71, 188, 0.3);
+}
+
+body .action-button-small.transfer-button:hover {
+  background: linear-gradient(135deg, rgba(42, 45, 58, 0.8) 0%, rgba(31, 34, 41, 0.8) 100%);
+  border-color: rgba(171, 71, 188, 0.5);
+}
+
+body .sync-icon {
+  color: #ffffff;
+}
+
+body .transfer-arrows-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
 }
 
 html[data-mui-color-scheme='light'] body .action-button-small {
@@ -208,13 +231,28 @@ html[data-mui-color-scheme='light'] body .action-button-small:hover {
 
 html[data-mui-color-scheme='light'] body .action-button-small.substitute-button {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.6) 0%, rgba(245, 245, 245, 0.6) 100%);
-  color: #6a1b9a !important;
+  color: #424242 !important;
   border: 1px solid rgba(106, 27, 154, 0.3);
 }
 
 html[data-mui-color-scheme='light'] body .action-button-small.substitute-button:hover {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(245, 245, 245, 0.9) 100%);
   border-color: rgba(106, 27, 154, 0.5);
+}
+
+html[data-mui-color-scheme='light'] body .action-button-small.transfer-button {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.6) 0%, rgba(245, 245, 245, 0.6) 100%);
+  color: #6a1b9a !important;
+  border: 1px solid rgba(106, 27, 154, 0.3);
+}
+
+html[data-mui-color-scheme='light'] body .action-button-small.transfer-button:hover {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(245, 245, 245, 0.9) 100%);
+  border-color: rgba(106, 27, 154, 0.5);
+}
+
+html[data-mui-color-scheme='light'] body .sync-icon {
+  color: #424242;
 }
 
 
