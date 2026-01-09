@@ -37,83 +37,66 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
       { isCaptain && <Box className='captain-badge'>C</Box> }
       { player.inDreamteam && <StarIcon className='dreamteam-icon' /> }
       <CardContent className='card-content'>
-        <Grid container spacing={ 0 }>
-          { /* Row 1: Avatar/Image spanning 2 columns */ }
-          <Grid size={ 12 } sx={ { display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
-            <Box className='avatar-box'>
-              <img
-                src={
-                  player.position === 5
-                    ? `https://resources.premierleague.com/premierleague/photos/managers/250x250/man${parseInt(player.code, 10) - 100000000 + 1}.png`
-                    : `https://resources.premierleague.com/premierleague25/photos/players/110x140/${player.code}.png`
-                }
-                alt={ player.webName }
-                className='player-image'
-                onError={ (e) => {
-                  e.target.style.display = 'none';
-                } }
-              />
-            </Box>
-          </Grid>
+        { /* Team Shirt */ }
+        <Box className='avatar-box'>
+          <img
+            src={ `https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_${player.teamCode}-66.png` }
+            alt={ player.webName }
+            className='player-image'
+            onError={ (e) => {
+              e.target.style.display = 'none';
+            } }
+          />
+        </Box>
 
-          { /* Row 2: Player Name spanning 2 columns */ }
-          <Grid size={ 12 } sx={ { display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
-            <Typography variant='caption' className='player-name'>
-              { player.webName }
+        { /* Player Name */ }
+        <Typography variant='body2' className='player-name'>
+          { player.webName }
+        </Typography>
+
+        { /* Points and Opponent Row */ }
+        <Grid container spacing={ 0 }>
+          <Grid size={ 6 } sx={ { display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
+            <Typography variant='h6' className='points-display'>
+              { predictedPoints }
             </Typography>
           </Grid>
-
-          { /* Row 3 Column 1: Predicted Points */ }
           <Grid size={ 6 } sx={ { display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
-            <Box className='info-box'>
-              <Typography variant='caption' className='info-label'>
-                { predictedPoints } pts
-              </Typography>
-            </Box>
+            <Typography variant='body2' className='opponent-display'>
+              { opponent }
+            </Typography>
           </Grid>
-
-          { /* Row 3 Column 2: Opponent */ }
-          <Grid size={ 6 } sx={ { display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
-            <Box className='info-box'>
-              <Typography variant='caption' className='info-label' sx={ { whiteSpace: 'nowrap' } }>
-                { opponent }
-              </Typography>
-            </Box>
-          </Grid>
-
-          { /* Row 4: Substitute and Transfer buttons */ }
-          { showTransferButtons && team && allPlayers && onTransfer && (
-            <>
-              { /* Row 4 Column 1: Substitute button */ }
-              <Grid size={ 6 } sx={ { display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
-                <IconButton
-                  size='small'
-                  className='action-button-small substitute-button'
-                  title='Substitute'
-                  onClick={ () => {
-                    if (onPlayerClick) {
-                      onPlayerClick(player, teamType);
-                    }
-                  } }
-                >
-                  <SwapVertIcon fontSize='small' />
-                </IconButton>
-              </Grid>
-
-              { /* Row 4 Column 2: Transfer button */ }
-              <Grid size={ 6 } sx={ { display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
-                <IconButton
-                  size='small'
-                  className='action-button-small'
-                  title='Transfer'
-                  onClick={ () => setTransferDialogOpen(true) }
-                >
-                  <CompareArrowsIcon fontSize='small' />
-                </IconButton>
-              </Grid>
-            </>
-          ) }
         </Grid>
+
+        { /* Action Buttons */ }
+        { showTransferButtons && team && allPlayers && onTransfer && (
+          <Grid container spacing={ 1 } sx={ { mt: 0.5 } }>
+            <Grid size={ 6 }>
+              <IconButton
+                size='small'
+                className='action-button-small substitute-button'
+                title='Substitute'
+                onClick={ () => {
+                  if (onPlayerClick) {
+                    onPlayerClick(player, teamType);
+                  }
+                } }
+              >
+                <SwapVertIcon fontSize='small' />
+              </IconButton>
+            </Grid>
+            <Grid size={ 6 }>
+              <IconButton
+                size='small'
+                className='action-button-small'
+                title='Transfer'
+                onClick={ () => setTransferDialogOpen(true) }
+              >
+                <CompareArrowsIcon fontSize='small' />
+              </IconButton>
+            </Grid>
+          </Grid>
+        ) }
       </CardContent>
 
       { transferDialogOpen && (
@@ -140,6 +123,7 @@ PlayerCard.propTypes = {
     user_team: PropTypes.bool,
     opponent: PropTypes.string,
     is_home: PropTypes.bool,
+    team: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
   }).isRequired,
   isCaptain: PropTypes.bool,
   team: PropTypes.array,

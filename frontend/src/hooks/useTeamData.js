@@ -17,6 +17,7 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true) => {
       const formatPlayer = (player) => ({
         name: `${player.first_name} ${player.second_name}`,
         team: player.team,
+        teamCode: player.team_code,
         position: player.element_type,
         predictedPoints: Math.round(player.ep_next),
         code: player.code,
@@ -59,6 +60,7 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true) => {
       const formatPlayer = (player) => ({
         name: `${player.first_name} ${player.second_name}`,
         team: player.team,
+        teamCode: player.team_code,
         position: player.element_type,
         predictedPoints: Math.round(player.ep_next),
         code: player.code,
