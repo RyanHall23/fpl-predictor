@@ -91,7 +91,7 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true) => {
   // Handle player selection and swapping (only for user's team)
   const handlePlayerClick = isHighestPredictedTeam
   ? undefined
-  : (player, teamType) => {
+  : async (player, teamType) => {
       if (selectedPlayer === null) {
         setSelectedPlayer({ player, teamType });
       } else {
@@ -102,25 +102,53 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true) => {
           return;
         }
         
-        const swapResult = isValidSwap(
-          selectedPlayer.player,
-          player,
-          selectedPlayer.teamType,
-          teamType
-        );
+        // Use backend validation as authoritative
+        try {
+          const response = await axios.post('/api/validate-swap', {
+            player1: selectedPlayer.player,
+            player2: player,
+            teamType1: selectedPlayer.teamType,
+            teamType2: teamType,
+            mainTeam: mainTeamData,
+            benchTeam: benchTeamData
+          });
 
-        if (swapResult.valid) {
-          swapPlayers(
+          if (response.data.valid) {
+            swapPlayers(
+              selectedPlayer.player,
+              player,
+              selectedPlayer.teamType,
+              teamType,
+            );
+            setSelectedPlayer(null);
+            setSnackbar({ message: '', key: Date.now() });
+          } else {
+            setSelectedPlayer(null);
+            setSnackbar({ message: response.data.error, key: Date.now() });
+          }
+        } catch (error) {
+          console.error('Error validating swap:', error);
+          // Fallback to client-side validation if backend fails
+          const swapResult = isValidSwap(
             selectedPlayer.player,
             player,
             selectedPlayer.teamType,
-            teamType,
+            teamType
           );
-          setSelectedPlayer(null);
-          setSnackbar({ message: '', key: Date.now() });
-        } else {
-          setSelectedPlayer(null);
-          setSnackbar({ message: swapResult.error, key: Date.now() });
+
+          if (swapResult.valid) {
+            swapPlayers(
+              selectedPlayer.player,
+              player,
+              selectedPlayer.teamType,
+              teamType,
+            );
+            setSelectedPlayer(null);
+            setSnackbar({ message: '', key: Date.now() });
+          } else {
+            setSelectedPlayer(null);
+            setSnackbar({ message: swapResult.error, key: Date.now() });
+          }
         }
       }
     };

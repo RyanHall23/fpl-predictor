@@ -173,6 +173,51 @@ const getAllPlayersEnriched = async (req, res) => {
   }
 };
 
+const validateSwap = async (req, res) => {
+  try {
+    const { player1, player2, teamType1, teamType2, mainTeam, benchTeam } = req.body;
+    
+    if (!player1 || !player2 || !teamType1 || !teamType2 || !mainTeam || !benchTeam) {
+      return res.status(400).json({ error: 'Missing required parameters' });
+    }
+    
+    const result = fplModel.validateSwap(player1, player2, teamType1, teamType2, mainTeam, benchTeam);
+    res.json(result);
+  } catch (error) {
+    console.error('Error validating swap:', error);
+    res.status(500).json({ error: 'Error validating swap' });
+  }
+};
+
+const getAvailableTransfers = async (req, res) => {
+  try {
+    const { playerCode } = req.params;
+    const { currentTeam } = req.body;
+    
+    if (!playerCode || !currentTeam) {
+      return res.status(400).json({ error: 'Missing required parameters' });
+    }
+    
+    // Fetch enriched players
+    const data = await fplModel.fetchBootstrapStatic();
+    const fixtures = await fplModel.fetchFixtures();
+    const currentEvent = data.events.find(e => e.is_current) || data.events[0];
+    
+    let players = data.elements.map((p) => ({
+      ...p,
+      ep_next: parseFloat(p.ep_next) || 0,
+    }));
+    
+    players = fplModel.enrichPlayersWithOpponents(players, fixtures, data.teams, currentEvent.id);
+    
+    const availablePlayers = fplModel.getAvailableTransfers(parseInt(playerCode), players, currentTeam);
+    res.json(availablePlayers);
+  } catch (error) {
+    console.error('Error fetching available transfers:', error);
+    res.status(500).json({ error: 'Error fetching available transfers' });
+  }
+};
+
 module.exports = {
   getBootstrapStatic,
   getPlayerPicks,
@@ -180,5 +225,7 @@ module.exports = {
   getPredictedTeam,
   getUserTeam,
   getUserProfile,
-  getAllPlayersEnriched
+  getAllPlayersEnriched,
+  validateSwap,
+  getAvailableTransfers
 };

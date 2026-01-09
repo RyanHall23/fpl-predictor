@@ -22,6 +22,8 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
   }
 
   // Helper function to check if swap maintains formation requirements
+  // This is kept for instant UI feedback (green borders)
+  // Backend validation is authoritative when actually performing swap
   const checkFormationAfterSwap = (player1, player2, teamType1, teamType2) => {
     if (!mainTeamData || !benchTeamData) return false;
     
@@ -50,7 +52,7 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
       return counts;
     }, {});
     
-    // Check formation requirements
+    // Check formation requirements (client-side preview only)
     return (positionCounts[2] || 0) >= 3 && 
            (positionCounts[3] || 0) >= 3 && 
            (positionCounts[4] || 0) >= 1;
