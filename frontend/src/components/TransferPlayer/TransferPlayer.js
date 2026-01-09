@@ -15,10 +15,9 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useTheme } from '@mui/material/styles';
 
-// props: team, allPlayers, onTransfer, playerOut
-const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut }) => {
+// props: team, allPlayers, onTransfer, playerOut, open, onClose
+const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut, open, onClose }) => {
     const theme = useTheme();
-    const [dialogOpen, setDialogOpen] = useState(false);
     const [selectedIn, setSelectedIn] = useState(null);
 
     // Defensive: handle missing playerOut
@@ -39,53 +38,32 @@ const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut }) => {
             getId(p) !== getId(playerOut)
     );
 
-    const handleOpenDialog = () => {
-        setDialogOpen(true);
-        setSelectedIn(null);
-    };
-
     const handleCloseDialog = () => {
-        setDialogOpen(false);
+        setSelectedIn(null);
+        if (onClose) onClose();
     };
 
     const handleTransfer = () => {
         if (playerOut && selectedIn) {
             onTransfer(playerOut, selectedIn);
-            setDialogOpen(false);
+            handleCloseDialog();
         }
     };
 
     return (
-        <>
-            <ButtonGroup variant='contained'>
-                <IconButton
-                    onClick={ handleOpenDialog }
-                    size='small'
-                    className='action-button'
-                >
-                    <ArrowForwardIcon />
-                </IconButton>
-                <IconButton
-                    disabled
-                    size='small'
-                    className='action-button'
-                >
-                    <ArrowBackIcon />
-                </IconButton>
-            </ButtonGroup>
-            <Dialog 
-                open={ dialogOpen } 
-                onClose={ handleCloseDialog }
-                PaperProps={{
+        <Dialog 
+            open={ open || false } 
+            onClose={ handleCloseDialog }
+                PaperProps={ {
                     sx: {
                         background: theme.palette.mode === 'dark' 
                             ? 'linear-gradient(135deg, #23272f 0%, #281455 100%)'
                             : 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
                         borderRadius: '12px',
                     }
-                }}
+                } }
             >
-                <DialogTitle sx={{ color: theme.palette.text.primary }}>Transfer Player</DialogTitle>
+                <DialogTitle sx={ { color: theme.palette.text.primary } }>Transfer Player</DialogTitle>
                 <DialogContent>
                     { /* Player Out: fixed, not a dropdown */ }
                     <ListItem>
@@ -105,14 +83,13 @@ const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut }) => {
                         ) }
                     />
                 </DialogContent>
-                <DialogActions sx={{ pb: 2, px: 3 }}>
-                    <Button onClick={ handleCloseDialog } variant="outlined">Cancel</Button>
+                <DialogActions sx={ { pb: 2, px: 3 } }>
+                    <Button onClick={ handleCloseDialog } variant='outlined'>Cancel</Button>
                     <Button onClick={ handleTransfer } disabled={ !selectedIn } variant='contained' color='primary'>
                         Confirm Transfer
                     </Button>
                 </DialogActions>
             </Dialog>
-        </>
     );
 };
 
@@ -127,6 +104,8 @@ TransferPlayer.propTypes = {
         position: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
         element_type: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     }).isRequired,
+    open: PropTypes.bool,
+    onClose: PropTypes.func,
 };
 
 export default TransferPlayer;

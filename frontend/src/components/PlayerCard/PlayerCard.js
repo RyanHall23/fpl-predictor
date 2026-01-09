@@ -1,104 +1,134 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   Card,
   CardContent,
   Typography,
-  IconButton,
   Box,
-  Avatar,
+  IconButton,
+  Grid
 } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import StarIcon from '@mui/icons-material/Star';
+import SwapVertIcon from '@mui/icons-material/SwapVert';
+import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import PropTypes from 'prop-types';
 import './styles.css';
 import TransferPlayer from '../TransferPlayer/TransferPlayer';
 
-const PlayerCard = ({ player, isCaptain, selectedPlayer, teamType, team, allPlayers, onTransfer }) => {
-  const theme = useTheme();
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const isSelected =
-    selectedPlayer &&
-    selectedPlayer.player.code === player.code &&
-    selectedPlayer.teamType === teamType;
+const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTransferButtons = true, teamType, onPlayerClick }) => {
+  const [transferDialogOpen, setTransferDialogOpen] = React.useState(false);
 
   let predictedPoints = parseFloat(player.predictedPoints) || 0;
   if (isCaptain) {
     predictedPoints *= 2;
   }
 
+  // Format opponent info (placeholder - you'll need to pass this data from parent)
+  const opponent = player.opponent || 'TBD';
+
   return (
     <Card className='player-card'>
       { isCaptain && <Box className='captain-badge'>C</Box> }
       { player.inDreamteam && <StarIcon className='dreamteam-icon' /> }
       <CardContent className='card-content'>
+        { /* Row 1: Avatar/Image and Name */ }
         <Box className='avatar-box'>
-          <Avatar sx={ { bgcolor: '#fff', width: 50, height: 96 } }>
-            <img
-              src={
-                player.position === 5
-                  ? `//resources.premierleague.com/premierleague/photos/managers/250x250/man${parseInt(player.code, 10) - 100000000 + 1}.png`
-                  : `//resources.premierleague.com/premierleague25/photos/players/110x140/${player.code}.png`
-              }
-              alt={ player.webName }
-              style={ {
-                width: '100%',
-                height: '100%',
-                objectFit: 'contain',
-                objectPosition: 'center 22px'
-              } }
-            />
-          </Avatar>
+          <img
+            src={
+              player.position === 5
+                ? `https://resources.premierleague.com/premierleague/photos/managers/250x250/man${parseInt(player.code, 10) - 100000000 + 1}.png`
+                : `https://resources.premierleague.com/premierleague25/photos/players/110x140/${player.code}.png`
+            }
+            alt={ player.webName }
+            className='player-image'
+            onError={ (e) => {
+              e.target.style.display = 'none';
+            } }
+          />
         </Box>
-        <Box className='player-info'>
-          <Typography
-            variant='body2' className='player-name'>
-            { player.webName }
-          </Typography>
-          <Box className='predicted-points'>
-            <Typography variant='caption'>
-              { predictedPoints } pts
-            </Typography>
-          </Box>
-        </Box>
-        { /* Transfer/Sub Button below player info */ }
-        { player.user_team && team && allPlayers && onTransfer && (
-          <Box sx={ { mt: 1 } }>
-            <TransferPlayer
-              team={ team }
-              allPlayers={ allPlayers }
-              playerOut={ player }
-              onTransfer={ onTransfer }
-            />
-          </Box>
+        <Typography variant='caption' className='player-name'>
+          { player.webName }
+        </Typography>
+
+        { /* Row 2: Predicted Points and Opponent */ }
+        <Grid container spacing={ 0 } className='info-row'>
+          <Grid item xs={ 6 } sx={ { padding: '0 !important' } }>
+            <Box className='info-box'>
+              <Typography variant='caption' className='info-label'>
+                { predictedPoints } pts
+              </Typography>
+            </Box>
+          </Grid>
+          <Grid item xs={ 6 } sx={ { padding: '0 !important' } }>
+            <Box className='info-box'>
+              <Typography variant='caption' className='info-label'>
+                { opponent }
+              </Typography>
+            </Box>
+          </Grid>
+        </Grid>
+
+        { /* Row 3: Substitute and Transfer buttons */ }
+        { showTransferButtons && team && allPlayers && onTransfer && (
+          <Grid container spacing={ 0 } className='button-row'>
+            <Grid item xs={ 6 } sx={ { padding: '0 !important' } }>
+              <IconButton
+                size='small'
+                className='action-button-small substitute-button'
+                title='Substitute'
+                onClick={ () => {
+                  if (onPlayerClick) {
+                    onPlayerClick(player, teamType);
+                  }
+                } }
+              >
+                <SwapVertIcon fontSize='small' />
+              </IconButton>
+            </Grid>
+            <Grid item xs={ 6 } sx={ { padding: '0 !important' } }>
+              <IconButton
+                size='small'
+                className='action-button-small'
+                title='Transfer'
+                onClick={ () => setTransferDialogOpen(true) }
+              >
+                <CompareArrowsIcon fontSize='small' />
+              </IconButton>
+            </Grid>
+          </Grid>
         ) }
       </CardContent>
+
+      { transferDialogOpen && (
+        <TransferPlayer
+          team={ team }
+          allPlayers={ allPlayers }
+          playerOut={ player }
+          onTransfer={ onTransfer }
+          open={ transferDialogOpen }
+          onClose={ () => setTransferDialogOpen(false) }
+        />
+      ) }
     </Card>
   );
 };
 
 PlayerCard.propTypes = {
-  player: PropTypes.exact({
+  player: PropTypes.shape({
     webName: PropTypes.string.isRequired,
     predictedPoints: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     inDreamteam: PropTypes.bool,
     code: PropTypes.number.isRequired,
     position: PropTypes.number.isRequired,
-    user_team: PropTypes.bool
+    user_team: PropTypes.bool,
+    opponent: PropTypes.string,
   }).isRequired,
   isCaptain: PropTypes.bool,
-  selectedPlayer: PropTypes.shape({
-    player: PropTypes.shape({
-      webName: PropTypes.string.isRequired,
-      code: PropTypes.number.isRequired,
-    }).isRequired,
-    teamType: PropTypes.any,
-  }),
-  teamType: PropTypes.any,
   team: PropTypes.array,
   allPlayers: PropTypes.array,
   onTransfer: PropTypes.func,
+  showTransferButtons: PropTypes.bool,
+  teamType: PropTypes.string,
+  onPlayerClick: PropTypes.func,
 };
 
 export default PlayerCard;

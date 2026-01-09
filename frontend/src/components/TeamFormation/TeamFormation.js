@@ -14,7 +14,7 @@ const positionLabels = {
   5: 'MAN'
 };
 
-const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, onTransfer }) => {
+const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, onTransfer, isHighestPredictedTeam, onPlayerClick }) => {
   const theme = useTheme();
   // Find the player with the highest points (captain, excluding manager)
   const captain = mainTeam && mainTeam.length
@@ -61,6 +61,8 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                     team={ team }
                     allPlayers={ allPlayers }
                     onTransfer={ onTransfer }
+                    showTransferButtons={ !isHighestPredictedTeam }
+                    onPlayerClick={ onPlayerClick }
                   />
                 </Grid>
               )) }
@@ -77,6 +79,8 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                       team={ team }
                       allPlayers={ allPlayers }
                       onTransfer={ onTransfer }
+                      showTransferButtons={ !isHighestPredictedTeam }
+                      onPlayerClick={ onPlayerClick }
                     />
                   </Box>
                 </Grid>
@@ -94,6 +98,8 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                     team={ team }
                     allPlayers={ allPlayers }
                     onTransfer={ onTransfer }
+                    showTransferButtons={ !isHighestPredictedTeam }
+                    onPlayerClick={ onPlayerClick }
                   />
                 </Grid>
               )) }
@@ -110,6 +116,8 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                     team={ team }
                     allPlayers={ allPlayers }
                     onTransfer={ onTransfer }
+                    showTransferButtons={ !isHighestPredictedTeam }
+                    onPlayerClick={ onPlayerClick }
                   />
                 </Grid>
               )) }
@@ -126,6 +134,8 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                     team={ team }
                     allPlayers={ allPlayers }
                     onTransfer={ onTransfer }
+                    showTransferButtons={ !isHighestPredictedTeam }
+                    onPlayerClick={ onPlayerClick }
                   />
                 </Grid>
               )) }
@@ -152,6 +162,8 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                       team={ team }
                       allPlayers={ allPlayers }
                       onTransfer={ onTransfer }
+                      showTransferButtons={ !isHighestPredictedTeam }
+                      onPlayerClick={ onPlayerClick }
                     />
                   </Box>
                 </Grid>
@@ -171,6 +183,8 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                       team={ team }
                       allPlayers={ allPlayers }
                       onTransfer={ onTransfer }
+                      showTransferButtons={ !isHighestPredictedTeam }
+                      onPlayerClick={ onPlayerClick }
                     />
                   </Box>
                 </Grid>
@@ -190,6 +204,8 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                       team={ team }
                       allPlayers={ allPlayers }
                       onTransfer={ onTransfer }
+                      showTransferButtons={ !isHighestPredictedTeam }
+                      onPlayerClick={ onPlayerClick }
                     />
                   </Box>
                 </Grid>
@@ -212,6 +228,8 @@ TeamFormation.propTypes = {
   team: PropTypes.any,
   allPlayers: PropTypes.any,
   onTransfer: PropTypes.func,
+  isHighestPredictedTeam: PropTypes.bool,
+  onPlayerClick: PropTypes.func,
 };
 
 export default TeamFormation;

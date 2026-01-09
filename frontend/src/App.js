@@ -167,6 +167,7 @@ const App = () => {
                       selectedPlayer={ selectedPlayer }
                       team={ [...mainTeamData, ...benchTeamData] }
                       allPlayers={ allPlayers }
+                      isHighestPredictedTeam={ isHighestPredictedTeam }
                       onTransfer={ (playerOut, playerIn) => {
                         // Prevent duplicate: do not allow transfer if playerIn is already in main or bench team
                         const playerInExists = [...mainTeamData, ...benchTeamData].some(p => p.code === playerIn.code);
