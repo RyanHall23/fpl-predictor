@@ -31,6 +31,8 @@ export default function usePredictedTeam() {
     lastGwPoints: player.event_points,
     inDreamteam: player.in_dreamteam,
     totalPoints: player.total_points,
+    opponent: player.opponent_short || 'TBD',
+    is_home: player.is_home
   });
 
   return { mainTeamData, benchTeamData, loading, error };

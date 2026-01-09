@@ -22,8 +22,15 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
     predictedPoints *= 2;
   }
 
-  // Format opponent info (placeholder - you'll need to pass this data from parent)
-  const opponent = player.opponent || 'TBD';
+  // Format opponent info with home/away indicator
+  const formatOpponent = () => {
+    const opp = player.opponent || 'TBD';
+    if (opp === 'TBD' || player.is_home === null || player.is_home === undefined) {
+      return opp;
+    }
+    return player.is_home ? `${opp} (H)` : `${opp} (A)`;
+  };
+  const opponent = formatOpponent();
 
   return (
     <Card className='player-card'>
@@ -121,6 +128,7 @@ PlayerCard.propTypes = {
     position: PropTypes.number.isRequired,
     user_team: PropTypes.bool,
     opponent: PropTypes.string,
+    is_home: PropTypes.bool,
   }).isRequired,
   isCaptain: PropTypes.bool,
   team: PropTypes.array,

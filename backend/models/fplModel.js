@@ -150,6 +150,74 @@ const fetchElementSummary = async (playerId) => {
   return response.data;
 };
 
+const fetchFixtures = async () => {
+  const response = await axios.get('https://fantasy.premierleague.com/api/fixtures/');
+  return response.data;
+};
+
+/**
+ * Enrich players with opponent data from fixtures.
+ * Adds 'opponent' field (opponent team ID) and 'opponent_short' (short name) to each player.
+ */
+const enrichPlayersWithOpponents = (players, fixtures, teams, currentEventId) => {
+  // Find next fixture for each team
+  const nextFixtureByTeam = {};
+  
+  // Get upcoming fixtures (not finished, event >= current)
+  const upcomingFixtures = fixtures.filter(f => !f.finished && f.event >= currentEventId);
+  
+  // Group by team and find earliest fixture for each team
+  upcomingFixtures.forEach(fixture => {
+    // Home team
+    if (!nextFixtureByTeam[fixture.team_h] || fixture.event < nextFixtureByTeam[fixture.team_h].event) {
+      nextFixtureByTeam[fixture.team_h] = {
+        event: fixture.event,
+        opponent: fixture.team_a,
+        is_home: true
+      };
+    }
+    // Away team
+    if (!nextFixtureByTeam[fixture.team_a] || fixture.event < nextFixtureByTeam[fixture.team_a].event) {
+      nextFixtureByTeam[fixture.team_a] = {
+        event: fixture.event,
+        opponent: fixture.team_h,
+        is_home: false
+      };
+    }
+  });
+  
+  // Create team lookup by id
+  const teamMap = {};
+  teams.forEach(team => {
+    teamMap[team.id] = team;
+  });
+  
+  // Enrich players
+  return players.map(player => {
+    const playerTeam = player.team;
+    const nextFixture = nextFixtureByTeam[playerTeam];
+    
+    if (nextFixture && teamMap[nextFixture.opponent]) {
+      const opponentTeam = teamMap[nextFixture.opponent];
+      return {
+        ...player,
+        opponent: nextFixture.opponent,
+        opponent_short: opponentTeam.short_name,
+        is_home: nextFixture.is_home,
+        next_event: nextFixture.event
+      };
+    }
+    
+    return {
+      ...player,
+      opponent: null,
+      opponent_short: 'TBD',
+      is_home: null,
+      next_event: null
+    };
+  });
+};
+
 const buildTeam = (players, picks = null, { filterZeroEp = false, includeManagers = INCLUDE_MANAGERS_GLOBAL } = {}) => {
   // Ensure numeric ep_next helper
   const num = (v) => {
@@ -350,6 +418,8 @@ module.exports = {
   fetchBootstrapStatic,
   fetchPlayerPicks,
   fetchElementSummary,
+  fetchFixtures,
+  enrichPlayersWithOpponents,
   buildHighestPredictedTeam,
   buildUserTeam,
   // export toggles for external visibility if needed

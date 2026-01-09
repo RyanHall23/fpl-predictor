@@ -24,7 +24,9 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true) => {
         lastGwPoints: player.event_points,
         inDreamteam: player.in_dreamteam,
         totalPoints: player.total_points,
-        user_team: false
+        user_team: false,
+        opponent: player.opponent_short || 'TBD',
+        is_home: player.is_home
       });
       setMainTeamData(mainTeam.map(formatPlayer));
       setBenchTeamData(bench.map(formatPlayer));
@@ -64,7 +66,9 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true) => {
         lastGwPoints: player.event_points,
         inDreamteam: player.in_dreamteam,
         totalPoints: player.total_points,
-        user_team: true
+        user_team: true,
+        opponent: player.opponent_short || 'TBD',
+        is_home: player.is_home
       });
 
       setMainTeamData(mainTeam.map(formatPlayer));

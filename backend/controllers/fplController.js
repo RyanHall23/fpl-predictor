@@ -44,10 +44,17 @@ const getElementSummary = async (req, res) => {
 const getPredictedTeam = async (req, res) => {
   try {
     const data = await fplModel.fetchBootstrapStatic();
-    const players = data.elements.map((p) => ({
+    const fixtures = await fplModel.fetchFixtures();
+    const currentEvent = data.events.find(e => e.is_current) || data.events[0];
+    
+    let players = data.elements.map((p) => ({
       ...p,
       ep_next: parseFloat(p.ep_next) || 0,
     }));
+    
+    // Enrich players with opponent data
+    players = fplModel.enrichPlayersWithOpponents(players, fixtures, data.teams, currentEvent.id);
+    
     const team = fplModel.buildHighestPredictedTeam(players);
     res.json(team);
   } catch (error) {
@@ -65,10 +72,17 @@ const getUserTeam = async (req, res) => {
   try {
     const bootstrap = await fplModel.fetchBootstrapStatic();
     const picksData = await fplModel.fetchPlayerPicks(entryId, eventId);
-    const players = bootstrap.elements.map((p) => ({
+    const fixtures = await fplModel.fetchFixtures();
+    const currentEvent = bootstrap.events.find(e => e.is_current) || bootstrap.events[0];
+    
+    let players = bootstrap.elements.map((p) => ({
       ...p,
       ep_next: parseFloat(p.ep_next) || 0,
     }));
+    
+    // Enrich players with opponent data
+    players = fplModel.enrichPlayersWithOpponents(players, fixtures, bootstrap.teams, currentEvent.id);
+    
     const { mainTeam, bench } = fplModel.buildUserTeam(players, picksData.picks);
 
     // Fetch the entry info for the team name
