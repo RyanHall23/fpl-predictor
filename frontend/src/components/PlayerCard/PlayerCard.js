@@ -13,12 +13,87 @@ import PropTypes from 'prop-types';
 import './styles.css';
 import TransferPlayer from '../TransferPlayer/TransferPlayer';
 
-const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTransferButtons = true, teamType, onPlayerClick }) => {
+const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTransferButtons = true, teamType, onPlayerClick, selectedPlayer, mainTeamData, benchTeamData }) => {
   const [transferDialogOpen, setTransferDialogOpen] = React.useState(false);
 
   let predictedPoints = parseFloat(player.predictedPoints) || 0;
   if (isCaptain) {
     predictedPoints *= 2;
+  }
+
+  // Helper function to check if swap maintains formation requirements
+  const checkFormationAfterSwap = (player1, player2, teamType1, teamType2) => {
+    if (!mainTeamData || !benchTeamData) return false;
+    
+    let newMain = [...mainTeamData];
+    let newBench = [...benchTeamData];
+    
+    // Perform the swap
+    const idx1 = teamType1 === 'bench'
+      ? newBench.findIndex(p => p.code === player1.code)
+      : newMain.findIndex(p => p.code === player1.code);
+    const idx2 = teamType2 === 'bench'
+      ? newBench.findIndex(p => p.code === player2.code)
+      : newMain.findIndex(p => p.code === player2.code);
+    
+    if (idx1 === -1 || idx2 === -1) return false;
+    
+    if (teamType1 === 'main' && teamType2 === 'bench') {
+      [newMain[idx1], newBench[idx2]] = [newBench[idx2], newMain[idx1]];
+    } else if (teamType1 === 'bench' && teamType2 === 'main') {
+      [newBench[idx1], newMain[idx2]] = [newMain[idx2], newBench[idx1]];
+    }
+    
+    // Count positions in new main team
+    const positionCounts = newMain.reduce((counts, p) => {
+      counts[p.position] = (counts[p.position] || 0) + 1;
+      return counts;
+    }, {});
+    
+    // Check formation requirements
+    return (positionCounts[2] || 0) >= 3 && 
+           (positionCounts[3] || 0) >= 3 && 
+           (positionCounts[4] || 0) >= 1;
+  };
+
+  // Determine if this card should be highlighted
+  const isSelected = selectedPlayer && selectedPlayer.player.code === player.code;
+  
+  // Check if this is a valid swap target based on game rules
+  let isValidTarget = false;
+  if (selectedPlayer && !isSelected && teamType) {
+    const selectedPos = selectedPlayer.player.position;
+    const thisPos = player.position;
+    const isDifferentZone = selectedPlayer.teamType !== teamType;
+    
+    // Must be in different zone (main vs bench)
+    if (isDifferentZone) {
+      // Manager swap rule: managers can only swap with managers
+      if (selectedPos === 5 || thisPos === 5) {
+        isValidTarget = selectedPos === 5 && thisPos === 5;
+      }
+      // Goalkeeper swap rule: goalkeepers can only swap with goalkeepers
+      else if (selectedPos === 1 || thisPos === 1) {
+        isValidTarget = selectedPos === 1 && thisPos === 1;
+      }
+      // Outfield players - check formation requirements
+      else {
+        isValidTarget = checkFormationAfterSwap(
+          selectedPlayer.player,
+          player,
+          selectedPlayer.teamType,
+          teamType
+        );
+      }
+    }
+  }
+  
+  // Determine card class based on selection state
+  let cardClassName = 'player-card';
+  if (isSelected) {
+    cardClassName += ' player-card-selected';
+  } else if (isValidTarget) {
+    cardClassName += ' player-card-valid-target';
   }
 
   // Format opponent info with home/away indicator
@@ -32,7 +107,7 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
   const opponent = formatOpponent();
 
   return (
-    <Card className='player-card'>
+    <Card className={ cardClassName }>
       { isCaptain && <Box className='captain-badge'>C</Box> }
       { player.inDreamteam && <StarIcon className='dreamteam-icon' /> }
       <CardContent className='card-content'>
@@ -138,6 +213,12 @@ PlayerCard.propTypes = {
   showTransferButtons: PropTypes.bool,
   teamType: PropTypes.string,
   onPlayerClick: PropTypes.func,
+  selectedPlayer: PropTypes.shape({
+    player: PropTypes.object,
+    teamType: PropTypes.string,
+  }),
+  mainTeamData: PropTypes.array,
+  benchTeamData: PropTypes.array,
 };
 
 export default PlayerCard;

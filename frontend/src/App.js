@@ -190,6 +190,10 @@ const App = () => {
                           inDreamteam: fullPlayerIn.inDreamteam ?? fullPlayerIn.in_dreamteam ?? false,
                           totalPoints: fullPlayerIn.totalPoints ?? fullPlayerIn.total_points ?? 0,
                           code: fullPlayerIn.code,
+                          team: fullPlayerIn.team,
+                          teamCode: fullPlayerIn.teamCode ?? fullPlayerIn.team_code,
+                          opponent: fullPlayerIn.opponent ?? fullPlayerIn.opponent_short ?? 'TBD',
+                          is_home: fullPlayerIn.is_home,
                         };
                         // Determine which team the playerOut is in, and only update that team
                         const mainIdx = mainTeamData.findIndex(p => p.code === playerOut.code);

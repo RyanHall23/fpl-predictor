@@ -152,11 +152,33 @@ const getUserProfile = async (req, res) => {
   }
 };
 
+const getAllPlayersEnriched = async (req, res) => {
+  try {
+    const data = await fplModel.fetchBootstrapStatic();
+    const fixtures = await fplModel.fetchFixtures();
+    const currentEvent = data.events.find(e => e.is_current) || data.events[0];
+    
+    let players = data.elements.map((p) => ({
+      ...p,
+      ep_next: parseFloat(p.ep_next) || 0,
+    }));
+    
+    // Enrich players with opponent data
+    players = fplModel.enrichPlayersWithOpponents(players, fixtures, data.teams, currentEvent.id);
+    
+    res.json({ elements: players, teams: data.teams, events: data.events });
+  } catch (error) {
+    console.error('Error fetching enriched players:', error);
+    res.status(500).json({ error: 'Error fetching enriched players' });
+  }
+};
+
 module.exports = {
   getBootstrapStatic,
   getPlayerPicks,
   getElementSummary,
   getPredictedTeam,
   getUserTeam,
-  getUserProfile
+  getUserProfile,
+  getAllPlayersEnriched
 };

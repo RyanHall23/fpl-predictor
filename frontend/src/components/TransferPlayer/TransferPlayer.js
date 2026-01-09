@@ -30,13 +30,19 @@ const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut, open, onClose
     const playerOutPosition = getPosition(playerOut);
     // Prevent duplicates: exclude any player already in the team by id or code
     const teamIds = new Set(team.map(tp => tp.id ?? tp.code));
-    const availablePlayers = allPlayers.filter(
-        (p) =>
-            getPosition(p) === playerOutPosition &&
-            !teamIds.has(p.id) &&
-            !teamIds.has(p.code) &&
-            getId(p) !== getId(playerOut)
-    );
+    const availablePlayers = allPlayers
+        .filter(
+            (p) =>
+                getPosition(p) === playerOutPosition &&
+                !teamIds.has(p.id) &&
+                !teamIds.has(p.code) &&
+                getId(p) !== getId(playerOut)
+        )
+        .sort((a, b) => {
+            const ptsA = parseFloat(a.ep_next) || 0;
+            const ptsB = parseFloat(b.ep_next) || 0;
+            return ptsB - ptsA; // Descending order
+        });
 
     const handleCloseDialog = () => {
         setSelectedIn(null);
@@ -78,7 +84,10 @@ const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut, open, onClose
                         renderInput={ (params) => <TextField { ...params } label='Player In' margin='normal' /> }
                         renderOption={ (props, option) => (
                             <ListItem { ...props } key={ option.id }>
-                                <ListItemText primary={ option.web_name || option.webName || option.name } secondary={ option.position } />
+                                <ListItemText 
+                                    primary={ option.web_name || option.webName || option.name } 
+                                    secondary={ `${option.ep_next || 0} pts • ${option.opponent || 'TBD'}` } 
+                                />
                             </ListItem>
                         ) }
                     />

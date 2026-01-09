@@ -63,6 +63,8 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                     onTransfer={ onTransfer }
                     showTransferButtons={ !isHighestPredictedTeam }
                     onPlayerClick={ onPlayerClick }
+                    mainTeamData={ mainTeam }
+                    benchTeamData={ benchTeam }
                   />
                 </Grid>
               )) }
@@ -81,6 +83,8 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                       onTransfer={ onTransfer }
                       showTransferButtons={ !isHighestPredictedTeam }
                       onPlayerClick={ onPlayerClick }
+                      mainTeamData={ mainTeam }
+                      benchTeamData={ benchTeam }
                     />
                   </Box>
                 </Grid>
@@ -100,6 +104,8 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                     onTransfer={ onTransfer }
                     showTransferButtons={ !isHighestPredictedTeam }
                     onPlayerClick={ onPlayerClick }
+                    mainTeamData={ mainTeam }
+                    benchTeamData={ benchTeam }
                   />
                 </Grid>
               )) }
@@ -118,6 +124,8 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                     onTransfer={ onTransfer }
                     showTransferButtons={ !isHighestPredictedTeam }
                     onPlayerClick={ onPlayerClick }
+                    mainTeamData={ mainTeam }
+                    benchTeamData={ benchTeam }
                   />
                 </Grid>
               )) }
@@ -136,6 +144,8 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                     onTransfer={ onTransfer }
                     showTransferButtons={ !isHighestPredictedTeam }
                     onPlayerClick={ onPlayerClick }
+                    mainTeamData={ mainTeam }
+                    benchTeamData={ benchTeam }
                   />
                 </Grid>
               )) }
@@ -164,6 +174,8 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                       onTransfer={ onTransfer }
                       showTransferButtons={ !isHighestPredictedTeam }
                       onPlayerClick={ onPlayerClick }
+                      mainTeamData={ mainTeam }
+                      benchTeamData={ benchTeam }
                     />
                   </Box>
                 </Grid>
@@ -185,6 +197,8 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                       onTransfer={ onTransfer }
                       showTransferButtons={ !isHighestPredictedTeam }
                       onPlayerClick={ onPlayerClick }
+                      mainTeamData={ mainTeam }
+                      benchTeamData={ benchTeam }
                     />
                   </Box>
                 </Grid>
@@ -206,6 +220,8 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                       onTransfer={ onTransfer }
                       showTransferButtons={ !isHighestPredictedTeam }
                       onPlayerClick={ onPlayerClick }
+                      mainTeamData={ mainTeam }
+                      benchTeamData={ benchTeam }
                     />
                   </Box>
                 </Grid>

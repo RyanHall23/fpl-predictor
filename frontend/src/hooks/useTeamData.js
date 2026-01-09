@@ -95,6 +95,13 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true) => {
       if (selectedPlayer === null) {
         setSelectedPlayer({ player, teamType });
       } else {
+        // If clicking the same player, deselect them
+        if (selectedPlayer.player.code === player.code) {
+          setSelectedPlayer(null);
+          setSnackbar({ message: '', key: Date.now() });
+          return;
+        }
+        
         const swapResult = isValidSwap(
           selectedPlayer.player,
           player,
