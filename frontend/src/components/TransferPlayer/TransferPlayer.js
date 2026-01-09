@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import PropTypes from 'prop-types';
 import Button from '@mui/material/Button';
 import ButtonGroup from '@mui/material/ButtonGroup';
 import Dialog from '@mui/material/Dialog';
@@ -13,12 +14,10 @@ import IconButton from '@mui/material/IconButton';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
-
 // props: team, allPlayers, onTransfer, playerOut
 const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut }) => {
     const [dialogOpen, setDialogOpen] = useState(false);
     const [selectedIn, setSelectedIn] = useState(null);
-
 
     // Defensive: handle missing playerOut
     if (!playerOut) return null;
@@ -37,8 +36,6 @@ const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut }) => {
             !teamIds.has(p.code) &&
             getId(p) !== getId(playerOut)
     );
-    // DEBUG: Uncomment to see why options may be empty
-    // console.log('playerOut', playerOut, 'playerOutPosition', playerOutPosition, 'team', team, 'allPlayers', allPlayers, 'availablePlayers', availablePlayers);
 
     const handleOpenDialog = () => {
         setDialogOpen(true);
@@ -84,13 +81,13 @@ const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut }) => {
                     { /* Player In: dropdown, only matching position */ }
                     <Autocomplete
                         options={ availablePlayers }
-                        getOptionLabel={ (option) => option.name }
+                        getOptionLabel={ (option) => option.web_name || option.webName || option.name }
                         value={ selectedIn }
                         onChange={ (_, value) => setSelectedIn(value) }
                         renderInput={ (params) => <TextField { ...params } label='Player In' margin='normal' /> }
                         renderOption={ (props, option) => (
                             <ListItem { ...props } key={ option.id }>
-                                <ListItemText primary={ option.name } secondary={ option.position } />
+                                <ListItemText primary={ option.web_name || option.webName || option.name } secondary={ option.position } />
                             </ListItem>
                         ) }
                     />
@@ -104,6 +101,19 @@ const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut }) => {
             </Dialog>
         </>
     );
+};
+
+TransferPlayer.propTypes = {
+    team: PropTypes.array.isRequired,
+    allPlayers: PropTypes.array.isRequired,
+    onTransfer: PropTypes.func.isRequired,
+    playerOut: PropTypes.shape({
+        id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+        code: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+        name: PropTypes.string,
+        position: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+        element_type: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    }).isRequired,
 };
 
 export default TransferPlayer;
