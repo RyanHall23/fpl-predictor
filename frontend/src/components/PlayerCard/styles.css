@@ -1,3 +1,4 @@
+/* Dark mode - default */
 body .player-card {
   width: 100px;
   height: 130px;
@@ -5,12 +6,30 @@ body .player-card {
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
-  background-color: #f5f5f5;
-  border-radius: 10px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  background: linear-gradient(135deg, #2a2d3a 0%, #1f2229 100%);
+  border-radius: 12px;
+  box-shadow: 0 4px 8px rgba(106, 27, 154, 0.2);
   padding: 8px;
   margin: 8px;
   position: relative;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(171, 71, 188, 0.3);
+}
+
+body .player-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(106, 27, 154, 0.3);
+}
+
+/* Light mode */
+html[data-mui-color-scheme='light'] body .player-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f5f5f5 100%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+html[data-mui-color-scheme='light'] body .player-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 body .captain-badge {
@@ -23,14 +42,20 @@ body .captain-badge {
   border-radius: 5px;
   font-size: 10px;
   font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 body .dreamteam-icon {
   position: absolute;
   top: 5px;
   left: 5px;
-  color: #0000ff;
+  color: #6a1b9a;
   transform: scale(0.75);
+  filter: drop-shadow(0 2px 4px rgba(106, 27, 154, 0.4));
+}
+
+html[data-mui-color-scheme='light'] body .dreamteam-icon {
+  color: #ab47bc;
 }
 
 body .card-content {
@@ -51,6 +76,7 @@ body .avatar-box {
   justify-content: center;
   border-radius: 50%;
   overflow: hidden;
+  background-color: #fff;
 }
 
 body .avatar {
@@ -71,11 +97,15 @@ body .player-info {
 body .player-name {
   font-size: 12px;
   font-weight: bold;
-  color: #333;
+  color: #ffffff;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100px;
+}
+
+html[data-mui-color-scheme='light'] body .player-name {
+  color: #212121;
 }
 
 body .predicted-points {
@@ -89,7 +119,11 @@ body .predicted-points {
 
 body .predicted-points span {
   font-weight: bold;
-  color: #000;
+  color: #ab47bc;
+}
+
+html[data-mui-color-scheme='light'] body .predicted-points span {
+  color: #6a1b9a;
 }
 
 body .action-button {
@@ -97,7 +131,13 @@ body .action-button {
   color: #fff;
   border-radius: 20px;
   padding: 3px 8px;
+  transition: all 0.3s ease;
 }
+
+html[data-mui-color-scheme='light'] body .action-button {
+  color: #6a1b9a;
+}
+
 
 body .action-button.clicked {
   background-color: #ff4081;

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, Paper, Typography } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import Grid from '@mui/material/Grid';
 import PropTypes from 'prop-types';
 import PlayerCard from '../PlayerCard/PlayerCard';
@@ -14,6 +15,7 @@ const positionLabels = {
 };
 
 const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, onTransfer }) => {
+  const theme = useTheme();
   // Find the player with the highest points (captain, excluding manager)
   const captain = mainTeam && mainTeam.length
     ? mainTeam.filter(p => p.position !== 5).reduce(

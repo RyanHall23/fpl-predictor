@@ -7,6 +7,7 @@ import {
   Box,
   Avatar,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import StarIcon from '@mui/icons-material/Star';
@@ -15,6 +16,7 @@ import './styles.css';
 import TransferPlayer from '../TransferPlayer/TransferPlayer';
 
 const PlayerCard = ({ player, isCaptain, selectedPlayer, teamType, team, allPlayers, onTransfer }) => {
+  const theme = useTheme();
   const [dialogOpen, setDialogOpen] = useState(false);
   const isSelected =
     selectedPlayer &&

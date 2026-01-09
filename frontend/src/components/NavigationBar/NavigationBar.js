@@ -7,8 +7,13 @@ import {
   Typography,
   Container,
   Button,
-  TextField
+  TextField,
+  IconButton,
+  Tooltip
 } from '@mui/material';
+import Brightness4Icon from '@mui/icons-material/Brightness4';
+import Brightness7Icon from '@mui/icons-material/Brightness7';
+import { useThemeMode } from '../../theme/ThemeContext';
 import axios from 'axios';
 import './styles.css';
 import AuthDialog from '../AuthDialog/AuthDialog';
@@ -30,6 +35,7 @@ const NavigationBar = ({
   username,
   searchedTeamName
 }) => {
+  const { mode, toggleTheme } = useThemeMode();
   const [authOpen, setAuthOpen] = React.useState(false);
   const [authMode, setAuthMode] = React.useState('login'); // or 'register'
   const [authForm, setAuthForm] = React.useState({ username: '', password: '', teamid: '' });
@@ -170,6 +176,11 @@ const NavigationBar = ({
           </Box>
           { /* Right side: login/logout/user */ }
           <Box sx={ { ml: 'auto', display: 'flex', alignItems: 'center' } }>
+            <Tooltip title={ mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode' }>
+              <IconButton onClick={ toggleTheme } color='inherit' sx={{ mr: 1 }}>
+                { mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon /> }
+              </IconButton>
+            </Tooltip>
             { user ? (
               <>
                 <Typography sx={ { ml: 2, mr: 1 } }>{ user.username }</Typography>

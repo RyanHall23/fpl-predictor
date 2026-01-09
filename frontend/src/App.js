@@ -5,6 +5,7 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Grid from '@mui/material/Grid';
 import Snackbar from '@mui/material/Snackbar';
+import { useTheme } from '@mui/material/styles';
 import TeamFormation from './components/TeamFormation/TeamFormation';
 import useTeamData from './hooks/useTeamData';
 import useAllPlayers from './hooks/useAllPlayers';
@@ -18,6 +19,7 @@ const TEAM_VIEW = {
 };
 
 const App = () => {
+  const theme = useTheme();
   const [searchedEntryId, setSearchedEntryId] = useState('');
   const [pendingSearchId, setPendingSearchId] = useState(''); // For input box
   const [userEntryId, setUserEntryId] = useState('');
@@ -121,7 +123,7 @@ const App = () => {
   }, [userEntryId, teamView]);
 
   return (
-    <>
+    <Box sx={{ minHeight: '100vh', backgroundColor: theme.palette.background.default }}>
       <NavigationBar
         entryId={ pendingSearchId }
         setEntryId={ setPendingSearchId }
@@ -225,7 +227,7 @@ const App = () => {
           message={ snackbar.message }
         />
       </Container>
-    </>
+    </Box>
   );
 };
 

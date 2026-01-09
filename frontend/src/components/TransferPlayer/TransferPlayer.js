@@ -13,9 +13,11 @@ import ListItemText from '@mui/material/ListItemText';
 import IconButton from '@mui/material/IconButton';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { useTheme } from '@mui/material/styles';
 
 // props: team, allPlayers, onTransfer, playerOut
 const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut }) => {
+    const theme = useTheme();
     const [dialogOpen, setDialogOpen] = useState(false);
     const [selectedIn, setSelectedIn] = useState(null);
 
@@ -71,8 +73,19 @@ const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut }) => {
                     <ArrowBackIcon />
                 </IconButton>
             </ButtonGroup>
-            <Dialog open={ dialogOpen } onClose={ handleCloseDialog }>
-                <DialogTitle>Transfer Player</DialogTitle>
+            <Dialog 
+                open={ dialogOpen } 
+                onClose={ handleCloseDialog }
+                PaperProps={{
+                    sx: {
+                        background: theme.palette.mode === 'dark' 
+                            ? 'linear-gradient(135deg, #23272f 0%, #281455 100%)'
+                            : 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
+                        borderRadius: '12px',
+                    }
+                }}
+            >
+                <DialogTitle sx={{ color: theme.palette.text.primary }}>Transfer Player</DialogTitle>
                 <DialogContent>
                     { /* Player Out: fixed, not a dropdown */ }
                     <ListItem>
@@ -92,8 +105,8 @@ const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut }) => {
                         ) }
                     />
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={ handleCloseDialog }>Cancel</Button>
+                <DialogActions sx={{ pb: 2, px: 3 }}>
+                    <Button onClick={ handleCloseDialog } variant="outlined">Cancel</Button>
                     <Button onClick={ handleTransfer } disabled={ !selectedIn } variant='contained' color='primary'>
                         Confirm Transfer
                     </Button>

@@ -1,13 +1,37 @@
+/* Dark mode - default */
 body .main-paper {
   background: repeating-linear-gradient(
     0deg,
-    #388e3c,
-    #388e3c 20px,
-    #4caf50 20px,
-    #4caf50 40px
+    #2d572f,
+    #2d572f 20px,
+    #3a6e3c 20px,
+    #3a6e3c 40px
   );
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
 }
 
 body .bench-paper {
-  background-color: #4caf50;
+  background: linear-gradient(135deg, #2d572f 0%, #1b5e20 100%);
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+/* Light mode */
+html[data-mui-color-scheme='light'] body .main-paper {
+  background: repeating-linear-gradient(
+    0deg,
+    #81c784,
+    #81c784 20px,
+    #a5d6a7 20px,
+    #a5d6a7 40px
+  );
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+html[data-mui-color-scheme='light'] body .bench-paper {
+  background: linear-gradient(135deg, #a8e6a3 0%, #81c784 100%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
