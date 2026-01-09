@@ -172,16 +172,34 @@ const App = () => {
                           // Optionally, show a snackbar or error here
                           return;
                         }
-                        // Replace OUT player with IN player in the correct team array only
-                        const replacePlayer = (teamArr) => {
-                          const idxOut = teamArr.findIndex(p => p.code === playerOut.code);
-                          if (idxOut === -1) return teamArr;
-                          const newArr = [...teamArr];
-                          newArr[idxOut] = { ...playerIn, user_team: true };
-                          return newArr;
+                        // Find the full player object from allPlayers to ensure all fields are present
+                        const fullPlayerIn = allPlayers.find(p => p.code === playerIn.code) || playerIn;
+                        // Compose the new player object for the team (ensure all required fields)
+                        const newPlayer = {
+                          ...fullPlayerIn,
+                          user_team: true,
+                          // Ensure all required fields for display
+                          name: fullPlayerIn.name || `${fullPlayerIn.first_name || ''} ${fullPlayerIn.second_name || ''}`.trim(),
+                          webName: fullPlayerIn.webName || fullPlayerIn.web_name || fullPlayerIn.name || `${fullPlayerIn.first_name || ''} ${fullPlayerIn.second_name || ''}`.trim(),
+                          predictedPoints: fullPlayerIn.predictedPoints ?? fullPlayerIn.ep_next ?? fullPlayerIn.ep_next_raw ?? 0,
+                          position: fullPlayerIn.position ?? fullPlayerIn.element_type,
+                          lastGwPoints: fullPlayerIn.lastGwPoints ?? fullPlayerIn.event_points ?? 0,
+                          inDreamteam: fullPlayerIn.inDreamteam ?? fullPlayerIn.in_dreamteam ?? false,
+                          totalPoints: fullPlayerIn.totalPoints ?? fullPlayerIn.total_points ?? 0,
+                          code: fullPlayerIn.code,
                         };
-                        setMainTeamData(replacePlayer(mainTeamData));
-                        setBenchTeamData(replacePlayer(benchTeamData));
+                        // Determine which team the playerOut is in, and only update that team
+                        const mainIdx = mainTeamData.findIndex(p => p.code === playerOut.code);
+                        const benchIdx = benchTeamData.findIndex(p => p.code === playerOut.code);
+                        if (mainIdx !== -1) {
+                          const newMain = [...mainTeamData];
+                          newMain[mainIdx] = newPlayer;
+                          setMainTeamData(newMain);
+                        } else if (benchIdx !== -1) {
+                          const newBench = [...benchTeamData];
+                          newBench[benchIdx] = newPlayer;
+                          setBenchTeamData(newBench);
+                        }
                       } }
                     />
                   </Grid>
