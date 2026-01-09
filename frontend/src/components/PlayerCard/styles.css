@@ -1,16 +1,77 @@
+/* Dark mode - default */
 body .player-card {
-  width: 100px;
-  height: 130px;
+  width: 130px;
+  min-height: 180px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: space-between;
-  background-color: #f5f5f5;
-  border-radius: 10px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  background: linear-gradient(135deg, #2a2d3a 0%, #1f2229 100%);
+  border-radius: 12px;
+  box-shadow: 0 4px 8px rgba(106, 27, 154, 0.2);
   padding: 8px;
-  margin: 8px;
+  margin: 0 auto;
   position: relative;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(171, 71, 188, 0.3);
+}
+
+body .player-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(106, 27, 154, 0.3);
+}
+
+/* Selected player - red border */
+body .player-card-selected {
+  border: 3px solid #f44336 !important;
+  box-shadow: 0 0 12px rgba(244, 67, 54, 0.5), 0 4px 8px rgba(106, 27, 154, 0.2);
+}
+
+body .player-card-selected:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 16px rgba(244, 67, 54, 0.6), 0 6px 12px rgba(106, 27, 154, 0.3);
+}
+
+/* Valid swap target - green border */
+body .player-card-valid-target {
+  border: 3px solid #4caf50 !important;
+  box-shadow: 0 0 12px rgba(76, 175, 80, 0.5), 0 4px 8px rgba(106, 27, 154, 0.2);
+  cursor: pointer;
+}
+
+body .player-card-valid-target:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 16px rgba(76, 175, 80, 0.6), 0 6px 12px rgba(106, 27, 154, 0.3);
+}
+
+/* Light mode */
+html[data-mui-color-scheme='light'] body .player-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f5f5f5 100%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+html[data-mui-color-scheme='light'] body .player-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Light mode - selected player */
+html[data-mui-color-scheme='light'] body .player-card-selected {
+  border: 3px solid #f44336 !important;
+  box-shadow: 0 0 12px rgba(244, 67, 54, 0.4), 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+html[data-mui-color-scheme='light'] body .player-card-selected:hover {
+  box-shadow: 0 0 16px rgba(244, 67, 54, 0.5), 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Light mode - valid swap target */
+html[data-mui-color-scheme='light'] body .player-card-valid-target {
+  border: 3px solid #4caf50 !important;
+  box-shadow: 0 0 12px rgba(76, 175, 80, 0.4), 0 2px 8px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+}
+
+html[data-mui-color-scheme='light'] body .player-card-valid-target:hover {
+  box-shadow: 0 0 16px rgba(76, 175, 80, 0.5), 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 body .captain-badge {
@@ -23,81 +84,221 @@ body .captain-badge {
   border-radius: 5px;
   font-size: 10px;
   font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 body .dreamteam-icon {
   position: absolute;
   top: 5px;
   left: 5px;
-  color: #0000ff;
+  color: #6a1b9a;
   transform: scale(0.75);
+  filter: drop-shadow(0 2px 4px rgba(106, 27, 154, 0.4));
+}
+
+html[data-mui-color-scheme='light'] body .dreamteam-icon {
+  color: #ab47bc;
 }
 
 body .card-content {
-  padding: 4px;
-  text-align: center;
+  padding: 8px !important;
+  width: 100%;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
+  gap: 8px;
 }
 
 body .avatar-box {
-  width: 60px;
-  height: 60px;
+  width: 100%;
+  height: 64px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  overflow: hidden;
+  overflow: visible;
+  background-color: transparent;
+  position: relative;
+  margin-bottom: 4px;
 }
 
-body .avatar {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
+body .player-image {
+  width: 40px;
+  height: 64px;
+  object-fit: cover;
+  object-position: center top;
   display: block;
 }
 
-body .player-info {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-}
-
 body .player-name {
-  font-size: 12px;
-  font-weight: bold;
-  color: #333;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 100px;
+  text-align: center;
+  display: block;
+  width: 100%;
+  margin-bottom: 8px;
+  letter-spacing: 0.3px;
 }
 
-body .predicted-points {
+html[data-mui-color-scheme='light'] body .player-name {
+  color: #212121;
+}
+
+body .info-row {
+  margin: 0 !important;
+  width: 100%;
+}
+
+body .info-row .MuiGrid-item {
+  padding: 0 !important;
+}
+
+body .button-row {
+  margin: 0 !important;
+  width: 100%;
+}
+
+body .button-row .MuiGrid-item {
+  padding: 0 !important;
+}
+
+body .info-box {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
+  padding: 4px;
+  min-height: 24px;
   width: 100%;
-  gap: 2px;
 }
 
-body .predicted-points span {
-  font-weight: bold;
-  color: #000;
+body .info-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #ab47bc;
+  text-align: center;
+  width: 100%;
 }
 
-body .action-button {
-  margin-top: 5px;
-  color: #fff;
-  border-radius: 20px;
-  padding: 3px 8px;
+body .points-display {
+  font-size: 18px;
+  font-weight: 700;
+  color: #ab47bc;
+  text-align: center;
+  width: 100%;
+  letter-spacing: 0.5px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  padding: 6px 0;
 }
+
+html[data-mui-color-scheme='light'] body .points-display {
+  color: #6a1b9a;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+body .opponent-display {
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  text-align: center;
+  width: 100%;
+  background: rgba(171, 71, 188, 0.15);
+  padding: 4px;
+  border-radius: 4px;
+  letter-spacing: 0.3px;
+}
+
+html[data-mui-color-scheme='light'] body .opponent-display {
+  color: #424242;
+  background: rgba(106, 27, 154, 0.08);
+}
+
+html[data-mui-color-scheme='light'] body .info-label {
+  color: #6a1b9a;
+}
+
+body .action-button-small {
+  width: 100%;
+  padding: 2px !important;
+  color: #ab47bc !important;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  min-height: 28px;
+}
+
+body .action-button-small:hover {
+  background-color: rgba(171, 71, 188, 0.2);
+}
+
+body .action-button-small.substitute-button {
+  background: linear-gradient(135deg, rgba(42, 45, 58, 0.6) 0%, rgba(31, 34, 41, 0.6) 100%);
+  color: #ffffff !important;
+  border: 1px solid rgba(156, 77, 204, 0.3);
+}
+
+body .action-button-small.substitute-button:hover {
+  background: linear-gradient(135deg, rgba(42, 45, 58, 0.8) 0%, rgba(31, 34, 41, 0.8) 100%);
+  border-color: rgba(156, 77, 204, 0.5);
+}
+
+body .action-button-small.transfer-button {
+  background: linear-gradient(135deg, rgba(42, 45, 58, 0.6) 0%, rgba(31, 34, 41, 0.6) 100%);
+  color: #ab47bc !important;
+  border: 1px solid rgba(171, 71, 188, 0.3);
+}
+
+body .action-button-small.transfer-button:hover {
+  background: linear-gradient(135deg, rgba(42, 45, 58, 0.8) 0%, rgba(31, 34, 41, 0.8) 100%);
+  border-color: rgba(171, 71, 188, 0.5);
+}
+
+body .sync-icon {
+  color: #ffffff;
+}
+
+body .transfer-arrows-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+}
+
+html[data-mui-color-scheme='light'] body .action-button-small {
+  color: #6a1b9a !important;
+}
+
+html[data-mui-color-scheme='light'] body .action-button-small:hover {
+  background-color: rgba(106, 27, 154, 0.1);
+}
+
+html[data-mui-color-scheme='light'] body .action-button-small.substitute-button {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.6) 0%, rgba(245, 245, 245, 0.6) 100%);
+  color: #424242 !important;
+  border: 1px solid rgba(106, 27, 154, 0.3);
+}
+
+html[data-mui-color-scheme='light'] body .action-button-small.substitute-button:hover {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(245, 245, 245, 0.9) 100%);
+  border-color: rgba(106, 27, 154, 0.5);
+}
+
+html[data-mui-color-scheme='light'] body .action-button-small.transfer-button {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.6) 0%, rgba(245, 245, 245, 0.6) 100%);
+  color: #6a1b9a !important;
+  border: 1px solid rgba(106, 27, 154, 0.3);
+}
+
+html[data-mui-color-scheme='light'] body .action-button-small.transfer-button:hover {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(245, 245, 245, 0.9) 100%);
+  border-color: rgba(106, 27, 154, 0.5);
+}
+
+html[data-mui-color-scheme='light'] body .sync-icon {
+  color: #424242;
+}
+
 
 body .action-button.clicked {
   background-color: #ff4081;

@@ -1,31 +1,49 @@
+/* Dark mode - default */
 .MuiPaper-root.user-profile-pane {
-background: linear-gradient(135deg, #23272f 0%, #281455 100%);
+  background: linear-gradient(135deg, #23272f 0%, #281455 100%);
   color: #fff;
   border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(106, 27, 154, 0.12);
+  box-shadow: 0 4px 16px rgba(106, 27, 154, 0.3);
   min-width: 250px;
   padding: 20px 16px;
+  transition: all 0.3s ease;
+}
+
+/* Light mode */
+html[data-mui-color-scheme='light'] .MuiPaper-root.user-profile-pane {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  color: #212121;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 }
 
 .MuiPaper-root.user-profile-pane .MuiTypography-h6,
 .MuiPaper-root.user-profile-pane .MuiTypography-subtitle2 {
-  color: #fff;
+  color: inherit;
 }
 
 .MuiPaper-root.user-profile-pane .MuiDivider-root {
-  background-color: #fff3;
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+html[data-mui-color-scheme='light'] .MuiPaper-root.user-profile-pane .MuiDivider-root {
+  background-color: rgba(0, 0, 0, 0.12);
 }
 
 .MuiPaper-root.user-profile-pane .MuiListItemText-primary,
 .MuiPaper-root.user-profile-pane .MuiListItemText-secondary {
-  color: #fff;
+  color: inherit;
 }
 
 .MuiPaper-root.user-profile-pane .MuiButton-root {
-  color: #fff;
-  border-color: #fff;
+  color: inherit;
+  border-color: currentColor;
+  transition: all 0.3s ease;
 }
 
 .MuiPaper-root.user-profile-pane .MuiButton-root:hover {
-  background-color: #eca6ff;
+  background-color: rgba(171, 71, 188, 0.2);
+}
+
+html[data-mui-color-scheme='light'] .MuiPaper-root.user-profile-pane .MuiButton-root:hover {
+  background-color: rgba(106, 27, 154, 0.1);
 }

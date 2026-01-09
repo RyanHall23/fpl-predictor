@@ -44,10 +44,17 @@ const getElementSummary = async (req, res) => {
 const getPredictedTeam = async (req, res) => {
   try {
     const data = await fplModel.fetchBootstrapStatic();
-    const players = data.elements.map((p) => ({
+    const fixtures = await fplModel.fetchFixtures();
+    const currentEvent = data.events.find(e => e.is_current) || data.events[0];
+    
+    let players = data.elements.map((p) => ({
       ...p,
       ep_next: parseFloat(p.ep_next) || 0,
     }));
+    
+    // Enrich players with opponent data
+    players = fplModel.enrichPlayersWithOpponents(players, fixtures, data.teams, currentEvent.id);
+    
     const team = fplModel.buildHighestPredictedTeam(players);
     res.json(team);
   } catch (error) {
@@ -65,10 +72,17 @@ const getUserTeam = async (req, res) => {
   try {
     const bootstrap = await fplModel.fetchBootstrapStatic();
     const picksData = await fplModel.fetchPlayerPicks(entryId, eventId);
-    const players = bootstrap.elements.map((p) => ({
+    const fixtures = await fplModel.fetchFixtures();
+    const currentEvent = bootstrap.events.find(e => e.is_current) || bootstrap.events[0];
+    
+    let players = bootstrap.elements.map((p) => ({
       ...p,
       ep_next: parseFloat(p.ep_next) || 0,
     }));
+    
+    // Enrich players with opponent data
+    players = fplModel.enrichPlayersWithOpponents(players, fixtures, bootstrap.teams, currentEvent.id);
+    
     const { mainTeam, bench } = fplModel.buildUserTeam(players, picksData.picks);
 
     // Fetch the entry info for the team name
@@ -138,11 +152,80 @@ const getUserProfile = async (req, res) => {
   }
 };
 
+const getAllPlayersEnriched = async (req, res) => {
+  try {
+    const data = await fplModel.fetchBootstrapStatic();
+    const fixtures = await fplModel.fetchFixtures();
+    const currentEvent = data.events.find(e => e.is_current) || data.events[0];
+    
+    let players = data.elements.map((p) => ({
+      ...p,
+      ep_next: parseFloat(p.ep_next) || 0,
+    }));
+    
+    // Enrich players with opponent data
+    players = fplModel.enrichPlayersWithOpponents(players, fixtures, data.teams, currentEvent.id);
+    
+    res.json({ elements: players, teams: data.teams, events: data.events });
+  } catch (error) {
+    console.error('Error fetching enriched players:', error);
+    res.status(500).json({ error: 'Error fetching enriched players' });
+  }
+};
+
+const validateSwap = async (req, res) => {
+  try {
+    const { player1, player2, teamType1, teamType2, mainTeam, benchTeam } = req.body;
+    
+    if (!player1 || !player2 || !teamType1 || !teamType2 || !mainTeam || !benchTeam) {
+      return res.status(400).json({ error: 'Missing required parameters' });
+    }
+    
+    const result = fplModel.validateSwap(player1, player2, teamType1, teamType2, mainTeam, benchTeam);
+    res.json(result);
+  } catch (error) {
+    console.error('Error validating swap:', error);
+    res.status(500).json({ error: 'Error validating swap' });
+  }
+};
+
+const getAvailableTransfers = async (req, res) => {
+  try {
+    const { playerCode } = req.params;
+    const { currentTeam } = req.body;
+    
+    if (!playerCode || !currentTeam) {
+      return res.status(400).json({ error: 'Missing required parameters' });
+    }
+    
+    // Fetch enriched players
+    const data = await fplModel.fetchBootstrapStatic();
+    const fixtures = await fplModel.fetchFixtures();
+    const currentEvent = data.events.find(e => e.is_current) || data.events[0];
+    
+    let players = data.elements.map((p) => ({
+      ...p,
+      ep_next: parseFloat(p.ep_next) || 0,
+    }));
+    
+    players = fplModel.enrichPlayersWithOpponents(players, fixtures, data.teams, currentEvent.id);
+    
+    const availablePlayers = fplModel.getAvailableTransfers(parseInt(playerCode), players, currentTeam);
+    res.json(availablePlayers);
+  } catch (error) {
+    console.error('Error fetching available transfers:', error);
+    res.status(500).json({ error: 'Error fetching available transfers' });
+  }
+};
+
 module.exports = {
   getBootstrapStatic,
   getPlayerPicks,
   getElementSummary,
   getPredictedTeam,
   getUserTeam,
-  getUserProfile
+  getUserProfile,
+  getAllPlayersEnriched,
+  validateSwap,
+  getAvailableTransfers
 };

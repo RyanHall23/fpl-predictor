@@ -16,11 +16,14 @@ mongoose.connect('mongodb://localhost:27017/fplpredictor')
 app.use('/api/auth', authRoutes);
 
 app.get('/api/bootstrap-static', fplController.getBootstrapStatic);
+app.get('/api/bootstrap-static/enriched', fplController.getAllPlayersEnriched);
 app.get('/api/entry/:entryId/event/:eventId/picks', fplController.getPlayerPicks);
 app.get('/api/element-summary/:playerId', fplController.getElementSummary);
 app.get('/api/predicted-team', fplController.getPredictedTeam);
 app.get('/api/entry/:entryId/event/:eventId/team', fplController.getUserTeam);
 app.get('/api/entry/:entryId/profile', fplController.getUserProfile);
+app.post('/api/validate-swap', fplController.validateSwap);
+app.post('/api/available-transfers/:playerCode', fplController.getAvailableTransfers);
 
 app.listen(port, () => {
   console.log(`Proxy server running on http://localhost:${port}`);
