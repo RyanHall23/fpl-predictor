@@ -12,6 +12,7 @@ import useAllPlayers from './hooks/useAllPlayers';
 import TransferPlayer from './components/TransferPlayer';
 import UserProfilePane from './components/UserProfilePane/UserProfilePane';
 import AccountPage from './components/AccountPage/AccountPage';
+import axios from 'axios';
 
 const TEAM_VIEW = {
   SEARCHED: 'searched',
@@ -53,6 +54,34 @@ const App = () => {
 
   const [snackbarOpen, setSnackbarOpen] = useState(false);
 
+  // Restore session from localStorage on app load
+  useEffect(() => {
+    const restoreSession = async () => {
+      const storedToken = localStorage.getItem('authToken');
+      if (storedToken) {
+        try {
+          const res = await axios.get('/api/auth/profile', {
+            headers: { Authorization: `Bearer ${storedToken}` }
+          });
+          // Successfully verified token, restore session
+          setAuthToken(storedToken);
+          setUsername(res.data.username);
+          setUserEntryId(res.data.teamid);
+          setCurrentEntryId(res.data.teamid);
+          setTeamView(TEAM_VIEW.USER);
+          if (isHighestPredictedTeam) {
+            toggleTeamView();
+          }
+        } catch (err) {
+          // Token is invalid or expired, clear it
+          localStorage.removeItem('authToken');
+          console.error('Failed to restore session:', err);
+        }
+      }
+    };
+    restoreSession();
+  }, []);
+
   useEffect(() => {
     if (snackbar.message) setSnackbarOpen(true);
   }, [snackbar]);
@@ -90,6 +119,10 @@ const App = () => {
     setUserEntryId(teamid);
     setUsername(usernameFromNav || '');
     setAuthToken(token || '');
+    // Save token to localStorage for session persistence
+    if (token) {
+      localStorage.setItem('authToken', token);
+    }
     setCurrentEntryId(teamid);
     setTeamView(TEAM_VIEW.USER);
     setShowAccountPage(false);
@@ -102,6 +135,10 @@ const App = () => {
   // Handle token update from account page
   const handleTokenUpdate = (newToken, newUsername, newTeamId) => {
     setAuthToken(newToken);
+    // Update token in localStorage
+    if (newToken) {
+      localStorage.setItem('authToken', newToken);
+    }
     if (newUsername) setUsername(newUsername);
     if (newTeamId) {
       setUserEntryId(newTeamId);
@@ -117,6 +154,8 @@ const App = () => {
     setUsername('');
     setUserEntryId('');
     setShowAccountPage(false);
+    // Clear token from localStorage
+    localStorage.removeItem('authToken');
     if (teamView === TEAM_VIEW.USER) {
       setTeamView(TEAM_VIEW.HIGHEST);
       setCurrentEntryId('');
