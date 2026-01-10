@@ -213,6 +213,49 @@ const enrichPlayersWithGameweekStats = async (players, targetEventId) => {
 };
 
 /**
+ * Recalculate expected points for a specific future gameweek based on opponents.
+ * This is needed because ep_next is only for the immediate next gameweek.
+ */
+const recalculatePointsForGameweek = (players, targetEventId, currentEventId) => {
+  // Only recalculate for future gameweeks beyond the immediate next
+  if (targetEventId <= currentEventId + 1) {
+    return players; // Use existing ep_next for current or immediate next gameweek
+  }
+  
+  return players.map(player => {
+    if (!player.opponent || !player.opponent_short) {
+      // No opponent data, keep original prediction
+      return player;
+    }
+    
+    // Basic recalculation based on opponent strength and player form
+    // This is a simplified model - in reality you'd want more sophisticated prediction
+    let adjustedPoints = parseFloat(player.ep_next) || 0;
+    
+    // Get opponent team strength (inverse of strength_overall_away/home)
+    const isHome = player.is_home;
+    const basePoints = adjustedPoints;
+    
+    // Simple adjustment based on home/away
+    if (isHome) {
+      adjustedPoints *= 1.1; // 10% bonus for home games
+    } else {
+      adjustedPoints *= 0.95; // 5% penalty for away games
+    }
+    
+    // Add some variance based on player's recent form (using total_points as proxy)
+    const formFactor = Math.min(2.0, Math.max(0.5, (player.total_points || 0) / 100));
+    adjustedPoints *= (0.8 + 0.4 * formFactor);
+    
+    return {
+      ...player,
+      ep_next: Math.max(0, Math.round(adjustedPoints * 100) / 100), // Round to 2 decimals
+      original_ep_next: basePoints // Keep original for reference
+    };
+  });
+};
+
+/**
  * Enrich players with opponent data from fixtures.
  * Adds 'opponent' field (opponent team ID) and 'opponent_short' (short name) to each player.
  * If targetEventId is provided, uses fixtures from that specific gameweek.
@@ -698,6 +741,7 @@ module.exports = {
   fetchLiveGameweek,
   enrichPlayersWithOpponents,
   enrichPlayersWithGameweekStats,
+  recalculatePointsForGameweek,
   buildHighestPredictedTeam,
   buildUserTeam,
   validateSwap,

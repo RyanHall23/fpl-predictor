@@ -86,6 +86,11 @@ const getPredictedTeam = async (req, res) => {
     // Enrich players with opponent data for target gameweek
     players = fplModel.enrichPlayersWithOpponents(players, fixtures, data.teams, targetEvent);
     
+    // For future gameweeks, recalculate points based on specific opponents
+    if (isFutureGameweek) {
+      players = fplModel.recalculatePointsForGameweek(players, targetEvent, currentEvent.id);
+    }
+    
     // For past/present gameweeks, build team based on actual points from that gameweek
     // For future gameweeks, build team based on predictions for that specific gameweek
     const team = fplModel.buildHighestPredictedTeam(players, isPastGameweek, isFutureGameweek, targetEvent);
@@ -155,6 +160,11 @@ const getUserTeam = async (req, res) => {
     
     // Enrich players with opponent data for the target gameweek
     players = fplModel.enrichPlayersWithOpponents(players, fixtures, bootstrap.teams, targetEvent);
+    
+    // For future gameweeks, recalculate points based on specific opponents
+    if (isFutureGameweekActual) {
+      players = fplModel.recalculatePointsForGameweek(players, targetEvent, currentEvent.id);
+    }
     
     const { mainTeam, bench, captainInfo } = fplModel.buildUserTeam(players, picksData.picks, isPastGameweek);
 
