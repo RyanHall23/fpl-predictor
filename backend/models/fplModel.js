@@ -152,35 +152,92 @@ const fetchFixtures = async () => {
   return response.data;
 };
 
+const fetchLiveGameweek = async (eventId) => {
+  const response = await axios.get(`https://fantasy.premierleague.com/api/event/${eventId}/live/`);
+  return response.data;
+};
+
+/**
+ * Enrich players with stats from a specific gameweek using actual API data.
+ * For past gameweeks, fetches actual points from the live gameweek endpoint.
+ */
+const enrichPlayersWithGameweekStats = async (players, targetEventId) => {
+  try {
+    // Fetch live gameweek data which contains actual points for each player
+    const liveData = await fetchLiveGameweek(targetEventId);
+    const playerStatsMap = {};
+  
+    // Build map of player ID to their stats for this gameweek
+    liveData.elements.forEach(element => {
+      playerStatsMap[element.id] = {
+        points: element.stats.total_points,
+        minutes: element.stats.minutes,
+        goals_scored: element.stats.goals_scored,
+        assists: element.stats.assists,
+        clean_sheets: element.stats.clean_sheets,
+        goals_conceded: element.stats.goals_conceded,
+        own_goals: element.stats.own_goals,
+        penalties_saved: element.stats.penalties_saved,
+        penalties_missed: element.stats.penalties_missed,
+        yellow_cards: element.stats.yellow_cards,
+        red_cards: element.stats.red_cards,
+        saves: element.stats.saves,
+        bonus: element.stats.bonus,
+        bps: element.stats.bps
+      };
+    });
+  
+    // Enrich players with gameweek-specific points from API
+    return players.map(player => {
+      const stats = playerStatsMap[player.id];
+      if (stats) {
+        return {
+          ...player,
+          event_points: stats.points,
+          gameweek_stats: stats
+        };
+      }
+      return {
+        ...player,
+        event_points: 0
+      };
+    });
+  } catch (error) {
+    console.error(`Error fetching gameweek ${targetEventId} data:`, error.message);
+    // Return players with zero points if API fails
+    return players.map(player => ({
+      ...player,
+      event_points: 0
+    }));
+  }
+};
+
 /**
  * Enrich players with opponent data from fixtures.
  * Adds 'opponent' field (opponent team ID) and 'opponent_short' (short name) to each player.
+ * If targetEventId is provided, uses fixtures from that specific gameweek.
  */
-const enrichPlayersWithOpponents = (players, fixtures, teams, currentEventId) => {
-  // Find next fixture for each team
-  const nextFixtureByTeam = {};
+const enrichPlayersWithOpponents = (players, fixtures, teams, targetEventId) => {
+  // Find fixture for each team in the target gameweek
+  const fixtureByTeam = {};
   
-  // Get upcoming fixtures (not finished, event >= current)
-  const upcomingFixtures = fixtures.filter(f => !f.finished && f.event >= currentEventId);
+  // Get fixtures for the target gameweek
+  const targetFixtures = fixtures.filter(f => f.event === targetEventId);
   
-  // Group by team and find earliest fixture for each team
-  upcomingFixtures.forEach(fixture => {
+  // Map fixtures to teams
+  targetFixtures.forEach(fixture => {
     // Home team
-    if (!nextFixtureByTeam[fixture.team_h] || fixture.event < nextFixtureByTeam[fixture.team_h].event) {
-      nextFixtureByTeam[fixture.team_h] = {
-        event: fixture.event,
-        opponent: fixture.team_a,
-        is_home: true
-      };
-    }
+    fixtureByTeam[fixture.team_h] = {
+      event: fixture.event,
+      opponent: fixture.team_a,
+      is_home: true
+    };
     // Away team
-    if (!nextFixtureByTeam[fixture.team_a] || fixture.event < nextFixtureByTeam[fixture.team_a].event) {
-      nextFixtureByTeam[fixture.team_a] = {
-        event: fixture.event,
-        opponent: fixture.team_h,
-        is_home: false
-      };
-    }
+    fixtureByTeam[fixture.team_a] = {
+      event: fixture.event,
+      opponent: fixture.team_h,
+      is_home: false
+    };
   });
   
   // Create team lookup by id
@@ -192,16 +249,16 @@ const enrichPlayersWithOpponents = (players, fixtures, teams, currentEventId) =>
   // Enrich players
   return players.map(player => {
     const playerTeam = player.team;
-    const nextFixture = nextFixtureByTeam[playerTeam];
+    const fixture = fixtureByTeam[playerTeam];
     
-    if (nextFixture && teamMap[nextFixture.opponent]) {
-      const opponentTeam = teamMap[nextFixture.opponent];
+    if (fixture && teamMap[fixture.opponent]) {
+      const opponentTeam = teamMap[fixture.opponent];
       return {
         ...player,
-        opponent: nextFixture.opponent,
+        opponent: fixture.opponent,
         opponent_short: opponentTeam.short_name,
-        is_home: nextFixture.is_home,
-        next_event: nextFixture.event
+        is_home: fixture.is_home,
+        fixture_event: fixture.event
       };
     }
     
@@ -210,7 +267,7 @@ const enrichPlayersWithOpponents = (players, fixtures, teams, currentEventId) =>
       opponent: null,
       opponent_short: 'TBD',
       is_home: null,
-      next_event: null
+      fixture_event: null
     };
   });
 };
@@ -235,14 +292,34 @@ const buildTeam = (players, picks = null, { filterZeroEp = false, includeManager
 
   // Build pool: either user's picks mapped to player objects, or all players
   let pool = [];
+  let captainInfo = null;
+  
   if (Array.isArray(picks) && picks.length) {
     const playerMap = {};
     players.forEach((p) => { playerMap[p.id] = p; });
+    
+    // Find captain and vice-captain
+    const captainPick = picks.find(p => p.is_captain);
+    const viceCaptainPick = picks.find(p => p.is_vice_captain);
+    
+    captainInfo = {
+      captainId: captainPick ? captainPick.element : null,
+      viceCaptainId: viceCaptainPick ? viceCaptainPick.element : null,
+      multiplier: captainPick ? captainPick.multiplier : 2
+    };
+    
     pool = picks
       .map((pick) => {
         const player = playerMap[pick.element];
         if (!player) return null;
-        return { ...player, ep_next: num(player.ep_next) };
+        return { 
+          ...player, 
+          ep_next: num(player.ep_next),
+          is_captain: pick.is_captain,
+          is_vice_captain: pick.is_vice_captain,
+          multiplier: pick.multiplier,
+          pick_position: pick.position
+        };
       })
       .filter(Boolean);
   } else {
@@ -402,19 +479,42 @@ const buildTeam = (players, picks = null, { filterZeroEp = false, includeManager
   const benchMids = benchOutfield.filter(p => p.element_type === 3).sort((a, b) => getPointsValue(b) - getPointsValue(a));
   const benchAtts = benchOutfield.filter(p => p.element_type === 4).sort((a, b) => getPointsValue(b) - getPointsValue(a));
 
-  const bench = [
+  let bench = [
     ...benchManager,
     ...benchGK,
     ...benchDefs,
     ...benchMids,
     ...benchAtts,
   ].filter(Boolean);
+  
+  // Mark captain and vice-captain if we have that info from picks
+  if (captainInfo) {
+    mainTeam = mainTeam.map(p => ({
+      ...p,
+      is_captain: p.id === captainInfo.captainId,
+      is_vice_captain: p.id === captainInfo.viceCaptainId,
+      multiplier: p.id === captainInfo.captainId ? captainInfo.multiplier : 1
+    }));
+    bench = bench.map(p => ({
+      ...p,
+      is_captain: false,
+      is_vice_captain: p.id === captainInfo.viceCaptainId,
+      multiplier: 1
+    }));
+  }
 
-  return { mainTeam, bench };
+  return { mainTeam, bench, captainInfo };
 };
 
-const buildHighestPredictedTeam = (players) => {
-  return buildTeam(players, null, { filterZeroEp: true });
+// eslint-disable-next-line no-unused-vars
+const buildHighestPredictedTeam = (players, isPastGameweek = false, isFutureGameweek = false, targetGameweek = null) => {
+  // For past gameweeks, use actual points to build the highest scoring team from that week
+  // For future gameweeks, use predictions
+  // filterZeroEp should be false for past gameweeks to include players who didn't score
+  return buildTeam(players, null, { 
+    filterZeroEp: !isPastGameweek, 
+    isPastGameweek 
+  });
 };
 
 const buildUserTeam = (players, picks, isPastGameweek = false) => {
@@ -550,7 +650,9 @@ module.exports = {
   fetchPlayerPicks,
   fetchElementSummary,
   fetchFixtures,
+  fetchLiveGameweek,
   enrichPlayersWithOpponents,
+  enrichPlayersWithGameweekStats,
   buildHighestPredictedTeam,
   buildUserTeam,
   validateSwap,

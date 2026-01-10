@@ -19,6 +19,7 @@ app.get('/api/bootstrap-static', fplController.getBootstrapStatic);
 app.get('/api/bootstrap-static/enriched', fplController.getAllPlayersEnriched);
 app.get('/api/entry/:entryId/event/:eventId/picks', fplController.getPlayerPicks);
 app.get('/api/element-summary/:playerId', fplController.getElementSummary);
+app.get('/api/event/:eventId/live', fplController.getLiveGameweek);
 app.get('/api/predicted-team', fplController.getPredictedTeam);
 app.get('/api/entry/:entryId/event/:eventId/team', fplController.getUserTeam);
 app.get('/api/entry/:entryId/profile', fplController.getUserProfile);

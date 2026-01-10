@@ -15,13 +15,23 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
     try {
       const gameweekParam = selectedGameweek ? `?gameweek=${selectedGameweek}` : '';
       const response = await axios.get(`/api/predicted-team${gameweekParam}`);
-      const { mainTeam, bench } = response.data;
+      const { mainTeam, bench, gameweek, currentGameweek, isPastGameweek, isFutureGameweek, gameweekData } = response.data;
+      
+      setGameweekInfo({
+        selected: gameweek,
+        current: currentGameweek,
+        isPast: isPastGameweek,
+        isFuture: isFutureGameweek,
+        data: gameweekData
+      });
+      
       const formatPlayer = (player) => ({
         name: `${player.first_name} ${player.second_name}`,
         team: player.team,
         teamCode: player.team_code,
         position: player.element_type,
-        predictedPoints: Math.round(player.ep_next),
+        // For past gameweeks, show actual points; for future, show predictions
+        predictedPoints: isPastGameweek ? Math.round(player.event_points) : Math.round(player.ep_next),
         code: player.code,
         webName: player.web_name,
         lastGwPoints: player.event_points,
@@ -58,30 +68,41 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
       // Fetch sorted user team from backend with optional gameweek parameter
       const gameweekParam = selectedGameweek ? `?gameweek=${selectedGameweek}` : '';
       const response = await axios.get(`/api/entry/${entryId}/event/${eventId}/team${gameweekParam}`);
-      const { mainTeam, bench, teamName: fetchedTeamName, gameweek, currentGameweek, isPastGameweek, gameweekData } = response.data;
+      const { mainTeam, bench, teamName: fetchedTeamName, gameweek, currentGameweek, isPastGameweek, isFutureGameweek, gameweekData, captainInfo } = response.data;
 
       setGameweekInfo({
         selected: gameweek,
         current: currentGameweek,
         isPast: isPastGameweek,
+        isFuture: isFutureGameweek,
         data: gameweekData
       });
 
-      const formatPlayer = (player) => ({
-        name: `${player.first_name} ${player.second_name}`,
-        team: player.team,
-        teamCode: player.team_code,
-        position: player.element_type,
-        predictedPoints: isPastGameweek ? Math.round(player.event_points) : Math.round(player.ep_next),
-        code: player.code,
-        webName: player.web_name,
-        lastGwPoints: player.event_points,
-        inDreamteam: player.in_dreamteam,
-        totalPoints: player.total_points,
-        user_team: true,
-        opponent: player.opponent_short || 'TBD',
-        is_home: player.is_home
-      });
+      const formatPlayer = (player) => {
+        const basePoints = isPastGameweek ? player.event_points : player.ep_next;
+        const multiplier = player.multiplier || 1;
+        const displayPoints = Math.round(basePoints * multiplier);
+        
+        return {
+          name: `${player.first_name} ${player.second_name}`,
+          team: player.team,
+          teamCode: player.team_code,
+          position: player.element_type,
+          predictedPoints: displayPoints,
+          basePoints: Math.round(basePoints),
+          multiplier: multiplier,
+          is_captain: player.is_captain || false,
+          is_vice_captain: player.is_vice_captain || false,
+          code: player.code,
+          webName: player.web_name,
+          lastGwPoints: player.event_points,
+          inDreamteam: player.in_dreamteam,
+          totalPoints: player.total_points,
+          user_team: true,
+          opponent: player.opponent_short || 'TBD',
+          is_home: player.is_home
+        };
+      };
 
       setMainTeamData(mainTeam.map(formatPlayer));
       setBenchTeamData(bench.map(formatPlayer));
@@ -283,32 +304,12 @@ const isValidSwap = (player1, player2, teamType1, teamType2) => {
 };
 
 // Calculate total predicted points for a team
-// Automatically double captain's points if team is main team (length > 5)
+// Points are already multiplied for captains in the backend
 const calculateTotalPredictedPoints = (team) => {
   if (!team || team.length === 0) return 0;
 
-  // If team is main team (more than 5 players), double captain's points
-  const isMainTeam = team.length > 5;
-
-  let captain = null;
-  if (isMainTeam) {
-    // Exclude manager (position 5) from captain selection
-    captain = team
-      .filter(player => player.position !== 5)
-      .reduce(
-        (max, player) =>
-          parseFloat(player.predictedPoints) > parseFloat(max.predictedPoints)
-            ? player
-            : max,
-        team.filter(player => player.position !== 5)[0],
-      );
-  }
-
   return team.reduce((total, player) => {
     const points = parseFloat(player.predictedPoints) || 0;
-    if (isMainTeam && player === captain) {
-      return total + points * 2;
-    }
     return total + points;
   }, 0);
 };

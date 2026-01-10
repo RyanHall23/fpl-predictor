@@ -240,13 +240,13 @@ const App = () => {
             ) : (
               <>
                 <Typography variant='h6' align='center' gutterBottom>
-                  Total Predicted Points:{ ' ' }
+                  {gameweekInfo?.isPast ? 'Total Points' : 'Total Predicted Points'}:{ ' ' }
                   <Box component='span' sx={ { fontWeight: 'bold' } }>
                     { calculateTotalPredictedPoints(mainTeamData) }
                   </Box>
                 </Typography>
                 <Typography variant='h6' align='center' gutterBottom>
-                  Bench Points:{ ' ' }
+                  {gameweekInfo?.isPast ? 'Bench Points' : 'Bench Predicted Points'}:{ ' ' }
                   <Box component='span' sx={ { fontWeight: 'bold' } }>
                     { calculateTotalPredictedPoints(benchTeamData) }
                   </Box>
