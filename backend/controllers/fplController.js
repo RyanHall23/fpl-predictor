@@ -122,10 +122,21 @@ const getUserTeam = async (req, res) => {
       return res.status(400).json({ error: 'Gameweek must be between 1 and 38' });
     }
     
-    const picksData = await fplModel.fetchPlayerPicks(entryId, targetEvent);
     const fixtures = await fplModel.fetchFixtures();
     const currentEvent = bootstrap.events.find(e => e.is_current) || bootstrap.events[0];
     const targetEventData = bootstrap.events.find(e => e.id === targetEvent);
+    
+    // For future gameweeks, use current picks since future picks don't exist yet
+    const isFutureGameweek = targetEvent > currentEvent.id;
+    const picksEventId = isFutureGameweek ? currentEvent.id : targetEvent;
+    
+    let picksData;
+    try {
+      picksData = await fplModel.fetchPlayerPicks(entryId, picksEventId);
+    } catch (picksError) {
+      console.error(`Error fetching picks for gameweek ${picksEventId}:`, picksError.message);
+      return res.status(500).json({ error: 'Error fetching team picks' });
+    }
     
     let players = bootstrap.elements.map((p) => ({
       ...p,
@@ -134,7 +145,8 @@ const getUserTeam = async (req, res) => {
     
     // For past gameweeks, use actual points; for future, use predicted
     const isPastGameweek = targetEventData && targetEventData.finished;
-    const isFutureGameweek = targetEvent > currentEvent.id;
+    // Re-define isFutureGameweek here since it was used earlier
+    const isFutureGameweekActual = targetEvent > currentEvent.id;
     
     // For past gameweeks, enrich with actual points from that gameweek
     if (isPastGameweek) {
@@ -164,7 +176,7 @@ const getUserTeam = async (req, res) => {
       gameweek: targetEvent,
       currentGameweek: currentEvent.id,
       isPastGameweek,
-      isFutureGameweek,
+      isFutureGameweek: isFutureGameweekActual,
       gameweekData: targetEventData,
       captainInfo
     });
