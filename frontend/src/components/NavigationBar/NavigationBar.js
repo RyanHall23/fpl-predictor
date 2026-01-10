@@ -9,7 +9,11 @@ import {
   Button,
   TextField,
   IconButton,
-  Tooltip
+  Tooltip,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel
 } from '@mui/material';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
@@ -36,7 +40,10 @@ const NavigationBar = ({
   username,
   searchedTeamName,
   showAccountPage,
-  setShowAccountPage
+  setShowAccountPage,
+  selectedGameweek,
+  setSelectedGameweek,
+  currentGameweek
 }) => {
   const { mode, toggleTheme } = useThemeMode();
   const [authOpen, setAuthOpen] = React.useState(false);
@@ -198,6 +205,28 @@ const NavigationBar = ({
               Highest Team
             </Button>
           </Box>
+          { /* Gameweek Selector */ }
+          <Box sx={ { ml: 2, minWidth: 120 } }>
+            <FormControl size='small' fullWidth>
+              <InputLabel id='gameweek-select-label'>Gameweek</InputLabel>
+              <Select
+                labelId='gameweek-select-label'
+                value={ selectedGameweek || currentGameweek || '' }
+                label='Gameweek'
+                onChange={ (e) => setSelectedGameweek(e.target.value === currentGameweek ? null : e.target.value) }
+                sx={ { 
+                  bgcolor: 'background.paper',
+                  '& .MuiSelect-select': { py: 1 }
+                } }
+              >
+                { Array.from({ length: 38 }, (_, i) => i + 1).map((gw) => (
+                  <MenuItem key={ gw } value={ gw }>
+                    GW {gw}{ gw === currentGameweek ? ' (Current)' : '' }
+                  </MenuItem>
+                )) }
+              </Select>
+            </FormControl>
+          </Box>
             </>
           ) }
           { /* Right side: login/logout/user */ }
@@ -258,7 +287,10 @@ NavigationBar.propTypes = {
   username: PropTypes.string.isRequired,
   searchedTeamName: PropTypes.string,
   showAccountPage: PropTypes.bool.isRequired,
-  setShowAccountPage: PropTypes.func.isRequired
+  setShowAccountPage: PropTypes.func.isRequired,
+  selectedGameweek: PropTypes.number,
+  setSelectedGameweek: PropTypes.func.isRequired,
+  currentGameweek: PropTypes.number
 };
 
 export default NavigationBar;

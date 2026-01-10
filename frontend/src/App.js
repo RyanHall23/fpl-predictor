@@ -31,6 +31,8 @@ const App = () => {
   const [searchedTeamName, setSearchedTeamName] = useState('');
   const [showAccountPage, setShowAccountPage] = useState(false);
   const [authToken, setAuthToken] = useState('');
+  const [selectedGameweek, setSelectedGameweek] = useState(null); // null means current gameweek
+  const [currentGameweek, setCurrentGameweek] = useState(null);
 
   const {
     mainTeamData,
@@ -44,10 +46,12 @@ const App = () => {
     teamName,
     // Add setters for transfer
     setMainTeamData,
-    setBenchTeamData
+    setBenchTeamData,
+    gameweekInfo
   } = useTeamData(
     currentEntryId,
-    teamView === TEAM_VIEW.HIGHEST
+    teamView === TEAM_VIEW.HIGHEST,
+    selectedGameweek
   );
 
   const { allPlayers, loading: allPlayersLoading } = useAllPlayers();
@@ -85,6 +89,13 @@ const App = () => {
   useEffect(() => {
     if (snackbar.message) setSnackbarOpen(true);
   }, [snackbar]);
+
+  // Update currentGameweek when gameweekInfo changes
+  useEffect(() => {
+    if (gameweekInfo && gameweekInfo.current) {
+      setCurrentGameweek(gameweekInfo.current);
+    }
+  }, [gameweekInfo]);
 
   const handleSnackbarClose = () => setSnackbarOpen(false);
 
@@ -208,6 +219,9 @@ const App = () => {
         searchedTeamName={ searchedTeamName }
         showAccountPage={ showAccountPage }
         setShowAccountPage={ setShowAccountPage }
+        selectedGameweek={ selectedGameweek }
+        setSelectedGameweek={ setSelectedGameweek }
+        currentGameweek={ currentGameweek }
       />
       { showAccountPage ? (
         <AccountPage

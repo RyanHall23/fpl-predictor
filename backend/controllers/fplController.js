@@ -43,17 +43,24 @@ const getElementSummary = async (req, res) => {
 
 const getPredictedTeam = async (req, res) => {
   try {
+    const { gameweek } = req.query;
     const data = await fplModel.fetchBootstrapStatic();
     const fixtures = await fplModel.fetchFixtures();
     const currentEvent = data.events.find(e => e.is_current) || data.events[0];
+    const targetEvent = gameweek ? parseInt(gameweek) : currentEvent.id;
+    
+    // Validate gameweek
+    if (targetEvent < 1 || targetEvent > 38) {
+      return res.status(400).json({ error: 'Gameweek must be between 1 and 38' });
+    }
     
     let players = data.elements.map((p) => ({
       ...p,
       ep_next: parseFloat(p.ep_next) || 0,
     }));
     
-    // Enrich players with opponent data
-    players = fplModel.enrichPlayersWithOpponents(players, fixtures, data.teams, currentEvent.id);
+    // Enrich players with opponent data for target gameweek
+    players = fplModel.enrichPlayersWithOpponents(players, fixtures, data.teams, targetEvent);
     
     const team = fplModel.buildHighestPredictedTeam(players);
     res.json(team);
@@ -65,25 +72,39 @@ const getPredictedTeam = async (req, res) => {
 
 const getUserTeam = async (req, res) => {
   const { entryId, eventId } = req.params;
+  const { gameweek } = req.query; // Optional gameweek parameter
+  
   // Validate entryId and eventId are positive integers
   if (!/^\d+$/.test(entryId) || !/^\d+$/.test(eventId)) {
     return res.status(400).json({ error: 'Invalid entryId or eventId' });
   }
+  
   try {
     const bootstrap = await fplModel.fetchBootstrapStatic();
-    const picksData = await fplModel.fetchPlayerPicks(entryId, eventId);
+    const targetEvent = gameweek ? parseInt(gameweek) : parseInt(eventId);
+    
+    // Validate gameweek is in valid range
+    if (targetEvent < 1 || targetEvent > 38) {
+      return res.status(400).json({ error: 'Gameweek must be between 1 and 38' });
+    }
+    
+    const picksData = await fplModel.fetchPlayerPicks(entryId, targetEvent);
     const fixtures = await fplModel.fetchFixtures();
     const currentEvent = bootstrap.events.find(e => e.is_current) || bootstrap.events[0];
+    const targetEventData = bootstrap.events.find(e => e.id === targetEvent);
     
     let players = bootstrap.elements.map((p) => ({
       ...p,
       ep_next: parseFloat(p.ep_next) || 0,
     }));
     
-    // Enrich players with opponent data
-    players = fplModel.enrichPlayersWithOpponents(players, fixtures, bootstrap.teams, currentEvent.id);
+    // For past gameweeks, use actual points; for future, use predicted
+    const isPastGameweek = targetEventData && targetEventData.finished;
     
-    const { mainTeam, bench } = fplModel.buildUserTeam(players, picksData.picks);
+    // Enrich players with opponent data for the target gameweek
+    players = fplModel.enrichPlayersWithOpponents(players, fixtures, bootstrap.teams, targetEvent);
+    
+    const { mainTeam, bench } = fplModel.buildUserTeam(players, picksData.picks, isPastGameweek);
 
     // Fetch the entry info for the team name
     let teamName = '';
@@ -96,7 +117,15 @@ const getUserTeam = async (req, res) => {
       teamName = '';
     }
 
-    res.json({ mainTeam, bench, teamName });
+    res.json({ 
+      mainTeam, 
+      bench, 
+      teamName,
+      gameweek: targetEvent,
+      currentGameweek: currentEvent.id,
+      isPastGameweek,
+      gameweekData: targetEventData
+    });
   } catch (error) {
     console.error('Error building user team:', error);
     res.status(500).json({ error: 'Error building user team' });

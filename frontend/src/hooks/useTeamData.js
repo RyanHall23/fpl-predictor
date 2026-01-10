@@ -1,18 +1,20 @@
 import { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 
-const useTeamData = (entryId, isHighestPredictedTeamInit = true) => {
+const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGameweek = null) => {
   const [mainTeamData, setMainTeamData] = useState([]);
   const [benchTeamData, setBenchTeamData] = useState([]);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [snackbar, setSnackbar] = useState({ message: '', key: 0 });
   const [isHighestPredictedTeam, setIsHighestPredictedTeam] = useState(isHighestPredictedTeamInit);
   const [teamName, setTeamName] = useState('');
+  const [gameweekInfo, setGameweekInfo] = useState(null);
 
   // Fetch the highest predicted team from the backend
   const fetchHighestPredictedTeam = async () => {
     try {
-      const response = await axios.get('/api/predicted-team');
+      const gameweekParam = selectedGameweek ? `?gameweek=${selectedGameweek}` : '';
+      const response = await axios.get(`/api/predicted-team${gameweekParam}`);
       const { mainTeam, bench } = response.data;
       const formatPlayer = (player) => ({
         name: `${player.first_name} ${player.second_name}`,
@@ -40,7 +42,7 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true) => {
     if (isHighestPredictedTeam) {
       fetchHighestPredictedTeam();
     }
-  }, [isHighestPredictedTeam]);
+  }, [isHighestPredictedTeam, selectedGameweek]);
 
   // Fetch the user's actual team (already sorted/grouped by backend)
   const fetchData = useCallback(async () => {
@@ -51,18 +53,26 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true) => {
       const bootstrap = await axios.get('/api/bootstrap-static');
       const CurrentEvent = bootstrap.data.events.find((event) => event.is_current === true);
       if (!CurrentEvent) throw new Error('No current event found.');
-      const eventId = CurrentEvent.id;
+      const eventId = selectedGameweek || CurrentEvent.id;
 
-      // Fetch sorted user team from backend
-      const response = await axios.get(`/api/entry/${entryId}/event/${eventId}/team`);
-      const { mainTeam, bench, teamName: fetchedTeamName } = response.data; // <-- Destructure teamName
+      // Fetch sorted user team from backend with optional gameweek parameter
+      const gameweekParam = selectedGameweek ? `?gameweek=${selectedGameweek}` : '';
+      const response = await axios.get(`/api/entry/${entryId}/event/${eventId}/team${gameweekParam}`);
+      const { mainTeam, bench, teamName: fetchedTeamName, gameweek, currentGameweek, isPastGameweek, gameweekData } = response.data;
+
+      setGameweekInfo({
+        selected: gameweek,
+        current: currentGameweek,
+        isPast: isPastGameweek,
+        data: gameweekData
+      });
 
       const formatPlayer = (player) => ({
         name: `${player.first_name} ${player.second_name}`,
         team: player.team,
         teamCode: player.team_code,
         position: player.element_type,
-        predictedPoints: Math.round(player.ep_next),
+        predictedPoints: isPastGameweek ? Math.round(player.event_points) : Math.round(player.ep_next),
         code: player.code,
         webName: player.web_name,
         lastGwPoints: player.event_points,
@@ -78,9 +88,10 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true) => {
       setTeamName(fetchedTeamName || '');
     } catch (error) {
       setTeamName('');
+      setGameweekInfo(null);
       console.error('Error fetching team data:', error);
     }
-  }, [entryId]);
+  }, [entryId, selectedGameweek]);
 
   useEffect(() => {
     if (!isHighestPredictedTeam) {
@@ -322,7 +333,8 @@ const calculateTotalPredictedPoints = (team) => {
     selectedPlayer,
     teamName,
     setMainTeamData,
-    setBenchTeamData
+    setBenchTeamData,
+    gameweekInfo
   };
 };
 

@@ -215,12 +215,22 @@ const enrichPlayersWithOpponents = (players, fixtures, teams, currentEventId) =>
   });
 };
 
-const buildTeam = (players, picks = null, { filterZeroEp = false, includeManagers = INCLUDE_MANAGERS_GLOBAL } = {}) => {
+const buildTeam = (players, picks = null, { filterZeroEp = false, includeManagers = INCLUDE_MANAGERS_GLOBAL, isPastGameweek = false } = {}) => {
   // Ensure numeric ep_next helper
   const num = (v) => {
     if (v == null) return 0;
     const n = parseFloat(v);
     return Number.isFinite(n) ? n : 0;
+  };
+
+  // Override getEpValue for this function to handle past gameweeks
+  const getPointsValue = (player) => {
+    if (isPastGameweek) {
+      // For past gameweeks, use actual points scored
+      return num(player.event_points);
+    }
+    // For current/future gameweeks, use the global getEpValue helper
+    return getEpValue(player);
   };
 
   // Build pool: either user's picks mapped to player objects, or all players
@@ -253,8 +263,8 @@ const buildTeam = (players, picks = null, { filterZeroEp = false, includeManager
   });
 
   const byPos = (type) => enriched
-    .filter((p) => p.element_type === type && (!filterZeroEp || getEpValue(p) > 0))
-    .sort((a, b) => getEpValue(b) - getEpValue(a));
+    .filter((p) => p.element_type === type && (!filterZeroEp || getPointsValue(p) > 0))
+    .sort((a, b) => getPointsValue(b) - getPointsValue(a));
 
   const goalkeepers = byPos(1);
   const defenders = byPos(2);
@@ -280,7 +290,7 @@ const buildTeam = (players, picks = null, { filterZeroEp = false, includeManager
     ...selectedDefenders.slice(3),
     ...selectedMidfielders.slice(3),
     ...selectedForwards.slice(1),
-  ].sort((a, b) => getEpValue(b) - getEpValue(a));
+  ].sort((a, b) => getPointsValue(b) - getPointsValue(a));
 
   // target main team size: 11 player slots (or 12 if a manager placeholder is included)
   const targetMainSize = (includeManagers && selectedManagers[0]) ? 12 : 11;
@@ -288,10 +298,10 @@ const buildTeam = (players, picks = null, { filterZeroEp = false, includeManager
     mainTeam.push(remaining.shift());
   }
 
-  const gks = mainTeam.filter(p => p && p.element_type === 1).sort((a, b) => getEpValue(b) - getEpValue(a));
-  const defs = mainTeam.filter(p => p && p.element_type === 2).sort((a, b) => getEpValue(b) - getEpValue(a));
-  const mids = mainTeam.filter(p => p && p.element_type === 3).sort((a, b) => getEpValue(b) - getEpValue(a));
-  const atts = mainTeam.filter(p => p && p.element_type === 4).sort((a, b) => getEpValue(b) - getEpValue(a));
+  const gks = mainTeam.filter(p => p && p.element_type === 1).sort((a, b) => getPointsValue(b) - getPointsValue(a));
+  const defs = mainTeam.filter(p => p && p.element_type === 2).sort((a, b) => getPointsValue(b) - getPointsValue(a));
+  const mids = mainTeam.filter(p => p && p.element_type === 3).sort((a, b) => getPointsValue(b) - getPointsValue(a));
+  const atts = mainTeam.filter(p => p && p.element_type === 4).sort((a, b) => getPointsValue(b) - getPointsValue(a));
 
   // Enforce valid FPL formation constraints:
   // 1 GK, defenders 3-5, midfielders 2-5, forwards 1-3; total outfield players = 10
@@ -311,11 +321,11 @@ const buildTeam = (players, picks = null, { filterZeroEp = false, includeManager
     if (!arr.length) return;
     let minIdx = 0;
     for (let i = 1; i < arr.length; i++) {
-      if (getEpValue(arr[i]) < getEpValue(arr[minIdx])) minIdx = i;
+      if (getPointsValue(arr[i]) < getPointsValue(arr[minIdx])) minIdx = i;
     }
     const [pl] = arr.splice(minIdx, 1);
     remaining.push(pl);
-    remaining.sort((a, b) => getEpValue(b) - getEpValue(a));
+    remaining.sort((a, b) => getPointsValue(b) - getPointsValue(a));
   };
 
   // Ensure exactly 1 goalkeeper in main team
@@ -332,7 +342,7 @@ const buildTeam = (players, picks = null, { filterZeroEp = false, includeManager
       const pick = pickFromRemaining(type);
       if (!pick) break;
       arr.push(pick);
-      arr.sort((a, b) => getEpValue(b) - getEpValue(a));
+      arr.sort((a, b) => getPointsValue(b) - getPointsValue(a));
     }
     // trim down to max
     while (arr.length > max) moveLowestToRemaining(arr);
@@ -372,9 +382,9 @@ const buildTeam = (players, picks = null, { filterZeroEp = false, includeManager
   }
 
   // Re-sort after adjustments
-  defs.sort((a, b) => getEpValue(b) - getEpValue(a));
-  mids.sort((a, b) => getEpValue(b) - getEpValue(a));
-  atts.sort((a, b) => getEpValue(b) - getEpValue(a));
+  defs.sort((a, b) => getPointsValue(b) - getPointsValue(a));
+  mids.sort((a, b) => getPointsValue(b) - getPointsValue(a));
+  atts.sort((a, b) => getPointsValue(b) - getPointsValue(a));
 
   mainTeam = [
     ...(selectedManagers[0] ? [selectedManagers[0]] : []),
@@ -385,12 +395,12 @@ const buildTeam = (players, picks = null, { filterZeroEp = false, includeManager
   ].filter(Boolean);
 
   const benchGK = selectedGoalkeepers[1] ? [selectedGoalkeepers[1]] : [];
-  const benchOutfield = remaining.sort((a, b) => getEpValue(b) - getEpValue(a));
+  const benchOutfield = remaining.sort((a, b) => getPointsValue(b) - getPointsValue(a));
   const benchManager = (includeManagers && selectedManagers[1]) ? [selectedManagers[1]] : [];
 
-  const benchDefs = benchOutfield.filter(p => p.element_type === 2).sort((a, b) => getEpValue(b) - getEpValue(a));
-  const benchMids = benchOutfield.filter(p => p.element_type === 3).sort((a, b) => getEpValue(b) - getEpValue(a));
-  const benchAtts = benchOutfield.filter(p => p.element_type === 4).sort((a, b) => getEpValue(b) - getEpValue(a));
+  const benchDefs = benchOutfield.filter(p => p.element_type === 2).sort((a, b) => getPointsValue(b) - getPointsValue(a));
+  const benchMids = benchOutfield.filter(p => p.element_type === 3).sort((a, b) => getPointsValue(b) - getPointsValue(a));
+  const benchAtts = benchOutfield.filter(p => p.element_type === 4).sort((a, b) => getPointsValue(b) - getPointsValue(a));
 
   const bench = [
     ...benchManager,
@@ -407,8 +417,8 @@ const buildHighestPredictedTeam = (players) => {
   return buildTeam(players, null, { filterZeroEp: true });
 };
 
-const buildUserTeam = (players, picks) => {
-  return buildTeam(players, picks);
+const buildUserTeam = (players, picks, isPastGameweek = false) => {
+  return buildTeam(players, picks, { isPastGameweek });
 };
 
 /**
