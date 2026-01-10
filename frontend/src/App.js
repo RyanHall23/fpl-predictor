@@ -11,6 +11,7 @@ import useTeamData from './hooks/useTeamData';
 import useAllPlayers from './hooks/useAllPlayers';
 import TransferPlayer from './components/TransferPlayer';
 import UserProfilePane from './components/UserProfilePane/UserProfilePane';
+import AccountPage from './components/AccountPage/AccountPage';
 
 const TEAM_VIEW = {
   SEARCHED: 'searched',
@@ -27,6 +28,8 @@ const App = () => {
   const [teamView, setTeamView] = useState(TEAM_VIEW.HIGHEST);
   const [username, setUsername] = useState('');
   const [searchedTeamName, setSearchedTeamName] = useState('');
+  const [showAccountPage, setShowAccountPage] = useState(false);
+  const [authToken, setAuthToken] = useState('');
 
   const {
     mainTeamData,
@@ -83,14 +86,41 @@ const App = () => {
   };
 
   // When user logs in, set userEntryId, username, and switch to My Team
-  const handleUserLogin = (teamid, usernameFromNav) => {
+  const handleUserLogin = (teamid, usernameFromNav, token) => {
     setUserEntryId(teamid);
     setUsername(usernameFromNav || '');
+    setAuthToken(token || '');
     setCurrentEntryId(teamid);
     setTeamView(TEAM_VIEW.USER);
+    setShowAccountPage(false);
     // If currently showing highest team, switch to user team
     if (isHighestPredictedTeam) {
       toggleTeamView();
+    }
+  };
+
+  // Handle token update from account page
+  const handleTokenUpdate = (newToken, newUsername, newTeamId) => {
+    setAuthToken(newToken);
+    if (newUsername) setUsername(newUsername);
+    if (newTeamId) {
+      setUserEntryId(newTeamId);
+      if (teamView === TEAM_VIEW.USER) {
+        setCurrentEntryId(newTeamId);
+      }
+    }
+  };
+
+  // Handle logout
+  const handleLogout = () => {
+    setAuthToken('');
+    setUsername('');
+    setUserEntryId('');
+    setShowAccountPage(false);
+    if (teamView === TEAM_VIEW.USER) {
+      setTeamView(TEAM_VIEW.HIGHEST);
+      setCurrentEntryId('');
+      if (!isHighestPredictedTeam) toggleTeamView();
     }
   };
 
@@ -129,6 +159,7 @@ const App = () => {
         setEntryId={ setPendingSearchId }
         handleEntryIdSubmit={ handleSearchedEntryIdSubmit }
         handleUserLogin={ handleUserLogin }
+        handleLogout={ handleLogout }
         teamView={ teamView }
         onSwitchTeamView={ handleSwitchTeamView }
         userTeamId={ userEntryId }
@@ -136,7 +167,16 @@ const App = () => {
         isHighestPredictedTeam={ isHighestPredictedTeam }
         toggleTeamView={ toggleTeamView }
         searchedTeamName={ searchedTeamName }
+        showAccountPage={ showAccountPage }
+        setShowAccountPage={ setShowAccountPage }
       />
+      { showAccountPage ? (
+        <AccountPage
+          token={ authToken }
+          onTokenUpdate={ handleTokenUpdate }
+          onLogout={ handleLogout }
+        />
+      ) : (
       <Container sx={ { marginTop: '4px' } }>
         <Box sx={ { display: 'flex', flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'center' } }>
           <Box sx={ { flex: 1, maxWidth: '900px' } }>
@@ -232,6 +272,7 @@ const App = () => {
           message={ snackbar.message }
         />
       </Container>
+      ) }
     </Box>
   );
 };

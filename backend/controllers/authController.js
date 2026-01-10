@@ -5,14 +5,20 @@ const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET || 'changeme';
 
 exports.register = async (req, res) => {
-  const { username, password, teamid } = req.body;
+  const { username, password, teamid, email } = req.body;
   if (!username || !password || !teamid) return res.status(400).json({ error: 'All fields required' });
   try {
     const existing = await User.findOne({ username: { $eq: username } });
     if (existing) return res.status(409).json({ error: 'Username taken' });
+    
+    if (email) {
+      const existingEmail = await User.findOne({ email: { $eq: email } });
+      if (existingEmail) return res.status(409).json({ error: 'Email already in use' });
+    }
+    
     const hash = await bcrypt.hash(password, 10);
-    const user = await User.create({ username, password: hash, teamid });
-    res.json({ message: 'Registered', user: { username: user.username, teamid: user.teamid } });
+    const user = await User.create({ username, password: hash, teamid, email: email || undefined });
+    res.json({ message: 'Registered', user: { username: user.username, teamid: user.teamid, email: user.email } });
   } catch (e) {
     res.status(500).json({ error: 'Registration failed' });
   }
@@ -27,8 +33,121 @@ exports.login = async (req, res) => {
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ error: 'Invalid credentials' });
     const token = jwt.sign({ id: user._id, username: user.username, teamid: user.teamid }, JWT_SECRET, { expiresIn: '1d' });
-    res.json({ token, username: user.username, teamid: user.teamid });
+    res.json({ token, username: user.username, teamid: user.teamid, email: user.email });
   } catch (e) {
     res.status(500).json({ error: 'Login failed' });
+  }
+};
+
+// Get user profile
+exports.getProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json({ username: user.username, email: user.email, teamid: user.teamid });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to fetch profile' });
+  }
+};
+
+// Update username
+exports.updateUsername = async (req, res) => {
+  const { username } = req.body;
+  if (!username) return res.status(400).json({ error: 'Username required' });
+  
+  try {
+    const existing = await User.findOne({ username: { $eq: username }, _id: { $ne: req.user.id } });
+    if (existing) return res.status(409).json({ error: 'Username already taken' });
+    
+    const user = await User.findByIdAndUpdate(req.user.id, { username }, { new: true }).select('-password');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    
+    // Generate new token with updated username
+    const token = jwt.sign({ id: user._id, username: user.username, teamid: user.teamid }, JWT_SECRET, { expiresIn: '1d' });
+    res.json({ message: 'Username updated', token, username: user.username });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to update username' });
+  }
+};
+
+// Update email
+exports.updateEmail = async (req, res) => {
+  const { email } = req.body;
+  
+  try {
+    if (email) {
+      const existing = await User.findOne({ email: { $eq: email }, _id: { $ne: req.user.id } });
+      if (existing) return res.status(409).json({ error: 'Email already in use' });
+    }
+    
+    const user = await User.findByIdAndUpdate(req.user.id, { email: email || undefined }, { new: true }).select('-password');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    
+    res.json({ message: 'Email updated', email: user.email });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to update email' });
+  }
+};
+
+// Update password
+exports.updatePassword = async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Current and new password required' });
+  
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    
+    const match = await bcrypt.compare(currentPassword, user.password);
+    if (!match) return res.status(401).json({ error: 'Current password is incorrect' });
+    
+    const hash = await bcrypt.hash(newPassword, 10);
+    user.password = hash;
+    await user.save();
+    
+    res.json({ message: 'Password updated successfully' });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to update password' });
+  }
+};
+
+// Update team ID
+exports.updateTeamId = async (req, res) => {
+  const { teamid } = req.body;
+  if (!teamid) return res.status(400).json({ error: 'Team ID required' });
+  
+  try {
+    const user = await User.findByIdAndUpdate(req.user.id, { teamid }, { new: true }).select('-password');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    
+    // Generate new token with updated teamid
+    const token = jwt.sign({ id: user._id, username: user.username, teamid: user.teamid }, JWT_SECRET, { expiresIn: '1d' });
+    res.json({ message: 'Team ID updated', token, teamid: user.teamid });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to update team ID' });
+  }
+};
+
+// Delete account - requires password verification
+exports.deleteAccount = async (req, res) => {
+  const { password, confirmDelete } = req.body;
+  
+  if (!password) return res.status(400).json({ error: 'Password required' });
+  if (!confirmDelete) return res.status(400).json({ error: 'Delete confirmation required' });
+  
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    
+    // Verify password
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) return res.status(401).json({ error: 'Incorrect password' });
+    
+    // Delete the user
+    await User.findByIdAndDelete(req.user.id);
+    
+    res.json({ message: 'Account deleted successfully' });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to delete account' });
   }
 };

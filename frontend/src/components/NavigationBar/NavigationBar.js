@@ -29,22 +29,34 @@ const NavigationBar = ({
   setEntryId,
   handleEntryIdSubmit,
   handleUserLogin,
+  handleLogout,
   teamView,
   onSwitchTeamView,
   userTeamId,
   username,
-  searchedTeamName
+  searchedTeamName,
+  showAccountPage,
+  setShowAccountPage
 }) => {
   const { mode, toggleTheme } = useThemeMode();
   const [authOpen, setAuthOpen] = React.useState(false);
   const [authMode, setAuthMode] = React.useState('login'); // or 'register'
-  const [authForm, setAuthForm] = React.useState({ username: '', password: '', teamid: '' });
+  const [authForm, setAuthForm] = React.useState({ username: '', password: '', teamid: '', email: '' });
   const [authError, setAuthError] = React.useState('');
   const [user, setUser] = React.useState(null);
 
+  // Sync local user state with parent's authentication state
+  React.useEffect(() => {
+    if (username && userTeamId) {
+      setUser({ username, teamid: userTeamId });
+    } else {
+      setUser(null);
+    }
+  }, [username, userTeamId]);
+
   const handleAuthOpen = (mode) => {
     setAuthMode(mode);
-    setAuthForm({ username: '', password: '', teamid: '' });
+    setAuthForm({ username: '', password: '', teamid: '', email: '' });
     setAuthError('');
     setAuthOpen(true);
   };
@@ -73,14 +85,14 @@ const NavigationBar = ({
         setAuthOpen(false);
         setAuthError('');
         if (typeof handleUserLogin === 'function') {
-          handleUserLogin(loginRes.data.teamid, loginRes.data.username);
+          handleUserLogin(loginRes.data.teamid, loginRes.data.username, loginRes.data.token);
         }
       } else {
         setUser({ username: res.data.username, teamid: res.data.teamid });
         setAuthOpen(false);
         setAuthError('');
         if (typeof handleUserLogin === 'function') {
-          handleUserLogin(res.data.teamid, res.data.username);
+          handleUserLogin(res.data.teamid, res.data.username, res.data.token);
         }
       }
     } catch (err) {
@@ -88,11 +100,19 @@ const NavigationBar = ({
     }
   };
 
-  const handleLogout = () => {
+  const handleLogoutClick = () => {
     setUser(null);
-    if (typeof handleUserLogin === 'function') {
-      handleUserLogin('');
+    if (typeof handleLogout === 'function') {
+      handleLogout();
     }
+  };
+
+  const handleAccountClick = () => {
+    setShowAccountPage(true);
+  };
+
+  const handleHomeClick = () => {
+    setShowAccountPage(false);
   };
 
   return (
@@ -103,7 +123,7 @@ const NavigationBar = ({
             variant='h6'
             noWrap
             component='a'
-            href='#'
+            onClick={ handleHomeClick }
             sx={ {
               mr: 2,
               display: { xs: 'none', md: 'flex' },
@@ -112,10 +132,14 @@ const NavigationBar = ({
               letterSpacing: '.3rem',
               color: 'inherit',
               textDecoration: 'none',
+              cursor: 'pointer',
             } }
           >
             FPL Predictor
           </Typography>
+          { /* Hide team controls when on account page */ }
+          { !showAccountPage && (
+            <>
           { /* Searched Team input and Search button */ }
           <Box sx={ { display: 'flex', alignItems: 'center', maxWidth: '250px', mx: 2 } }>
             <TextField
@@ -174,8 +198,20 @@ const NavigationBar = ({
               Highest Team
             </Button>
           </Box>
+            </>
+          ) }
           { /* Right side: login/logout/user */ }
           <Box sx={ { ml: 'auto', display: 'flex', alignItems: 'center' } }>
+            { user && (
+              <Button
+                color='inherit'
+                onClick={ handleAccountClick }
+                variant={ showAccountPage ? 'outlined' : 'text' }
+                sx={ { mr: 1 } }
+              >
+                Account
+              </Button>
+            ) }
             <Tooltip title={ mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode' }>
               <IconButton onClick={ toggleTheme } color='inherit' sx={{ mr: 1 }}>
                 { mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon /> }
@@ -184,7 +220,7 @@ const NavigationBar = ({
             { user ? (
               <>
                 <Typography sx={ { ml: 2, mr: 1 } }>{ user.username }</Typography>
-                <Button color='inherit' onClick={ handleLogout }>Logout</Button>
+                <Button color='inherit' onClick={ handleLogoutClick }>Logout</Button>
               </>
             ) : (
               <>
@@ -213,13 +249,16 @@ NavigationBar.propTypes = {
   setEntryId: PropTypes.func.isRequired,
   handleEntryIdSubmit: PropTypes.func.isRequired,
   handleUserLogin: PropTypes.func.isRequired,
+  handleLogout: PropTypes.func.isRequired,
   teamView: PropTypes.string.isRequired,
   onSwitchTeamView: PropTypes.func.isRequired,
   userTeamId: PropTypes.string.isRequired,
   isHighestPredictedTeam: PropTypes.bool.isRequired,
   toggleTeamView: PropTypes.func.isRequired,
   username: PropTypes.string.isRequired,
-  searchedTeamName: PropTypes.string
+  searchedTeamName: PropTypes.string,
+  showAccountPage: PropTypes.bool.isRequired,
+  setShowAccountPage: PropTypes.func.isRequired
 };
 
 export default NavigationBar;

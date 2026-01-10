@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
+const authMiddleware = require('../middleware/authMiddleware');
 
 // Rate limiting for registration endpoint
 const rateLimit = require('express-rate-limit');
@@ -21,4 +22,13 @@ const loginLimiter = rateLimit({
 });
 
 router.post('/login', loginLimiter, authController.login);
+
+// Protected routes - require authentication
+router.get('/profile', authMiddleware, authController.getProfile);
+router.put('/username', authMiddleware, authController.updateUsername);
+router.put('/email', authMiddleware, authController.updateEmail);
+router.put('/password', authMiddleware, authController.updatePassword);
+router.put('/teamid', authMiddleware, authController.updateTeamId);
+router.delete('/account', authMiddleware, authController.deleteAccount);
+
 module.exports = router;
