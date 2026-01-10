@@ -518,7 +518,52 @@ const buildHighestPredictedTeam = (players, isPastGameweek = false, isFutureGame
 };
 
 const buildUserTeam = (players, picks, isPastGameweek = false) => {
-  return buildTeam(players, picks, { isPastGameweek });
+  if (!Array.isArray(picks) || picks.length === 0) {
+    // If no picks provided, fall back to regular team building
+    return buildTeam(players, picks, { isPastGameweek });
+  }
+
+  // For user teams, preserve the original formation from picks
+  const playerMap = {};
+  players.forEach((p) => { playerMap[p.id] = p; });
+  
+  // Find captain and vice-captain info
+  const captainPick = picks.find(p => p.is_captain);
+  const viceCaptainPick = picks.find(p => p.is_vice_captain);
+  
+  const captainInfo = {
+    captainId: captainPick ? captainPick.element : null,
+    viceCaptainId: viceCaptainPick ? viceCaptainPick.element : null,
+    multiplier: captainPick ? captainPick.multiplier : 2
+  };
+
+  // Sort picks by position (1-11 main team, 12-15 bench)
+  const sortedPicks = picks.sort((a, b) => a.position - b.position);
+  
+  const mainTeam = [];
+  const bench = [];
+  
+  sortedPicks.forEach(pick => {
+    const player = playerMap[pick.element];
+    if (player) {
+      const enrichedPlayer = {
+        ...player,
+        is_captain: pick.is_captain,
+        is_vice_captain: pick.is_vice_captain,
+        multiplier: pick.multiplier,
+        pick_position: pick.position
+      };
+      
+      // Positions 1-11 are main team, 12-15 are bench
+      if (pick.position <= 11) {
+        mainTeam.push(enrichedPlayer);
+      } else {
+        bench.push(enrichedPlayer);
+      }
+    }
+  });
+
+  return { mainTeam, bench, captainInfo };
 };
 
 /**
