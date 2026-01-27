@@ -471,7 +471,11 @@ const getRecommendedTransfers = async (req, res) => {
     });
   } catch (error) {
     console.error('Error generating recommended transfers:', error);
-    res.status(500).json({ error: 'Error generating recommended transfers' });
+    console.error('Error details:', error.message);
+    res.status(500).json({ 
+      error: 'Error generating recommended transfers',
+      details: error.message 
+    });
   }
 };
 
