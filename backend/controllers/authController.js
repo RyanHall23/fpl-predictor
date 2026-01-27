@@ -73,16 +73,32 @@ exports.updateUsername = async (req, res) => {
 // Update email
 exports.updateEmail = async (req, res) => {
   const { email } = req.body;
-  
+
   try {
-    if (email) {
-      const existing = await User.findOne({ email: { $eq: email }, _id: { $ne: req.user.id } });
+    let trimmedEmail = undefined;
+
+    if (email !== undefined) {
+      // Ensure email is a non-empty string to avoid injecting objects or other unexpected types
+      if (typeof email !== 'string') {
+        return res.status(400).json({ error: 'Invalid email' });
+      }
+      trimmedEmail = email.trim();
+      if (!trimmedEmail) {
+        return res.status(400).json({ error: 'Invalid email' });
+      }
+
+      const existing = await User.findOne({ email: { $eq: trimmedEmail }, _id: { $ne: req.user.id } });
       if (existing) return res.status(409).json({ error: 'Email already in use' });
     }
-    
-    const user = await User.findByIdAndUpdate(req.user.id, { email: email || undefined }, { new: true }).select('-password');
+
+    const update = {};
+    if (trimmedEmail !== undefined) {
+      update.email = trimmedEmail;
+    }
+
+    const user = await User.findByIdAndUpdate(req.user.id, update, { new: true }).select('-password');
     if (!user) return res.status(404).json({ error: 'User not found' });
-    
+
     res.json({ message: 'Email updated', email: user.email });
   } catch (e) {
     res.status(500).json({ error: 'Failed to update email' });
