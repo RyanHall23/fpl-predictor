@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
+const authMiddleware = require('../middleware/authMiddleware');
 
 // Rate limiting for registration endpoint
 const rateLimit = require('express-rate-limit');
@@ -21,4 +22,20 @@ const loginLimiter = rateLimit({
 });
 
 router.post('/login', loginLimiter, authController.login);
+
+// Rate limiting for authenticated routes
+const authRoutesLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minute window
+  max: 100, // limit each IP to 100 requests per windowMs for authenticated routes
+  message: 'Too many requests from this IP, please try again after 15 minutes'
+});
+
+// Protected routes - require authentication
+router.get('/profile', authRoutesLimiter, authMiddleware, authController.getProfile);
+router.put('/username', authRoutesLimiter, authMiddleware, authController.updateUsername);
+router.put('/email', authRoutesLimiter, authMiddleware, authController.updateEmail);
+router.put('/password', authRoutesLimiter, authMiddleware, authController.updatePassword);
+router.put('/teamid', authRoutesLimiter, authMiddleware, authController.updateTeamId);
+router.delete('/account', authRoutesLimiter, authMiddleware, authController.deleteAccount);
+
 module.exports = router;

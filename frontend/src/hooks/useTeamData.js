@@ -1,25 +1,37 @@
 import { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 
-const useTeamData = (entryId, isHighestPredictedTeamInit = true) => {
+const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGameweek = null) => {
   const [mainTeamData, setMainTeamData] = useState([]);
   const [benchTeamData, setBenchTeamData] = useState([]);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [snackbar, setSnackbar] = useState({ message: '', key: 0 });
   const [isHighestPredictedTeam, setIsHighestPredictedTeam] = useState(isHighestPredictedTeamInit);
   const [teamName, setTeamName] = useState('');
+  const [gameweekInfo, setGameweekInfo] = useState(null);
 
   // Fetch the highest predicted team from the backend
   const fetchHighestPredictedTeam = async () => {
     try {
-      const response = await axios.get('/api/predicted-team');
-      const { mainTeam, bench } = response.data;
+      const gameweekParam = selectedGameweek ? `?gameweek=${selectedGameweek}` : '';
+      const response = await axios.get(`/api/predicted-team${gameweekParam}`);
+      const { mainTeam, bench, gameweek, currentGameweek, isPastGameweek, isFutureGameweek, gameweekData } = response.data;
+      
+      setGameweekInfo({
+        selected: gameweek,
+        current: currentGameweek,
+        isPast: isPastGameweek,
+        isFuture: isFutureGameweek,
+        data: gameweekData
+      });
+      
       const formatPlayer = (player) => ({
         name: `${player.first_name} ${player.second_name}`,
         team: player.team,
         teamCode: player.team_code,
         position: player.element_type,
-        predictedPoints: Math.round(player.ep_next),
+        // For past gameweeks, show actual points; for future, show predictions
+        predictedPoints: isPastGameweek ? Math.round(player.event_points) : Math.round(player.ep_next),
         code: player.code,
         webName: player.web_name,
         lastGwPoints: player.event_points,
@@ -40,7 +52,7 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true) => {
     if (isHighestPredictedTeam) {
       fetchHighestPredictedTeam();
     }
-  }, [isHighestPredictedTeam]);
+  }, [isHighestPredictedTeam, selectedGameweek]);
 
   // Fetch the user's actual team (already sorted/grouped by backend)
   const fetchData = useCallback(async () => {
@@ -51,36 +63,56 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true) => {
       const bootstrap = await axios.get('/api/bootstrap-static');
       const CurrentEvent = bootstrap.data.events.find((event) => event.is_current === true);
       if (!CurrentEvent) throw new Error('No current event found.');
-      const eventId = CurrentEvent.id;
+      const eventId = selectedGameweek || CurrentEvent.id;
 
-      // Fetch sorted user team from backend
-      const response = await axios.get(`/api/entry/${entryId}/event/${eventId}/team`);
-      const { mainTeam, bench, teamName: fetchedTeamName } = response.data; // <-- Destructure teamName
+      // Fetch sorted user team from backend with optional gameweek parameter
+      const gameweekParam = selectedGameweek ? `?gameweek=${selectedGameweek}` : '';
+      const response = await axios.get(`/api/entry/${entryId}/event/${eventId}/team${gameweekParam}`);
+      const { mainTeam, bench, teamName: fetchedTeamName, gameweek, currentGameweek, isPastGameweek, isFutureGameweek, gameweekData } = response.data;
 
-      const formatPlayer = (player) => ({
-        name: `${player.first_name} ${player.second_name}`,
-        team: player.team,
-        teamCode: player.team_code,
-        position: player.element_type,
-        predictedPoints: Math.round(player.ep_next),
-        code: player.code,
-        webName: player.web_name,
-        lastGwPoints: player.event_points,
-        inDreamteam: player.in_dreamteam,
-        totalPoints: player.total_points,
-        user_team: true,
-        opponent: player.opponent_short || 'TBD',
-        is_home: player.is_home
+      setGameweekInfo({
+        selected: gameweek,
+        current: currentGameweek,
+        isPast: isPastGameweek,
+        isFuture: isFutureGameweek,
+        data: gameweekData
       });
+
+      const formatPlayer = (player) => {
+        const basePoints = isPastGameweek ? player.event_points : player.ep_next;
+        const multiplier = player.multiplier || 1;
+        const displayPoints = Math.round(basePoints * multiplier);
+        
+        return {
+          name: `${player.first_name} ${player.second_name}`,
+          team: player.team,
+          teamCode: player.team_code,
+          position: player.element_type,
+          predictedPoints: displayPoints,
+          basePoints: Math.round(basePoints),
+          multiplier: multiplier,
+          is_captain: player.is_captain || false,
+          is_vice_captain: player.is_vice_captain || false,
+          code: player.code,
+          webName: player.web_name,
+          lastGwPoints: player.event_points,
+          inDreamteam: player.in_dreamteam,
+          totalPoints: player.total_points,
+          user_team: true,
+          opponent: player.opponent_short || 'TBD',
+          is_home: player.is_home
+        };
+      };
 
       setMainTeamData(mainTeam.map(formatPlayer));
       setBenchTeamData(bench.map(formatPlayer));
       setTeamName(fetchedTeamName || '');
     } catch (error) {
       setTeamName('');
+      setGameweekInfo(null);
       console.error('Error fetching team data:', error);
     }
-  }, [entryId]);
+  }, [entryId, selectedGameweek]);
 
   useEffect(() => {
     if (!isHighestPredictedTeam) {
@@ -272,32 +304,12 @@ const isValidSwap = (player1, player2, teamType1, teamType2) => {
 };
 
 // Calculate total predicted points for a team
-// Automatically double captain's points if team is main team (length > 5)
+// The team array's predictedPoints values already include any captain multiplier applied by the frontend formatting
 const calculateTotalPredictedPoints = (team) => {
   if (!team || team.length === 0) return 0;
 
-  // If team is main team (more than 5 players), double captain's points
-  const isMainTeam = team.length > 5;
-
-  let captain = null;
-  if (isMainTeam) {
-    // Exclude manager (position 5) from captain selection
-    captain = team
-      .filter(player => player.position !== 5)
-      .reduce(
-        (max, player) =>
-          parseFloat(player.predictedPoints) > parseFloat(max.predictedPoints)
-            ? player
-            : max,
-        team.filter(player => player.position !== 5)[0],
-      );
-  }
-
   return team.reduce((total, player) => {
     const points = parseFloat(player.predictedPoints) || 0;
-    if (isMainTeam && player === captain) {
-      return total + points * 2;
-    }
     return total + points;
   }, 0);
 };
@@ -322,7 +334,8 @@ const calculateTotalPredictedPoints = (team) => {
     selectedPlayer,
     teamName,
     setMainTeamData,
-    setBenchTeamData
+    setBenchTeamData,
+    gameweekInfo
   };
 };
 

@@ -16,15 +16,18 @@ const positionLabels = {
 
 const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, onTransfer, isHighestPredictedTeam, onPlayerClick }) => {
   const theme = useTheme();
-  // Find the player with the highest points (captain, excluding manager)
+  
+  // Find the captain from the team data (for user teams, this comes from picks)
+  // For highest predicted teams, calculate based on highest points
   const captain = mainTeam && mainTeam.length
-    ? mainTeam.filter(p => p.position !== 5).reduce(
+    ? (mainTeam.find(p => p.is_captain) || 
+       mainTeam.filter(p => p.position !== 5).reduce(
         (max, player) =>
-          parseFloat(player.predictedPoints) > parseFloat(max.predictedPoints)
+          parseFloat(player.basePoints || player.predictedPoints) > parseFloat(max.basePoints || max.predictedPoints)
             ? player
             : max,
         mainTeam.filter(p => p.position !== 5)[0],
-      )
+      ))
     : null;
 
   // Manager is always first in mainTeam

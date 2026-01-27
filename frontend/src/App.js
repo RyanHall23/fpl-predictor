@@ -11,6 +11,8 @@ import useTeamData from './hooks/useTeamData';
 import useAllPlayers from './hooks/useAllPlayers';
 import TransferPlayer from './components/TransferPlayer';
 import UserProfilePane from './components/UserProfilePane/UserProfilePane';
+import AccountPage from './components/AccountPage/AccountPage';
+import axios from 'axios';
 
 const TEAM_VIEW = {
   SEARCHED: 'searched',
@@ -27,6 +29,10 @@ const App = () => {
   const [teamView, setTeamView] = useState(TEAM_VIEW.HIGHEST);
   const [username, setUsername] = useState('');
   const [searchedTeamName, setSearchedTeamName] = useState('');
+  const [showAccountPage, setShowAccountPage] = useState(false);
+  const [authToken, setAuthToken] = useState('');
+  const [selectedGameweek, setSelectedGameweek] = useState(null); // null means current gameweek
+  const [currentGameweek, setCurrentGameweek] = useState(null);
 
   const {
     mainTeamData,
@@ -40,19 +46,54 @@ const App = () => {
     teamName,
     // Add setters for transfer
     setMainTeamData,
-    setBenchTeamData
+    setBenchTeamData,
+    gameweekInfo
   } = useTeamData(
     currentEntryId,
-    teamView === TEAM_VIEW.HIGHEST
+    teamView === TEAM_VIEW.HIGHEST,
+    selectedGameweek
   );
 
   const { allPlayers, loading: allPlayersLoading } = useAllPlayers();
 
   const [snackbarOpen, setSnackbarOpen] = useState(false);
 
+  // Restore session from localStorage on app load
+  useEffect(() => {
+    const restoreSession = async () => {
+      const storedToken = localStorage.getItem('authToken');
+      if (storedToken) {
+        try {
+          const res = await axios.get('/api/auth/profile', {
+            headers: { Authorization: `Bearer ${storedToken}` }
+          });
+          // Successfully verified token, restore session
+          setAuthToken(storedToken);
+          setUsername(res.data.username);
+          setUserEntryId(res.data.teamid);
+          setCurrentEntryId(res.data.teamid);
+          setTeamView(TEAM_VIEW.USER);
+        } catch (err) {
+          // Token is invalid or expired, clear it
+          localStorage.removeItem('authToken');
+          console.error('Failed to restore session:', err);
+        }
+      }
+    };
+    restoreSession();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     if (snackbar.message) setSnackbarOpen(true);
   }, [snackbar]);
+
+  // Update currentGameweek when gameweekInfo changes
+  useEffect(() => {
+    if (gameweekInfo && gameweekInfo.current) {
+      setCurrentGameweek(gameweekInfo.current);
+    }
+  }, [gameweekInfo]);
 
   const handleSnackbarClose = () => setSnackbarOpen(false);
 
@@ -83,14 +124,51 @@ const App = () => {
   };
 
   // When user logs in, set userEntryId, username, and switch to My Team
-  const handleUserLogin = (teamid, usernameFromNav) => {
+  const handleUserLogin = (teamid, usernameFromNav, token) => {
     setUserEntryId(teamid);
     setUsername(usernameFromNav || '');
+    setAuthToken(token || '');
+    // Save token to localStorage for session persistence
+    if (token) {
+      localStorage.setItem('authToken', token);
+    }
     setCurrentEntryId(teamid);
     setTeamView(TEAM_VIEW.USER);
+    setShowAccountPage(false);
     // If currently showing highest team, switch to user team
     if (isHighestPredictedTeam) {
       toggleTeamView();
+    }
+  };
+
+  // Handle token update from account page
+  const handleTokenUpdate = (newToken, newUsername, newTeamId) => {
+    setAuthToken(newToken);
+    // Update token in localStorage
+    if (newToken) {
+      localStorage.setItem('authToken', newToken);
+    }
+    if (newUsername) setUsername(newUsername);
+    if (newTeamId) {
+      setUserEntryId(newTeamId);
+      if (teamView === TEAM_VIEW.USER) {
+        setCurrentEntryId(newTeamId);
+      }
+    }
+  };
+
+  // Handle logout
+  const handleLogout = () => {
+    setAuthToken('');
+    setUsername('');
+    setUserEntryId('');
+    setShowAccountPage(false);
+    // Clear token from localStorage
+    localStorage.removeItem('authToken');
+    if (teamView === TEAM_VIEW.USER) {
+      setTeamView(TEAM_VIEW.HIGHEST);
+      setCurrentEntryId('');
+      if (!isHighestPredictedTeam) toggleTeamView();
     }
   };
 
@@ -129,6 +207,7 @@ const App = () => {
         setEntryId={ setPendingSearchId }
         handleEntryIdSubmit={ handleSearchedEntryIdSubmit }
         handleUserLogin={ handleUserLogin }
+        handleLogout={ handleLogout }
         teamView={ teamView }
         onSwitchTeamView={ handleSwitchTeamView }
         userTeamId={ userEntryId }
@@ -136,7 +215,19 @@ const App = () => {
         isHighestPredictedTeam={ isHighestPredictedTeam }
         toggleTeamView={ toggleTeamView }
         searchedTeamName={ searchedTeamName }
+        showAccountPage={ showAccountPage }
+        setShowAccountPage={ setShowAccountPage }
+        selectedGameweek={ selectedGameweek }
+        setSelectedGameweek={ setSelectedGameweek }
+        currentGameweek={ currentGameweek }
       />
+      { showAccountPage ? (
+        <AccountPage
+          token={ authToken }
+          onTokenUpdate={ handleTokenUpdate }
+          onLogout={ handleLogout }
+        />
+      ) : (
       <Container sx={ { marginTop: '4px' } }>
         <Box sx={ { display: 'flex', flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'center' } }>
           <Box sx={ { flex: 1, maxWidth: '900px' } }>
@@ -147,13 +238,13 @@ const App = () => {
             ) : (
               <>
                 <Typography variant='h6' align='center' gutterBottom>
-                  Total Predicted Points:{ ' ' }
+                  {gameweekInfo?.isPast ? 'Total Points' : 'Total Predicted Points'}:{ ' ' }
                   <Box component='span' sx={ { fontWeight: 'bold' } }>
                     { calculateTotalPredictedPoints(mainTeamData) }
                   </Box>
                 </Typography>
                 <Typography variant='h6' align='center' gutterBottom>
-                  Bench Points:{ ' ' }
+                  {gameweekInfo?.isPast ? 'Bench Points' : 'Bench Predicted Points'}:{ ' ' }
                   <Box component='span' sx={ { fontWeight: 'bold' } }>
                     { calculateTotalPredictedPoints(benchTeamData) }
                   </Box>
@@ -232,6 +323,7 @@ const App = () => {
           message={ snackbar.message }
         />
       </Container>
+      ) }
     </Box>
   );
 };
