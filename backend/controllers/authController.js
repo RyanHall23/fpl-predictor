@@ -35,19 +35,28 @@ exports.register = async (req, res) => {
     const existing = await User.findOne({ username: { $eq: trimmedUsername } });
     if (existing) return res.status(409).json({ error: 'Username taken' });
     
+    let trimmedEmail = undefined;
     if (email) {
-      // Validate email format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
+      // Trim and validate email format
+      if (typeof email !== 'string') {
+        return res.status(400).json({ error: 'Invalid email format' });
+      }
+      trimmedEmail = email.trim();
+      if (!trimmedEmail) {
         return res.status(400).json({ error: 'Invalid email format' });
       }
       
-      const existingEmail = await User.findOne({ email: { $eq: email } });
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(trimmedEmail)) {
+        return res.status(400).json({ error: 'Invalid email format' });
+      }
+      
+      const existingEmail = await User.findOne({ email: { $eq: trimmedEmail } });
       if (existingEmail) return res.status(409).json({ error: 'Email already in use' });
     }
     
     const hash = await bcrypt.hash(password, 10);
-    const user = await User.create({ username: trimmedUsername, password: hash, teamid: teamidStr, email: email || undefined });
+    const user = await User.create({ username: trimmedUsername, password: hash, teamid: teamidStr, email: trimmedEmail });
     res.json({ message: 'Registered', user: { username: user.username, teamid: user.teamid, email: user.email } });
   } catch (e) {
     res.status(500).json({ error: 'Registration failed' });

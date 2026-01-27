@@ -204,7 +204,7 @@ const getUserTeam = async (req, res) => {
       gameweek: targetEvent,
       currentGameweek: currentEvent.id,
       isPastGameweek,
-      isFutureGameweek: isFutureGameweekActual,
+      isFutureGameweek,
       gameweekData: targetEventData,
       captainInfo
     });
