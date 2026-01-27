@@ -4,6 +4,26 @@ const jwt = require('jsonwebtoken');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'changeme';
 
+// Email validation helper
+const validateEmail = (email) => {
+  if (!email || typeof email !== 'string') {
+    return { valid: false, error: 'Invalid email format' };
+  }
+  
+  const trimmed = email.trim();
+  if (!trimmed) {
+    return { valid: false, error: 'Invalid email format' };
+  }
+  
+  // More robust email regex that avoids catastrophic backtracking
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  if (!emailRegex.test(trimmed)) {
+    return { valid: false, error: 'Invalid email format' };
+  }
+  
+  return { valid: true, email: trimmed };
+};
+
 exports.register = async (req, res) => {
   const { username, password, teamid, email } = req.body;
   if (!username || !password || !teamid) return res.status(400).json({ error: 'All fields required' });
@@ -37,19 +57,11 @@ exports.register = async (req, res) => {
     
     let trimmedEmail = undefined;
     if (email) {
-      // Trim and validate email format
-      if (typeof email !== 'string') {
-        return res.status(400).json({ error: 'Invalid email format' });
+      const validation = validateEmail(email);
+      if (!validation.valid) {
+        return res.status(400).json({ error: validation.error });
       }
-      trimmedEmail = email.trim();
-      if (!trimmedEmail) {
-        return res.status(400).json({ error: 'Invalid email format' });
-      }
-      
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(trimmedEmail)) {
-        return res.status(400).json({ error: 'Invalid email format' });
-      }
+      trimmedEmail = validation.email;
       
       const existingEmail = await User.findOne({ email: { $eq: trimmedEmail } });
       if (existingEmail) return res.status(409).json({ error: 'Email already in use' });
@@ -130,20 +142,11 @@ exports.updateEmail = async (req, res) => {
     let trimmedEmail = undefined;
 
     if (email !== undefined) {
-      // Ensure email is a non-empty string to avoid injecting objects or other unexpected types
-      if (typeof email !== 'string') {
-        return res.status(400).json({ error: 'Invalid email' });
+      const validation = validateEmail(email);
+      if (!validation.valid) {
+        return res.status(400).json({ error: validation.error });
       }
-      trimmedEmail = email.trim();
-      if (!trimmedEmail) {
-        return res.status(400).json({ error: 'Invalid email' });
-      }
-
-      // Validate email format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(trimmedEmail)) {
-        return res.status(400).json({ error: 'Invalid email format' });
-      }
+      trimmedEmail = validation.email;
 
       const existing = await User.findOne({ email: { $eq: trimmedEmail }, _id: { $ne: req.user.id } });
       if (existing) return res.status(409).json({ error: 'Email already in use' });
