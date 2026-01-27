@@ -62,7 +62,17 @@ const getPredictedTeam = async (req, res) => {
     const data = await fplModel.fetchBootstrapStatic();
     const fixtures = await fplModel.fetchFixtures();
     const currentEvent = data.events.find(e => e.is_current) || data.events[0];
-    const targetEvent = gameweek ? parseInt(gameweek) : currentEvent.id;
+
+    let targetEvent;
+    if (gameweek !== undefined) {
+      // Ensure gameweek is a numeric string
+      if (!/^\d+$/.test(gameweek)) {
+        return res.status(400).json({ error: 'Gameweek must be a valid number' });
+      }
+      targetEvent = parseInt(gameweek, 10);
+    } else {
+      targetEvent = currentEvent.id;
+    }
     
     // Validate gameweek
     if (targetEvent < 1 || targetEvent > 38) {
