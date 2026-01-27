@@ -23,6 +23,7 @@ app.get('/api/event/:eventId/live', fplController.getLiveGameweek);
 app.get('/api/predicted-team', fplController.getPredictedTeam);
 app.get('/api/entry/:entryId/event/:eventId/team', fplController.getUserTeam);
 app.get('/api/entry/:entryId/profile', fplController.getUserProfile);
+app.get('/api/entry/:entryId/event/:eventId/recommended-transfers', fplController.getRecommendedTransfers);
 app.post('/api/validate-swap', fplController.validateSwap);
 app.post('/api/available-transfers/:playerCode', fplController.getAvailableTransfers);
 

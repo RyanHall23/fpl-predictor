@@ -329,6 +329,152 @@ const getAvailableTransfers = async (req, res) => {
   }
 };
 
+const getRecommendedTransfers = async (req, res) => {
+  const { entryId, eventId } = req.params;
+  const { gameweeksAhead } = req.query;
+  
+  // Validate entryId and eventId are positive integers
+  if (!/^\d+$/.test(entryId) || !/^\d+$/.test(eventId)) {
+    return res.status(400).json({ error: 'Invalid entryId or eventId' });
+  }
+  
+  // Validate gameweeksAhead (0-5, default 1)
+  let lookahead = 1;
+  if (gameweeksAhead !== undefined) {
+    if (!/^\d+$/.test(gameweeksAhead)) {
+      return res.status(400).json({ error: 'Invalid gameweeksAhead parameter' });
+    }
+    lookahead = parseInt(gameweeksAhead, 10);
+    if (lookahead < 0 || lookahead > 5) {
+      return res.status(400).json({ error: 'gameweeksAhead must be between 0 and 5' });
+    }
+  }
+  
+  try {
+    const bootstrap = await fplModel.fetchBootstrapStatic();
+    const fixtures = await fplModel.fetchFixtures();
+    const currentEvent = bootstrap.events.find(e => e.is_current) || bootstrap.events[0];
+    const targetEvent = currentEvent.id + lookahead;
+    
+    // Validate target gameweek
+    if (targetEvent < 1 || targetEvent > 38) {
+      return res.status(400).json({ error: 'Target gameweek out of range' });
+    }
+    
+    // Get user's current team
+    const picksData = await fplModel.fetchPlayerPicks(entryId, eventId);
+    
+    // Enrich all players with opponent data for target gameweek
+    let allPlayers = bootstrap.elements.map((p) => ({
+      ...p,
+      ep_next: parseFloat(p.ep_next) || 0,
+    }));
+    
+    allPlayers = fplModel.enrichPlayersWithOpponents(allPlayers, fixtures, bootstrap.teams, targetEvent);
+    
+    // Recalculate points for target gameweek if needed
+    if (targetEvent > currentEvent.id) {
+      allPlayers = fplModel.recalculatePointsForGameweek(allPlayers, targetEvent, currentEvent.id);
+    }
+    
+    // Build user's team to get full player objects
+    const userTeamIds = new Set(picksData.picks.map(p => p.element));
+    const userPlayers = allPlayers.filter(p => userTeamIds.has(p.id));
+    
+    // Group user players by position
+    const userByPosition = {
+      1: userPlayers.filter(p => p.element_type === 1).sort((a, b) => parseFloat(b.ep_next) - parseFloat(a.ep_next)),
+      2: userPlayers.filter(p => p.element_type === 2).sort((a, b) => parseFloat(b.ep_next) - parseFloat(a.ep_next)),
+      3: userPlayers.filter(p => p.element_type === 3).sort((a, b) => parseFloat(b.ep_next) - parseFloat(a.ep_next)),
+      4: userPlayers.filter(p => p.element_type === 4).sort((a, b) => parseFloat(b.ep_next) - parseFloat(a.ep_next)),
+    };
+    
+    // Get available players by position (excluding user's team)
+    const availableByPosition = {
+      1: allPlayers.filter(p => p.element_type === 1 && !userTeamIds.has(p.id))
+        .sort((a, b) => parseFloat(b.ep_next) - parseFloat(a.ep_next)),
+      2: allPlayers.filter(p => p.element_type === 2 && !userTeamIds.has(p.id))
+        .sort((a, b) => parseFloat(b.ep_next) - parseFloat(a.ep_next)),
+      3: allPlayers.filter(p => p.element_type === 3 && !userTeamIds.has(p.id))
+        .sort((a, b) => parseFloat(b.ep_next) - parseFloat(a.ep_next)),
+      4: allPlayers.filter(p => p.element_type === 4 && !userTeamIds.has(p.id))
+        .sort((a, b) => parseFloat(b.ep_next) - parseFloat(a.ep_next)),
+    };
+    
+    // Generate recommendations: for each position, suggest transfers
+    // Strategy: identify weakest players in user's team and suggest better alternatives
+    const recommendations = {};
+    const positionNames = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'ATT' };
+    
+    Object.keys(userByPosition).forEach(posKey => {
+      const pos = parseInt(posKey);
+      const userPosPlayers = userByPosition[pos];
+      const availablePosPlayers = availableByPosition[pos];
+      
+      if (!userPosPlayers.length || !availablePosPlayers.length) {
+        recommendations[positionNames[pos]] = [];
+        return;
+      }
+      
+      // Find the weakest players in user's position
+      const weakestPlayers = [...userPosPlayers]
+        .sort((a, b) => parseFloat(a.ep_next) - parseFloat(b.ep_next))
+        .slice(0, Math.min(3, userPosPlayers.length)); // Top 3 weakest
+      
+      const posRecommendations = [];
+      
+      weakestPlayers.forEach(weakPlayer => {
+        // Find top alternatives that are better than this player
+        const betterOptions = availablePosPlayers.filter(p => 
+          parseFloat(p.ep_next) > parseFloat(weakPlayer.ep_next)
+        ).slice(0, 5); // Top 5 alternatives
+        
+        if (betterOptions.length > 0) {
+          posRecommendations.push({
+            playerOut: {
+              id: weakPlayer.id,
+              code: weakPlayer.code,
+              name: `${weakPlayer.first_name} ${weakPlayer.second_name}`,
+              web_name: weakPlayer.web_name,
+              team: weakPlayer.team,
+              predicted_points: parseFloat(weakPlayer.ep_next),
+              opponent: weakPlayer.opponent_short || 'TBD',
+              is_home: weakPlayer.is_home,
+              now_cost: weakPlayer.now_cost,
+              total_points: weakPlayer.total_points
+            },
+            alternatives: betterOptions.map(alt => ({
+              id: alt.id,
+              code: alt.code,
+              name: `${alt.first_name} ${alt.second_name}`,
+              web_name: alt.web_name,
+              team: alt.team,
+              predicted_points: parseFloat(alt.ep_next),
+              opponent: alt.opponent_short || 'TBD',
+              is_home: alt.is_home,
+              now_cost: alt.now_cost,
+              total_points: alt.total_points,
+              points_difference: parseFloat(alt.ep_next) - parseFloat(weakPlayer.ep_next)
+            }))
+          });
+        }
+      });
+      
+      recommendations[positionNames[pos]] = posRecommendations;
+    });
+    
+    res.json({
+      recommendations,
+      targetGameweek: targetEvent,
+      currentGameweek: currentEvent.id,
+      gameweeksAhead: lookahead
+    });
+  } catch (error) {
+    console.error('Error generating recommended transfers:', error);
+    res.status(500).json({ error: 'Error generating recommended transfers' });
+  }
+};
+
 module.exports = {
   getBootstrapStatic,
   getPlayerPicks,
@@ -339,5 +485,6 @@ module.exports = {
   getUserProfile,
   getAllPlayersEnriched,
   validateSwap,
-  getAvailableTransfers
+  getAvailableTransfers,
+  getRecommendedTransfers
 };
