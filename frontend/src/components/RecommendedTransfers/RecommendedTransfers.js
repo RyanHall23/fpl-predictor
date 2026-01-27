@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import {
   Box,
@@ -36,13 +36,9 @@ const RecommendedTransfers = ({ entryId, currentGameweek, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    if (entryId && currentGameweek) {
-      fetchRecommendations();
-    }
-  }, [entryId, currentGameweek, gameweeksAhead]);
-
-  const fetchRecommendations = async () => {
+  const fetchRecommendations = useCallback(async () => {
+    if (!entryId || !currentGameweek) return;
+    
     setLoading(true);
     setError(null);
     try {
@@ -56,7 +52,11 @@ const RecommendedTransfers = ({ entryId, currentGameweek, onClose }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [entryId, currentGameweek, gameweeksAhead]);
+
+  useEffect(() => {
+    fetchRecommendations();
+  }, [fetchRecommendations]);
 
   const handleGameweekChange = (event) => {
     setGameweeksAhead(event.target.value);
@@ -167,7 +167,7 @@ const RecommendedTransfers = ({ entryId, currentGameweek, onClose }) => {
       <Paper
         sx={{
           p: 3,
-          backgroundColor: theme.palette.mode === 'dark' 
+          background: theme.palette.mode === 'dark' 
             ? 'linear-gradient(135deg, #23272f 0%, #281455 100%)'
             : 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
         }}
@@ -239,8 +239,8 @@ const RecommendedTransfers = ({ entryId, currentGameweek, onClose }) => {
 };
 
 RecommendedTransfers.propTypes = {
-  entryId: PropTypes.string.isRequired,
-  currentGameweek: PropTypes.number.isRequired,
+  entryId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+  currentGameweek: PropTypes.number,
   onClose: PropTypes.func.isRequired,
 };
 

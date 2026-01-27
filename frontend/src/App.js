@@ -247,7 +247,7 @@ const App = () => {
             ) : (
               <>
                 {/* Show Recommended Transfers button for user and searched teams */}
-                {currentEntryId && (
+                {currentEntryId && currentGameweek && (
                   <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
                     <Button
                       variant="contained"

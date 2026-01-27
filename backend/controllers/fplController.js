@@ -329,6 +329,35 @@ const getAvailableTransfers = async (req, res) => {
   }
 };
 
+// Configuration constants for recommendation algorithm
+const MAX_WEAKEST_PLAYERS = 3;
+const MAX_ALTERNATIVES = 5;
+const MAX_GAMEWEEKS_AHEAD = 5;
+
+/**
+ * Generate recommended transfers for a user's team
+ * 
+ * @route GET /api/entry/:entryId/event/:eventId/recommended-transfers
+ * @param {string} entryId - FPL entry/team ID
+ * @param {string} eventId - Current gameweek ID
+ * @param {string} gameweeksAhead - Number of gameweeks to forecast (0-5, default 1)
+ * 
+ * @returns {Object} recommendations - Transfer recommendations by position
+ * @returns {Object} recommendations.GK - Goalkeeper recommendations
+ * @returns {Object} recommendations.DEF - Defender recommendations
+ * @returns {Object} recommendations.MID - Midfielder recommendations
+ * @returns {Object} recommendations.ATT - Forward recommendations
+ * @returns {number} targetGameweek - The gameweek being forecasted
+ * @returns {number} currentGameweek - The current gameweek
+ * @returns {number} gameweeksAhead - Number of gameweeks ahead forecasted
+ * 
+ * Algorithm:
+ * 1. Fetches user's current team and all available players
+ * 2. Enriches players with opponent data and recalculates points for target gameweek
+ * 3. For each position, identifies the weakest players (up to 3)
+ * 4. For each weak player, finds better alternatives (up to 5)
+ * 5. Returns sorted recommendations showing player out vs alternatives
+ */
 const getRecommendedTransfers = async (req, res) => {
   const { entryId, eventId } = req.params;
   const { gameweeksAhead } = req.query;
@@ -345,8 +374,8 @@ const getRecommendedTransfers = async (req, res) => {
       return res.status(400).json({ error: 'Invalid gameweeksAhead parameter' });
     }
     lookahead = parseInt(gameweeksAhead, 10);
-    if (lookahead < 0 || lookahead > 5) {
-      return res.status(400).json({ error: 'gameweeksAhead must be between 0 and 5' });
+    if (lookahead < 0 || lookahead > MAX_GAMEWEEKS_AHEAD) {
+      return res.status(400).json({ error: `gameweeksAhead must be between 0 and ${MAX_GAMEWEEKS_AHEAD}` });
     }
   }
   
@@ -402,7 +431,6 @@ const getRecommendedTransfers = async (req, res) => {
     };
     
     // Generate recommendations: for each position, suggest transfers
-    // Strategy: identify weakest players in user's team and suggest better alternatives
     const recommendations = {};
     const positionNames = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'ATT' };
     
@@ -419,15 +447,17 @@ const getRecommendedTransfers = async (req, res) => {
       // Find the weakest players in user's position
       const weakestPlayers = [...userPosPlayers]
         .sort((a, b) => parseFloat(a.ep_next) - parseFloat(b.ep_next))
-        .slice(0, Math.min(3, userPosPlayers.length)); // Top 3 weakest
+        .slice(0, Math.min(MAX_WEAKEST_PLAYERS, userPosPlayers.length));
       
       const posRecommendations = [];
       
       weakestPlayers.forEach(weakPlayer => {
+        const weakPlayerPoints = parseFloat(weakPlayer.ep_next);
+        
         // Find top alternatives that are better than this player
-        const betterOptions = availablePosPlayers.filter(p => 
-          parseFloat(p.ep_next) > parseFloat(weakPlayer.ep_next)
-        ).slice(0, 5); // Top 5 alternatives
+        const betterOptions = availablePosPlayers
+          .filter(p => parseFloat(p.ep_next) > weakPlayerPoints)
+          .slice(0, MAX_ALTERNATIVES);
         
         if (betterOptions.length > 0) {
           posRecommendations.push({
@@ -437,7 +467,7 @@ const getRecommendedTransfers = async (req, res) => {
               name: `${weakPlayer.first_name} ${weakPlayer.second_name}`,
               web_name: weakPlayer.web_name,
               team: weakPlayer.team,
-              predicted_points: parseFloat(weakPlayer.ep_next),
+              predicted_points: weakPlayerPoints,
               opponent: weakPlayer.opponent_short || 'TBD',
               is_home: weakPlayer.is_home,
               now_cost: weakPlayer.now_cost,
@@ -454,7 +484,7 @@ const getRecommendedTransfers = async (req, res) => {
               is_home: alt.is_home,
               now_cost: alt.now_cost,
               total_points: alt.total_points,
-              points_difference: parseFloat(alt.ep_next) - parseFloat(weakPlayer.ep_next)
+              points_difference: parseFloat(alt.ep_next) - weakPlayerPoints
             }))
           });
         }
@@ -470,12 +500,8 @@ const getRecommendedTransfers = async (req, res) => {
       gameweeksAhead: lookahead
     });
   } catch (error) {
-    console.error('Error generating recommended transfers:', error);
-    console.error('Error details:', error.message);
-    res.status(500).json({ 
-      error: 'Error generating recommended transfers',
-      details: error.message 
-    });
+    console.error('Error generating recommended transfers:', error.message);
+    res.status(500).json({ error: 'Error generating recommended transfers' });
   }
 };
 
