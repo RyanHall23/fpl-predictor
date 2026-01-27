@@ -7,17 +7,47 @@ const JWT_SECRET = process.env.JWT_SECRET || 'changeme';
 exports.register = async (req, res) => {
   const { username, password, teamid, email } = req.body;
   if (!username || !password || !teamid) return res.status(400).json({ error: 'All fields required' });
+  
+  // Validate username length and format
+  const trimmedUsername = username.trim();
+  if (trimmedUsername.length < 3 || trimmedUsername.length > 30) {
+    return res.status(400).json({ error: 'Username must be between 3 and 30 characters' });
+  }
+  if (!/^[a-zA-Z0-9_-]+$/.test(trimmedUsername)) {
+    return res.status(400).json({ error: 'Username can only contain letters, numbers, underscores, and hyphens' });
+  }
+  
+  // Validate teamid format
+  if (typeof teamid !== 'string' && typeof teamid !== 'number') {
+    return res.status(400).json({ error: 'Invalid team ID format' });
+  }
+  const teamidStr = String(teamid).trim();
+  if (!/^\d+$/.test(teamidStr)) {
+    return res.status(400).json({ error: 'Team ID must be a valid number' });
+  }
+  
+  // Validate password strength
+  if (password.length < 6) {
+    return res.status(400).json({ error: 'Password must be at least 6 characters long' });
+  }
+  
   try {
-    const existing = await User.findOne({ username: { $eq: username } });
+    const existing = await User.findOne({ username: { $eq: trimmedUsername } });
     if (existing) return res.status(409).json({ error: 'Username taken' });
     
     if (email) {
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ error: 'Invalid email format' });
+      }
+      
       const existingEmail = await User.findOne({ email: { $eq: email } });
       if (existingEmail) return res.status(409).json({ error: 'Email already in use' });
     }
     
     const hash = await bcrypt.hash(password, 10);
-    const user = await User.create({ username, password: hash, teamid, email: email || undefined });
+    const user = await User.create({ username: trimmedUsername, password: hash, teamid: teamidStr, email: email || undefined });
     res.json({ message: 'Registered', user: { username: user.username, teamid: user.teamid, email: user.email } });
   } catch (e) {
     res.status(500).json({ error: 'Registration failed' });
@@ -58,6 +88,16 @@ exports.updateUsername = async (req, res) => {
   }
   const safeUsername = username.trim();
   
+  // Validate username length and format
+  if (safeUsername.length < 3 || safeUsername.length > 30) {
+    return res.status(400).json({ error: 'Username must be between 3 and 30 characters' });
+  }
+  
+  // Allow alphanumeric, underscores, and hyphens
+  if (!/^[a-zA-Z0-9_-]+$/.test(safeUsername)) {
+    return res.status(400).json({ error: 'Username can only contain letters, numbers, underscores, and hyphens' });
+  }
+  
   try {
     const existing = await User.findOne({ username: { $eq: safeUsername }, _id: { $ne: req.user.id } });
     if (existing) return res.status(409).json({ error: 'Username already taken' });
@@ -90,6 +130,12 @@ exports.updateEmail = async (req, res) => {
         return res.status(400).json({ error: 'Invalid email' });
       }
 
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(trimmedEmail)) {
+        return res.status(400).json({ error: 'Invalid email format' });
+      }
+
       const existing = await User.findOne({ email: { $eq: trimmedEmail }, _id: { $ne: req.user.id } });
       if (existing) return res.status(409).json({ error: 'Email already in use' });
     }
@@ -113,6 +159,11 @@ exports.updatePassword = async (req, res) => {
   const { currentPassword, newPassword } = req.body;
   if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Current and new password required' });
   
+  // Validate new password strength
+  if (newPassword.length < 6) {
+    return res.status(400).json({ error: 'New password must be at least 6 characters long' });
+  }
+  
   try {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -135,8 +186,18 @@ exports.updateTeamId = async (req, res) => {
   const { teamid } = req.body;
   if (!teamid) return res.status(400).json({ error: 'Team ID required' });
   
+  // Validate teamid format (must be numeric string)
+  if (typeof teamid !== 'string' && typeof teamid !== 'number') {
+    return res.status(400).json({ error: 'Invalid team ID format' });
+  }
+  
+  const teamidStr = String(teamid).trim();
+  if (!/^\d+$/.test(teamidStr)) {
+    return res.status(400).json({ error: 'Team ID must be a valid number' });
+  }
+  
   try {
-    const user = await User.findByIdAndUpdate(req.user.id, { teamid }, { new: true }).select('-password');
+    const user = await User.findByIdAndUpdate(req.user.id, { teamid: teamidStr }, { new: true }).select('-password');
     if (!user) return res.status(404).json({ error: 'User not found' });
     
     // Generate new token with updated teamid

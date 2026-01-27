@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import {
   Container,
@@ -37,11 +37,7 @@ const AccountPage = ({ token, onTokenUpdate, onLogout }) => {
     confirmDelete: false
   });
 
-  useEffect(() => {
-    loadProfile();
-  }, []);
-
-  const loadProfile = async () => {
+  const loadProfile = useCallback(async () => {
     try {
       const res = await axios.get('/api/auth/profile', {
         headers: { Authorization: `Bearer ${token}` }
@@ -63,7 +59,11 @@ const AccountPage = ({ token, onTokenUpdate, onLogout }) => {
       setError('Failed to load profile');
       setLoading(false);
     }
-  };
+  }, [token, onLogout]);
+
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
 
   const handleUpdateUsername = async () => {
     setError('');

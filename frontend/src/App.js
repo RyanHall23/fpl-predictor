@@ -73,9 +73,6 @@ const App = () => {
           setUserEntryId(res.data.teamid);
           setCurrentEntryId(res.data.teamid);
           setTeamView(TEAM_VIEW.USER);
-          if (isHighestPredictedTeam) {
-            toggleTeamView();
-          }
         } catch (err) {
           // Token is invalid or expired, clear it
           localStorage.removeItem('authToken');
@@ -84,6 +81,7 @@ const App = () => {
       }
     };
     restoreSession();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
