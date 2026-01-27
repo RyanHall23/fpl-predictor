@@ -53,6 +53,13 @@ const AccountPage = ({ token, onTokenUpdate, onLogout }) => {
       setLoading(false);
     } catch (err) {
       console.error('Failed to load profile:', err);
+      // If the error is an authentication error, log the user out
+      if (err && err.response && err.response.status === 401) {
+        if (typeof onLogout === 'function') {
+          onLogout();
+        }
+        return;
+      }
       setError('Failed to load profile');
       setLoading(false);
     }
