@@ -68,7 +68,7 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
       // Fetch sorted user team from backend with optional gameweek parameter
       const gameweekParam = selectedGameweek ? `?gameweek=${selectedGameweek}` : '';
       const response = await axios.get(`/api/entry/${entryId}/event/${eventId}/team${gameweekParam}`);
-      const { mainTeam, bench, teamName: fetchedTeamName, gameweek, currentGameweek, isPastGameweek, isFutureGameweek, gameweekData, captainInfo } = response.data;
+      const { mainTeam, bench, teamName: fetchedTeamName, gameweek, currentGameweek, isPastGameweek, isFutureGameweek, gameweekData } = response.data;
 
       setGameweekInfo({
         selected: gameweek,
