@@ -549,8 +549,7 @@ const buildTeam = (players, picks = null, { filterZeroEp = false, includeManager
   return { mainTeam, bench, captainInfo };
 };
 
-// eslint-disable-next-line no-unused-vars
-const buildHighestPredictedTeam = (players, isPastGameweek = false, isFutureGameweek = false, targetGameweek = null) => {
+const buildHighestPredictedTeam = (players, isPastGameweek = false) => {
   // For past gameweeks, use actual points to build the highest scoring team from that week
   // For future gameweeks, use predictions
   // filterZeroEp should be false for past gameweeks to include players who didn't score
