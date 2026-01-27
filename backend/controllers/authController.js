@@ -53,13 +53,16 @@ exports.getProfile = async (req, res) => {
 // Update username
 exports.updateUsername = async (req, res) => {
   const { username } = req.body;
-  if (!username) return res.status(400).json({ error: 'Username required' });
+  if (typeof username !== 'string' || username.trim() === '') {
+    return res.status(400).json({ error: 'Username required' });
+  }
+  const safeUsername = username.trim();
   
   try {
-    const existing = await User.findOne({ username: { $eq: username }, _id: { $ne: req.user.id } });
+    const existing = await User.findOne({ username: { $eq: safeUsername }, _id: { $ne: req.user.id } });
     if (existing) return res.status(409).json({ error: 'Username already taken' });
     
-    const user = await User.findByIdAndUpdate(req.user.id, { username }, { new: true }).select('-password');
+    const user = await User.findByIdAndUpdate(req.user.id, { username: safeUsername }, { new: true }).select('-password');
     if (!user) return res.status(404).json({ error: 'User not found' });
     
     // Generate new token with updated username
