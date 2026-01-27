@@ -120,7 +120,17 @@ const getUserTeam = async (req, res) => {
   
   try {
     const bootstrap = await fplModel.fetchBootstrapStatic();
-    const targetEvent = gameweek ? parseInt(gameweek) : parseInt(eventId);
+
+    let targetEvent;
+    if (typeof gameweek !== 'undefined') {
+      // Validate gameweek is a numeric string
+      if (!/^\d+$/.test(gameweek)) {
+        return res.status(400).json({ error: 'Invalid gameweek' });
+      }
+      targetEvent = parseInt(gameweek, 10);
+    } else {
+      targetEvent = parseInt(eventId, 10);
+    }
     
     // Validate gameweek is in valid range
     if (targetEvent < 1 || targetEvent > 38) {
