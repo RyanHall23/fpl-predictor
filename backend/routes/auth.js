@@ -33,7 +33,7 @@ const authRoutesLimiter = rateLimit({
 // Protected routes - require authentication
 router.get('/profile', authRoutesLimiter, authMiddleware, authController.getProfile);
 router.put('/username', authMiddleware, authController.updateUsername);
-router.put('/email', authMiddleware, authController.updateEmail);
+router.put('/email', authRoutesLimiter, authMiddleware, authController.updateEmail);
 router.put('/password', authRoutesLimiter, authMiddleware, authController.updatePassword);
 router.put('/teamid', authMiddleware, authController.updateTeamId);
 router.delete('/account', authMiddleware, authController.deleteAccount);
