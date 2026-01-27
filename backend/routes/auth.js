@@ -23,8 +23,15 @@ const loginLimiter = rateLimit({
 
 router.post('/login', loginLimiter, authController.login);
 
+// Rate limiting for authenticated routes
+const authRoutesLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minute window
+  max: 100, // limit each IP to 100 requests per windowMs for authenticated routes
+  message: 'Too many requests from this IP, please try again after 15 minutes'
+});
+
 // Protected routes - require authentication
-router.get('/profile', authMiddleware, authController.getProfile);
+router.get('/profile', authRoutesLimiter, authMiddleware, authController.getProfile);
 router.put('/username', authMiddleware, authController.updateUsername);
 router.put('/email', authMiddleware, authController.updateEmail);
 router.put('/password', authMiddleware, authController.updatePassword);
