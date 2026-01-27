@@ -170,8 +170,6 @@ const getUserTeam = async (req, res) => {
     
     // For past gameweeks, use actual points; for future, use predicted
     const isPastGameweek = targetEventData && targetEventData.finished;
-    // Re-define isFutureGameweek here since it was used earlier
-    const isFutureGameweekActual = targetEvent > currentEvent.id;
     
     // For past gameweeks, enrich with actual points from that gameweek
     if (isPastGameweek) {
@@ -182,7 +180,7 @@ const getUserTeam = async (req, res) => {
     players = fplModel.enrichPlayersWithOpponents(players, fixtures, bootstrap.teams, targetEvent);
     
     // For future gameweeks, recalculate points based on specific opponents
-    if (isFutureGameweekActual) {
+    if (isFutureGameweek) {
       players = fplModel.recalculatePointsForGameweek(players, targetEvent, currentEvent.id);
     }
     
@@ -206,7 +204,7 @@ const getUserTeam = async (req, res) => {
       gameweek: targetEvent,
       currentGameweek: currentEvent.id,
       isPastGameweek,
-      isFutureGameweek: isFutureGameweekActual,
+      isFutureGameweek,
       gameweekData: targetEventData,
       captainInfo
     });

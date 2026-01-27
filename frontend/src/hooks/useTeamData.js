@@ -304,7 +304,7 @@ const isValidSwap = (player1, player2, teamType1, teamType2) => {
 };
 
 // Calculate total predicted points for a team
-// Points are already multiplied for captains in the backend
+// The team array's predictedPoints values already include any captain multiplier applied by the frontend formatting
 const calculateTotalPredictedPoints = (team) => {
   if (!team || team.length === 0) return 0;
 
