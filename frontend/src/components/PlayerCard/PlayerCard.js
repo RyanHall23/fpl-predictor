@@ -16,10 +16,9 @@ import TransferPlayer from '../TransferPlayer/TransferPlayer';
 const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTransferButtons = true, teamType, onPlayerClick, selectedPlayer, mainTeamData, benchTeamData }) => {
   const [transferDialogOpen, setTransferDialogOpen] = React.useState(false);
 
-  let predictedPoints = parseFloat(player.predictedPoints) || 0;
-  if (isCaptain) {
-    predictedPoints *= 2;
-  }
+  // predictedPoints here is already multiplied for captain/triple captain in the frontend
+  // (e.g. via formatPlayer in useTeamData.js); the backend sends raw points + multiplier.
+  const predictedPoints = parseFloat(player.predictedPoints) || 0;
 
   // Helper function to check if swap maintains formation requirements
   // This is kept for instant UI feedback (green borders)

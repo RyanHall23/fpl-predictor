@@ -4,15 +4,72 @@ const jwt = require('jsonwebtoken');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'changeme';
 
+// Email validation helper
+const validateEmail = (email) => {
+  if (!email || typeof email !== 'string') {
+    return { valid: false, error: 'Invalid email format' };
+  }
+  
+  const trimmed = email.trim();
+  if (!trimmed) {
+    return { valid: false, error: 'Invalid email format' };
+  }
+  
+  // More robust email regex that avoids catastrophic backtracking
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  if (!emailRegex.test(trimmed)) {
+    return { valid: false, error: 'Invalid email format' };
+  }
+  
+  return { valid: true, email: trimmed };
+};
+
 exports.register = async (req, res) => {
-  const { username, password, teamid } = req.body;
+  const { username, password, teamid, email } = req.body;
   if (!username || !password || !teamid) return res.status(400).json({ error: 'All fields required' });
+  
+  // Validate username length and format
+  const trimmedUsername = username.trim();
+  if (trimmedUsername.length < 3 || trimmedUsername.length > 30) {
+    return res.status(400).json({ error: 'Username must be between 3 and 30 characters' });
+  }
+  if (!/^[a-zA-Z0-9_-]+$/.test(trimmedUsername)) {
+    return res.status(400).json({ error: 'Username can only contain letters, numbers, underscores, and hyphens' });
+  }
+  
+  // Validate teamid format
+  if (typeof teamid !== 'string' && typeof teamid !== 'number') {
+    return res.status(400).json({ error: 'Invalid team ID format' });
+  }
+  const teamidStr = String(teamid).trim();
+  if (!/^\d+$/.test(teamidStr)) {
+    return res.status(400).json({ error: 'Team ID must be a valid number' });
+  }
+  
+  // Validate password strength
+  if (password.length < 6) {
+    return res.status(400).json({ error: 'Password must be at least 6 characters long' });
+  }
+  
   try {
-    const existing = await User.findOne({ username: { $eq: username } });
+    const existing = await User.findOne({ username: { $eq: trimmedUsername } });
     if (existing) return res.status(409).json({ error: 'Username taken' });
+    
+    let trimmedEmail = undefined;
+    if (email) {
+      const validation = validateEmail(email);
+      if (!validation.valid) {
+        return res.status(400).json({ error: validation.error });
+      }
+      trimmedEmail = validation.email;
+      
+      const existingEmail = await User.findOne({ email: { $eq: trimmedEmail } });
+      if (existingEmail) return res.status(409).json({ error: 'Email already in use' });
+    }
+    
     const hash = await bcrypt.hash(password, 10);
-    const user = await User.create({ username, password: hash, teamid });
-    res.json({ message: 'Registered', user: { username: user.username, teamid: user.teamid } });
+    const user = await User.create({ username: trimmedUsername, password: hash, teamid: teamidStr, email: trimmedEmail });
+    res.json({ message: 'Registered', user: { username: user.username, teamid: user.teamid, email: user.email } });
   } catch (e) {
     res.status(500).json({ error: 'Registration failed' });
   }
@@ -27,8 +84,162 @@ exports.login = async (req, res) => {
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ error: 'Invalid credentials' });
     const token = jwt.sign({ id: user._id, username: user.username, teamid: user.teamid }, JWT_SECRET, { expiresIn: '1d' });
-    res.json({ token, username: user.username, teamid: user.teamid });
+    res.json({ token, username: user.username, teamid: user.teamid, email: user.email });
   } catch (e) {
     res.status(500).json({ error: 'Login failed' });
+  }
+};
+
+// Get user profile
+exports.getProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json({ username: user.username, email: user.email, teamid: user.teamid });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to fetch profile' });
+  }
+};
+
+// Update username
+exports.updateUsername = async (req, res) => {
+  const { username } = req.body;
+  if (typeof username !== 'string' || username.trim() === '') {
+    return res.status(400).json({ error: 'Username required' });
+  }
+  const safeUsername = username.trim();
+  
+  // Validate username length and format
+  if (safeUsername.length < 3 || safeUsername.length > 30) {
+    return res.status(400).json({ error: 'Username must be between 3 and 30 characters' });
+  }
+  
+  // Allow alphanumeric, underscores, and hyphens
+  if (!/^[a-zA-Z0-9_-]+$/.test(safeUsername)) {
+    return res.status(400).json({ error: 'Username can only contain letters, numbers, underscores, and hyphens' });
+  }
+  
+  try {
+    const existing = await User.findOne({ username: { $eq: safeUsername }, _id: { $ne: req.user.id } });
+    if (existing) return res.status(409).json({ error: 'Username already taken' });
+    
+    const user = await User.findByIdAndUpdate(req.user.id, { username: safeUsername }, { new: true }).select('-password');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    
+    // Generate new token with updated username
+    const token = jwt.sign({ id: user._id, username: user.username, teamid: user.teamid }, JWT_SECRET, { expiresIn: '1d' });
+    res.json({ message: 'Username updated', token, username: user.username });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to update username' });
+  }
+};
+
+// Update email
+exports.updateEmail = async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    let trimmedEmail = undefined;
+
+    if (email !== undefined) {
+      const validation = validateEmail(email);
+      if (!validation.valid) {
+        return res.status(400).json({ error: validation.error });
+      }
+      trimmedEmail = validation.email;
+
+      const existing = await User.findOne({ email: { $eq: trimmedEmail }, _id: { $ne: req.user.id } });
+      if (existing) return res.status(409).json({ error: 'Email already in use' });
+    }
+
+    const update = {};
+    if (trimmedEmail !== undefined) {
+      update.email = trimmedEmail;
+    }
+
+    const user = await User.findByIdAndUpdate(req.user.id, update, { new: true }).select('-password');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    res.json({ message: 'Email updated', email: user.email });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to update email' });
+  }
+};
+
+// Update password
+exports.updatePassword = async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Current and new password required' });
+  
+  // Validate new password strength
+  if (newPassword.length < 6) {
+    return res.status(400).json({ error: 'New password must be at least 6 characters long' });
+  }
+  
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    
+    const match = await bcrypt.compare(currentPassword, user.password);
+    if (!match) return res.status(401).json({ error: 'Current password is incorrect' });
+    
+    const hash = await bcrypt.hash(newPassword, 10);
+    user.password = hash;
+    await user.save();
+    
+    res.json({ message: 'Password updated successfully' });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to update password' });
+  }
+};
+
+// Update team ID
+exports.updateTeamId = async (req, res) => {
+  const { teamid } = req.body;
+  if (!teamid) return res.status(400).json({ error: 'Team ID required' });
+  
+  // Validate teamid format (must be numeric string)
+  if (typeof teamid !== 'string' && typeof teamid !== 'number') {
+    return res.status(400).json({ error: 'Invalid team ID format' });
+  }
+  
+  const teamidStr = String(teamid).trim();
+  if (!/^\d+$/.test(teamidStr)) {
+    return res.status(400).json({ error: 'Team ID must be a valid number' });
+  }
+  
+  try {
+    const user = await User.findByIdAndUpdate(req.user.id, { teamid: teamidStr }, { new: true }).select('-password');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    
+    // Generate new token with updated teamid
+    const token = jwt.sign({ id: user._id, username: user.username, teamid: user.teamid }, JWT_SECRET, { expiresIn: '1d' });
+    res.json({ message: 'Team ID updated', token, teamid: user.teamid });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to update team ID' });
+  }
+};
+
+// Delete account - requires password verification
+exports.deleteAccount = async (req, res) => {
+  const { password, confirmDelete } = req.body;
+  
+  if (!password) return res.status(400).json({ error: 'Password required' });
+  if (!confirmDelete) return res.status(400).json({ error: 'Delete confirmation required' });
+  
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    
+    // Verify password
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) return res.status(401).json({ error: 'Incorrect password' });
+    
+    // Delete the user
+    await User.findByIdAndDelete(req.user.id);
+    
+    res.json({ message: 'Account deleted successfully' });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to delete account' });
   }
 };

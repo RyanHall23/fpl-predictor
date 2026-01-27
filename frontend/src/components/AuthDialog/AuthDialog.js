@@ -78,16 +78,27 @@ const AuthDialog = ({
             onChange={ onChange }
           />
           { mode === 'register' && (
-            <TextField
-              margin='dense'
-              label='Team ID'
-              name='teamid'
-              fullWidth
-              value={ form.teamid }
-              onChange={ handleChange }
-              error={ !!teamIdError }
-              helperText={ teamIdError ? 'Team ID must only contain numbers' : '' }
-            />
+            <>
+              <TextField
+                margin='dense'
+                label='Email (Optional)'
+                name='email'
+                type='email'
+                fullWidth
+                value={ form.email || '' }
+                onChange={ handleChange }
+              />
+              <TextField
+                margin='dense'
+                label='Team ID'
+                name='teamid'
+                fullWidth
+                value={ form.teamid }
+                onChange={ handleChange }
+                error={ !!teamIdError }
+                helperText={ teamIdError ? 'Team ID must only contain numbers' : '' }
+              />
+            </>
           ) }
           { error && <Typography color='error'>{ error }</Typography> }
         </DialogContent>
@@ -108,7 +119,8 @@ AuthDialog.propTypes = {
   form: PropTypes.shape({
     username: PropTypes.string,
     password: PropTypes.string,
-    teamid: PropTypes.string
+    teamid: PropTypes.string,
+    email: PropTypes.string
   }).isRequired,
   error: PropTypes.string,
   onClose: PropTypes.func.isRequired,
