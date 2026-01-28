@@ -251,14 +251,6 @@ const App = () => {
                   </Box>
                 </Typography>
                 
-                {/* Show Recommended Transfers inline for user and searched teams */}
-                {currentEntryId && currentGameweek && (
-                  <RecommendedTransfers
-                    entryId={ currentEntryId }
-                    currentGameweek={ currentGameweek }
-                  />
-                )}
-                
                 <Grid container spacing={ 2 } justifyContent='center'>
                   <Grid item md={ 10 }>
                     <TeamFormation
@@ -312,6 +304,14 @@ const App = () => {
                     />
                   </Grid>
                 </Grid>
+                
+                {/* Show Recommended Transfers inline for user and searched teams - BELOW team formation */}
+                {currentEntryId && currentGameweek && (
+                  <RecommendedTransfers
+                    entryId={ currentEntryId }
+                    currentGameweek={ currentGameweek }
+                  />
+                )}
               </>
             ) }
           </Box>
