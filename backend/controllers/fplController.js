@@ -383,28 +383,63 @@ const getRecommendedTransfers = async (req, res) => {
     const bootstrap = await fplModel.fetchBootstrapStatic();
     const fixtures = await fplModel.fetchFixtures();
     const currentEvent = bootstrap.events.find(e => e.is_current) || bootstrap.events[0];
-    const targetEvent = currentEvent.id + lookahead;
+    const startEvent = currentEvent.id + 1;
+    const endEvent = currentEvent.id + lookahead;
     
     // Validate target gameweek
-    if (targetEvent < 1 || targetEvent > 38) {
+    if (endEvent < 1 || endEvent > 38) {
       return res.status(400).json({ error: 'Target gameweek out of range' });
     }
     
     // Get user's current team
     const picksData = await fplModel.fetchPlayerPicks(entryId, eventId);
     
-    // Enrich all players with opponent data for target gameweek
+    // Calculate cumulative predicted points across multiple gameweeks
+    // For each player, sum predicted points from startEvent to endEvent
     let allPlayers = bootstrap.elements.map((p) => ({
       ...p,
       ep_next: parseFloat(p.ep_next) || 0,
     }));
     
-    allPlayers = fplModel.enrichPlayersWithOpponents(allPlayers, fixtures, bootstrap.teams, targetEvent);
+    // Calculate cumulative points for each gameweek in the range
+    const playerCumulativePoints = {};
     
-    // Recalculate points for target gameweek if needed
-    if (targetEvent > currentEvent.id) {
-      allPlayers = fplModel.recalculatePointsForGameweek(allPlayers, targetEvent, currentEvent.id);
+    for (let gw = startEvent; gw <= endEvent; gw++) {
+      if (gw > 38) break;
+      
+      let gwPlayers = allPlayers.map(p => ({ ...p }));
+      gwPlayers = fplModel.enrichPlayersWithOpponents(gwPlayers, fixtures, bootstrap.teams, gw);
+      
+      if (gw > currentEvent.id) {
+        gwPlayers = fplModel.recalculatePointsForGameweek(gwPlayers, gw, currentEvent.id);
+      }
+      
+      gwPlayers.forEach(p => {
+        if (!playerCumulativePoints[p.id]) {
+          playerCumulativePoints[p.id] = {
+            player: p,
+            cumulativePoints: 0,
+            gameweeks: []
+          };
+        }
+        const points = parseFloat(p.ep_next) || 0;
+        playerCumulativePoints[p.id].cumulativePoints += points;
+        playerCumulativePoints[p.id].gameweeks.push({
+          gameweek: gw,
+          points: points,
+          opponent: p.opponent_short || 'TBD',
+          is_home: p.is_home
+        });
+      });
     }
+    
+    // Update allPlayers with cumulative points
+    allPlayers = Object.values(playerCumulativePoints).map(data => ({
+      ...data.player,
+      ep_next: data.cumulativePoints,
+      cumulative_points: data.cumulativePoints,
+      gameweek_breakdown: data.gameweeks
+    }));
     
     // Build user's team to get full player objects
     const userTeamIds = new Set(picksData.picks.map(p => p.element));
@@ -495,7 +530,8 @@ const getRecommendedTransfers = async (req, res) => {
     
     res.json({
       recommendations,
-      targetGameweek: targetEvent,
+      startGameweek: startEvent,
+      endGameweek: endEvent,
       currentGameweek: currentEvent.id,
       gameweeksAhead: lookahead
     });

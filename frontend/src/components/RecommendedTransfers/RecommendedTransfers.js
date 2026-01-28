@@ -2,34 +2,34 @@ import React, { useState, useEffect, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import {
   Box,
-  Paper,
   Typography,
-  Button,
   Select,
   MenuItem,
   FormControl,
   InputLabel,
-  Card,
-  CardContent,
-  Grid,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
   Chip,
   CircularProgress,
   Alert
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import HomeIcon from '@mui/icons-material/Home';
-import FlightIcon from '@mui/icons-material/Flight';
 import axios from 'axios';
 
 const positionLabels = {
-  GK: 'Goalkeepers',
-  DEF: 'Defenders',
-  MID: 'Midfielders',
-  ATT: 'Forwards'
+  GK: 'GK',
+  DEF: 'DEF',
+  MID: 'MID',
+  ATT: 'FWD'
 };
 
-const RecommendedTransfers = ({ entryId, currentGameweek, onClose }) => {
+const RecommendedTransfers = ({ entryId, currentGameweek }) => {
   const theme = useTheme();
   const [gameweeksAhead, setGameweeksAhead] = useState(1);
   const [recommendations, setRecommendations] = useState(null);
@@ -62,178 +62,121 @@ const RecommendedTransfers = ({ entryId, currentGameweek, onClose }) => {
     setGameweeksAhead(event.target.value);
   };
 
-  const renderPlayerCard = (player, isPlayerOut = false) => (
-    <Card
-      sx={{
-        mb: 1,
-        backgroundColor: theme.palette.mode === 'dark' ? '#2a2d35' : '#f8f9fa',
-        border: isPlayerOut 
-          ? `2px solid ${theme.palette.error.main}` 
-          : `2px solid ${theme.palette.success.main}`,
-      }}
-    >
-      <CardContent sx={{ py: 1.5 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Box>
-            <Typography variant="body1" fontWeight="bold">
-              {player.web_name}
-            </Typography>
-            <Typography variant="caption" color="textSecondary">
-              {player.name}
-            </Typography>
-          </Box>
-          <Box sx={{ textAlign: 'right' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <Typography variant="h6" fontWeight="bold" color={isPlayerOut ? 'error' : 'success.main'}>
-                {player.predicted_points.toFixed(1)}
-              </Typography>
-              <Typography variant="caption" color="textSecondary">pts</Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
-              {player.is_home ? (
-                <HomeIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
-              ) : (
-                <FlightIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
-              )}
-              <Typography variant="caption" color="textSecondary">
-                {player.opponent}
-              </Typography>
-            </Box>
-          </Box>
-        </Box>
-        {!isPlayerOut && player.points_difference && (
-          <Box sx={{ mt: 1 }}>
-            <Chip
-              icon={<TrendingUpIcon />}
-              label={`+${player.points_difference.toFixed(1)} pts`}
-              size="small"
-              color="success"
-              variant="outlined"
-            />
-          </Box>
-        )}
-      </CardContent>
-    </Card>
-  );
-
-  const renderPositionRecommendations = (position, posRecommendations) => {
-    if (!posRecommendations || posRecommendations.length === 0) {
-      return null;
-    }
-
-    return (
-      <Box key={position} sx={{ mb: 4 }}>
-        <Typography variant="h6" gutterBottom sx={{ color: theme.palette.primary.main, fontWeight: 'bold' }}>
-          {positionLabels[position]}
-        </Typography>
-        {posRecommendations.map((rec, idx) => (
-          <Paper
-            key={idx}
-            sx={{
-              p: 2,
-              mb: 2,
-              backgroundColor: theme.palette.mode === 'dark' ? '#1e2127' : '#ffffff',
-            }}
-          >
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={5}>
-                <Typography variant="subtitle2" color="error" gutterBottom>
-                  Transfer Out
-                </Typography>
-                {renderPlayerCard(rec.playerOut, true)}
-              </Grid>
-              <Grid item xs={12} md={2} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Typography variant="h5" color="textSecondary">→</Typography>
-              </Grid>
-              <Grid item xs={12} md={5}>
-                <Typography variant="subtitle2" color="success.main" gutterBottom>
-                  Transfer In (Top {rec.alternatives.length})
-                </Typography>
-                {rec.alternatives.map((alt) => (
-                  <Box key={alt.id}>
-                    {renderPlayerCard(alt)}
-                  </Box>
-                ))}
-              </Grid>
-            </Grid>
-          </Paper>
-        ))}
-      </Box>
-    );
-  };
+  if (!entryId || !currentGameweek) return null;
 
   return (
-    <Box sx={{ p: 2 }}>
-      <Paper
-        sx={{
-          p: 3,
-          background: theme.palette.mode === 'dark' 
-            ? 'linear-gradient(135deg, #23272f 0%, #281455 100%)'
-            : 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
-        }}
-      >
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h5" fontWeight="bold">
-            Recommended Transfers
-          </Typography>
-          <Button onClick={onClose} variant="outlined">
-            Close
-          </Button>
+    <Box sx={{ mb: 3, mt: 2 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h6" fontWeight="bold">
+          Recommended Transfers
+        </Typography>
+        <FormControl size="small" sx={{ minWidth: 200 }}>
+          <InputLabel>Forecast Period</InputLabel>
+          <Select
+            value={gameweeksAhead}
+            onChange={handleGameweekChange}
+            label="Forecast Period"
+          >
+            <MenuItem value={1}>Next GW ({currentGameweek + 1})</MenuItem>
+            <MenuItem value={2}>Next 2 GWs (Cumulative)</MenuItem>
+            <MenuItem value={3}>Next 3 GWs (Cumulative)</MenuItem>
+            <MenuItem value={4}>Next 4 GWs (Cumulative)</MenuItem>
+            <MenuItem value={5}>Next 5 GWs (Cumulative)</MenuItem>
+          </Select>
+        </FormControl>
+      </Box>
+
+      {loading && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+          <CircularProgress size={24} />
         </Box>
+      )}
 
-        <Box sx={{ mb: 3 }}>
-          <FormControl fullWidth>
-            <InputLabel>Forecast Gameweeks Ahead</InputLabel>
-            <Select
-              value={gameweeksAhead}
-              onChange={handleGameweekChange}
-              label="Forecast Gameweeks Ahead"
-            >
-              <MenuItem value={0}>Current Gameweek ({currentGameweek})</MenuItem>
-              <MenuItem value={1}>Next Gameweek ({currentGameweek + 1})</MenuItem>
-              <MenuItem value={2}>2 Gameweeks Ahead ({currentGameweek + 2})</MenuItem>
-              <MenuItem value={3}>3 Gameweeks Ahead ({currentGameweek + 3})</MenuItem>
-              <MenuItem value={4}>4 Gameweeks Ahead ({currentGameweek + 4})</MenuItem>
-              <MenuItem value={5}>5 Gameweeks Ahead ({currentGameweek + 5})</MenuItem>
-            </Select>
-          </FormControl>
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+
+      {!loading && !error && recommendations && (
+        <Box>
+          {Object.keys(recommendations.recommendations).map((position) => {
+            const posRecommendations = recommendations.recommendations[position];
+            if (!posRecommendations || posRecommendations.length === 0) return null;
+
+            return (
+              <Box key={position} sx={{ mb: 3 }}>
+                <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 1, color: theme.palette.primary.main }}>
+                  {positionLabels[position]}
+                </Typography>
+                <TableContainer component={Paper} sx={{ backgroundColor: theme.palette.mode === 'dark' ? '#1e2127' : '#ffffff' }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell><strong>Out</strong></TableCell>
+                        <TableCell align="center" colSpan={3}><strong>In (Top Alternatives)</strong></TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {posRecommendations.map((rec, idx) => (
+                        <TableRow key={idx} sx={{ '&:hover': { backgroundColor: theme.palette.action.hover } }}>
+                          <TableCell sx={{ borderRight: `2px solid ${theme.palette.divider}`, minWidth: 180 }}>
+                            <Box>
+                              <Typography variant="body2" fontWeight="bold">
+                                {rec.playerOut.web_name}
+                              </Typography>
+                              <Typography variant="caption" color="error">
+                                {rec.playerOut.predicted_points.toFixed(1)} pts
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          {rec.alternatives.slice(0, 3).map((alt, altIdx) => (
+                            <TableCell key={altIdx} sx={{ minWidth: 180 }}>
+                              <Box>
+                                <Typography variant="body2" fontWeight="bold">
+                                  {alt.web_name}
+                                </Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <Typography variant="caption" color="success.main">
+                                    {alt.predicted_points.toFixed(1)} pts
+                                  </Typography>
+                                  <Chip
+                                    icon={<TrendingUpIcon />}
+                                    label={`+${alt.points_difference.toFixed(1)}`}
+                                    size="small"
+                                    color="success"
+                                    sx={{ height: 18, fontSize: '0.7rem' }}
+                                  />
+                                </Box>
+                              </Box>
+                            </TableCell>
+                          ))}
+                          {/* Fill empty cells if less than 3 alternatives */}
+                          {rec.alternatives.length < 3 && [...Array(3 - rec.alternatives.length)].map((_, emptyIdx) => (
+                            <TableCell key={`empty-${emptyIdx}`} />
+                          ))}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Box>
+            );
+          })}
+
+          {Object.values(recommendations.recommendations).every(arr => !arr || arr.length === 0) && (
+            <Alert severity="info">
+              No transfer recommendations available. Your team is performing well!
+            </Alert>
+          )}
+
+          {gameweeksAhead > 1 && (
+            <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mt: 1 }}>
+              * Points shown are cumulative across {gameweeksAhead} gameweeks (GW {recommendations.startGameweek} - {recommendations.endGameweek})
+            </Typography>
+          )}
         </Box>
-
-        {loading && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-            <CircularProgress />
-          </Box>
-        )}
-
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
-
-        {!loading && !error && recommendations && (
-          <Box>
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="body2" color="textSecondary">
-                Showing recommendations for Gameweek {recommendations.targetGameweek}
-                {recommendations.gameweeksAhead > 0 && 
-                  ` (${recommendations.gameweeksAhead} gameweek${recommendations.gameweeksAhead > 1 ? 's' : ''} ahead)`
-                }
-              </Typography>
-            </Box>
-
-            {Object.keys(recommendations.recommendations).map((position) =>
-              renderPositionRecommendations(position, recommendations.recommendations[position])
-            )}
-
-            {Object.values(recommendations.recommendations).every(arr => !arr || arr.length === 0) && (
-              <Alert severity="info">
-                No transfer recommendations available. Your team is performing well for the selected gameweek!
-              </Alert>
-            )}
-          </Box>
-        )}
-      </Paper>
+      )}
     </Box>
   );
 };
@@ -241,7 +184,6 @@ const RecommendedTransfers = ({ entryId, currentGameweek, onClose }) => {
 RecommendedTransfers.propTypes = {
   entryId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
   currentGameweek: PropTypes.number,
-  onClose: PropTypes.func.isRequired,
 };
 
 export default RecommendedTransfers;

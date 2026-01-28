@@ -5,7 +5,6 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Grid from '@mui/material/Grid';
 import Snackbar from '@mui/material/Snackbar';
-import Button from '@mui/material/Button';
 import { useTheme } from '@mui/material/styles';
 import TeamFormation from './components/TeamFormation/TeamFormation';
 import useTeamData from './hooks/useTeamData';
@@ -32,7 +31,6 @@ const App = () => {
   const [username, setUsername] = useState('');
   const [searchedTeamName, setSearchedTeamName] = useState('');
   const [showAccountPage, setShowAccountPage] = useState(false);
-  const [showRecommendedTransfers, setShowRecommendedTransfers] = useState(false);
   const [authToken, setAuthToken] = useState('');
   const [selectedGameweek, setSelectedGameweek] = useState(null); // null means current gameweek
   const [currentGameweek, setCurrentGameweek] = useState(null);
@@ -230,12 +228,6 @@ const App = () => {
           onTokenUpdate={ handleTokenUpdate }
           onLogout={ handleLogout }
         />
-      ) : showRecommendedTransfers ? (
-        <RecommendedTransfers
-          entryId={ currentEntryId }
-          currentGameweek={ currentGameweek }
-          onClose={ () => setShowRecommendedTransfers(false) }
-        />
       ) : (
       <Container sx={ { marginTop: '4px' } }>
         <Box sx={ { display: 'flex', flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'center' } }>
@@ -246,18 +238,6 @@ const App = () => {
               </Typography>
             ) : (
               <>
-                {/* Show Recommended Transfers button for user and searched teams */}
-                {currentEntryId && currentGameweek && (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-                    <Button
-                      variant="contained"
-                      color="secondary"
-                      onClick={() => setShowRecommendedTransfers(true)}
-                    >
-                      View Recommended Transfers
-                    </Button>
-                  </Box>
-                )}
                 <Typography variant='h6' align='center' gutterBottom>
                   {gameweekInfo?.isPast ? 'Total Points' : 'Total Predicted Points'}:{ ' ' }
                   <Box component='span' sx={ { fontWeight: 'bold' } }>
@@ -270,6 +250,15 @@ const App = () => {
                     { calculateTotalPredictedPoints(benchTeamData) }
                   </Box>
                 </Typography>
+                
+                {/* Show Recommended Transfers inline for user and searched teams */}
+                {currentEntryId && currentGameweek && (
+                  <RecommendedTransfers
+                    entryId={ currentEntryId }
+                    currentGameweek={ currentGameweek }
+                  />
+                )}
+                
                 <Grid container spacing={ 2 } justifyContent='center'>
                   <Grid item md={ 10 }>
                     <TeamFormation
