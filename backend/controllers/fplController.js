@@ -492,12 +492,13 @@ const getRecommendedTransfers = async (req, res) => {
         const weakPlayerPrice = weakPlayer.now_cost / 10; // Convert to actual price
         
         // Get all better options excluding already recommended
+        // ONLY recommend players with HIGHER predicted points
         let betterOptions = availablePosPlayers
           .filter(p => parseFloat(p.ep_next) > weakPlayerPoints && !alreadyRecommended.has(p.id));
         
+        // If no better options exist, skip this player (don't recommend downgrades)
         if (betterOptions.length === 0) {
-          // If no better options, include all available players not yet recommended
-          betterOptions = availablePosPlayers.filter(p => !alreadyRecommended.has(p.id));
+          return; // Skip to next weak player
         }
         
         // Diversify recommendations based on price ranges

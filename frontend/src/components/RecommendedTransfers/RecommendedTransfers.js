@@ -16,7 +16,9 @@ import {
   Paper,
   Chip,
   CircularProgress,
-  Alert
+  Alert,
+  FormControlLabel,
+  Checkbox
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
@@ -32,6 +34,7 @@ const positionLabels = {
 const RecommendedTransfers = ({ entryId, currentGameweek }) => {
   const theme = useTheme();
   const [gameweeksAhead, setGameweeksAhead] = useState(1);
+  const [similarPricingOnly, setSimilarPricingOnly] = useState(false);
   const [recommendations, setRecommendations] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -62,28 +65,56 @@ const RecommendedTransfers = ({ entryId, currentGameweek }) => {
     setGameweeksAhead(event.target.value);
   };
 
+  const handleSimilarPricingToggle = (event) => {
+    setSimilarPricingOnly(event.target.checked);
+  };
+
+  // Filter recommendations based on Similar Pricing toggle
+  const filterAlternativesByPrice = (alternatives, playerOutPrice) => {
+    if (!similarPricingOnly) return alternatives;
+    
+    // Only show alternatives within ±£0.5m
+    return alternatives.filter(alt => {
+      const altPrice = alt.now_cost / 10;
+      const playerPrice = playerOutPrice / 10;
+      return Math.abs(altPrice - playerPrice) <= 0.5;
+    });
+  };
+
   if (!entryId || !currentGameweek) return null;
 
   return (
     <Box sx={{ mb: 3, mt: 2 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 2 }}>
         <Typography variant="h6" fontWeight="bold">
           Recommended Transfers
         </Typography>
-        <FormControl size="small" sx={{ minWidth: 200 }}>
-          <InputLabel>Forecast Period</InputLabel>
-          <Select
-            value={gameweeksAhead}
-            onChange={handleGameweekChange}
-            label="Forecast Period"
-          >
-            <MenuItem value={1}>Next GW ({currentGameweek + 1})</MenuItem>
-            <MenuItem value={2}>Next 2 GWs (Cumulative)</MenuItem>
-            <MenuItem value={3}>Next 3 GWs (Cumulative)</MenuItem>
-            <MenuItem value={4}>Next 4 GWs (Cumulative)</MenuItem>
-            <MenuItem value={5}>Next 5 GWs (Cumulative)</MenuItem>
-          </Select>
-        </FormControl>
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={similarPricingOnly}
+                onChange={handleSimilarPricingToggle}
+                color="primary"
+              />
+            }
+            label="Similar Pricing"
+          />
+          <FormControl size="small" sx={{ minWidth: 200 }}>
+            <InputLabel>Forecast Period</InputLabel>
+            <Select
+              value={gameweeksAhead}
+              onChange={handleGameweekChange}
+              label="Forecast Period"
+            >
+              <MenuItem value={1}>Next GW ({currentGameweek + 1})</MenuItem>
+              <MenuItem value={2}>Next 2 GWs (Cumulative)</MenuItem>
+              <MenuItem value={3}>Next 3 GWs (Cumulative)</MenuItem>
+              <MenuItem value={4}>Next 4 GWs (Cumulative)</MenuItem>
+              <MenuItem value={5}>Next 5 GWs (Cumulative)</MenuItem>
+            </Select>
+          </FormControl>
+        </Box>
       </Box>
 
       {loading && (
@@ -126,50 +157,63 @@ const RecommendedTransfers = ({ entryId, currentGameweek }) => {
                 <TableContainer component={Paper} sx={{ backgroundColor: theme.palette.mode === 'dark' ? '#1e2127' : '#ffffff' }}>
                   <Table size="small">
                     <TableBody>
-                      {posRecommendations.map((rec, idx) => (
-                        <TableRow key={idx} sx={{ '&:hover': { backgroundColor: theme.palette.action.hover } }}>
-                          <TableCell sx={{ borderRight: `2px solid ${theme.palette.divider}`, minWidth: 180 }}>
-                            <Box>
-                              <Typography variant="body2" fontWeight="bold">
-                                {rec.playerOut.web_name}
-                              </Typography>
-                              <Typography variant="caption" color="error">
-                                {rec.playerOut.predicted_points.toFixed(1)} pts
-                              </Typography>
-                              <Typography variant="caption" color="textSecondary" sx={{ display: 'block', fontSize: '0.65rem' }}>
-                                £{(rec.playerOut.now_cost / 10).toFixed(1)}m
-                              </Typography>
-                            </Box>
-                          </TableCell>
-                          {rec.alternatives.slice(0, 3).map((alt, altIdx) => (
-                            <TableCell key={altIdx} sx={{ minWidth: 180 }}>
+                      {posRecommendations.map((rec, idx) => {
+                        // Filter alternatives based on Similar Pricing toggle
+                        const filteredAlternatives = filterAlternativesByPrice(rec.alternatives, rec.playerOut.now_cost);
+                        
+                        // Skip this row if no alternatives pass the filter
+                        if (filteredAlternatives.length === 0) return null;
+                        
+                        return (
+                          <TableRow key={idx} sx={{ '&:hover': { backgroundColor: theme.palette.action.hover } }}>
+                            <TableCell sx={{ borderRight: `2px solid ${theme.palette.divider}`, minWidth: 180 }}>
                               <Box>
                                 <Typography variant="body2" fontWeight="bold">
-                                  {alt.web_name}
+                                  {rec.playerOut.web_name}
                                 </Typography>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                  <Typography variant="caption" color="success.main">
-                                    {alt.predicted_points.toFixed(1)} pts
-                                  </Typography>
-                                  <Chip
-                                    icon={<TrendingUpIcon />}
-                                    label={`+${alt.points_difference.toFixed(1)}`}
-                                    size="small"
-                                    color="success"
-                                    sx={{ height: 18, fontSize: '0.7rem' }}
-                                  />
-                                </Box>
-                                <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.65rem' }}>
-                                  £{(alt.now_cost / 10).toFixed(1)}m
+                                <Typography variant="caption" color="error">
+                                  {rec.playerOut.predicted_points.toFixed(1)} pts
+                                </Typography>
+                                <Typography variant="caption" color="textSecondary" sx={{ display: 'block', fontSize: '0.65rem' }}>
+                                  £{(rec.playerOut.now_cost / 10).toFixed(1)}m
                                 </Typography>
                               </Box>
                             </TableCell>
-                          ))}
-                          {/* Fill empty cells if less than 3 alternatives */}
-                          {rec.alternatives.length < 3 && [...Array(3 - rec.alternatives.length)].map((_, emptyIdx) => (
-                            <TableCell key={`empty-${emptyIdx}`} />
-                          ))}
-                        </TableRow>
+                            {filteredAlternatives.slice(0, 3).map((alt, altIdx) => (
+                              <TableCell key={altIdx} sx={{ minWidth: 180 }}>
+                                <Box>
+                                  <Typography variant="body2" fontWeight="bold">
+                                    {alt.web_name}
+                                  </Typography>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                    <Typography variant="caption" color="success.main">
+                                      {alt.predicted_points.toFixed(1)} pts
+                                    </Typography>
+                                    <Chip
+                                      icon={<TrendingUpIcon />}
+                                      label={`+${alt.points_difference.toFixed(1)}`}
+                                      size="small"
+                                      color="success"
+                                      sx={{ height: 18, fontSize: '0.7rem' }}
+                                    />
+                                  </Box>
+                                  <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.65rem' }}>
+                                    £{(alt.now_cost / 10).toFixed(1)}m
+                                  </Typography>
+                                  </Box>
+                                  <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.65rem' }}>
+                                    £{(alt.now_cost / 10).toFixed(1)}m
+                                  </Typography>
+                                </Box>
+                              </TableCell>
+                            ))}
+                            {/* Fill empty cells if less than 3 alternatives */}
+                            {filteredAlternatives.length < 3 && [...Array(3 - filteredAlternatives.length)].map((_, emptyIdx) => (
+                              <TableCell key={`empty-${emptyIdx}`} />
+                            ))}
+                          </TableRow>
+                        );
+                      })}
                       ))}
                     </TableBody>
                   </Table>
