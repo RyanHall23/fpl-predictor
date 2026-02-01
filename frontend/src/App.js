@@ -12,6 +12,7 @@ import useAllPlayers from './hooks/useAllPlayers';
 import TransferPlayer from './components/TransferPlayer';
 import UserProfilePane from './components/UserProfilePane/UserProfilePane';
 import AccountPage from './components/AccountPage/AccountPage';
+import RecommendedTransfers from './components/RecommendedTransfers';
 import axios from 'axios';
 
 const TEAM_VIEW = {
@@ -249,6 +250,7 @@ const App = () => {
                     { calculateTotalPredictedPoints(benchTeamData) }
                   </Box>
                 </Typography>
+                
                 <Grid container spacing={ 2 } justifyContent='center'>
                   <Grid item md={ 10 }>
                     <TeamFormation
@@ -302,6 +304,14 @@ const App = () => {
                     />
                   </Grid>
                 </Grid>
+                
+                {/* Show Recommended Transfers inline for user and searched teams - BELOW team formation */}
+                {currentEntryId && currentGameweek && (
+                  <RecommendedTransfers
+                    entryId={ currentEntryId }
+                    currentGameweek={ currentGameweek }
+                  />
+                )}
               </>
             ) }
           </Box>
