@@ -1,5 +1,5 @@
 const fplModel = require('../models/fplModel');
-const axios = require('axios');
+const dataProvider = require('../models/dataProvider');
 
 const getBootstrapStatic = async (req, res) => {
   try {
@@ -189,9 +189,9 @@ const getUserTeam = async (req, res) => {
     // Fetch the entry info for the team name
     let teamName = '';
     try {
-      const entryRes = await axios.get(`https://fantasy.premierleague.com/api/entry/${entryId}/`);
-      if (entryRes.data.player_first_name) {
-        teamName = `${entryRes.data.player_first_name} ${entryRes.data.player_last_name}`;
+      const entryData = await dataProvider.fetchEntry(entryId);
+      if (entryData.player_first_name) {
+        teamName = `${entryData.player_first_name} ${entryData.player_last_name}`;
       }
     } catch (e) {
       teamName = '';
@@ -223,14 +223,14 @@ const getUserProfile = async (req, res) => {
   }
 
   try {
-    const entryRes = await axios.get(`https://fantasy.premierleague.com/api/entry/${entryId}/`);
-    const historyRes = await axios.get(`https://fantasy.premierleague.com/api/entry/${entryId}/history/`);
+    const entryData = await dataProvider.fetchEntry(entryId);
+    const historyData = await dataProvider.fetchHistory(entryId);
 
-    const totalPoints = historyRes.data.current.reduce((sum, gw) => sum + gw.points, 0);
-    const futureEvent = historyRes.data.future?.[0] || null;
+    const totalPoints = historyData.current.reduce((sum, gw) => sum + gw.points, 0);
+    const futureEvent = historyData.future?.[0] || null;
     const futurePoints = futureEvent ? futureEvent.event : null;
 
-    const classicLeagues = entryRes.data.leagues.classic.map(l => ({
+    const classicLeagues = entryData.leagues.classic.map(l => ({
       id: l.id,
       name: l.name,
       entry_rank: l.entry_rank,
@@ -252,7 +252,7 @@ const getUserProfile = async (req, res) => {
     }));
 
     res.json({
-      entry: entryRes.data,
+      entry: entryData,
       totalPoints,
       futurePoints,
       classicLeagues,

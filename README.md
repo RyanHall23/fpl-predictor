@@ -36,6 +36,43 @@ package.json       # Root scripts for running both frontend and backend together
 - npm (v6 or higher, recommended v8+)
 - MongoDB (running locally on default port 27017)
 
+## Environment Variables
+
+The backend supports several environment variables to configure behavior:
+
+### Authentication
+- `JWT_SECRET` - Secret key for JWT token generation (required in production, defaults to 'changeme' in development)
+
+### FPL API Configuration
+- `USE_FPL_API` - Controls data source for FPL data (default: `'true'`)
+  - `'true'` - Use real FPL API (fantasy.premierleague.com)
+  - `'false'` - Use local mock data for testing (useful when API is unavailable or for development)
+
+### Prediction Model Settings
+- `USE_COMPUTED_EP` - Toggle between computed vs raw expected points (default: `'true'`)
+  - `'true'` - Use computed expected points from ML model
+  - `'false'` - Use raw API expected points
+- `INCLUDE_MANAGERS` - Include manager placeholders in squads (default: `'false'`)
+
+### Setting Environment Variables
+
+Create a `.env` file in the `backend` directory:
+
+```sh
+# Example .env file
+JWT_SECRET=your-secret-key-here
+USE_FPL_API=true
+USE_COMPUTED_EP=true
+INCLUDE_MANAGERS=false
+```
+
+For testing without FPL API access:
+```sh
+USE_FPL_API=false
+```
+
+This will use mock data from `backend/mockData/` that matches the exact structure of FPL API responses.
+
 ### Installation
 
 1. Clone the repository:
