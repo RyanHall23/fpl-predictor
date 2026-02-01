@@ -84,80 +84,80 @@ const RecommendedTransfers = ({ entryId, currentGameweek }) => {
   if (!entryId || !currentGameweek) return null;
 
   return (
-    <Box sx={{ mb: 3, mt: 2 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 2 }}>
-        <Typography variant="h6" fontWeight="bold">
+    <Box sx={ { mb: 3, mt: 2 } }>
+      <Box sx={ { display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 2 } }>
+        <Typography variant='h6' fontWeight='bold'>
           Recommended Transfers
         </Typography>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+        <Box sx={ { display: 'flex', gap: 2, alignItems: 'center' } }>
           <FormControlLabel
             control={
               <Checkbox
-                checked={similarPricingOnly}
-                onChange={handleSimilarPricingToggle}
-                color="primary"
+                checked={ similarPricingOnly }
+                onChange={ handleSimilarPricingToggle }
+                color='primary'
               />
             }
-            label="Similar Pricing"
+            label='Similar Pricing'
           />
-          <FormControl size="small" sx={{ minWidth: 200 }}>
+          <FormControl size='small' sx={ { minWidth: 200 } }>
             <InputLabel>Forecast Period</InputLabel>
             <Select
-              value={gameweeksAhead}
-              onChange={handleGameweekChange}
-              label="Forecast Period"
+              value={ gameweeksAhead }
+              onChange={ handleGameweekChange }
+              label='Forecast Period'
             >
-              <MenuItem value={1}>Next GW ({currentGameweek + 1})</MenuItem>
-              <MenuItem value={2}>Next 2 GWs (Cumulative)</MenuItem>
-              <MenuItem value={3}>Next 3 GWs (Cumulative)</MenuItem>
-              <MenuItem value={4}>Next 4 GWs (Cumulative)</MenuItem>
-              <MenuItem value={5}>Next 5 GWs (Cumulative)</MenuItem>
+              <MenuItem value={ 1 }>Next GW ({ currentGameweek + 1 })</MenuItem>
+              <MenuItem value={ 2 }>Next 2 GWs (Cumulative)</MenuItem>
+              <MenuItem value={ 3 }>Next 3 GWs (Cumulative)</MenuItem>
+              <MenuItem value={ 4 }>Next 4 GWs (Cumulative)</MenuItem>
+              <MenuItem value={ 5 }>Next 5 GWs (Cumulative)</MenuItem>
             </Select>
           </FormControl>
         </Box>
       </Box>
 
-      {loading && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-          <CircularProgress size={24} />
+      { loading && (
+        <Box sx={ { display: 'flex', justifyContent: 'center', py: 2 } }>
+          <CircularProgress size={ 24 } />
         </Box>
-      )}
+      ) }
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
+      { error && (
+        <Alert severity='error' sx={ { mb: 2 } }>
+          { error }
         </Alert>
-      )}
+      ) }
 
-      {!loading && !error && recommendations && (
+      { !loading && !error && recommendations && (
         <Box>
-          {/* Show table header once at the top */}
-          {Object.values(recommendations.recommendations).some(arr => arr && arr.length > 0) && (
-            <TableContainer component={Paper} sx={{ backgroundColor: theme.palette.mode === 'dark' ? '#1e2127' : '#ffffff', mb: 2 }}>
-              <Table size="small">
+          { /* Show table header once at the top */ }
+          { Object.values(recommendations.recommendations).some(arr => arr && arr.length > 0) && (
+            <TableContainer component={ Paper } sx={ { backgroundColor: theme.palette.mode === 'dark' ? '#1e2127' : '#ffffff', mb: 2 } }>
+              <Table size='small'>
                 <TableHead>
                   <TableRow>
                     <TableCell><strong>Out</strong></TableCell>
-                    <TableCell align="center" colSpan={3}><strong>In (Top Alternatives)</strong></TableCell>
+                    <TableCell align='center' colSpan={ 3 }><strong>In (Top Alternatives)</strong></TableCell>
                   </TableRow>
                 </TableHead>
               </Table>
             </TableContainer>
-          )}
+          ) }
           
-          {Object.keys(recommendations.recommendations).map((position) => {
+          { Object.keys(recommendations.recommendations).map((position) => {
             const posRecommendations = recommendations.recommendations[position];
             if (!posRecommendations || posRecommendations.length === 0) return null;
 
             return (
-              <Box key={position} sx={{ mb: 3 }}>
-                <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 1, color: theme.palette.primary.main }}>
-                  {positionLabels[position]}
+              <Box key={ position } sx={ { mb: 3 } }>
+                <Typography variant='subtitle1' fontWeight='bold' sx={ { mb: 1, color: theme.palette.primary.main } }>
+                  { positionLabels[position] }
                 </Typography>
-                <TableContainer component={Paper} sx={{ backgroundColor: theme.palette.mode === 'dark' ? '#1e2127' : '#ffffff' }}>
-                  <Table size="small">
+                <TableContainer component={ Paper } sx={ { backgroundColor: theme.palette.mode === 'dark' ? '#1e2127' : '#ffffff' } }>
+                  <Table size='small'>
                     <TableBody>
-                      {posRecommendations.map((rec, idx) => {
+                      { posRecommendations.map((rec, idx) => {
                         // Filter alternatives based on Similar Pricing toggle
                         const filteredAlternatives = filterAlternativesByPrice(rec.alternatives, rec.playerOut.now_cost);
                         
@@ -165,72 +165,71 @@ const RecommendedTransfers = ({ entryId, currentGameweek }) => {
                         if (filteredAlternatives.length === 0) return null;
                         
                         return (
-                          <TableRow key={idx} sx={{ '&:hover': { backgroundColor: theme.palette.action.hover } }}>
-                            <TableCell sx={{ borderRight: `2px solid ${theme.palette.divider}`, minWidth: 180 }}>
+                          <TableRow key={ idx } sx={ { '&:hover': { backgroundColor: theme.palette.action.hover } } }>
+                            <TableCell sx={ { borderRight: `2px solid ${theme.palette.divider}`, minWidth: 180 } }>
                               <Box>
-                                <Typography variant="body2" fontWeight="bold">
-                                  {rec.playerOut.web_name}
+                                <Typography variant='body2' fontWeight='bold'>
+                                  { rec.playerOut.web_name }
                                 </Typography>
-                                <Typography variant="caption" color="error">
-                                  {rec.playerOut.predicted_points.toFixed(1)} pts
+                                <Typography variant='caption' color='error'>
+                                  { rec.playerOut.predicted_points.toFixed(1) } pts
                                 </Typography>
-                                <Typography variant="caption" color="textSecondary" sx={{ display: 'block', fontSize: '0.65rem' }}>
-                                  £{(rec.playerOut.now_cost / 10).toFixed(1)}m
+                                <Typography variant='caption' color='textSecondary' sx={ { display: 'block', fontSize: '0.65rem' } }>
+                                  £{ (rec.playerOut.now_cost / 10).toFixed(1) }m
                                 </Typography>
                               </Box>
                             </TableCell>
-                            {filteredAlternatives.slice(0, 3).map((alt, altIdx) => (
-                              <TableCell key={altIdx} sx={{ minWidth: 180 }}>
+                            { filteredAlternatives.slice(0, 3).map((alt, altIdx) => (
+                              <TableCell key={ altIdx } sx={ { minWidth: 180 } }>
                                 <Box>
-                                  <Typography variant="body2" fontWeight="bold">
-                                    {alt.web_name}
+                                  <Typography variant='body2' fontWeight='bold'>
+                                    { alt.web_name }
                                   </Typography>
-                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                    <Typography variant="caption" color="success.main">
-                                      {alt.predicted_points.toFixed(1)} pts
+                                  <Box sx={ { display: 'flex', alignItems: 'center', gap: 0.5 } }>
+                                    <Typography variant='caption' color='success.main'>
+                                      { alt.predicted_points.toFixed(1) } pts
                                     </Typography>
                                     <Chip
-                                      icon={<TrendingUpIcon />}
-                                      label={`+${alt.points_difference.toFixed(1)}`}
-                                      size="small"
-                                      color="success"
-                                      sx={{ height: 18, fontSize: '0.7rem' }}
+                                      icon={ <TrendingUpIcon /> }
+                                      label={ `+${alt.points_difference.toFixed(1)}` }
+                                      size='small'
+                                      color='success'
+                                      sx={ { height: 18, fontSize: '0.7rem' } }
                                     />
                                   </Box>
-                                  <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.65rem' }}>
-                                    £{(alt.now_cost / 10).toFixed(1)}m
+                                  <Typography variant='caption' color='textSecondary' sx={ { fontSize: '0.65rem' } }>
+                                    £{ (alt.now_cost / 10).toFixed(1) }m
                                   </Typography>
                                 </Box>
                               </TableCell>
-                            ))}
-                            {/* Fill empty cells if less than 3 alternatives */}
-                            {filteredAlternatives.length < 3 && [...Array(3 - filteredAlternatives.length)].map((_, emptyIdx) => (
-                              <TableCell key={`empty-${emptyIdx}`} />
-                            ))}
+                            )) }
+                            { /* Fill empty cells if less than 3 alternatives */ }
+                            { filteredAlternatives.length < 3 && [...Array(3 - filteredAlternatives.length)].map((_, emptyIdx) => (
+                              <TableCell key={ `empty-${emptyIdx}` } />
+                            )) }
                           </TableRow>
                         );
-                      })}
-                      ))}
+                      }) }
                     </TableBody>
                   </Table>
                 </TableContainer>
               </Box>
             );
-          })}
+          }) }
 
-          {Object.values(recommendations.recommendations).every(arr => !arr || arr.length === 0) && (
-            <Alert severity="info">
+          { Object.values(recommendations.recommendations).every(arr => !arr || arr.length === 0) && (
+            <Alert severity='info'>
               No transfer recommendations available. Your team is performing well!
             </Alert>
-          )}
+          ) }
 
-          {gameweeksAhead > 1 && (
-            <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mt: 1 }}>
-              * Points shown are cumulative across {gameweeksAhead} gameweeks (GW {recommendations.startGameweek} - {recommendations.endGameweek})
+          { gameweeksAhead > 1 && (
+            <Typography variant='caption' color='textSecondary' sx={ { display: 'block', mt: 1 } }>
+              * Points shown are cumulative across { gameweeksAhead } gameweeks (GW { recommendations.startGameweek } - { recommendations.endGameweek })
             </Typography>
-          )}
+          ) }
         </Box>
-      )}
+      ) }
     </Box>
   );
 };
