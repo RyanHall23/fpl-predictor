@@ -155,7 +155,8 @@ const activateChip = async (req, res) => {
     if (chipName.startsWith('free_hit')) {
       const preChipHistory = new SquadHistory({
         userId,
-        gameweek: gameweek - 0.5, // Use fractional gameweek to mark as pre-chip snapshot
+        gameweek,
+        snapshotType: 'pre_chip',
         players: squad.players,
         bank: squad.bank,
         squadValue: squad.squadValue,

@@ -154,7 +154,8 @@ fi
 
 # Test 4: Model Structure Tests
 echo "4. Testing Model Structures..."
-cd /home/runner/work/fpl-predictor/fpl-predictor/backend && node -e "
+pushd "$(dirname "$0")" > /dev/null
+node -e "
 const mongoose = require('mongoose');
 const Squad = require('./models/squadModel');
 const Transfer = require('./models/transferModel');
@@ -211,6 +212,7 @@ try {
   process.exit(1);
 }
 "
+popd > /dev/null
 
 if [ $? -ne 0 ]; then
     echo "❌ Model structure tests failed"

@@ -15,6 +15,11 @@ const squadHistorySchema = new mongoose.Schema({
     type: Number,
     required: true
   },
+  snapshotType: {
+    type: String,
+    enum: ['regular', 'pre_chip'],
+    default: 'regular'
+  },
   players: [{
     playerId: Number,
     position: Number,
@@ -61,7 +66,7 @@ const squadHistorySchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Compound index for efficient queries
-squadHistorySchema.index({ userId: 1, gameweek: 1 }, { unique: true });
+// Index for efficient queries (removed unique constraint to allow pre-chip snapshots)
+squadHistorySchema.index({ userId: 1, gameweek: 1, snapshotType: 1 });
 
 module.exports = mongoose.model('SquadHistory', squadHistorySchema);

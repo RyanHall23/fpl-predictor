@@ -28,9 +28,6 @@ app.use('/api/transfers', transferRoutes);
 // Chip routes
 app.use('/api/chips', chipRoutes);
 
-// Chip routes
-app.use('/api/chips', chipRoutes);
-
 // FPL API proxy routes
 app.get('/api/bootstrap-static', fplController.getBootstrapStatic);
 app.get('/api/bootstrap-static/enriched', fplController.getAllPlayersEnriched);

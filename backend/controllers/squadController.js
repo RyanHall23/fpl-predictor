@@ -77,6 +77,7 @@ const initializeSquad = async (req, res) => {
     const history = new SquadHistory({
       userId,
       gameweek,
+      snapshotType: 'regular',
       players: squad.players,
       bank: squad.bank,
       squadValue: squad.squadValue,
