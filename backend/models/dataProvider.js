@@ -7,7 +7,8 @@ const path = require('path');
 // USE_FPL_API: 'false' - Use local mock data for testing
 const USE_FPL_API = (process.env.USE_FPL_API ?? 'true') === 'true';
 
-const MOCK_DATA_DIR = path.join(__dirname, 'mockData');
+// Mock data is in backend/mockData, one level up from models directory
+const MOCK_DATA_DIR = path.join(__dirname, '..', 'mockData');
 
 /**
  * Load mock data from a JSON file
