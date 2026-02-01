@@ -10,6 +10,40 @@ This project is guided by GitHub Copilot, an AI-powered coding assistant that he
 
 The main goal of this project is to create a model that can accurately predict the points that players will score in the Fantasy Premier League. This can help fantasy football managers make better decisions when selecting their teams.
 
+## Features
+
+### Prediction Engine
+- **ML-based Point Predictions**: Uses expected goals (xG), expected assists (xA), clean sheets, and head-to-head data
+- **Opponent Analysis**: Enriches players with opponent difficulty and fixture information
+- **Gameweek Forecasting**: Predict player performance for future gameweeks
+
+### Squad Management
+- **Player Value Tracking**: Track purchase prices vs current prices for all players
+- **Selling Price Calculation**: Automatically calculates selling price with profit rules (keep 50% of profit, rounded down)
+- **Squad History**: Store and view squad snapshots for each gameweek
+- **Database Caching**: Reduce API calls by storing team data locally
+
+### Transfer System
+- **Free Transfer Management**: Track free transfers (1 per week, max 2 banked)
+- **Points Deduction**: Automatic calculation of -4 points for extra transfers
+- **Transfer History**: Complete record of all transfers made
+- **Transfer Validation**: Ensures valid position swaps and sufficient funds
+
+### Chip Management
+- **All FPL Chips Supported**: Wildcard, Free Hit, Bench Boost, Triple Captain
+- **Availability Windows**: Chips available at correct times (GW1-19, GW20-38)
+- **Usage Tracking**: Track which chips have been used
+- **Chip Rules Enforcement**: 
+  - One chip per gameweek
+  - Free Hit cannot be used in consecutive gameweeks
+  - Saved transfers retained when using Wildcard/Free Hit
+  - Wildcard and Free Hit cannot be cancelled once confirmed
+
+### API Features
+- **Mock Data Support**: Test without FPL API access using local mock data
+- **RESTful API**: Clean, documented API endpoints
+- **Authentication**: Secure JWT-based authentication
+
 ## Project Structure
 
 ```
@@ -111,3 +145,68 @@ npm start
     cd frontend
     npm start
     ```
+
+## API Documentation
+
+The backend provides comprehensive REST API endpoints for squad management, transfers, and chips.
+
+### Key Endpoints
+
+**Squad Management:**
+- `POST /api/squad/initialize` - Initialize user's squad from FPL account
+- `GET /api/squad/:userId` - Get current squad with calculated values
+- `GET /api/squad/history/:userId/:gameweek` - Get squad for specific gameweek
+
+**Transfers:**
+- `POST /api/transfers` - Make a player transfer
+- `GET /api/transfers/history/:userId` - Get transfer history
+- `GET /api/transfers/summary/:userId/:gameweek` - Get gameweek transfer summary
+
+**Chips:**
+- `GET /api/chips/:userId?gameweek=N` - Get available chips for gameweek
+- `POST /api/chips/activate` - Activate a chip
+- `POST /api/chips/cancel` - Cancel an active chip (if allowed)
+
+**FPL Data:**
+- `GET /api/bootstrap-static` - All players, teams, and gameweeks
+- `GET /api/predicted-team` - AI-predicted optimal team
+- `GET /api/entry/:entryId/event/:eventId/recommended-transfers` - Smart transfer suggestions
+
+For complete API documentation, see [backend/API_DOCUMENTATION.md](backend/API_DOCUMENTATION.md)
+
+## Player Value System
+
+The application implements FPL's player pricing rules:
+
+- **Purchase Price**: Price when player was added to squad
+- **Current Price**: Live market price from FPL API
+- **Selling Price**: `Purchase Price + floor((Current Price - Purchase Price) / 2)`
+
+**Example:**
+- Bought player at £7.5m
+- Current price rises to £7.8m
+- Profit = £0.3m
+- Selling price = £7.5m + floor(£0.3m / 2) = £7.5m + £0.1m = **£7.6m**
+
+## Transfer Rules
+
+- **1 Free Transfer per gameweek** (unused transfers carry over, max 2)
+- **-4 Points** for each additional transfer beyond free transfers
+- **Wildcard**: All transfers free for the gameweek
+- **Free Hit**: Unlimited free transfers, squad reverts next gameweek
+
+## Chip System
+
+| Chip | Effect | Availability |
+|------|--------|--------------|
+| **Bench Boost** | Bench players' points count | 2 chips: GW1-19, GW20-38 |
+| **Triple Captain** | Captain points tripled (3x) | 2 chips: GW1-19, GW20-38 |
+| **Free Hit** | Unlimited free transfers, reverts next GW | 2 chips: GW2-19, GW20-38 |
+| **Wildcard** | All transfers free for the gameweek | 2 chips: GW2-19, GW20-38 |
+
+**Rules:**
+- Only one chip per gameweek
+- Free Hit cannot be used in consecutive gameweeks
+- Wildcard and Free Hit cannot be cancelled once confirmed
+- Bench Boost and Triple Captain can be cancelled before deadline
+- Saved free transfers are retained when using Wildcard or Free Hit
