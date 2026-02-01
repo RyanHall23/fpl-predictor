@@ -200,10 +200,6 @@ const RecommendedTransfers = ({ entryId, currentGameweek }) => {
                                   <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.65rem' }}>
                                     £{(alt.now_cost / 10).toFixed(1)}m
                                   </Typography>
-                                  </Box>
-                                  <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.65rem' }}>
-                                    £{(alt.now_cost / 10).toFixed(1)}m
-                                  </Typography>
                                 </Box>
                               </TableCell>
                             ))}
