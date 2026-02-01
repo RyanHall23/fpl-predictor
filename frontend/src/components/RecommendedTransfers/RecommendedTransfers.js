@@ -100,6 +100,20 @@ const RecommendedTransfers = ({ entryId, currentGameweek }) => {
 
       {!loading && !error && recommendations && (
         <Box>
+          {/* Show table header once at the top */}
+          {Object.values(recommendations.recommendations).some(arr => arr && arr.length > 0) && (
+            <TableContainer component={Paper} sx={{ backgroundColor: theme.palette.mode === 'dark' ? '#1e2127' : '#ffffff', mb: 2 }}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell><strong>Out</strong></TableCell>
+                    <TableCell align="center" colSpan={3}><strong>In (Top Alternatives)</strong></TableCell>
+                  </TableRow>
+                </TableHead>
+              </Table>
+            </TableContainer>
+          )}
+          
           {Object.keys(recommendations.recommendations).map((position) => {
             const posRecommendations = recommendations.recommendations[position];
             if (!posRecommendations || posRecommendations.length === 0) return null;
@@ -111,12 +125,6 @@ const RecommendedTransfers = ({ entryId, currentGameweek }) => {
                 </Typography>
                 <TableContainer component={Paper} sx={{ backgroundColor: theme.palette.mode === 'dark' ? '#1e2127' : '#ffffff' }}>
                   <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell><strong>Out</strong></TableCell>
-                        <TableCell align="center" colSpan={3}><strong>In (Top Alternatives)</strong></TableCell>
-                      </TableRow>
-                    </TableHead>
                     <TableBody>
                       {posRecommendations.map((rec, idx) => (
                         <TableRow key={idx} sx={{ '&:hover': { backgroundColor: theme.palette.action.hover } }}>
@@ -127,6 +135,9 @@ const RecommendedTransfers = ({ entryId, currentGameweek }) => {
                               </Typography>
                               <Typography variant="caption" color="error">
                                 {rec.playerOut.predicted_points.toFixed(1)} pts
+                              </Typography>
+                              <Typography variant="caption" color="textSecondary" sx={{ display: 'block', fontSize: '0.65rem' }}>
+                                £{(rec.playerOut.now_cost / 10).toFixed(1)}m
                               </Typography>
                             </Box>
                           </TableCell>
@@ -148,6 +159,9 @@ const RecommendedTransfers = ({ entryId, currentGameweek }) => {
                                     sx={{ height: 18, fontSize: '0.7rem' }}
                                   />
                                 </Box>
+                                <Typography variant="caption" color="textSecondary" sx={{ fontSize: '0.65rem' }}>
+                                  £{(alt.now_cost / 10).toFixed(1)}m
+                                </Typography>
                               </Box>
                             </TableCell>
                           ))}

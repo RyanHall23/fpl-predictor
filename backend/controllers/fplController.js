@@ -485,16 +485,68 @@ const getRecommendedTransfers = async (req, res) => {
         .slice(0, Math.min(MAX_WEAKEST_PLAYERS, userPosPlayers.length));
       
       const posRecommendations = [];
+      const alreadyRecommended = new Set(); // Track recommended players to avoid duplicates
       
-      weakestPlayers.forEach(weakPlayer => {
+      weakestPlayers.forEach((weakPlayer, weakPlayerIndex) => {
         const weakPlayerPoints = parseFloat(weakPlayer.ep_next);
+        const weakPlayerPrice = weakPlayer.now_cost / 10; // Convert to actual price
         
-        // Find top alternatives that are better than this player
-        const betterOptions = availablePosPlayers
-          .filter(p => parseFloat(p.ep_next) > weakPlayerPoints)
+        // Get all better options excluding already recommended
+        let betterOptions = availablePosPlayers
+          .filter(p => parseFloat(p.ep_next) > weakPlayerPoints && !alreadyRecommended.has(p.id));
+        
+        if (betterOptions.length === 0) {
+          // If no better options, include all available players not yet recommended
+          betterOptions = availablePosPlayers.filter(p => !alreadyRecommended.has(p.id));
+        }
+        
+        // Diversify recommendations based on price ranges
+        // Similar price: within ±0.5m
+        // Budget: 0.5m+ cheaper
+        // Premium: 0.5m+ expensive
+        const similarPrice = betterOptions.filter(p => Math.abs((p.now_cost / 10) - weakPlayerPrice) <= 0.5);
+        const budget = betterOptions.filter(p => (p.now_cost / 10) < weakPlayerPrice - 0.5);
+        const premium = betterOptions.filter(p => (p.now_cost / 10) > weakPlayerPrice + 0.5);
+        
+        // For each weak player, distribute recommendations across price ranges
+        // Take best from each category to ensure diversity
+        const alternatives = [];
+        const maxPerCategory = Math.ceil(MAX_ALTERNATIVES / 3);
+        
+        // Strategy: Alternate between price categories to provide diverse options
+        if (weakPlayerIndex % 3 === 0) {
+          // First weak player: focus on similar price + some premium
+          alternatives.push(...similarPrice.slice(0, 2));
+          alternatives.push(...premium.slice(0, 2));
+          alternatives.push(...budget.slice(0, 1));
+        } else if (weakPlayerIndex % 3 === 1) {
+          // Second weak player: focus on premium + some similar
+          alternatives.push(...premium.slice(0, 2));
+          alternatives.push(...similarPrice.slice(2, 4));
+          alternatives.push(...budget.slice(0, 1));
+        } else {
+          // Third weak player: focus on budget + mixed
+          alternatives.push(...budget.slice(0, 2));
+          alternatives.push(...similarPrice.slice(4, 6));
+          alternatives.push(...premium.slice(2, 3));
+        }
+        
+        // Remove duplicates and take top MAX_ALTERNATIVES
+        const uniqueAlternatives = [...new Map(alternatives.map(p => [p.id, p])).values()]
           .slice(0, MAX_ALTERNATIVES);
         
-        if (betterOptions.length > 0) {
+        // If still not enough, fill with next best options
+        if (uniqueAlternatives.length < MAX_ALTERNATIVES) {
+          const remainingOptions = betterOptions
+            .filter(p => !uniqueAlternatives.find(alt => alt.id === p.id))
+            .slice(0, MAX_ALTERNATIVES - uniqueAlternatives.length);
+          uniqueAlternatives.push(...remainingOptions);
+        }
+        
+        // Mark these alternatives as recommended
+        uniqueAlternatives.forEach(alt => alreadyRecommended.add(alt.id));
+        
+        if (uniqueAlternatives.length > 0) {
           posRecommendations.push({
             playerOut: {
               id: weakPlayer.id,
@@ -508,7 +560,7 @@ const getRecommendedTransfers = async (req, res) => {
               now_cost: weakPlayer.now_cost,
               total_points: weakPlayer.total_points
             },
-            alternatives: betterOptions.map(alt => ({
+            alternatives: uniqueAlternatives.map(alt => ({
               id: alt.id,
               code: alt.code,
               name: `${alt.first_name} ${alt.second_name}`,
