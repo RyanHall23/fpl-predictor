@@ -3,6 +3,9 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const fplController = require('./controllers/fplController');
 const authRoutes = require('./routes/auth');
+const squadRoutes = require('./routes/squad');
+const transferRoutes = require('./routes/transfers');
+const chipRoutes = require('./routes/chips');
 const app = express();
 const port = 5000;
 
@@ -13,8 +16,22 @@ mongoose.connect('mongodb://localhost:27017/fplpredictor')
   .then(() => console.log('MongoDB connected'))
   .catch((err) => console.error('MongoDB error:', err));
 
+// Authentication routes
 app.use('/api/auth', authRoutes);
 
+// Squad management routes
+app.use('/api/squad', squadRoutes);
+
+// Transfer routes
+app.use('/api/transfers', transferRoutes);
+
+// Chip routes
+app.use('/api/chips', chipRoutes);
+
+// Chip routes
+app.use('/api/chips', chipRoutes);
+
+// FPL API proxy routes
 app.get('/api/bootstrap-static', fplController.getBootstrapStatic);
 app.get('/api/bootstrap-static/enriched', fplController.getAllPlayersEnriched);
 app.get('/api/entry/:entryId/event/:eventId/picks', fplController.getPlayerPicks);
