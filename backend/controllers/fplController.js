@@ -2,6 +2,68 @@ const fplModel = require('../models/fplModel');
 const dataProvider = require('../models/dataProvider');
 const User = require('../models/userModel');
 const Squad = require('../models/squadModel');
+const SquadHistory = require('../models/squadHistoryModel');
+
+/**
+ * Find the most recent purchase price for a player by looking through squad history
+ * This handles cases where a player was transferred in/out multiple times
+ * @param {string} userId - MongoDB user ID
+ * @param {number} playerId - FPL player element ID
+ * @param {number} currentGameweek - Current gameweek to look back from
+ * @returns {Promise<{purchasePrice: number, gameweekAdded: number} | null>}
+ */
+async function findMostRecentPurchasePrice(userId, playerId, currentGameweek) {
+  try {
+    // Get all squad history for this user, sorted by gameweek descending
+    const allHistory = await SquadHistory.find({ 
+      userId,
+      snapshotType: 'regular' // Only look at regular snapshots, not pre-chip
+    }).sort({ gameweek: -1 }).exec();
+    
+    if (!allHistory || allHistory.length === 0) {
+      return null;
+    }
+    
+    // Find the most recent gameweek where the player was added
+    let playerWasPresentPreviously = false;
+    let mostRecentAdditionGameweek = null;
+    let purchasePrice = null;
+    
+    // Walk backwards through gameweeks
+    for (let i = 0; i < allHistory.length; i++) {
+      const history = allHistory[i];
+      const playerInThisGameweek = history.players.find(p => p.playerId === playerId);
+      
+      if (playerInThisGameweek) {
+        // Player is in this gameweek's squad
+        if (!playerWasPresentPreviously) {
+          // This is the most recent addition (or they've always had the player)
+          mostRecentAdditionGameweek = history.gameweek;
+          purchasePrice = playerInThisGameweek.purchasePrice;
+          break;
+        }
+        playerWasPresentPreviously = true;
+      } else {
+        // Player not in this gameweek
+        if (playerWasPresentPreviously) {
+          // They had the player in a more recent gameweek but not this one
+          // The next gameweek we saw them in (which we already processed) is the addition point
+          break;
+        }
+      }
+    }
+    
+    if (purchasePrice !== null && mostRecentAdditionGameweek !== null) {
+      return { purchasePrice, gameweekAdded: mostRecentAdditionGameweek };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error finding most recent purchase price:', error);
+    return null;
+  }
+}
+
 
 const getBootstrapStatic = async (req, res) => {
   try {
@@ -398,20 +460,41 @@ const getRecommendedTransfers = async (req, res) => {
     
     // Try to fetch user's squad from database to get purchase prices
     // First, find the user by their FPL team ID
+    let userId = null;
     let squadData = null;
     let purchasePriceMap = {};
     try {
       const user = await User.findOne({ teamid: entryId });
       if (user) {
+        userId = user._id;
         squadData = await Squad.findOne({ userId: user._id });
-        if (squadData) {
-          // Create a map of player ID to purchase price and current price
-          squadData.players.forEach(player => {
-            purchasePriceMap[player.playerId] = {
-              purchasePrice: player.purchasePrice,
-              currentPrice: player.currentPrice || 0
-            };
-          });
+        
+        // For each player in the current squad, find their most recent purchase price
+        // from squad history to handle in/out/in scenarios correctly
+        if (squadData && squadData.players.length > 0) {
+          // Try to get accurate purchase prices from squad history
+          for (const player of squadData.players) {
+            const historyData = await findMostRecentPurchasePrice(
+              user._id, 
+              player.playerId, 
+              currentEvent.id
+            );
+            
+            if (historyData && historyData.purchasePrice) {
+              // Use the most recent purchase price from history
+              purchasePriceMap[player.playerId] = {
+                purchasePrice: historyData.purchasePrice,
+                currentPrice: player.currentPrice || 0,
+                gameweekAdded: historyData.gameweekAdded
+              };
+            } else {
+              // Fallback to current squad data if history not available
+              purchasePriceMap[player.playerId] = {
+                purchasePrice: player.purchasePrice,
+                currentPrice: player.currentPrice || 0
+              };
+            }
+          }
         }
       }
     } catch (squadError) {

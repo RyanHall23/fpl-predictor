@@ -10,6 +10,11 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
   const [teamName, setTeamName] = useState('');
   const [gameweekInfo, setGameweekInfo] = useState(null);
 
+  // Sync internal state with prop changes (e.g., when restoring session)
+  useEffect(() => {
+    setIsHighestPredictedTeam(isHighestPredictedTeamInit);
+  }, [isHighestPredictedTeamInit]);
+
   // Fetch the highest predicted team from the backend
   const fetchHighestPredictedTeam = async () => {
     try {
