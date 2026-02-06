@@ -30,8 +30,7 @@ async function findMostRecentPurchasePrice(userId, playerId, currentGameweek) {
     let purchasePrice = null;
     
     // Walk backwards through gameweeks
-    for (let i = 0; i < allHistory.length; i++) {
-      const history = allHistory[i];
+    for (const history of allHistory) {
       const playerInThisGameweek = history.players.find(p => p.playerId === playerId);
       
       if (playerInThisGameweek) {
