@@ -1,5 +1,7 @@
 const fplModel = require('../models/fplModel');
 const dataProvider = require('../models/dataProvider');
+const User = require('../models/userModel');
+const Squad = require('../models/squadModel');
 
 const getBootstrapStatic = async (req, res) => {
   try {
@@ -394,6 +396,29 @@ const getRecommendedTransfers = async (req, res) => {
     // Get user's current team
     const picksData = await fplModel.fetchPlayerPicks(entryId, eventId);
     
+    // Try to fetch user's squad from database to get purchase prices
+    // First, find the user by their FPL team ID
+    let squadData = null;
+    let purchasePriceMap = {};
+    try {
+      const user = await User.findOne({ teamid: entryId });
+      if (user) {
+        squadData = await Squad.findOne({ userId: user._id });
+        if (squadData) {
+          // Create a map of player ID to purchase price and current price
+          squadData.players.forEach(player => {
+            purchasePriceMap[player.playerId] = {
+              purchasePrice: player.purchasePrice,
+              currentPrice: player.currentPrice || 0
+            };
+          });
+        }
+      }
+    } catch (squadError) {
+      // Squad not initialized yet, will just show current prices
+      console.log('Squad data not found, showing current prices only');
+    }
+    
     // Calculate cumulative predicted points across multiple gameweeks
     // For each player, sum predicted points from startEvent to endEvent
     let allPlayers = bootstrap.elements.map((p) => ({
@@ -548,6 +573,21 @@ const getRecommendedTransfers = async (req, res) => {
         uniqueAlternatives.forEach(alt => alreadyRecommended.add(alt.id));
         
         if (uniqueAlternatives.length > 0) {
+          // Calculate selling price for playerOut
+          const purchaseInfo = purchasePriceMap[weakPlayer.id];
+          let purchasePrice = null;
+          let sellingPrice = null;
+          
+          if (purchaseInfo) {
+            purchasePrice = purchaseInfo.purchasePrice;
+            const currentPrice = weakPlayer.now_cost;
+            
+            // Calculate selling price using FPL rules: keep 50% of profit, rounded down
+            const profit = currentPrice - purchasePrice;
+            const profitToKeep = profit > 0 ? Math.floor(profit / 2) : 0;
+            sellingPrice = purchasePrice + profitToKeep;
+          }
+          
           posRecommendations.push({
             playerOut: {
               id: weakPlayer.id,
@@ -559,6 +599,8 @@ const getRecommendedTransfers = async (req, res) => {
               opponent: weakPlayer.opponent_short || 'TBD',
               is_home: weakPlayer.is_home,
               now_cost: weakPlayer.now_cost,
+              purchase_price: purchasePrice,
+              selling_price: sellingPrice,
               total_points: weakPlayer.total_points
             },
             alternatives: uniqueAlternatives.map(alt => ({

@@ -174,9 +174,37 @@ const RecommendedTransfers = ({ entryId, currentGameweek }) => {
                                 <Typography variant='caption' color='error'>
                                   { rec.playerOut.predicted_points.toFixed(1) } pts
                                 </Typography>
-                                <Typography variant='caption' color='textSecondary' sx={ { display: 'block', fontSize: '0.65rem' } }>
-                                  £{ (rec.playerOut.now_cost / 10).toFixed(1) }m
-                                </Typography>
+                                { /* Show price information */ }
+                                { rec.playerOut.purchase_price !== null && rec.playerOut.purchase_price !== undefined ? (
+                                  <Box sx={ { mt: 0.5 } }>
+                                    <Typography variant='caption' color='textSecondary' sx={ { display: 'block', fontSize: '0.65rem' } }>
+                                      Bought: £{ (rec.playerOut.purchase_price / 10).toFixed(1) }m
+                                    </Typography>
+                                    <Typography variant='caption' color='textSecondary' sx={ { display: 'block', fontSize: '0.65rem' } }>
+                                      Current: £{ (rec.playerOut.now_cost / 10).toFixed(1) }m
+                                    </Typography>
+                                    <Typography 
+                                      variant='caption' 
+                                      sx={ { 
+                                        display: 'block', 
+                                        fontSize: '0.65rem',
+                                        color: rec.playerOut.selling_price > rec.playerOut.purchase_price ? 'success.main' : 
+                                               rec.playerOut.selling_price < rec.playerOut.purchase_price ? 'error.main' : 'textSecondary',
+                                        fontWeight: 'bold'
+                                      } }
+                                    >
+                                      Sell: £{ (rec.playerOut.selling_price / 10).toFixed(1) }m
+                                      { rec.playerOut.selling_price > rec.playerOut.purchase_price && 
+                                        ` (+£${((rec.playerOut.selling_price - rec.playerOut.purchase_price) / 10).toFixed(1)}m)` }
+                                      { rec.playerOut.selling_price < rec.playerOut.purchase_price && 
+                                        ` (-£${((rec.playerOut.purchase_price - rec.playerOut.selling_price) / 10).toFixed(1)}m)` }
+                                    </Typography>
+                                  </Box>
+                                ) : (
+                                  <Typography variant='caption' color='textSecondary' sx={ { display: 'block', fontSize: '0.65rem' } }>
+                                    £{ (rec.playerOut.now_cost / 10).toFixed(1) }m
+                                  </Typography>
+                                ) }
                               </Box>
                             </TableCell>
                             { filteredAlternatives.slice(0, 3).map((alt, altIdx) => (
