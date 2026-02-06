@@ -175,7 +175,7 @@ const RecommendedTransfers = ({ entryId, currentGameweek }) => {
                                   { rec.playerOut.predicted_points.toFixed(1) } pts
                                 </Typography>
                                 { /* Show price information */ }
-                                { rec.playerOut.purchase_price !== null && rec.playerOut.purchase_price !== undefined ? (
+                                { rec.playerOut.purchase_price != null ? (
                                   <Box sx={ { mt: 0.5 } }>
                                     <Typography variant='caption' color='textSecondary' sx={ { display: 'block', fontSize: '0.65rem' } }>
                                       Bought: £{ (rec.playerOut.purchase_price / 10).toFixed(1) }m

@@ -416,7 +416,7 @@ const getRecommendedTransfers = async (req, res) => {
       }
     } catch (squadError) {
       // Squad not initialized yet, will just show current prices
-      console.log('Squad data not found, showing current prices only');
+      console.warn('Squad data not found for entryId', entryId, '- showing current prices only');
     }
     
     // Calculate cumulative predicted points across multiple gameweeks
