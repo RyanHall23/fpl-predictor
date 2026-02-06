@@ -22,6 +22,7 @@ The main goal of this project is to create a model that can accurately predict t
 - **Selling Price Calculation**: Automatically calculates selling price with profit rules (keep 50% of profit, rounded down)
 - **Squad History**: Store and view squad snapshots for each gameweek
 - **Database Caching**: Reduce API calls by storing team data locally
+- **Recommended Transfers Price Display**: Shows purchase price, current market value, and selling price for players being transferred out
 
 ### Transfer System
 - **Free Transfer Management**: Track free transfers (1 per week, max 2 banked)
