@@ -641,17 +641,17 @@ const getRecommendedTransfers = async (req, res) => {
       weakestPlayers.forEach((weakPlayer, weakPlayerIndex) => {
         const weakPlayerPoints = parseFloat(weakPlayer.ep_next);
         const weakPlayerPrice = weakPlayer.now_cost / 10; // Convert to actual price
-        
+
         // Get all better options excluding already recommended
         // ONLY recommend players with HIGHER predicted points
         let betterOptions = availablePosPlayers
           .filter(p => parseFloat(p.ep_next) > weakPlayerPoints && !alreadyRecommended.has(p.id));
-        
+
         // If no better options exist, skip this player (don't recommend downgrades)
         if (betterOptions.length === 0) {
           return; // Skip to next weak player
         }
-        
+
         // Diversify recommendations based on price ranges
         // Similar price: within ±0.5m
         // Budget: 0.5m+ cheaper
@@ -659,12 +659,12 @@ const getRecommendedTransfers = async (req, res) => {
         const similarPrice = betterOptions.filter(p => Math.abs((p.now_cost / 10) - weakPlayerPrice) <= 0.5);
         const budget = betterOptions.filter(p => (p.now_cost / 10) < weakPlayerPrice - 0.5);
         const premium = betterOptions.filter(p => (p.now_cost / 10) > weakPlayerPrice + 0.5);
-        
+
         // For each weak player, distribute recommendations across price ranges
         // Take best from each category to ensure diversity
         const alternatives = [];
         const maxPerCategory = Math.ceil(MAX_ALTERNATIVES / 3);
-        
+
         // Strategy: Alternate between price categories to provide diverse options
         if (weakPlayerIndex % 3 === 0) {
           // First weak player: focus on similar price + some premium
@@ -682,11 +682,11 @@ const getRecommendedTransfers = async (req, res) => {
           alternatives.push(...similarPrice.slice(4, 6));
           alternatives.push(...premium.slice(2, 3));
         }
-        
+
         // Remove duplicates and take top MAX_ALTERNATIVES
         const uniqueAlternatives = [...new Map(alternatives.map(p => [p.id, p])).values()]
           .slice(0, MAX_ALTERNATIVES);
-        
+
         // If still not enough, fill with next best options
         if (uniqueAlternatives.length < MAX_ALTERNATIVES) {
           const remainingOptions = betterOptions
@@ -694,26 +694,35 @@ const getRecommendedTransfers = async (req, res) => {
             .slice(0, MAX_ALTERNATIVES - uniqueAlternatives.length);
           uniqueAlternatives.push(...remainingOptions);
         }
-        
+
         // Mark these alternatives as recommended
         uniqueAlternatives.forEach(alt => alreadyRecommended.add(alt.id));
-        
+
         if (uniqueAlternatives.length > 0) {
           // Calculate selling price for playerOut
           const purchaseInfo = purchasePriceMap[weakPlayer.id];
           let purchasePrice = null;
           let sellingPrice = null;
-          
+
           if (purchaseInfo) {
             purchasePrice = purchaseInfo.purchasePrice;
             const currentPrice = weakPlayer.now_cost;
-            
+
             // Calculate selling price using FPL rules: keep 50% of profit, rounded down
             const profit = currentPrice - purchasePrice;
             const profitToKeep = profit > 0 ? Math.floor(profit / 2) : 0;
             sellingPrice = purchasePrice + profitToKeep;
+
+            // Add console logging for price info
+            console.log(`Player: ${weakPlayer.first_name} ${weakPlayer.second_name} (ID: ${weakPlayer.id})`);
+            console.log(`  Purchase Price: ${purchasePrice}`);
+            console.log(`  Current Price: ${currentPrice}`);
+            console.log(`  Selling Price: ${sellingPrice}`);
+          } else {
+            // Log if no purchase info found
+            console.log(`Player: ${weakPlayer.first_name} ${weakPlayer.second_name} (ID: ${weakPlayer.id}) - No purchase info found`);
           }
-          
+
           posRecommendations.push({
             playerOut: {
               id: weakPlayer.id,
