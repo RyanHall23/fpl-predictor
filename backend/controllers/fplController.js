@@ -497,8 +497,52 @@ const getRecommendedTransfers = async (req, res) => {
         }
       }
     } catch (squadError) {
-      // Squad not initialized yet, will just show current prices
-      console.warn('Squad data not found for entryId', entryId, '- showing current prices only');
+      // Squad not initialized yet - try to estimate purchase prices from FPL API
+      console.warn('Squad data not found for entryId', entryId, '- attempting to estimate purchase prices from player history');
+      
+      try {
+        // Fetch the user's history to see which gameweeks they've been active
+        const userHistory = await dataProvider.fetchHistory(entryId);
+        const firstGameweek = userHistory.current && userHistory.current.length > 0 
+          ? userHistory.current[0].event 
+          : 1;
+        
+        // For each player in their current team, try to estimate when they were added
+        const playerIds = picksData.picks.map(p => p.element);
+        
+        for (const playerId of playerIds) {
+          try {
+            // Fetch element summary to get historical prices
+            const elementSummary = await dataProvider.fetchElementSummary(playerId);
+            
+            if (elementSummary && elementSummary.history && elementSummary.history.length > 0) {
+              // Find the first gameweek in the user's history where this could have been purchased
+              // Use the price from that gameweek or the first available price
+              const relevantHistory = elementSummary.history.filter(h => h.round >= firstGameweek);
+              
+              if (relevantHistory.length > 0) {
+                // Use the first relevant gameweek's price as purchase price
+                const purchasePrice = relevantHistory[0].value;
+                const currentPrice = elementSummary.history[elementSummary.history.length - 1].value;
+                
+                purchasePriceMap[playerId] = {
+                  purchasePrice: purchasePrice,
+                  currentPrice: currentPrice
+                };
+              }
+            }
+          } catch (elementError) {
+            // Skip this player if we can't fetch their history
+            console.warn(`Could not fetch history for player ${playerId}:`, elementError.message);
+          }
+        }
+        
+        if (Object.keys(purchasePriceMap).length > 0) {
+          console.log(`Estimated purchase prices for ${Object.keys(purchasePriceMap).length} players from FPL API`);
+        }
+      } catch (historyError) {
+        console.warn('Could not estimate purchase prices from FPL API:', historyError.message);
+      }
     }
     
     // Calculate cumulative predicted points across multiple gameweeks
