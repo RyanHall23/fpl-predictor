@@ -63,6 +63,107 @@ async function findMostRecentPurchasePrice(userId, playerId, currentGameweek) {
   }
 }
 
+/**
+ * Calculate purchase prices for current squad by analyzing FPL picks history
+ * Handles in/out/in scenarios by finding when each player was most recently added
+ * @param {number} entryId - FPL entry/team ID
+ * @param {Array<number>} currentPlayerIds - Array of player IDs currently in the squad
+ * @param {number} currentGameweek - Current gameweek number
+ * @returns {Promise<Object>} - Map of playerId to {purchasePrice, currentPrice, gameweekAdded}
+ */
+async function calculatePurchasePricesFromPicks(entryId, currentPlayerIds, currentGameweek) {
+  const purchasePriceMap = {};
+  
+  try {
+    // Fetch picks for all gameweeks from 1 to current
+    const picksHistory = {};
+    
+    console.log(`Fetching picks history for entry ${entryId} from GW1 to GW${currentGameweek}`);
+    
+    // Fetch picks for each gameweek (with some rate limiting consideration)
+    for (let gw = 1; gw <= currentGameweek; gw++) {
+      try {
+        const picks = await dataProvider.fetchPlayerPicks(entryId, gw);
+        if (picks && picks.picks) {
+          picksHistory[gw] = picks.picks.map(p => p.element);
+        }
+        // Small delay to avoid overwhelming the API (only if using real API)
+        if (dataProvider.USE_FPL_API && gw < currentGameweek) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      } catch (error) {
+        console.warn(`Could not fetch picks for GW${gw}:`, error.message);
+        // Continue with other gameweeks
+      }
+    }
+    
+    console.log(`Fetched picks for ${Object.keys(picksHistory).length} gameweeks`);
+    
+    // For each current player, find when they were most recently added
+    for (const playerId of currentPlayerIds) {
+      try {
+        let gameweekAdded = null;
+        let wasInPreviousGW = false;
+        
+        // Walk through gameweeks chronologically
+        for (let gw = 1; gw <= currentGameweek; gw++) {
+          if (!picksHistory[gw]) continue;
+          
+          const isInCurrentGW = picksHistory[gw].includes(playerId);
+          
+          if (isInCurrentGW && !wasInPreviousGW) {
+            // Player was added in this gameweek (either first time or re-added)
+            gameweekAdded = gw;
+          }
+          
+          wasInPreviousGW = isInCurrentGW;
+        }
+        
+        // Now fetch element summary to get the price at that gameweek
+        if (gameweekAdded) {
+          const elementSummary = await dataProvider.fetchElementSummary(playerId);
+          
+          if (elementSummary && elementSummary.history) {
+            // Find the price at the gameweek they were added
+            const historyEntry = elementSummary.history.find(h => h.round === gameweekAdded);
+            
+            if (historyEntry) {
+              const purchasePrice = historyEntry.value;
+              // Get current price from latest history entry
+              const latestHistory = elementSummary.history[elementSummary.history.length - 1];
+              const currentPrice = latestHistory ? latestHistory.value : purchasePrice;
+              
+              purchasePriceMap[playerId] = {
+                purchasePrice,
+                currentPrice,
+                gameweekAdded
+              };
+              
+              console.log(`Player ${playerId}: Added in GW${gameweekAdded}, Purchase: £${purchasePrice / 10}m, Current: £${currentPrice / 10}m`);
+            } else {
+              console.warn(`Player ${playerId}: No history entry found for GW${gameweekAdded}`);
+            }
+          }
+        } else {
+          console.warn(`Player ${playerId}: Could not determine when they were added`);
+        }
+        
+        // Small delay between element-summary calls
+        if (dataProvider.USE_FPL_API) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      } catch (playerError) {
+        console.warn(`Error processing player ${playerId}:`, playerError.message);
+      }
+    }
+    
+    return purchasePriceMap;
+  } catch (error) {
+    console.error('Error calculating purchase prices from picks:', error);
+    return {};
+  }
+}
+
 
 const getBootstrapStatic = async (req, res) => {
   try {
@@ -497,51 +598,23 @@ const getRecommendedTransfers = async (req, res) => {
         }
       }
     } catch (squadError) {
-      // Squad not initialized yet - try to estimate purchase prices from FPL API
-      console.warn('Squad data not found for entryId', entryId, '- attempting to estimate purchase prices from player history');
+      // Squad not initialized yet - calculate purchase prices from FPL picks API
+      console.warn('Squad data not found for entryId', entryId, '- calculating purchase prices from FPL picks history');
       
       try {
-        // Fetch the user's history to see which gameweeks they've been active
-        const userHistory = await dataProvider.fetchHistory(entryId);
-        const firstGameweek = userHistory.current && userHistory.current.length > 0 
-          ? userHistory.current[0].event 
-          : 1;
+        // Get current player IDs
+        const currentPlayerIds = picksData.picks.map(p => p.element);
         
-        // For each player in their current team, try to estimate when they were added
-        const playerIds = picksData.picks.map(p => p.element);
-        
-        for (const playerId of playerIds) {
-          try {
-            // Fetch element summary to get historical prices
-            const elementSummary = await dataProvider.fetchElementSummary(playerId);
-            
-            if (elementSummary && elementSummary.history && elementSummary.history.length > 0) {
-              // Find the first gameweek in the user's history where this could have been purchased
-              // Use the price from that gameweek or the first available price
-              const relevantHistory = elementSummary.history.filter(h => h.round >= firstGameweek);
-              
-              if (relevantHistory.length > 0) {
-                // Use the first relevant gameweek's price as purchase price
-                const purchasePrice = relevantHistory[0].value;
-                const currentPrice = elementSummary.history[elementSummary.history.length - 1].value;
-                
-                purchasePriceMap[playerId] = {
-                  purchasePrice: purchasePrice,
-                  currentPrice: currentPrice
-                };
-              }
-            }
-          } catch (elementError) {
-            // Skip this player if we can't fetch their history
-            console.warn(`Could not fetch history for player ${playerId}:`, elementError.message);
-          }
-        }
+        // Calculate purchase prices using picks history
+        purchasePriceMap = await calculatePurchasePricesFromPicks(entryId, currentPlayerIds, currentEvent.id);
         
         if (Object.keys(purchasePriceMap).length > 0) {
-          console.log(`Estimated purchase prices for ${Object.keys(purchasePriceMap).length} players from FPL API`);
+          console.log(`Calculated purchase prices for ${Object.keys(purchasePriceMap).length} players from FPL picks history`);
+        } else {
+          console.warn('No purchase prices could be calculated from picks history');
         }
-      } catch (historyError) {
-        console.warn('Could not estimate purchase prices from FPL API:', historyError.message);
+      } catch (picksError) {
+        console.warn('Could not calculate purchase prices from FPL picks:', picksError.message);
       }
     }
     
