@@ -75,7 +75,7 @@ async function calculatePurchasePricesFromPicks(entryId, currentPlayerIds, curre
   const purchasePriceMap = {};
   
   try {
-    console.log(`Fetching picks history for entry ${entryId} from GW1 to GW${currentGameweek}`);
+    console.log(`[calculatePurchasePricesFromPicks] Starting for entry ${entryId}, GW1-${currentGameweek}, ${currentPlayerIds.length} players`);
     
     // Fetch picks for all gameweeks in parallel with batching to avoid overwhelming API
     const batchSize = 10; // Process 10 gameweeks at a time
@@ -110,7 +110,12 @@ async function calculatePurchasePricesFromPicks(entryId, currentPlayerIds, curre
       }
     }
     
-    console.log(`Fetched picks for ${Object.keys(picksHistory).length} gameweeks`);
+    console.log(`[calculatePurchasePricesFromPicks] Fetched picks for ${Object.keys(picksHistory).length} gameweeks`);
+    
+    if (Object.keys(picksHistory).length === 0) {
+      console.warn('[calculatePurchasePricesFromPicks] No picks history fetched - cannot calculate purchase prices');
+      return {};
+    }
     
     // For each current player, find when they were most recently added
     for (const playerId of currentPlayerIds) {
@@ -146,8 +151,10 @@ async function calculatePurchasePricesFromPicks(entryId, currentPlayerIds, curre
     // Now fetch element summaries in parallel for all players
     const playerIdsToFetch = Object.keys(purchasePriceMap).map(id => parseInt(id));
     
+    console.log(`[calculatePurchasePricesFromPicks] Found gameweek added for ${playerIdsToFetch.length}/${currentPlayerIds.length} players`);
+    
     if (playerIdsToFetch.length > 0) {
-      console.log(`Fetching element summaries for ${playerIdsToFetch.length} players`);
+      console.log(`[calculatePurchasePricesFromPicks] Fetching element summaries for ${playerIdsToFetch.length} players`);
       
       const elementResults = await Promise.allSettled(
         playerIdsToFetch.map(playerId => dataProvider.fetchElementSummary(playerId))
@@ -161,11 +168,33 @@ async function calculatePurchasePricesFromPicks(entryId, currentPlayerIds, curre
         if (result.status === 'fulfilled' && result.value && result.value.history) {
           const elementSummary = result.value;
           
-          // Find the price at the gameweek they were added
-          const historyEntry = elementSummary.history.find(h => h.round === gameweekAdded);
+          // Find the price at the START of the gameweek they were added
+          // The history entry shows the price at the END of each gameweek
+          // So we need to use the price from the PREVIOUS gameweek (or start price for GW1)
+          let purchasePrice = null;
           
-          if (historyEntry) {
-            const purchasePrice = historyEntry.value;
+          if (gameweekAdded === 1) {
+            // For GW1, check if there's a history entry, otherwise use bootstrap start price
+            const gw1Entry = elementSummary.history.find(h => h.round === 1);
+            if (gw1Entry) {
+              purchasePrice = gw1Entry.value;
+            }
+          } else {
+            // For other gameweeks, use the price from the PREVIOUS gameweek
+            // This is the price at the time of transfer
+            const previousGwEntry = elementSummary.history.find(h => h.round === gameweekAdded - 1);
+            if (previousGwEntry) {
+              purchasePrice = previousGwEntry.value;
+            } else {
+              // Fallback: if previous GW not found, use the entry for the added GW
+              const historyEntry = elementSummary.history.find(h => h.round === gameweekAdded);
+              if (historyEntry) {
+                purchasePrice = historyEntry.value;
+              }
+            }
+          }
+          
+          if (purchasePrice !== null) {
             // Get current price from latest history entry
             const latestHistory = elementSummary.history[elementSummary.history.length - 1];
             const currentPrice = latestHistory ? latestHistory.value : purchasePrice;
@@ -176,18 +205,19 @@ async function calculatePurchasePricesFromPicks(entryId, currentPlayerIds, curre
               gameweekAdded
             };
             
-            console.log(`Player ${playerId}: Added in GW${gameweekAdded}, Purchase: £${purchasePrice / 10}m, Current: £${currentPrice / 10}m`);
+            console.log(`[calculatePurchasePricesFromPicks] Player ${playerId}: Added in GW${gameweekAdded}, Purchase: £${purchasePrice / 10}m, Current: £${currentPrice / 10}m`);
           } else {
-            console.warn(`Player ${playerId}: No history entry found for GW${gameweekAdded}`);
+            console.warn(`[calculatePurchasePricesFromPicks] Player ${playerId}: No history entry found for GW${gameweekAdded} or previous GW`);
             delete purchasePriceMap[playerId];
           }
         } else if (result.status === 'rejected') {
-          console.warn(`Player ${playerId}: Could not fetch element summary:`, result.reason?.message || 'Unknown error');
+          console.warn(`[calculatePurchasePricesFromPicks] Player ${playerId}: Could not fetch element summary:`, result.reason?.message || 'Unknown error');
           delete purchasePriceMap[playerId];
         }
       });
     }
     
+    console.log(`[calculatePurchasePricesFromPicks] Successfully calculated prices for ${Object.keys(purchasePriceMap).length} players`);
     return purchasePriceMap;
   } catch (error) {
     console.error('Error calculating purchase prices from picks:', error);
@@ -594,16 +624,22 @@ const getRecommendedTransfers = async (req, res) => {
     let userId = null;
     let squadData = null;
     let purchasePriceMap = {};
+    
+    console.log(`[getRecommendedTransfers] Attempting to fetch squad data for entryId: ${entryId}`);
+    
     try {
       const user = await User.findOne({ teamid: entryId });
       if (user) {
+        console.log(`[getRecommendedTransfers] User found: ${user._id}`);
         userId = user._id;
         squadData = await Squad.findOne({ userId: user._id });
+        console.log(`[getRecommendedTransfers] Squad data ${squadData ? 'found' : 'not found'}`);
         
         // For each player in the current squad, find their most recent purchase price
         // from squad history to handle in/out/in scenarios correctly
         if (squadData && squadData.players.length > 0) {
           // Try to get accurate purchase prices from squad history
+          console.log(`[getRecommendedTransfers] Processing ${squadData.players.length} players from squad data`);
           for (const player of squadData.players) {
             const historyData = await findMostRecentPurchasePrice(
               user._id, 
@@ -626,11 +662,21 @@ const getRecommendedTransfers = async (req, res) => {
               };
             }
           }
+          console.log(`[getRecommendedTransfers] Populated purchase prices for ${Object.keys(purchasePriceMap).length} players from squad data`);
+        } else {
+          console.log('[getRecommendedTransfers] User found but no squad data available - will calculate from FPL picks history');
         }
+      } else {
+        console.log(`[getRecommendedTransfers] No user found for entryId: ${entryId} - will calculate from FPL picks history`);
       }
     } catch (squadError) {
       // Squad not initialized yet - calculate purchase prices from FPL picks API
-      console.warn('Squad data not found for entryId', entryId, '- calculating purchase prices from FPL picks history');
+      console.warn('[getRecommendedTransfers] Error fetching squad data:', squadError.message, '- will calculate from FPL picks history');
+    }
+    
+    // If no purchase prices were found from squad data, calculate from FPL picks history
+    if (Object.keys(purchasePriceMap).length === 0) {
+      console.log('[getRecommendedTransfers] No squad data available - calculating purchase prices from FPL picks history');
       
       try {
         // Get current player IDs
@@ -640,13 +686,53 @@ const getRecommendedTransfers = async (req, res) => {
         purchasePriceMap = await calculatePurchasePricesFromPicks(entryId, currentPlayerIds, currentEvent.id);
         
         if (Object.keys(purchasePriceMap).length > 0) {
-          console.log(`Calculated purchase prices for ${Object.keys(purchasePriceMap).length} players from FPL picks history`);
+          console.log(`[getRecommendedTransfers] Calculated purchase prices for ${Object.keys(purchasePriceMap).length} players from FPL picks history`);
         } else {
-          console.warn('No purchase prices could be calculated from picks history');
+          console.warn('[getRecommendedTransfers] No purchase prices could be calculated from picks history - using fallback (now_cost)');
+          // Fallback: Use current price as purchase price for all players
+          currentPlayerIds.forEach(playerId => {
+            const playerData = bootstrap.elements.find(p => p.id === playerId);
+            if (playerData) {
+              purchasePriceMap[playerId] = {
+                purchasePrice: playerData.now_cost,
+                currentPrice: playerData.now_cost,
+                gameweekAdded: null // Unknown
+              };
+            }
+          });
         }
       } catch (picksError) {
-        console.warn('Could not calculate purchase prices from FPL picks:', picksError.message);
+        console.warn('[getRecommendedTransfers] Could not calculate purchase prices from FPL picks:', picksError.message);
+        // Fallback: Use current price as purchase price for all players
+        const currentPlayerIds = picksData.picks.map(p => p.element);
+        currentPlayerIds.forEach(playerId => {
+          const playerData = bootstrap.elements.find(p => p.id === playerId);
+          if (playerData) {
+            purchasePriceMap[playerId] = {
+              purchasePrice: playerData.now_cost,
+              currentPrice: playerData.now_cost,
+              gameweekAdded: null // Unknown
+            };
+          }
+        });
       }
+    }
+    
+    // Final safety check: If purchasePriceMap is still empty, use current prices as fallback
+    if (Object.keys(purchasePriceMap).length === 0) {
+      console.warn('Purchase price map is empty after all attempts - using current prices as final fallback');
+      const currentPlayerIds = picksData.picks.map(p => p.element);
+      currentPlayerIds.forEach(playerId => {
+        const playerData = bootstrap.elements.find(p => p.id === playerId);
+        if (playerData) {
+          purchasePriceMap[playerId] = {
+            purchasePrice: playerData.now_cost,
+            currentPrice: playerData.now_cost,
+            gameweekAdded: null // Unknown
+          };
+        }
+      });
+      console.log(`Populated purchase price map with ${Object.keys(purchasePriceMap).length} players using current prices`);
     }
     
     // Calculate cumulative predicted points across multiple gameweeks
@@ -812,19 +898,28 @@ const getRecommendedTransfers = async (req, res) => {
             purchasePrice = purchaseInfo.purchasePrice;
             const currentPrice = weakPlayer.now_cost;
 
-            // Calculate selling price using FPL rules: keep 50% of profit, rounded down
-            const profit = currentPrice - purchasePrice;
-            const profitToKeep = profit > 0 ? Math.floor(profit / 2) : 0;
-            sellingPrice = purchasePrice + profitToKeep;
+            // Calculate selling price using FPL rules:
+            // - If price dropped: selling price = current price (you lose the full amount)
+            // - If price increased: selling price = purchase price + floor(profit / 2)
+            if (currentPrice <= purchasePrice) {
+              sellingPrice = currentPrice;
+            } else {
+              const profit = currentPrice - purchasePrice;
+              const profitToKeep = Math.floor(profit / 2);
+              sellingPrice = purchasePrice + profitToKeep;
+            }
 
             // Add console logging for price info
-            console.log(`Player: ${weakPlayer.first_name} ${weakPlayer.second_name} (ID: ${weakPlayer.id})`);
-            console.log(`  Purchase Price: ${purchasePrice}`);
-            console.log(`  Current Price: ${currentPrice}`);
-            console.log(`  Selling Price: ${sellingPrice}`);
+            // Price info logging removed - can be enabled for debugging
+            // console.log(`Player: ${weakPlayer.first_name} ${weakPlayer.second_name} (ID: ${weakPlayer.id})`);
+            // console.log(`  Purchase Price: ${purchasePrice}`);
+            // console.log(`  Current Price: ${currentPrice}`);
+            // console.log(`  Selling Price: ${sellingPrice}`);
           } else {
-            // Log if no purchase info found
-            console.log(`Player: ${weakPlayer.first_name} ${weakPlayer.second_name} (ID: ${weakPlayer.id}) - No purchase info found`);
+            // Purchase info not found - player uses current price as both purchase and selling price
+            purchasePrice = weakPlayer.now_cost;
+            sellingPrice = weakPlayer.now_cost;
+            console.warn(`Player ${weakPlayer.id}: Using current price (${weakPlayer.now_cost}) as fallback for purchase/selling price`);
           }
 
           posRecommendations.push({
