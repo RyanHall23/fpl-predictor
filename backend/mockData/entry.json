@@ -1,0 +1,80 @@
+{
+  "id": 123456,
+  "joined_time": "2024-07-01T10:00:00Z",
+  "started_event": 1,
+  "favourite_team": 11,
+  "player_first_name": "Test",
+  "player_last_name": "User",
+  "player_region_id": 1,
+  "player_region_name": "England",
+  "player_region_iso_code_short": "ENG",
+  "player_region_iso_code_long": "ENG",
+  "summary_overall_points": 93,
+  "summary_overall_rank": 1234567,
+  "summary_event_points": 45,
+  "summary_event_rank": 987654,
+  "current_event": 2,
+  "leagues": {
+    "classic": [
+      {
+        "id": 314,
+        "name": "Overall",
+        "short_name": null,
+        "created": "2024-07-01T00:00:00Z",
+        "closed": false,
+        "rank": null,
+        "max_entries": null,
+        "league_type": "s",
+        "scoring": "c",
+        "admin_entry": null,
+        "start_event": 1,
+        "entry_can_leave": false,
+        "entry_can_admin": false,
+        "entry_can_invite": false,
+        "has_cup": false,
+        "cup_league": null,
+        "cup_qualified": null,
+        "entry_rank": 1234567,
+        "entry_last_rank": 1234567
+      },
+      {
+        "id": 12345,
+        "name": "Test League",
+        "short_name": "TL",
+        "created": "2024-07-15T12:00:00Z",
+        "closed": false,
+        "rank": 5,
+        "max_entries": 50,
+        "league_type": "x",
+        "scoring": "c",
+        "admin_entry": 123456,
+        "start_event": 1,
+        "entry_can_leave": true,
+        "entry_can_admin": true,
+        "entry_can_invite": true,
+        "has_cup": false,
+        "cup_league": null,
+        "cup_qualified": null,
+        "entry_rank": 5,
+        "entry_last_rank": 6
+      }
+    ],
+    "h2h": [],
+    "cup": {
+      "matches": [],
+      "status": {
+        "qualification_event": null,
+        "qualification_numbers": null,
+        "qualification_rank": null,
+        "qualification_state": null
+      }
+    },
+    "cup_matches": []
+  },
+  "name": "Test User Team",
+  "name_change_blocked": false,
+  "kit": null,
+  "last_deadline_bank": 5,
+  "last_deadline_value": 1000,
+  "last_deadline_total_transfers": 0
+}

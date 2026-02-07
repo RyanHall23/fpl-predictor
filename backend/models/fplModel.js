@@ -1,8 +1,9 @@
-const axios = require('axios');
+const dataProvider = require('./dataProvider');
 
 // Global toggles — can be overridden via env vars
 // USE_COMPUTED_EP: 'true' | 'false' (prefer computed EP and optionally overwrite ep_next)
 // INCLUDE_MANAGERS: 'true' | 'false' (enable manager placeholders in squads)
+// USE_FPL_API: 'true' | 'false' (use real FPL API vs local mock data)
 const USE_COMPUTED_EP = (process.env.USE_COMPUTED_EP ?? 'true') === 'true';
 const INCLUDE_MANAGERS_GLOBAL = (process.env.INCLUDE_MANAGERS ?? 'false') === 'false';
 
@@ -132,30 +133,12 @@ const getEpValue = (p) => {
   return 0;
 };
 
-const fetchBootstrapStatic = async () => {
-  const response = await axios.get('https://fantasy.premierleague.com/api/bootstrap-static/');
-  return response.data;
-};
-
-const fetchPlayerPicks = async (entryId, eventId) => {
-  const response = await axios.get(`https://fantasy.premierleague.com/api/entry/${entryId}/event/${eventId}/picks/`);
-  return response.data;
-};
-
-const fetchElementSummary = async (playerId) => {
-  const response = await axios.get(`https://fantasy.premierleague.com/api/element-summary/${playerId}/`);
-  return response.data;
-};
-
-const fetchFixtures = async () => {
-  const response = await axios.get('https://fantasy.premierleague.com/api/fixtures/');
-  return response.data;
-};
-
-const fetchLiveGameweek = async (eventId) => {
-  const response = await axios.get(`https://fantasy.premierleague.com/api/event/${eventId}/live/`);
-  return response.data;
-};
+// Re-export data provider functions for backward compatibility
+const fetchBootstrapStatic = dataProvider.fetchBootstrapStatic;
+const fetchPlayerPicks = dataProvider.fetchPlayerPicks;
+const fetchElementSummary = dataProvider.fetchElementSummary;
+const fetchFixtures = dataProvider.fetchFixtures;
+const fetchLiveGameweek = dataProvider.fetchLiveGameweek;
 
 /**
  * Enrich players with stats from a specific gameweek using actual API data.
