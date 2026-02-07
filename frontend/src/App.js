@@ -9,7 +9,6 @@ import { useTheme } from '@mui/material/styles';
 import TeamFormation from './components/TeamFormation/TeamFormation';
 import useTeamData from './hooks/useTeamData';
 import useAllPlayers from './hooks/useAllPlayers';
-import TransferPlayer from './components/TransferPlayer';
 import UserProfilePane from './components/UserProfilePane/UserProfilePane';
 import AccountPage from './components/AccountPage/AccountPage';
 import RecommendedTransfers from './components/RecommendedTransfers';
@@ -55,7 +54,7 @@ const App = () => {
     selectedGameweek
   );
 
-  const { allPlayers, loading: allPlayersLoading } = useAllPlayers();
+  const { allPlayers } = useAllPlayers();
 
   const [snackbarOpen, setSnackbarOpen] = useState(false);
 
@@ -82,7 +81,7 @@ const App = () => {
       }
     };
     restoreSession();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, []);
 
   useEffect(() => {
@@ -234,18 +233,18 @@ const App = () => {
           <Box sx={ { flex: 1, maxWidth: '900px' } }>
             { teamView === TEAM_VIEW.SEARCHED && !searchedEntryId ? (
               <Typography variant='h6' align='center' color='textSecondary' sx={ { mt: 4 } }>
-                Enter a Team ID above and click "Search" to view a team's predicted points.
+                Enter a Team ID above and click &quot;Search&quot; to view a team&apos;s predicted points.
               </Typography>
             ) : (
               <>
                 <Typography variant='h6' align='center' gutterBottom>
-                  {gameweekInfo?.isPast ? 'Total Points' : 'Total Predicted Points'}:{ ' ' }
+                  { gameweekInfo?.isPast ? 'Total Points' : 'Total Predicted Points' }:{ ' ' }
                   <Box component='span' sx={ { fontWeight: 'bold' } }>
                     { calculateTotalPredictedPoints(mainTeamData) }
                   </Box>
                 </Typography>
                 <Typography variant='h6' align='center' gutterBottom>
-                  {gameweekInfo?.isPast ? 'Bench Points' : 'Bench Predicted Points'}:{ ' ' }
+                  { gameweekInfo?.isPast ? 'Bench Points' : 'Bench Predicted Points' }:{ ' ' }
                   <Box component='span' sx={ { fontWeight: 'bold' } }>
                     { calculateTotalPredictedPoints(benchTeamData) }
                   </Box>
@@ -305,13 +304,13 @@ const App = () => {
                   </Grid>
                 </Grid>
                 
-                {/* Show Recommended Transfers inline for user and searched teams - BELOW team formation */}
-                {currentEntryId && currentGameweek && (
+                { /* Show Recommended Transfers inline for user and searched teams - BELOW team formation */ }
+                { currentEntryId && currentGameweek && (
                   <RecommendedTransfers
                     entryId={ currentEntryId }
                     currentGameweek={ currentGameweek }
                   />
-                )}
+                ) }
               </>
             ) }
           </Box>

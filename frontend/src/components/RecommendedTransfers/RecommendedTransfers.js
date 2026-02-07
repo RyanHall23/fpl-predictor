@@ -187,12 +187,12 @@ const RecommendedTransfers = ({ entryId, currentGameweek }) => {
                                     } }
                                   >
                                     Current: £{ (rec.playerOut.now_cost / 10).toFixed(1) }m | 
-                                    <span style={{ 
+                                    <span style={ { 
                                       color: rec.playerOut.selling_price > rec.playerOut.purchase_price ? theme.palette.success.main : 
                                              rec.playerOut.selling_price < rec.playerOut.purchase_price ? theme.palette.error.main : 'inherit',
                                       fontWeight: rec.playerOut.selling_price !== rec.playerOut.purchase_price ? 'bold' : 'normal'
-                                    }}>
-                                      {' '}Sell: £{ (rec.playerOut.selling_price / 10).toFixed(1) }m
+                                    } }>
+                                      { ' ' }Sell: £{ (rec.playerOut.selling_price / 10).toFixed(1) }m
                                     </span> | Purchase: £{ (rec.playerOut.purchase_price / 10).toFixed(1) }m
                                   </Typography>
                                 ) : (

@@ -12,7 +12,7 @@ const SquadHistory = require('../models/squadHistoryModel');
  * @param {number} currentGameweek - Current gameweek to look back from
  * @returns {Promise<{purchasePrice: number, gameweekAdded: number} | null>}
  */
-async function findMostRecentPurchasePrice(userId, playerId, currentGameweek) {
+async function findMostRecentPurchasePrice(userId, playerId) {
   try {
     // Get all squad history for this user, sorted by gameweek descending
     const allHistory = await SquadHistory.find({ 
@@ -418,7 +418,7 @@ const getUserTeam = async (req, res) => {
       if (entryData.player_first_name) {
         teamName = `${entryData.player_first_name} ${entryData.player_last_name}`;
       }
-    } catch (e) {
+    } catch {
       teamName = '';
     }
 
@@ -621,7 +621,6 @@ const getRecommendedTransfers = async (req, res) => {
     
     // Try to fetch user's squad from database to get purchase prices
     // First, find the user by their FPL team ID
-    let userId = null;
     let squadData = null;
     let purchasePriceMap = {};
     
@@ -631,7 +630,6 @@ const getRecommendedTransfers = async (req, res) => {
       const user = await User.findOne({ teamid: entryId });
       if (user) {
         console.log(`[getRecommendedTransfers] User found: ${user._id}`);
-        userId = user._id;
         squadData = await Squad.findOne({ userId: user._id });
         console.log(`[getRecommendedTransfers] Squad data ${squadData ? 'found' : 'not found'}`);
         
@@ -853,7 +851,6 @@ const getRecommendedTransfers = async (req, res) => {
         // For each weak player, distribute recommendations across price ranges
         // Take best from each category to ensure diversity
         const alternatives = [];
-        const maxPerCategory = Math.ceil(MAX_ALTERNATIVES / 3);
 
         // Strategy: Alternate between price categories to provide diverse options
         if (weakPlayerIndex % 3 === 0) {

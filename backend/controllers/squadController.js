@@ -1,6 +1,5 @@
 const Squad = require('../models/squadModel');
 const SquadHistory = require('../models/squadHistoryModel');
-const Transfer = require('../models/transferModel');
 const Chip = require('../models/chipModel');
 const dataProvider = require('../models/dataProvider');
 const { validateObjectId, validateEntryId, validateGameweek } = require('../utils/validation');
