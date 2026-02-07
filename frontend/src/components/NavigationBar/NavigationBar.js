@@ -221,7 +221,7 @@ const NavigationBar = ({
               >
                 { Array.from({ length: 38 }, (_, i) => i + 1).map((gw) => (
                   <MenuItem key={ gw } value={ gw }>
-                    GW {gw}{ gw === currentGameweek ? ' (Current)' : '' }
+                    GW { gw }{ gw === currentGameweek ? ' (Current)' : '' }
                   </MenuItem>
                 )) }
               </Select>
@@ -242,7 +242,7 @@ const NavigationBar = ({
               </Button>
             ) }
             <Tooltip title={ mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode' }>
-              <IconButton onClick={ toggleTheme } color='inherit' sx={{ mr: 1 }}>
+              <IconButton onClick={ toggleTheme } color='inherit' sx={ { mr: 1 } }>
                 { mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon /> }
               </IconButton>
             </Tooltip>

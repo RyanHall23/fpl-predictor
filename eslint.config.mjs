@@ -5,6 +5,15 @@ import globals from 'globals';
 
 export default [
   {
+    ignores: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/build/**',
+      '**/.venv/**',
+      '**/coverage/**'
+    ]
+  },
+  {
     files: [
       '**/*.{js,mjs,cjs,jsx}'
     ]
@@ -41,7 +50,7 @@ export default [
     },
     settings: {
       react: {
-        version: 'detect'
+        version: '18.2.0'
       }
     }
   }

@@ -202,6 +202,7 @@ PlayerCard.propTypes = {
     inDreamteam: PropTypes.bool,
     code: PropTypes.number.isRequired,
     position: PropTypes.number.isRequired,
+    teamCode: PropTypes.number,
     user_team: PropTypes.bool,
     opponent: PropTypes.string,
     is_home: PropTypes.bool,

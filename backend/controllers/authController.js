@@ -70,7 +70,7 @@ exports.register = async (req, res) => {
     const hash = await bcrypt.hash(password, 10);
     const user = await User.create({ username: trimmedUsername, password: hash, teamid: teamidStr, email: trimmedEmail });
     res.json({ message: 'Registered', user: { username: user.username, teamid: user.teamid, email: user.email } });
-  } catch (e) {
+  } catch {
     res.status(500).json({ error: 'Registration failed' });
   }
 };
@@ -85,7 +85,7 @@ exports.login = async (req, res) => {
     if (!match) return res.status(401).json({ error: 'Invalid credentials' });
     const token = jwt.sign({ id: user._id, username: user.username, teamid: user.teamid }, JWT_SECRET, { expiresIn: '1d' });
     res.json({ token, username: user.username, teamid: user.teamid, email: user.email });
-  } catch (e) {
+  } catch {
     res.status(500).json({ error: 'Login failed' });
   }
 };
@@ -96,7 +96,7 @@ exports.getProfile = async (req, res) => {
     const user = await User.findById(req.user.id).select('-password');
     if (!user) return res.status(404).json({ error: 'User not found' });
     res.json({ username: user.username, email: user.email, teamid: user.teamid });
-  } catch (e) {
+  } catch {
     res.status(500).json({ error: 'Failed to fetch profile' });
   }
 };
@@ -129,7 +129,7 @@ exports.updateUsername = async (req, res) => {
     // Generate new token with updated username
     const token = jwt.sign({ id: user._id, username: user.username, teamid: user.teamid }, JWT_SECRET, { expiresIn: '1d' });
     res.json({ message: 'Username updated', token, username: user.username });
-  } catch (e) {
+  } catch {
     res.status(500).json({ error: 'Failed to update username' });
   }
 };
@@ -161,7 +161,7 @@ exports.updateEmail = async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     res.json({ message: 'Email updated', email: user.email });
-  } catch (e) {
+  } catch {
     res.status(500).json({ error: 'Failed to update email' });
   }
 };
@@ -188,7 +188,7 @@ exports.updatePassword = async (req, res) => {
     await user.save();
     
     res.json({ message: 'Password updated successfully' });
-  } catch (e) {
+  } catch {
     res.status(500).json({ error: 'Failed to update password' });
   }
 };
@@ -215,7 +215,7 @@ exports.updateTeamId = async (req, res) => {
     // Generate new token with updated teamid
     const token = jwt.sign({ id: user._id, username: user.username, teamid: user.teamid }, JWT_SECRET, { expiresIn: '1d' });
     res.json({ message: 'Team ID updated', token, teamid: user.teamid });
-  } catch (e) {
+  } catch {
     res.status(500).json({ error: 'Failed to update team ID' });
   }
 };
@@ -239,7 +239,7 @@ exports.deleteAccount = async (req, res) => {
     await User.findByIdAndDelete(req.user.id);
     
     res.json({ message: 'Account deleted successfully' });
-  } catch (e) {
+  } catch {
     res.status(500).json({ error: 'Failed to delete account' });
   }
 };

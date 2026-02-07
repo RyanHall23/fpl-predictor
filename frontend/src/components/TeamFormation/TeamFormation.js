@@ -1,6 +1,5 @@
 import React from 'react';
 import { Box, Paper, Typography } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
 import Grid from '@mui/material/Grid';
 import PropTypes from 'prop-types';
 import PlayerCard from '../PlayerCard/PlayerCard';
@@ -15,8 +14,6 @@ const positionLabels = {
 };
 
 const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, onTransfer, isHighestPredictedTeam, onPlayerClick }) => {
-  const theme = useTheme();
-  
   // Find the captain from the team data (for user teams, this comes from picks)
   // For highest predicted teams, calculate based on highest points
   const captain = mainTeam && mainTeam.length
