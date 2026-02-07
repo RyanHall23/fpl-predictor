@@ -43,7 +43,11 @@ The main goal of this project is to create a model that can accurately predict t
 ### API Features
 - **Mock Data Support**: Test without FPL API access using local mock data
 - **RESTful API**: Clean, documented API endpoints
-- **Authentication**: Secure JWT-based authentication
+- **Authentication & Security**: 
+  - JWT-based authentication
+  - NoSQL injection protection via input validation
+  - SSRF protection via URL whitelisting
+  - 4-tier rate limiting (auth, general API, read, write operations)
 
 ## Project Structure
 
@@ -76,7 +80,9 @@ package.json       # Root scripts for running both frontend and backend together
 The backend supports several environment variables to configure behavior:
 
 ### Authentication
-- `JWT_SECRET` - Secret key for JWT token generation (required in production, defaults to 'changeme' in development)
+- `JWT_SECRET` - Secret key for JWT token generation (**required in production**, defaults to 'changeme' in development)
+  - ⚠️ Must be set to a secure random value in production
+  - Generate with: `openssl rand -base64 32`
 
 ### FPL API Configuration
 - `USE_FPL_API` - Controls data source for FPL data (default: `'true'`)

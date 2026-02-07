@@ -191,14 +191,11 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
     };
 
 const swapPlayers = (player1, player2, teamType1, teamType2) => {
-  console.log('Attempting swap:', player1, player2, teamType1, teamType2);
   const fromTeam1 = teamType1 === 'bench' ? benchTeamData : mainTeamData;
   const fromTeam2 = teamType2 === 'bench' ? benchTeamData : mainTeamData;
 
   const index1 = fromTeam1.findIndex((p) => p.name === player1.name);
   const index2 = fromTeam2.findIndex((p) => p.name === player2.name);
-
-  console.log('Indexes found:', index1, index2);
 
   if (index1 !== -1 && index2 !== -1) {
     // Create new arrays to avoid mutating state directly
@@ -219,10 +216,6 @@ const swapPlayers = (player1, player2, teamType1, teamType2) => {
 
     setMainTeamData(newMainTeam);
     setBenchTeamData(newBenchTeam);
-
-    console.log('Swap successful');
-  } else {
-    console.log('Swap failed: player not found');
   }
 };
 

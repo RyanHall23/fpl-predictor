@@ -36,7 +36,7 @@ The solution walks backwards through squad history to find when a player was mos
 
 **Logic:**
 ```javascript
-function findMostRecentPurchasePrice(userId, playerId, currentGameweek):
+function findMostRecentPurchasePrice(userId, playerId):
   Get all squad history sorted by gameweek (descending)
   
   playerWasPresentPreviously = false
@@ -98,7 +98,7 @@ const SquadHistory = require('../models/squadHistoryModel');
 
 2. **New Helper Function:**
 ```javascript
-async function findMostRecentPurchasePrice(userId, playerId, currentGameweek) {
+async function findMostRecentPurchasePrice(userId, playerId) {
   // Queries SquadHistory with snapshotType: 'regular'
   // Returns { purchasePrice, gameweekAdded } or null
 }
@@ -109,8 +109,7 @@ async function findMostRecentPurchasePrice(userId, playerId, currentGameweek) {
 // For each player in squad:
 const historyData = await findMostRecentPurchasePrice(
   user._id, 
-  player.playerId, 
-  currentEvent.id
+  player.playerId
 );
 
 if (historyData && historyData.purchasePrice) {
