@@ -3,6 +3,7 @@ const SquadHistory = require('../models/squadHistoryModel');
 const Transfer = require('../models/transferModel');
 const Chip = require('../models/chipModel');
 const dataProvider = require('../models/dataProvider');
+const { validateObjectId, validateEntryId, validateGameweek } = require('../utils/validation');
 
 /**
  * Initialize a user's squad from FPL API data
@@ -16,14 +17,19 @@ const initializeSquad = async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields: userId, entryId, gameweek' });
     }
     
+    // Validate inputs to prevent NoSQL injection
+    const validatedUserId = validateObjectId(userId);
+    const validatedEntryId = validateEntryId(entryId);
+    const validatedGameweek = validateGameweek(gameweek);
+    
     // Check if squad already exists
-    const existingSquad = await Squad.findOne({ userId });
+    const existingSquad = await Squad.findOne({ userId: validatedUserId });
     if (existingSquad) {
       return res.status(400).json({ error: 'Squad already initialized for this user' });
     }
     
     // Fetch current picks from FPL API
-    const picksData = await dataProvider.fetchPlayerPicks(entryId, gameweek);
+    const picksData = await dataProvider.fetchPlayerPicks(validatedEntryId, validatedGameweek);
     const bootstrapData = await dataProvider.fetchBootstrapStatic();
     
     // Build player map for quick lookup
@@ -108,7 +114,10 @@ const getSquad = async (req, res) => {
   try {
     const { userId } = req.params;
     
-    const squad = await Squad.findOne({ userId });
+    // Validate to prevent NoSQL injection
+    const validatedUserId = validateObjectId(userId);
+    
+    const squad = await Squad.findOne({ userId: validatedUserId });
     if (!squad) {
       return res.status(404).json({ error: 'Squad not found' });
     }
@@ -162,7 +171,11 @@ const getSquadHistory = async (req, res) => {
   try {
     const { userId, gameweek } = req.params;
     
-    const history = await SquadHistory.findOne({ userId, gameweek });
+    // Validate to prevent NoSQL injection
+    const validatedUserId = validateObjectId(userId);
+    const validatedGameweek = validateGameweek(gameweek);
+    
+    const history = await SquadHistory.findOne({ userId: validatedUserId, gameweek: validatedGameweek });
     if (!history) {
       return res.status(404).json({ error: 'Squad history not found for this gameweek' });
     }
@@ -181,7 +194,10 @@ const getAllSquadHistory = async (req, res) => {
   try {
     const { userId } = req.params;
     
-    const history = await SquadHistory.find({ userId }).sort({ gameweek: 1 });
+    // Validate to prevent NoSQL injection
+    const validatedUserId = validateObjectId(userId);
+    
+    const history = await SquadHistory.find({ userId: validatedUserId }).sort({ gameweek: 1 });
     
     res.json(history);
   } catch (error) {
@@ -206,7 +222,11 @@ const updateForNewGameweek = async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields: userId, newGameweek' });
     }
     
-    const squad = await Squad.findOne({ userId });
+    // Validate to prevent NoSQL injection
+    const validatedUserId = validateObjectId(userId);
+    const validatedGameweek = validateGameweek(newGameweek);
+    
+    const squad = await Squad.findOne({ userId: validatedUserId });
     if (!squad) {
       return res.status(404).json({ error: 'Squad not found' });
     }
@@ -214,8 +234,8 @@ const updateForNewGameweek = async (req, res) => {
     // If Free Hit was active, revert to previous gameweek's squad
     if (squad.activeChip === 'free_hit') {
       const previousHistory = await SquadHistory.findOne({ 
-        userId, 
-        gameweek: newGameweek - 1 
+        userId: validatedUserId, 
+        gameweek: validatedGameweek - 1 
       });
       
       if (previousHistory) {

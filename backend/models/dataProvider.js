@@ -1,11 +1,15 @@
 const axios = require('axios');
 const fs = require('fs').promises;
 const path = require('path');
+const { validateEntryId, validateGameweek, validatePlayerId } = require('../utils/validation');
 
 // Environment flag to control data source
 // USE_FPL_API: 'true' (default) - Use real FPL API
 // USE_FPL_API: 'false' - Use local mock data for testing
 const USE_FPL_API = (process.env.USE_FPL_API ?? 'true') === 'true';
+
+// Whitelist of allowed FPL API endpoints
+const FPL_API_BASE = 'https://fantasy.premierleague.com/api';
 
 // Mock data is in backend/mockData, one level up from models directory
 const MOCK_DATA_DIR = path.join(__dirname, '..', 'mockData');
@@ -32,7 +36,8 @@ const loadMockData = async (filename) => {
  */
 const fetchBootstrapStatic = async () => {
   if (USE_FPL_API) {
-    const response = await axios.get('https://fantasy.premierleague.com/api/bootstrap-static/');
+    const url = `${FPL_API_BASE}/bootstrap-static/`;
+    const response = await axios.get(url);
     return response.data;
   } else {
     console.log('[Mock Mode] Fetching bootstrap-static from local data');
@@ -47,11 +52,16 @@ const fetchBootstrapStatic = async () => {
  * @returns {Promise<any>} - Player picks data
  */
 const fetchPlayerPicks = async (entryId, eventId) => {
+  // Validate inputs to prevent SSRF
+  const validatedEntryId = validateEntryId(entryId);
+  const validatedEventId = validateGameweek(eventId);
+  
   if (USE_FPL_API) {
-    const response = await axios.get(`https://fantasy.premierleague.com/api/entry/${entryId}/event/${eventId}/picks/`);
+    const url = `${FPL_API_BASE}/entry/${validatedEntryId}/event/${validatedEventId}/picks/`;
+    const response = await axios.get(url);
     return response.data;
   } else {
-    console.log(`[Mock Mode] Fetching player picks for entry ${entryId} event ${eventId} from local data`);
+    console.log(`[Mock Mode] Fetching player picks for entry ${validatedEntryId} event ${validatedEventId} from local data`);
     return await loadMockData('player-picks.json');
   }
 };
@@ -62,11 +72,15 @@ const fetchPlayerPicks = async (entryId, eventId) => {
  * @returns {Promise<any>} - Element summary data
  */
 const fetchElementSummary = async (playerId) => {
+  // Validate input to prevent SSRF
+  const validatedPlayerId = validatePlayerId(playerId);
+  
   if (USE_FPL_API) {
-    const response = await axios.get(`https://fantasy.premierleague.com/api/element-summary/${playerId}/`);
+    const url = `${FPL_API_BASE}/element-summary/${validatedPlayerId}/`;
+    const response = await axios.get(url);
     return response.data;
   } else {
-    console.log(`[Mock Mode] Fetching element summary for player ${playerId} from local data`);
+    console.log(`[Mock Mode] Fetching element summary for player ${validatedPlayerId} from local data`);
     return await loadMockData('element-summary.json');
   }
 };
@@ -77,7 +91,8 @@ const fetchElementSummary = async (playerId) => {
  */
 const fetchFixtures = async () => {
   if (USE_FPL_API) {
-    const response = await axios.get('https://fantasy.premierleague.com/api/fixtures/');
+    const url = `${FPL_API_BASE}/fixtures/`;
+    const response = await axios.get(url);
     return response.data;
   } else {
     console.log('[Mock Mode] Fetching fixtures from local data');
@@ -91,11 +106,15 @@ const fetchFixtures = async () => {
  * @returns {Promise<any>} - Live gameweek data
  */
 const fetchLiveGameweek = async (eventId) => {
+  // Validate input to prevent SSRF
+  const validatedEventId = validateGameweek(eventId);
+  
   if (USE_FPL_API) {
-    const response = await axios.get(`https://fantasy.premierleague.com/api/event/${eventId}/live/`);
+    const url = `${FPL_API_BASE}/event/${validatedEventId}/live/`;
+    const response = await axios.get(url);
     return response.data;
   } else {
-    console.log(`[Mock Mode] Fetching live gameweek ${eventId} from local data`);
+    console.log(`[Mock Mode] Fetching live gameweek ${validatedEventId} from local data`);
     return await loadMockData('live-gameweek.json');
   }
 };
@@ -106,11 +125,15 @@ const fetchLiveGameweek = async (eventId) => {
  * @returns {Promise<any>} - Entry data
  */
 const fetchEntry = async (entryId) => {
+  // Validate input to prevent SSRF
+  const validatedEntryId = validateEntryId(entryId);
+  
   if (USE_FPL_API) {
-    const response = await axios.get(`https://fantasy.premierleague.com/api/entry/${entryId}/`);
+    const url = `${FPL_API_BASE}/entry/${validatedEntryId}/`;
+    const response = await axios.get(url);
     return response.data;
   } else {
-    console.log(`[Mock Mode] Fetching entry ${entryId} from local data`);
+    console.log(`[Mock Mode] Fetching entry ${validatedEntryId} from local data`);
     return await loadMockData('entry.json');
   }
 };
@@ -121,11 +144,15 @@ const fetchEntry = async (entryId) => {
  * @returns {Promise<any>} - History data
  */
 const fetchHistory = async (entryId) => {
+  // Validate input to prevent SSRF
+  const validatedEntryId = validateEntryId(entryId);
+  
   if (USE_FPL_API) {
-    const response = await axios.get(`https://fantasy.premierleague.com/api/entry/${entryId}/history/`);
+    const url = `${FPL_API_BASE}/entry/${validatedEntryId}/history/`;
+    const response = await axios.get(url);
     return response.data;
   } else {
-    console.log(`[Mock Mode] Fetching history for entry ${entryId} from local data`);
+    console.log(`[Mock Mode] Fetching history for entry ${validatedEntryId} from local data`);
     return await loadMockData('history.json');
   }
 };

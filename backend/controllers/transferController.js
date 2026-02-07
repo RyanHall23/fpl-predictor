@@ -3,6 +3,7 @@ const SquadHistory = require('../models/squadHistoryModel');
 const Transfer = require('../models/transferModel');
 const Chip = require('../models/chipModel');
 const dataProvider = require('../models/dataProvider');
+const { validateObjectId, validateGameweek, validatePlayerId } = require('../utils/validation');
 
 /**
  * Make a transfer (swap one player for another)
@@ -17,20 +18,26 @@ const makeTransfer = async (req, res) => {
       });
     }
     
+    // Validate to prevent NoSQL injection
+    const validatedUserId = validateObjectId(userId);
+    const validatedPlayerOutId = validatePlayerId(playerOutId);
+    const validatedPlayerInId = validatePlayerId(playerInId);
+    const validatedGameweek = validateGameweek(gameweek);
+    
     // Get squad
-    const squad = await Squad.findOne({ userId });
+    const squad = await Squad.findOne({ userId: validatedUserId });
     if (!squad) {
       return res.status(404).json({ error: 'Squad not found' });
     }
     
-    if (squad.gameweek !== gameweek) {
+    if (squad.gameweek !== validatedGameweek) {
       return res.status(400).json({ 
-        error: `Squad is on gameweek ${squad.gameweek}, but transfer requested for gameweek ${gameweek}` 
+        error: `Squad is on gameweek ${squad.gameweek}, but transfer requested for gameweek ${validatedGameweek}` 
       });
     }
     
     // Find player to remove
-    const playerOutIndex = squad.players.findIndex(p => p.playerId === playerOutId);
+    const playerOutIndex = squad.players.findIndex(p => p.playerId === validatedPlayerOutId);
     if (playerOutIndex === -1) {
       return res.status(400).json({ error: 'Player to remove not found in squad' });
     }
@@ -44,12 +51,12 @@ const makeTransfer = async (req, res) => {
       playerMap[player.id] = player;
     });
     
-    const playerInData = playerMap[playerInId];
+    const playerInData = playerMap[validatedPlayerInId];
     if (!playerInData) {
       return res.status(400).json({ error: 'Player to add not found' });
     }
     
-    const playerOutData = playerMap[playerOutId];
+    const playerOutData = playerMap[validatedPlayerOutId];
     if (!playerOutData) {
       return res.status(400).json({ error: 'Player to remove data not found' });
     }
@@ -93,7 +100,7 @@ const makeTransfer = async (req, res) => {
     
     // Update squad
     squad.players[playerOutIndex] = {
-      playerId: playerInId,
+      playerId: validatedPlayerInId,
       position: playerOut.position, // Keep same position
       purchasePrice: playerInData.now_cost,
       currentPrice: playerInData.now_cost,
@@ -113,14 +120,14 @@ const makeTransfer = async (req, res) => {
     
     // Record transfer in history
     const transfer = new Transfer({
-      userId,
-      gameweek,
+      userId: validatedUserId,
+      gameweek: validatedGameweek,
       playerIn: {
-        playerId: playerInId,
+        playerId: validatedPlayerInId,
         price: playerInData.now_cost
       },
       playerOut: {
-        playerId: playerOutId,
+        playerId: validatedPlayerOutId,
         purchasePrice: playerOut.purchasePrice,
         sellingPrice
       },
@@ -143,12 +150,12 @@ const makeTransfer = async (req, res) => {
         pointsDeducted: squad.pointsDeducted
       },
       playerIn: {
-        id: playerInId,
+        id: validatedPlayerInId,
         name: `${playerInData.first_name} ${playerInData.second_name}`,
         cost: playerInData.now_cost
       },
       playerOut: {
-        id: playerOutId,
+        id: validatedPlayerOutId,
         name: `${playerOutData.first_name} ${playerOutData.second_name}`,
         sellingPrice
       }
@@ -167,9 +174,13 @@ const getTransferHistory = async (req, res) => {
     const { userId } = req.params;
     const { gameweek, limit } = req.query;
     
-    let query = { userId };
+    // Validate to prevent NoSQL injection
+    const validatedUserId = validateObjectId(userId);
+    
+    let query = { userId: validatedUserId };
     if (gameweek) {
-      query.gameweek = parseInt(gameweek);
+      const validatedGameweek = validateGameweek(gameweek);
+      query.gameweek = validatedGameweek;
     }
     
     let transferQuery = Transfer.find(query).sort({ createdAt: -1 });
@@ -219,9 +230,13 @@ const getTransferSummary = async (req, res) => {
   try {
     const { userId, gameweek } = req.params;
     
+    // Validate to prevent NoSQL injection
+    const validatedUserId = validateObjectId(userId);
+    const validatedGameweek = validateGameweek(gameweek);
+    
     const transfers = await Transfer.find({ 
-      userId, 
-      gameweek: parseInt(gameweek) 
+      userId: validatedUserId, 
+      gameweek: validatedGameweek 
     });
     
     const totalPointsCost = transfers.reduce((sum, t) => sum + t.pointsCost, 0);
@@ -229,7 +244,7 @@ const getTransferSummary = async (req, res) => {
     const paidTransfers = transfers.filter(t => !t.isFree).length;
     
     res.json({
-      gameweek: parseInt(gameweek),
+      gameweek: validatedGameweek,
       totalTransfers: transfers.length,
       freeTransfers,
       paidTransfers,
