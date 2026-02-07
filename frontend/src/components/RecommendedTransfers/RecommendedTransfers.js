@@ -166,7 +166,7 @@ const RecommendedTransfers = ({ entryId, currentGameweek }) => {
                         
                         return (
                           <TableRow key={ idx } sx={ { '&:hover': { backgroundColor: theme.palette.action.hover } } }>
-                            <TableCell sx={ { borderRight: `2px solid ${theme.palette.divider}`, minWidth: 180 } }>
+                            <TableCell sx={ { borderRight: `2px solid ${theme.palette.divider}`, minWidth: 280 } }>
                               <Box>
                                 <Typography variant='body2' fontWeight='bold'>
                                   { rec.playerOut.web_name }
@@ -174,9 +174,32 @@ const RecommendedTransfers = ({ entryId, currentGameweek }) => {
                                 <Typography variant='caption' color='error'>
                                   { rec.playerOut.predicted_points.toFixed(1) } pts
                                 </Typography>
-                                <Typography variant='caption' color='textSecondary' sx={ { display: 'block', fontSize: '0.65rem' } }>
-                                  £{ (rec.playerOut.now_cost / 10).toFixed(1) }m
-                                </Typography>
+                                { /* Show price information in single line */ }
+                                { rec.playerOut.purchase_price != null ? (
+                                  <Typography 
+                                    variant='caption' 
+                                    color='textSecondary' 
+                                    sx={ { 
+                                      display: 'block', 
+                                      fontSize: '0.65rem',
+                                      mt: 0.5,
+                                      whiteSpace: 'nowrap'
+                                    } }
+                                  >
+                                    Current: £{ (rec.playerOut.now_cost / 10).toFixed(1) }m | 
+                                    <span style={{ 
+                                      color: rec.playerOut.selling_price > rec.playerOut.purchase_price ? theme.palette.success.main : 
+                                             rec.playerOut.selling_price < rec.playerOut.purchase_price ? theme.palette.error.main : 'inherit',
+                                      fontWeight: rec.playerOut.selling_price !== rec.playerOut.purchase_price ? 'bold' : 'normal'
+                                    }}>
+                                      {' '}Sell: £{ (rec.playerOut.selling_price / 10).toFixed(1) }m
+                                    </span> | Purchase: £{ (rec.playerOut.purchase_price / 10).toFixed(1) }m
+                                  </Typography>
+                                ) : (
+                                  <Typography variant='caption' color='textSecondary' sx={ { display: 'block', fontSize: '0.65rem' } }>
+                                    £{ (rec.playerOut.now_cost / 10).toFixed(1) }m
+                                  </Typography>
+                                ) }
                               </Box>
                             </TableCell>
                             { filteredAlternatives.slice(0, 3).map((alt, altIdx) => (
