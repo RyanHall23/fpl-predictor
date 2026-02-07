@@ -75,25 +75,38 @@ async function calculatePurchasePricesFromPicks(entryId, currentPlayerIds, curre
   const purchasePriceMap = {};
   
   try {
-    // Fetch picks for all gameweeks from 1 to current
-    const picksHistory = {};
-    
     console.log(`Fetching picks history for entry ${entryId} from GW1 to GW${currentGameweek}`);
     
-    // Fetch picks for each gameweek (with some rate limiting consideration)
-    for (let gw = 1; gw <= currentGameweek; gw++) {
-      try {
-        const picks = await dataProvider.fetchPlayerPicks(entryId, gw);
-        if (picks && picks.picks) {
-          picksHistory[gw] = picks.picks.map(p => p.element);
+    // Fetch picks for all gameweeks in parallel with batching to avoid overwhelming API
+    const batchSize = 10; // Process 10 gameweeks at a time
+    const picksHistory = {};
+    
+    for (let startGW = 1; startGW <= currentGameweek; startGW += batchSize) {
+      const endGW = Math.min(startGW + batchSize - 1, currentGameweek);
+      const gwRange = [];
+      
+      for (let gw = startGW; gw <= endGW; gw++) {
+        gwRange.push(gw);
+      }
+      
+      // Fetch this batch in parallel
+      const batchResults = await Promise.allSettled(
+        gwRange.map(gw => dataProvider.fetchPlayerPicks(entryId, gw))
+      );
+      
+      // Process results
+      gwRange.forEach((gw, index) => {
+        const result = batchResults[index];
+        if (result.status === 'fulfilled' && result.value && result.value.picks) {
+          picksHistory[gw] = result.value.picks.map(p => p.element);
+        } else if (result.status === 'rejected') {
+          console.warn(`Could not fetch picks for GW${gw}:`, result.reason?.message || 'Unknown error');
         }
-        // Small delay to avoid overwhelming the API (only if using real API)
-        if (dataProvider.USE_FPL_API && gw < currentGameweek) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
-      } catch (error) {
-        console.warn(`Could not fetch picks for GW${gw}:`, error.message);
-        // Continue with other gameweeks
+      });
+      
+      // Small delay between batches to be respectful to API
+      if (dataProvider.USE_FPL_API && endGW < currentGameweek) {
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
     }
     
@@ -119,42 +132,60 @@ async function calculatePurchasePricesFromPicks(entryId, currentPlayerIds, curre
           wasInPreviousGW = isInCurrentGW;
         }
         
-        // Now fetch element summary to get the price at that gameweek
+        // Store gameweek for batch fetching
         if (gameweekAdded) {
-          const elementSummary = await dataProvider.fetchElementSummary(playerId);
-          
-          if (elementSummary && elementSummary.history) {
-            // Find the price at the gameweek they were added
-            const historyEntry = elementSummary.history.find(h => h.round === gameweekAdded);
-            
-            if (historyEntry) {
-              const purchasePrice = historyEntry.value;
-              // Get current price from latest history entry
-              const latestHistory = elementSummary.history[elementSummary.history.length - 1];
-              const currentPrice = latestHistory ? latestHistory.value : purchasePrice;
-              
-              purchasePriceMap[playerId] = {
-                purchasePrice,
-                currentPrice,
-                gameweekAdded
-              };
-              
-              console.log(`Player ${playerId}: Added in GW${gameweekAdded}, Purchase: £${purchasePrice / 10}m, Current: £${currentPrice / 10}m`);
-            } else {
-              console.warn(`Player ${playerId}: No history entry found for GW${gameweekAdded}`);
-            }
-          }
+          purchasePriceMap[playerId] = { gameweekAdded };
         } else {
           console.warn(`Player ${playerId}: Could not determine when they were added`);
-        }
-        
-        // Small delay between element-summary calls
-        if (dataProvider.USE_FPL_API) {
-          await new Promise(resolve => setTimeout(resolve, 100));
         }
       } catch (playerError) {
         console.warn(`Error processing player ${playerId}:`, playerError.message);
       }
+    }
+    
+    // Now fetch element summaries in parallel for all players
+    const playerIdsToFetch = Object.keys(purchasePriceMap).map(id => parseInt(id));
+    
+    if (playerIdsToFetch.length > 0) {
+      console.log(`Fetching element summaries for ${playerIdsToFetch.length} players`);
+      
+      const elementResults = await Promise.allSettled(
+        playerIdsToFetch.map(playerId => dataProvider.fetchElementSummary(playerId))
+      );
+      
+      // Process element summary results
+      playerIdsToFetch.forEach((playerId, index) => {
+        const result = elementResults[index];
+        const gameweekAdded = purchasePriceMap[playerId].gameweekAdded;
+        
+        if (result.status === 'fulfilled' && result.value && result.value.history) {
+          const elementSummary = result.value;
+          
+          // Find the price at the gameweek they were added
+          const historyEntry = elementSummary.history.find(h => h.round === gameweekAdded);
+          
+          if (historyEntry) {
+            const purchasePrice = historyEntry.value;
+            // Get current price from latest history entry
+            const latestHistory = elementSummary.history[elementSummary.history.length - 1];
+            const currentPrice = latestHistory ? latestHistory.value : purchasePrice;
+            
+            purchasePriceMap[playerId] = {
+              purchasePrice,
+              currentPrice,
+              gameweekAdded
+            };
+            
+            console.log(`Player ${playerId}: Added in GW${gameweekAdded}, Purchase: £${purchasePrice / 10}m, Current: £${currentPrice / 10}m`);
+          } else {
+            console.warn(`Player ${playerId}: No history entry found for GW${gameweekAdded}`);
+            delete purchasePriceMap[playerId];
+          }
+        } else if (result.status === 'rejected') {
+          console.warn(`Player ${playerId}: Could not fetch element summary:`, result.reason?.message || 'Unknown error');
+          delete purchasePriceMap[playerId];
+        }
+      });
     }
     
     return purchasePriceMap;
