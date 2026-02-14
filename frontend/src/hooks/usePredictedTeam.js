@@ -33,7 +33,8 @@ export default function usePredictedTeam() {
     inDreamteam: player.in_dreamteam,
     totalPoints: player.total_points,
     opponent: player.opponent_short || 'TBD',
-    is_home: player.is_home
+    is_home: player.is_home,
+    opponents: player.opponents || [] // DGW support
   });
 
   return { mainTeamData, benchTeamData, loading, error };

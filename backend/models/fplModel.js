@@ -240,30 +240,40 @@ const recalculatePointsForGameweek = (players, targetEventId, currentEventId) =>
 
 /**
  * Enrich players with opponent data from fixtures.
- * Adds 'opponent' field (opponent team ID) and 'opponent_short' (short name) to each player.
+ * Adds 'opponents' array with all fixtures for the gameweek (supports DGW).
+ * Also adds legacy 'opponent' and 'opponent_short' fields for backwards compatibility (first fixture only).
  * If targetEventId is provided, uses fixtures from that specific gameweek.
  */
 const enrichPlayersWithOpponents = (players, fixtures, teams, targetEventId) => {
-  // Find fixture for each team in the target gameweek
-  const fixtureByTeam = {};
+  // Find all fixtures for each team in the target gameweek (supports DGW)
+  const fixturesByTeam = {};
   
   // Get fixtures for the target gameweek
   const targetFixtures = fixtures.filter(f => f.event === targetEventId);
   
-  // Map fixtures to teams
+  // Map fixtures to teams (using arrays to support multiple fixtures per team)
   targetFixtures.forEach(fixture => {
     // Home team
-    fixtureByTeam[fixture.team_h] = {
+    if (!fixturesByTeam[fixture.team_h]) {
+      fixturesByTeam[fixture.team_h] = [];
+    }
+    fixturesByTeam[fixture.team_h].push({
       event: fixture.event,
       opponent: fixture.team_a,
-      is_home: true
-    };
+      is_home: true,
+      difficulty: fixture.team_h_difficulty || 3 // Difficulty for home team (1=easy, 5=hard)
+    });
+    
     // Away team
-    fixtureByTeam[fixture.team_a] = {
+    if (!fixturesByTeam[fixture.team_a]) {
+      fixturesByTeam[fixture.team_a] = [];
+    }
+    fixturesByTeam[fixture.team_a].push({
       event: fixture.event,
       opponent: fixture.team_h,
-      is_home: false
-    };
+      is_home: false,
+      difficulty: fixture.team_a_difficulty || 3 // Difficulty for away team (1=easy, 5=hard)
+    });
   });
   
   // Create team lookup by id
@@ -275,25 +285,86 @@ const enrichPlayersWithOpponents = (players, fixtures, teams, targetEventId) => 
   // Enrich players
   return players.map(player => {
     const playerTeam = player.team;
-    const fixture = fixtureByTeam[playerTeam];
+    const fixtures = fixturesByTeam[playerTeam];
     
-    if (fixture && teamMap[fixture.opponent]) {
-      const opponentTeam = teamMap[fixture.opponent];
+    if (fixtures && fixtures.length > 0) {
+      // Build opponents array with team names
+      const opponents = fixtures.map(fixture => ({
+        opponent_id: fixture.opponent,
+        opponent_short: teamMap[fixture.opponent]?.short_name || 'TBD',
+        is_home: fixture.is_home,
+        difficulty: fixture.difficulty // Include FPL difficulty rating (1-5)
+      }));
+      
+      // For backwards compatibility, set first fixture as primary opponent
+      const firstFixture = fixtures[0];
+      const firstOpponent = teamMap[firstFixture.opponent];
+      
+      // Calculate expected points for DGW by evaluating each fixture separately
+      const fixtureCount = fixtures.length;
+      const baseEpNext = parseFloat(player.ep_next) || 0;
+      
+      let adjustedEpNext = baseEpNext;
+      
+      if (fixtureCount >= 1) {
+        // Calculate expected points for each fixture separately
+        let totalExpectedPoints = 0;
+        
+        fixtures.forEach(fixture => {
+          let fixturePoints = baseEpNext; // Start with base prediction
+          
+          // Use FPL's difficulty rating (1=easy, 5=hard)
+          const difficulty = fixture.difficulty || 3; // Default to medium difficulty
+          
+          // Convert difficulty to multiplier
+          // Difficulty 1 (easiest) = 1.4x, Difficulty 5 (hardest) = 0.6x
+          // Linear scale: multiplier = 1.8 - (difficulty * 0.2)
+          const difficultyFactor = 1.8 - (difficulty * 0.2);
+          fixturePoints *= difficultyFactor;
+          
+          // Home advantage bonus (10% boost for home games)
+          if (fixture.is_home) {
+            fixturePoints *= 1.1;
+          } else {
+            // Away penalty (5% reduction)
+            fixturePoints *= 0.95;
+          }
+          
+          // Account for rotation risk and fatigue in DGW (each game worth ~85% of normal)
+          // For single gameweeks, no rotation penalty
+          if (fixtureCount > 1) {
+            fixturePoints *= 0.85;
+          }
+          
+          totalExpectedPoints += fixturePoints;
+        });
+        
+        adjustedEpNext = totalExpectedPoints;
+      }
+      
       return {
         ...player,
-        opponent: fixture.opponent,
-        opponent_short: opponentTeam.short_name,
-        is_home: fixture.is_home,
-        fixture_event: fixture.event
+        opponents: opponents, // Array of all fixtures
+        opponent: firstFixture.opponent, // Legacy: first opponent ID
+        opponent_short: firstOpponent?.short_name || 'TBD', // Legacy: first opponent short name
+        is_home: firstFixture.is_home, // Legacy: first fixture home/away status
+        difficulty: firstFixture.difficulty, // FPL difficulty rating for first fixture
+        fixture_event: firstFixture.event,
+        fixture_count: fixtureCount,
+        ep_next: Math.round(adjustedEpNext * 100) / 100, // Adjusted for DGW with proper calculation
+        ep_next_base: baseEpNext // Original single-game prediction
       };
     }
     
     return {
       ...player,
+      opponents: [], // Empty array when no fixtures
       opponent: null,
       opponent_short: 'TBD',
       is_home: null,
-      fixture_event: null
+      difficulty: null,
+      fixture_event: null,
+      fixture_count: 0
     };
   });
 };
