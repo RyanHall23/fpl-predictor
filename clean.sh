@@ -44,4 +44,5 @@ cd frontend && npm install && cd ..
 
 echo "✅ Clean process completed!"
 echo ""
-echo "To start the application, run: npm start"
+echo "🚀 Starting the application..."
+npm start
