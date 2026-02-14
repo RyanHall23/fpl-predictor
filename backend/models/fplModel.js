@@ -240,30 +240,38 @@ const recalculatePointsForGameweek = (players, targetEventId, currentEventId) =>
 
 /**
  * Enrich players with opponent data from fixtures.
- * Adds 'opponent' field (opponent team ID) and 'opponent_short' (short name) to each player.
+ * Adds 'opponents' array with all fixtures for the gameweek (supports DGW).
+ * Also adds legacy 'opponent' and 'opponent_short' fields for backwards compatibility (first fixture only).
  * If targetEventId is provided, uses fixtures from that specific gameweek.
  */
 const enrichPlayersWithOpponents = (players, fixtures, teams, targetEventId) => {
-  // Find fixture for each team in the target gameweek
-  const fixtureByTeam = {};
+  // Find all fixtures for each team in the target gameweek (supports DGW)
+  const fixturesByTeam = {};
   
   // Get fixtures for the target gameweek
   const targetFixtures = fixtures.filter(f => f.event === targetEventId);
   
-  // Map fixtures to teams
+  // Map fixtures to teams (using arrays to support multiple fixtures per team)
   targetFixtures.forEach(fixture => {
     // Home team
-    fixtureByTeam[fixture.team_h] = {
+    if (!fixturesByTeam[fixture.team_h]) {
+      fixturesByTeam[fixture.team_h] = [];
+    }
+    fixturesByTeam[fixture.team_h].push({
       event: fixture.event,
       opponent: fixture.team_a,
       is_home: true
-    };
+    });
+    
     // Away team
-    fixtureByTeam[fixture.team_a] = {
+    if (!fixturesByTeam[fixture.team_a]) {
+      fixturesByTeam[fixture.team_a] = [];
+    }
+    fixturesByTeam[fixture.team_a].push({
       event: fixture.event,
       opponent: fixture.team_h,
       is_home: false
-    };
+    });
   });
   
   // Create team lookup by id
@@ -275,21 +283,33 @@ const enrichPlayersWithOpponents = (players, fixtures, teams, targetEventId) => 
   // Enrich players
   return players.map(player => {
     const playerTeam = player.team;
-    const fixture = fixtureByTeam[playerTeam];
+    const fixtures = fixturesByTeam[playerTeam];
     
-    if (fixture && teamMap[fixture.opponent]) {
-      const opponentTeam = teamMap[fixture.opponent];
+    if (fixtures && fixtures.length > 0) {
+      // Build opponents array with team names
+      const opponents = fixtures.map(fixture => ({
+        opponent_id: fixture.opponent,
+        opponent_short: teamMap[fixture.opponent]?.short_name || 'TBD',
+        is_home: fixture.is_home
+      }));
+      
+      // For backwards compatibility, set first fixture as primary opponent
+      const firstFixture = fixtures[0];
+      const firstOpponent = teamMap[firstFixture.opponent];
+      
       return {
         ...player,
-        opponent: fixture.opponent,
-        opponent_short: opponentTeam.short_name,
-        is_home: fixture.is_home,
-        fixture_event: fixture.event
+        opponents: opponents, // Array of all fixtures
+        opponent: firstFixture.opponent, // Legacy: first opponent ID
+        opponent_short: firstOpponent?.short_name || 'TBD', // Legacy: first opponent short name
+        is_home: firstFixture.is_home, // Legacy: first fixture home/away status
+        fixture_event: firstFixture.event
       };
     }
     
     return {
       ...player,
+      opponents: [], // Empty array when no fixtures
       opponent: null,
       opponent_short: 'TBD',
       is_home: null,

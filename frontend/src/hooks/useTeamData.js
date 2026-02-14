@@ -44,7 +44,8 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
         totalPoints: player.total_points,
         user_team: false,
         opponent: player.opponent_short || 'TBD',
-        is_home: player.is_home
+        is_home: player.is_home,
+        opponents: player.opponents || [] // DGW support
       });
       setMainTeamData(mainTeam.map(formatPlayer));
       setBenchTeamData(bench.map(formatPlayer));
@@ -105,7 +106,8 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
           totalPoints: player.total_points,
           user_team: true,
           opponent: player.opponent_short || 'TBD',
-          is_home: player.is_home
+          is_home: player.is_home,
+          opponents: player.opponents || [] // DGW support
         };
       };
 
