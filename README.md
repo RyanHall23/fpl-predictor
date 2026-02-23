@@ -49,7 +49,48 @@ The main goal of this project is to create a model that can accurately predict t
   - SSRF protection via URL whitelisting
   - 4-tier rate limiting (auth, general API, read, write operations)
 
-## Project Structure
+## Render Deployment
+
+This application can be deployed on [Render](https://render.com) as two separate services.
+
+### Backend (Web Service)
+
+1. Create a new **Web Service** on Render
+2. Connect your GitHub repository and set the **Root Directory** to `backend`
+3. Configure the service:
+   - **Runtime:** Node
+   - **Build Command:** `npm install`
+   - **Start Command:** `npm start`
+4. Add the following environment variables in the Render dashboard:
+   - `MONGODB_URI` — MongoDB connection string (e.g. from Render's MongoDB add-on)
+   - `JWT_SECRET` — A strong random secret (generate with `openssl rand -base64 32`)
+   - `FRONTEND_URL` — The URL of your deployed frontend (e.g. `https://your-app.onrender.com`)
+   - `PORT` is automatically provided by Render
+
+### Frontend (Static Site)
+
+1. Create a new **Static Site** on Render
+2. Connect your GitHub repository and set the **Root Directory** to `frontend`
+3. Configure the site:
+   - **Build Command:** `npm install && npm run build`
+   - **Publish Directory:** `dist`
+4. Add the following environment variable in the Render dashboard:
+   - `VITE_API_URL` — The URL of your deployed backend (e.g. `https://your-backend.onrender.com`)
+
+### How the Frontend Connects to the Backend
+
+In production, the frontend reads `VITE_API_URL` and uses it as the base URL for all API requests. In local development, Vite's proxy handles `/api` requests to `localhost:5000` and `VITE_API_URL` can be left empty.
+
+### Required Environment Variables Summary
+
+| Service  | Variable       | Description                            |
+|----------|---------------|----------------------------------------|
+| Backend  | `MONGODB_URI`  | MongoDB connection string              |
+| Backend  | `JWT_SECRET`   | Secret for JWT token signing           |
+| Backend  | `FRONTEND_URL` | Deployed frontend URL (for CORS)       |
+| Frontend | `VITE_API_URL` | Deployed backend URL                   |
+
+
 
 ```
 backend/           # Express.js backend (API, authentication, MongoDB models)

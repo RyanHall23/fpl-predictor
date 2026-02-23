@@ -12,7 +12,7 @@ import useAllPlayers from './hooks/useAllPlayers';
 import UserProfilePane from './components/UserProfilePane/UserProfilePane';
 import AccountPage from './components/AccountPage/AccountPage';
 import RecommendedTransfers from './components/RecommendedTransfers';
-import axios from 'axios';
+import axios from './api';
 
 const TEAM_VIEW = {
   SEARCHED: 'searched',

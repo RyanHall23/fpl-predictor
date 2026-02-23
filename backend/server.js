@@ -8,14 +8,21 @@ const transferRoutes = require('./routes/transfers');
 const chipRoutes = require('./routes/chips');
 const { apiLimiter, dbReadLimiter } = require('./middleware/rateLimiter');
 const app = express();
-const port = 5000;
+const port = process.env.PORT || 5000;
 
-app.use(cors());
+const corsOptions = {
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+};
+app.use(cors(corsOptions));
 app.use(express.json());
 
-mongoose.connect('mongodb://localhost:27017/fplpredictor')
+const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/fplpredictor';
+mongoose.connect(mongoUri)
   .then(() => console.log('MongoDB connected'))
-  .catch((err) => console.error('MongoDB error:', err));
+  .catch((err) => {
+    console.error('MongoDB connection error:', err);
+    process.exit(1);
+  });
 
 // Authentication routes
 app.use('/api/auth', authRoutes);
@@ -43,5 +50,5 @@ app.post('/api/validate-swap', apiLimiter, fplController.validateSwap);
 app.post('/api/available-transfers/:playerCode', apiLimiter, fplController.getAvailableTransfers);
 
 app.listen(port, () => {
-  console.log(`Proxy server running on http://localhost:${port}`);
+  console.log(`Proxy server running on port ${port}`);
 });

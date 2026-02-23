@@ -14,7 +14,7 @@ import {
   FormControlLabel
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import axios from 'axios';
+import axios from '../../api';
 
 const AccountPage = ({ token, onTokenUpdate, onLogout }) => {
   const theme = useTheme();
