@@ -16,6 +16,7 @@ export default function useAllPlayers() {
           webName: player.web_name,
           position: player.element_type,
           opponent: player.opponent_short || 'TBD',
+          opponents: player.opponents || [], // DGW support
           teamCode: player.team_code,
           photo: player.code ? `//resources.premierleague.com/premierleague25/photos/players/110x140/${player.code}.png` : undefined
         })));

@@ -78,14 +78,28 @@ const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut, open, onClose
                         value={ selectedIn }
                         onChange={ (_, value) => setSelectedIn(value) }
                         renderInput={ (params) => <TextField { ...params } label='Player In' margin='normal' /> }
-                        renderOption={ (props, option) => (
-                            <ListItem { ...props } key={ option.id }>
-                                <ListItemText 
-                                    primary={ option.web_name || option.webName || option.name } 
-                                    secondary={ `${option.ep_next || 0} pts • ${option.opponent || 'TBD'}` } 
-                                />
-                            </ListItem>
-                        ) }
+                        renderOption={ (props, option) => {
+                            // Format opponents for DGW support
+                            let opponentText = 'TBD';
+                            if (option.opponents && Array.isArray(option.opponents) && option.opponents.length > 0) {
+                                opponentText = option.opponents.map(opp => {
+                                    const teamName = opp.opponent_short || 'TBD';
+                                    if (opp.is_home === null || opp.is_home === undefined) return teamName;
+                                    return opp.is_home ? `${teamName} (H)` : `${teamName} (A)`;
+                                }).join(', ');
+                            } else if (option.opponent) {
+                                opponentText = option.opponent;
+                            }
+                            
+                            return (
+                                <ListItem { ...props } key={ option.id }>
+                                    <ListItemText 
+                                        primary={ option.web_name || option.webName || option.name } 
+                                        secondary={ `${option.ep_next || 0} pts • ${opponentText}` } 
+                                    />
+                                </ListItem>
+                            );
+                        } }
                     />
                 </DialogContent>
                 <DialogActions sx={ { pb: 2, px: 3 } }>
