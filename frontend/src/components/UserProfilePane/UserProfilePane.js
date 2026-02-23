@@ -5,7 +5,7 @@ import { useTheme } from '@mui/material/styles';
 import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import RemoveIcon from '@mui/icons-material/Remove';
-import axios from 'axios';
+import axios from '../../api';
 import './styles.css';
 
 const getRankChangeIcon = (current, last) => {

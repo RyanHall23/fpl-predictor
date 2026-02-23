@@ -18,7 +18,7 @@ import {
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import { useThemeMode } from '../../theme/ThemeContext';
-import axios from 'axios';
+import axios from '../../api';
 import './styles.css';
 import AuthDialog from '../AuthDialog/AuthDialog';
 

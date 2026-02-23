@@ -22,7 +22,7 @@ import {
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import axios from 'axios';
+import axios from '../../api';
 
 const positionLabels = {
   GK: 'GK',

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import axios from 'axios';
+import axios from '../api';
 
 const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGameweek = null) => {
   const [mainTeamData, setMainTeamData] = useState([]);

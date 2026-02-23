@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
+import axios from '../api';
 
 export default function useAllPlayers() {
   const [allPlayers, setAllPlayers] = useState([]);
