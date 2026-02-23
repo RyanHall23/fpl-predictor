@@ -52,7 +52,7 @@ exports.register = async (req, res) => {
   }
   
   try {
-    const existing = await User.findOne({ username: { $eq: trimmedUsername } });
+    const existing = await User.findOne({ username: trimmedUsername });
     if (existing) return res.status(409).json({ error: 'Username taken' });
     
     let trimmedEmail = undefined;
@@ -63,7 +63,7 @@ exports.register = async (req, res) => {
       }
       trimmedEmail = validation.email;
       
-      const existingEmail = await User.findOne({ email: { $eq: trimmedEmail } });
+      const existingEmail = await User.findOne({ email: trimmedEmail });
       if (existingEmail) return res.status(409).json({ error: 'Email already in use' });
     }
     
@@ -79,11 +79,11 @@ exports.login = async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.status(400).json({ error: 'All fields required' });
   try {
-    const user = await User.findOne({ username: { $eq: username } });
+    const user = await User.findOne({ username });
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ error: 'Invalid credentials' });
-    const token = jwt.sign({ id: user._id, username: user.username, teamid: user.teamid }, JWT_SECRET, { expiresIn: '1d' });
+    const token = jwt.sign({ id: user.id, username: user.username, teamid: user.teamid }, JWT_SECRET, { expiresIn: '1d' });
     res.json({ token, username: user.username, teamid: user.teamid, email: user.email });
   } catch {
     res.status(500).json({ error: 'Login failed' });
@@ -93,7 +93,7 @@ exports.login = async (req, res) => {
 // Get user profile
 exports.getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('-password');
+    const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ error: 'User not found' });
     res.json({ username: user.username, email: user.email, teamid: user.teamid });
   } catch {
@@ -120,14 +120,14 @@ exports.updateUsername = async (req, res) => {
   }
   
   try {
-    const existing = await User.findOne({ username: { $eq: safeUsername }, _id: { $ne: req.user.id } });
+    const existing = await User.findByUsernameExcludingId(safeUsername, req.user.id);
     if (existing) return res.status(409).json({ error: 'Username already taken' });
     
-    const user = await User.findByIdAndUpdate(req.user.id, { username: safeUsername }, { new: true }).select('-password');
+    const user = await User.updateById(req.user.id, { username: safeUsername });
     if (!user) return res.status(404).json({ error: 'User not found' });
     
     // Generate new token with updated username
-    const token = jwt.sign({ id: user._id, username: user.username, teamid: user.teamid }, JWT_SECRET, { expiresIn: '1d' });
+    const token = jwt.sign({ id: user.id, username: user.username, teamid: user.teamid }, JWT_SECRET, { expiresIn: '1d' });
     res.json({ message: 'Username updated', token, username: user.username });
   } catch {
     res.status(500).json({ error: 'Failed to update username' });
@@ -148,7 +148,7 @@ exports.updateEmail = async (req, res) => {
       }
       trimmedEmail = validation.email;
 
-      const existing = await User.findOne({ email: { $eq: trimmedEmail }, _id: { $ne: req.user.id } });
+      const existing = await User.findByEmailExcludingId(trimmedEmail, req.user.id);
       if (existing) return res.status(409).json({ error: 'Email already in use' });
     }
 
@@ -157,7 +157,7 @@ exports.updateEmail = async (req, res) => {
       update.email = trimmedEmail;
     }
 
-    const user = await User.findByIdAndUpdate(req.user.id, update, { new: true }).select('-password');
+    const user = await User.updateById(req.user.id, update);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     res.json({ message: 'Email updated', email: user.email });
@@ -184,8 +184,7 @@ exports.updatePassword = async (req, res) => {
     if (!match) return res.status(401).json({ error: 'Current password is incorrect' });
     
     const hash = await bcrypt.hash(newPassword, 10);
-    user.password = hash;
-    await user.save();
+    await User.updateById(req.user.id, { password: hash });
     
     res.json({ message: 'Password updated successfully' });
   } catch {
@@ -209,11 +208,11 @@ exports.updateTeamId = async (req, res) => {
   }
   
   try {
-    const user = await User.findByIdAndUpdate(req.user.id, { teamid: teamidStr }, { new: true }).select('-password');
+    const user = await User.updateById(req.user.id, { teamid: teamidStr });
     if (!user) return res.status(404).json({ error: 'User not found' });
     
     // Generate new token with updated teamid
-    const token = jwt.sign({ id: user._id, username: user.username, teamid: user.teamid }, JWT_SECRET, { expiresIn: '1d' });
+    const token = jwt.sign({ id: user.id, username: user.username, teamid: user.teamid }, JWT_SECRET, { expiresIn: '1d' });
     res.json({ message: 'Team ID updated', token, teamid: user.teamid });
   } catch {
     res.status(500).json({ error: 'Failed to update team ID' });
@@ -236,7 +235,7 @@ exports.deleteAccount = async (req, res) => {
     if (!match) return res.status(401).json({ error: 'Incorrect password' });
     
     // Delete the user
-    await User.findByIdAndDelete(req.user.id);
+    await User.deleteById(req.user.id);
     
     res.json({ message: 'Account deleted successfully' });
   } catch {

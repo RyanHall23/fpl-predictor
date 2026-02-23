@@ -1,8 +1,8 @@
 const express = require('express');
 const cors = require('cors');
-const mongoose = require('mongoose');
 const path = require('path');
 const fs = require('fs');
+const { initDb } = require('./db');
 const fplController = require('./controllers/fplController');
 const authRoutes = require('./routes/auth');
 const squadRoutes = require('./routes/squad');
@@ -18,11 +18,10 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
-const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/fplpredictor';
-mongoose.connect(mongoUri)
-  .then(() => console.log('MongoDB connected'))
+initDb()
+  .then(() => console.log('PostgreSQL connected and tables initialised'))
   .catch((err) => {
-    console.error('MongoDB connection error:', err);
+    console.error('PostgreSQL connection error:', err);
     process.exit(1);
   });
 

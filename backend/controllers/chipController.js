@@ -1,12 +1,12 @@
-const Squad = require('../models/squadModel');
+const { Squad } = require('../models/squadModel');
 const SquadHistory = require('../models/squadHistoryModel');
-const Chip = require('../models/chipModel');
-const { validateObjectId, validateGameweek, validateChipName } = require('../utils/validation');
+const { Chip, getAvailableChips, useChip } = require('../models/chipModel');
+const { validateId, validateGameweek, validateChipName } = require('../utils/validation');
 
 /**
  * Get available chips for a user in a specific gameweek
  */
-const getAvailableChips = async (req, res) => {
+const getAvailableChipsHandler = async (req, res) => {
   try {
     const { userId } = req.params;
     const { gameweek } = req.query;
@@ -15,37 +15,35 @@ const getAvailableChips = async (req, res) => {
       return res.status(400).json({ error: 'Gameweek parameter required' });
     }
     
-    // Validate to prevent NoSQL injection
-    const validatedUserId = validateObjectId(userId);
+    const validatedUserId = validateId(userId);
     const validatedGameweek = validateGameweek(gameweek);
     
-    const chips = await Chip.findOne({ userId: validatedUserId });
+    const chips = await Chip.findByUserId(validatedUserId);
     if (!chips) {
       return res.status(404).json({ error: 'Chip data not found for user' });
     }
     
     // Get last Free Hit usage to check consecutive gameweek rule
-    const squad = await Squad.findOne({ userId: validatedUserId });
+    const squad = await Squad.findByUserId(validatedUserId);
     let lastFreeHitGameweek = null;
     
-    if (squad && squad.activeChip === 'free_hit') {
+    if (squad && squad.active_chip === 'free_hit') {
       lastFreeHitGameweek = squad.gameweek;
     } else {
-      // Check history for last Free Hit usage
-      const lastFreeHitHistory = await SquadHistory.findOne({
+      const lastFreeHitHistory = await SquadHistory.findLastWithActiveChip({
         userId: validatedUserId,
         activeChip: 'free_hit'
-      }).sort({ gameweek: -1 });
+      });
       
       if (lastFreeHitHistory) {
         lastFreeHitGameweek = lastFreeHitHistory.gameweek;
       }
     }
     
-    const availableChips = chips.getAvailableChips(validatedGameweek, lastFreeHitGameweek);
+    const availableChipNames = getAvailableChips(chips.data, validatedGameweek, lastFreeHitGameweek);
     
     // Format response with chip details
-    const chipDetails = availableChips.map(chipName => {
+    const chipDetails = availableChipNames.map(chipName => {
       const chipParts = chipName.split('_');
       const chipType = chipParts.slice(0, -1).join('_');
       const chipNumber = chipParts[chipParts.length - 1];
@@ -86,16 +84,7 @@ const getAvailableChips = async (req, res) => {
       userId: validatedUserId,
       gameweek: validatedGameweek,
       availableChips: chipDetails,
-      allChips: {
-        benchBoost1: chips.benchBoost1,
-        benchBoost2: chips.benchBoost2,
-        tripleCaptain1: chips.tripleCaptain1,
-        tripleCaptain2: chips.tripleCaptain2,
-        freeHit1: chips.freeHit1,
-        freeHit2: chips.freeHit2,
-        wildcard1: chips.wildcard1,
-        wildcard2: chips.wildcard2
-      }
+      allChips: chips.data
     });
   } catch (error) {
     console.error('Error getting available chips:', error);
@@ -116,19 +105,18 @@ const activateChip = async (req, res) => {
       });
     }
     
-    // Validate to prevent NoSQL injection
-    const validatedUserId = validateObjectId(userId);
+    const validatedUserId = validateId(userId);
     const validatedChipName = validateChipName(chipName);
     const validatedGameweek = validateGameweek(gameweek);
     
     // Get chip data
-    const chips = await Chip.findOne({ userId: validatedUserId });
+    const chips = await Chip.findByUserId(validatedUserId);
     if (!chips) {
       return res.status(404).json({ error: 'Chip data not found for user' });
     }
     
     // Get squad
-    const squad = await Squad.findOne({ userId: validatedUserId });
+    const squad = await Squad.findByUserId(validatedUserId);
     if (!squad) {
       return res.status(404).json({ error: 'Squad not found' });
     }
@@ -140,18 +128,18 @@ const activateChip = async (req, res) => {
     }
     
     // Check if chip is already active
-    if (squad.activeChip) {
+    if (squad.active_chip) {
       return res.status(400).json({ 
-        error: `Chip already active this gameweek: ${squad.activeChip}` 
+        error: `Chip already active this gameweek: ${squad.active_chip}` 
       });
     }
     
     // Validate consecutive Free Hit rule
     if (validatedChipName.startsWith('free_hit')) {
-      const lastFreeHitHistory = await SquadHistory.findOne({
+      const lastFreeHitHistory = await SquadHistory.findLastWithActiveChip({
         userId: validatedUserId,
         activeChip: 'free_hit'
-      }).sort({ gameweek: -1 });
+      });
       
       if (lastFreeHitHistory && (validatedGameweek - lastFreeHitHistory.gameweek) < 2) {
         return res.status(400).json({ 
@@ -163,60 +151,59 @@ const activateChip = async (req, res) => {
     
     // For Free Hit, save current squad state before activation
     if (validatedChipName.startsWith('free_hit')) {
-      const preChipHistory = new SquadHistory({
+      await SquadHistory.create({
         userId: validatedUserId,
         gameweek: validatedGameweek,
         snapshotType: 'pre_chip',
         players: squad.players,
         bank: squad.bank,
-        squadValue: squad.squadValue,
-        freeTransfers: squad.freeTransfers,
-        transfersMadeThisWeek: squad.transfersMadeThisWeek,
-        pointsDeducted: squad.pointsDeducted,
+        squadValue: squad.squad_value,
+        freeTransfers: squad.free_transfers,
+        transfersMadeThisWeek: squad.transfers_made_this_week,
+        pointsDeducted: squad.points_deducted,
         activeChip: null
       });
-      await preChipHistory.save();
     }
     
-    // Use the chip
-    const chipUsed = chips.useChip(validatedChipName, validatedGameweek);
+    // Use the chip (mutates chips.data in place)
+    const chipData = { ...chips.data };
+    const chipUsed = useChip(chipData, validatedChipName, validatedGameweek);
     if (!chipUsed) {
       return res.status(400).json({ 
         error: 'Chip not available or invalid for this gameweek' 
       });
     }
     
-    await chips.save();
+    await Chip.updateByUserId(validatedUserId, chipData);
     
     // Update squad with active chip
     const chipType = validatedChipName.split('_').slice(0, -1).join('_');
-    squad.activeChip = chipType;
+    const squadUpdates = { activeChip: chipType };
     
     // For Wildcard and Free Hit, reset transfer counters
     if (chipType === 'wildcard' || chipType === 'free_hit') {
-      squad.transfersMadeThisWeek = 0;
-      squad.pointsDeducted = 0;
+      squadUpdates.transfersMadeThisWeek = 0;
+      squadUpdates.pointsDeducted = 0;
     }
     
     // For Triple Captain, update captain multiplier
+    let players = squad.players;
     if (chipType === 'triple_captain') {
-      const captainIndex = squad.players.findIndex(p => p.isCaptain);
-      if (captainIndex !== -1) {
-        squad.players[captainIndex].multiplier = 3;
-      }
+      players = players.map(p => p.isCaptain ? { ...p, multiplier: 3 } : p);
+      squadUpdates.players = players;
     }
     
-    await squad.save();
+    await Squad.updateByUserId(validatedUserId, squadUpdates);
     
     res.json({
       message: `Chip ${chipType} activated successfully`,
       chip: validatedChipName,
-      activeChip: squad.activeChip,
+      activeChip: chipType,
       squad: {
         gameweek: squad.gameweek,
-        activeChip: squad.activeChip,
-        transfersMadeThisWeek: squad.transfersMadeThisWeek,
-        pointsDeducted: squad.pointsDeducted
+        activeChip: chipType,
+        transfersMadeThisWeek: squadUpdates.transfersMadeThisWeek ?? squad.transfers_made_this_week,
+        pointsDeducted: squadUpdates.pointsDeducted ?? squad.points_deducted
       }
     });
   } catch (error) {
@@ -236,56 +223,51 @@ const cancelChip = async (req, res) => {
       return res.status(400).json({ error: 'Missing required field: userId' });
     }
     
-    // Validate to prevent NoSQL injection
-    const validatedUserId = validateObjectId(userId);
+    const validatedUserId = validateId(userId);
     
-    const squad = await Squad.findOne({ userId: validatedUserId });
+    const squad = await Squad.findByUserId(validatedUserId);
     if (!squad) {
       return res.status(404).json({ error: 'Squad not found' });
     }
     
-    if (!squad.activeChip) {
+    if (!squad.active_chip) {
       return res.status(400).json({ error: 'No active chip to cancel' });
     }
     
     // Free Hit and Wildcard cannot be cancelled once confirmed
-    if (squad.activeChip === 'free_hit' || squad.activeChip === 'wildcard') {
+    if (squad.active_chip === 'free_hit' || squad.active_chip === 'wildcard') {
       return res.status(400).json({ 
-        error: `${squad.activeChip} cannot be cancelled once activated` 
+        error: `${squad.active_chip} cannot be cancelled once activated` 
       });
     }
     
     // For Triple Captain, revert multiplier
-    if (squad.activeChip === 'triple_captain') {
-      const captainIndex = squad.players.findIndex(p => p.isCaptain);
-      if (captainIndex !== -1) {
-        squad.players[captainIndex].multiplier = 2; // Revert to normal captain
-      }
+    let players = squad.players;
+    if (squad.active_chip === 'triple_captain') {
+      players = players.map(p => p.isCaptain ? { ...p, multiplier: 2 } : p);
     }
     
-    // Find which chip was used and restore availability
-    const chips = await Chip.findOne({ userId: validatedUserId });
+    // Find which chip was used this gameweek and restore it
+    const chips = await Chip.findByUserId(validatedUserId);
     if (chips) {
-      // Find the chip that was used this gameweek and restore it
-      for (const [key, value] of Object.entries(chips.toObject())) {
-        if (typeof value === 'object' && value.usedInGameweek === squad.gameweek) {
-          chips[key].available = true;
-          chips[key].usedInGameweek = null;
+      const chipData = { ...chips.data };
+      for (const key of Object.keys(chipData)) {
+        if (chipData[key] && chipData[key].usedInGameweek === squad.gameweek) {
+          chipData[key] = { ...chipData[key], available: true, usedInGameweek: null };
           break;
         }
       }
-      await chips.save();
+      await Chip.updateByUserId(validatedUserId, chipData);
     }
     
-    const cancelledChip = squad.activeChip;
-    squad.activeChip = null;
-    await squad.save();
+    const cancelledChip = squad.active_chip;
+    await Squad.updateByUserId(validatedUserId, { activeChip: null, players });
     
     res.json({
       message: `Chip ${cancelledChip} cancelled successfully`,
       squad: {
         gameweek: squad.gameweek,
-        activeChip: squad.activeChip
+        activeChip: null
       }
     });
   } catch (error) {
@@ -295,7 +277,7 @@ const cancelChip = async (req, res) => {
 };
 
 module.exports = {
-  getAvailableChips,
+  getAvailableChips: getAvailableChipsHandler,
   activateChip,
   cancelChip
 };

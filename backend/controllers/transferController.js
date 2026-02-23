@@ -1,7 +1,7 @@
-const Squad = require('../models/squadModel');
+const { Squad, getSellingPrice } = require('../models/squadModel');
 const Transfer = require('../models/transferModel');
 const dataProvider = require('../models/dataProvider');
-const { validateObjectId, validateGameweek, validatePlayerId } = require('../utils/validation');
+const { validateId, validateGameweek, validatePlayerId } = require('../utils/validation');
 
 /**
  * Make a transfer (swap one player for another)
@@ -16,14 +16,13 @@ const makeTransfer = async (req, res) => {
       });
     }
     
-    // Validate to prevent NoSQL injection
-    const validatedUserId = validateObjectId(userId);
+    const validatedUserId = validateId(userId);
     const validatedPlayerOutId = validatePlayerId(playerOutId);
     const validatedPlayerInId = validatePlayerId(playerInId);
     const validatedGameweek = validateGameweek(gameweek);
     
     // Get squad
-    const squad = await Squad.findOne({ userId: validatedUserId });
+    const squad = await Squad.findByUserId(validatedUserId);
     if (!squad) {
       return res.status(404).json({ error: 'Squad not found' });
     }
@@ -34,13 +33,15 @@ const makeTransfer = async (req, res) => {
       });
     }
     
+    const players = squad.players;
+    
     // Find player to remove
-    const playerOutIndex = squad.players.findIndex(p => p.playerId === validatedPlayerOutId);
+    const playerOutIndex = players.findIndex(p => p.playerId === validatedPlayerOutId);
     if (playerOutIndex === -1) {
       return res.status(400).json({ error: 'Player to remove not found in squad' });
     }
     
-    const playerOut = squad.players[playerOutIndex];
+    const playerOut = players[playerOutIndex];
     
     // Fetch current player data
     const bootstrapData = await dataProvider.fetchBootstrapStatic();
@@ -67,9 +68,7 @@ const makeTransfer = async (req, res) => {
     }
     
     // Calculate selling price for player out
-    const profit = playerOut.currentPrice - playerOut.purchasePrice;
-    const profitToKeep = profit > 0 ? Math.floor(profit / 2) : 0;
-    const sellingPrice = playerOut.purchasePrice + profitToKeep;
+    const sellingPrice = getSellingPrice(playerOut.purchasePrice, playerOut.currentPrice);
     
     // Calculate new bank balance
     const newBank = squad.bank + sellingPrice - playerInData.now_cost;
@@ -87,19 +86,20 @@ const makeTransfer = async (req, res) => {
     }
     
     // Check transfer costs
-    const isWildcardActive = squad.activeChip === 'wildcard';
-    const isFreeHitActive = squad.activeChip === 'free_hit';
-    const isFreeTransfer = squad.transfersMadeThisWeek < squad.freeTransfers;
+    const isWildcardActive = squad.active_chip === 'wildcard';
+    const isFreeHitActive = squad.active_chip === 'free_hit';
+    const isFreeTransfer = squad.transfers_made_this_week < squad.free_transfers;
     
     let pointsCost = 0;
     if (!isWildcardActive && !isFreeHitActive && !isFreeTransfer) {
-      pointsCost = 4; // 4 points for extra transfer
+      pointsCost = 4;
     }
     
-    // Update squad
-    squad.players[playerOutIndex] = {
+    // Update players array
+    const updatedPlayers = [...players];
+    updatedPlayers[playerOutIndex] = {
       playerId: validatedPlayerInId,
-      position: playerOut.position, // Keep same position
+      position: playerOut.position,
       purchasePrice: playerInData.now_cost,
       currentPrice: playerInData.now_cost,
       isCaptain: playerOut.isCaptain,
@@ -107,17 +107,18 @@ const makeTransfer = async (req, res) => {
       multiplier: playerOut.multiplier
     };
     
-    squad.bank = newBank;
-    squad.transfersMadeThisWeek += 1;
-    squad.pointsDeducted += pointsCost;
+    const newSquadValue = updatedPlayers.reduce((sum, p) => sum + p.currentPrice, 0) + newBank;
     
-    // Recalculate squad value
-    squad.squadValue = squad.players.reduce((sum, p) => sum + p.currentPrice, 0) + squad.bank;
-    
-    await squad.save();
+    const updatedSquad = await Squad.updateByUserId(validatedUserId, {
+      players: updatedPlayers,
+      bank: newBank,
+      squadValue: newSquadValue,
+      transfersMadeThisWeek: squad.transfers_made_this_week + 1,
+      pointsDeducted: squad.points_deducted + pointsCost,
+    });
     
     // Record transfer in history
-    const transfer = new Transfer({
+    const transfer = await Transfer.create({
       userId: validatedUserId,
       gameweek: validatedGameweek,
       playerIn: {
@@ -131,21 +132,19 @@ const makeTransfer = async (req, res) => {
       },
       isFree: isFreeTransfer || isWildcardActive || isFreeHitActive,
       pointsCost,
-      chipActive: squad.activeChip
+      chipActive: squad.active_chip
     });
-    
-    await transfer.save();
     
     res.json({
       message: 'Transfer completed successfully',
       transfer,
       squad: {
-        players: squad.players,
-        bank: squad.bank,
-        squadValue: squad.squadValue,
-        transfersMadeThisWeek: squad.transfersMadeThisWeek,
-        freeTransfers: squad.freeTransfers,
-        pointsDeducted: squad.pointsDeducted
+        players: updatedSquad.players,
+        bank: updatedSquad.bank,
+        squadValue: updatedSquad.squad_value,
+        transfersMadeThisWeek: updatedSquad.transfers_made_this_week,
+        freeTransfers: updatedSquad.free_transfers,
+        pointsDeducted: updatedSquad.points_deducted
       },
       playerIn: {
         id: validatedPlayerInId,
@@ -172,21 +171,13 @@ const getTransferHistory = async (req, res) => {
     const { userId } = req.params;
     const { gameweek, limit } = req.query;
     
-    // Validate to prevent NoSQL injection
-    const validatedUserId = validateObjectId(userId);
+    const validatedUserId = validateId(userId);
     
-    let query = { userId: validatedUserId };
-    if (gameweek) {
-      const validatedGameweek = validateGameweek(gameweek);
-      query.gameweek = validatedGameweek;
-    }
+    const options = {};
+    if (gameweek) options.gameweek = validateGameweek(gameweek);
+    if (limit) options.limit = parseInt(limit);
     
-    let transferQuery = Transfer.find(query).sort({ createdAt: -1 });
-    if (limit) {
-      transferQuery = transferQuery.limit(parseInt(limit));
-    }
-    
-    const transfers = await transferQuery;
+    const transfers = await Transfer.findByUserId(validatedUserId, options);
     
     // Fetch player names
     const bootstrapData = await dataProvider.fetchBootstrapStatic();
@@ -200,7 +191,7 @@ const getTransferHistory = async (req, res) => {
       const playerOut = playerMap[transfer.playerOut.playerId];
       
       return {
-        ...transfer.toObject(),
+        ...transfer,
         playerIn: {
           ...transfer.playerIn,
           name: playerIn ? `${playerIn.first_name} ${playerIn.second_name}` : 'Unknown',
@@ -228,14 +219,10 @@ const getTransferSummary = async (req, res) => {
   try {
     const { userId, gameweek } = req.params;
     
-    // Validate to prevent NoSQL injection
-    const validatedUserId = validateObjectId(userId);
+    const validatedUserId = validateId(userId);
     const validatedGameweek = validateGameweek(gameweek);
     
-    const transfers = await Transfer.find({ 
-      userId: validatedUserId, 
-      gameweek: validatedGameweek 
-    });
+    const transfers = await Transfer.findByUserIdAndGameweek(validatedUserId, validatedGameweek);
     
     const totalPointsCost = transfers.reduce((sum, t) => sum + t.pointsCost, 0);
     const freeTransfers = transfers.filter(t => t.isFree).length;

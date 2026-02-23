@@ -1,62 +1,75 @@
-const mongoose = require('mongoose');
+const { query } = require('../db');
 
-/**
- * Transfer Schema
- * Tracks all player transfers made by users
- */
-const transferSchema = new mongoose.Schema({
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+const Transfer = {
+  async create({ userId, gameweek, playerIn, playerOut, isFree, pointsCost, chipActive }) {
+    const result = await query(
+      `INSERT INTO transfers
+         (user_id, gameweek, player_in_id, player_in_price,
+          player_out_id, player_out_purchase_price, player_out_selling_price,
+          is_free, points_cost, chip_active)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+       RETURNING *`,
+      [
+        userId,
+        gameweek,
+        playerIn.playerId,
+        playerIn.price,
+        playerOut.playerId,
+        playerOut.purchasePrice,
+        playerOut.sellingPrice,
+        isFree ?? false,
+        pointsCost ?? 0,
+        chipActive ?? null,
+      ]
+    );
+    const row = result.rows[0];
+    return rowToTransfer(row);
   },
-  gameweek: {
-    type: Number,
-    required: true
-  },
-  playerIn: {
-    playerId: {
-      type: Number,
-      required: true
-    },
-    price: {
-      type: Number, // Purchase price in £0.1m units
-      required: true
+
+  async findByUserId(userId, { gameweek, limit } = {}) {
+    let text = 'SELECT * FROM transfers WHERE user_id = $1';
+    const params = [userId];
+    if (gameweek !== undefined) {
+      params.push(gameweek);
+      text += ` AND gameweek = $${params.length}`;
     }
-  },
-  playerOut: {
-    playerId: {
-      type: Number,
-      required: true
-    },
-    purchasePrice: {
-      type: Number, // Original purchase price
-      required: true
-    },
-    sellingPrice: {
-      type: Number, // Actual selling price (with profit rules)
-      required: true
+    text += ' ORDER BY created_at DESC';
+    if (limit !== undefined) {
+      params.push(limit);
+      text += ` LIMIT $${params.length}`;
     }
+    const result = await query(text, params);
+    return result.rows.map(rowToTransfer);
   },
-  isFree: {
-    type: Boolean,
-    default: false // Whether this was a free transfer
-  },
-  pointsCost: {
-    type: Number,
-    default: 0 // Points deducted for this transfer (0 or 4)
-  },
-  chipActive: {
-    type: String,
-    enum: ['wildcard', 'free_hit', null],
-    default: null
-  }
-}, {
-  timestamps: true
-});
 
-// Index for efficient queries
-transferSchema.index({ userId: 1, gameweek: 1 });
-transferSchema.index({ userId: 1, createdAt: -1 });
+  async findByUserIdAndGameweek(userId, gameweek) {
+    const result = await query(
+      'SELECT * FROM transfers WHERE user_id = $1 AND gameweek = $2 ORDER BY created_at DESC',
+      [userId, gameweek]
+    );
+    return result.rows.map(rowToTransfer);
+  },
+};
 
-module.exports = mongoose.model('Transfer', transferSchema);
+function rowToTransfer(row) {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    gameweek: row.gameweek,
+    playerIn: {
+      playerId: row.player_in_id,
+      price: row.player_in_price,
+    },
+    playerOut: {
+      playerId: row.player_out_id,
+      purchasePrice: row.player_out_purchase_price,
+      sellingPrice: row.player_out_selling_price,
+    },
+    isFree: row.is_free,
+    pointsCost: row.points_cost,
+    chipActive: row.chip_active,
+    createdAt: row.created_at,
+  };
+}
+
+module.exports = Transfer;
