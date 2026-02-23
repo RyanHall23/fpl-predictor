@@ -55,7 +55,7 @@ app.post('/api/available-transfers/:playerCode', apiLimiter, fplController.getAv
 const distPath = path.join(__dirname, '..', 'frontend', 'dist');
 if (fs.existsSync(distPath)) {
   app.use(express.static(distPath));
-  app.get('*', apiLimiter, (req, res, next) => {
+  app.get('/*splat', apiLimiter, (req, res, next) => {
     if (req.path.startsWith('/api')) return next();
     res.sendFile(path.join(distPath, 'index.html'));
   });
