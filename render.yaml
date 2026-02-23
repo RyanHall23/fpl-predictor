@@ -2,24 +2,12 @@ services:
   - type: web
     name: fpl-predictor-backend
     runtime: node
-    rootDir: backend
-    buildCommand: npm install
-    startCommand: npm start
+    buildCommand: npm ci --omit=dev && npm run build
+    startCommand: npm run start-backend
     envVars:
       - key: NODE_ENV
         value: production
       - key: JWT_SECRET
         generateValue: true
       - key: MONGODB_URI
-        sync: false
-      - key: FRONTEND_URL
-        sync: false
-
-  - type: static
-    name: fpl-predictor-frontend
-    rootDir: frontend
-    buildCommand: npm install && npm run build
-    staticPublishPath: dist
-    envVars:
-      - key: VITE_API_URL
         sync: false

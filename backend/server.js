@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
+const path = require('path');
+const fs = require('fs');
 const fplController = require('./controllers/fplController');
 const authRoutes = require('./routes/auth');
 const squadRoutes = require('./routes/squad');
@@ -48,6 +50,16 @@ app.get('/api/entry/:entryId/profile', apiLimiter, fplController.getUserProfile)
 app.get('/api/entry/:entryId/event/:eventId/recommended-transfers', dbReadLimiter, fplController.getRecommendedTransfers);
 app.post('/api/validate-swap', apiLimiter, fplController.validateSwap);
 app.post('/api/available-transfers/:playerCode', apiLimiter, fplController.getAvailableTransfers);
+
+// Serve built Vite frontend from the same process
+const distPath = path.join(__dirname, '..', 'frontend', 'dist');
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+  app.get('*', apiLimiter, (req, res, next) => {
+    if (req.path.startsWith('/api')) return next();
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+}
 
 app.listen(port, () => {
   console.log(`Proxy server running on port ${port}`);
