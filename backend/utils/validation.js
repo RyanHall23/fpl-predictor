@@ -1,24 +1,15 @@
-const mongoose = require('mongoose');
-
 /**
- * Validate and sanitize MongoDB ObjectId
- * Prevents NoSQL injection attacks
- * @param {string} id - User-provided ID
- * @returns {string} - Validated ObjectId
+ * Validate and sanitize a PostgreSQL integer ID.
+ * @param {string|number} id - User-provided ID
+ * @returns {number} - Validated integer ID
  * @throws {Error} - If ID is invalid
  */
-function validateObjectId(id) {
-  if (!id || typeof id !== 'string') {
-    throw new Error('Invalid ID: must be a non-empty string');
+function validateId(id) {
+  const parsed = parseInt(id, 10);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new Error('Invalid ID: must be a positive integer');
   }
-  
-  // Check if it's a valid MongoDB ObjectId
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    throw new Error('Invalid ID: not a valid MongoDB ObjectId');
-  }
-  
-  // Return the validated ID as a string (Mongoose will convert it)
-  return id.trim();
+  return parsed;
 }
 
 /**
@@ -74,13 +65,18 @@ function validatePlayerId(playerId) {
 
 /**
  * Validate chip name
- * Must be one of the allowed chip types
+ * Must be one of the allowed chip types (optionally with a number suffix, e.g. bench_boost_1)
  * @param {string} chipName - Chip name
  * @returns {string} - Validated chip name
  * @throws {Error} - If chip name is invalid
  */
 function validateChipName(chipName) {
-  const allowedChips = ['bench_boost', 'free_hit', 'triple_captain', 'wildcard'];
+  const allowedChips = [
+    'bench_boost', 'bench_boost_1', 'bench_boost_2',
+    'free_hit', 'free_hit_1', 'free_hit_2',
+    'triple_captain', 'triple_captain_1', 'triple_captain_2',
+    'wildcard', 'wildcard_1', 'wildcard_2',
+  ];
   
   if (!chipName || typeof chipName !== 'string') {
     throw new Error('Invalid chip name: must be a non-empty string');
@@ -89,7 +85,7 @@ function validateChipName(chipName) {
   const normalized = chipName.toLowerCase().trim();
   
   if (!allowedChips.includes(normalized)) {
-    throw new Error(`Invalid chip name: must be one of ${allowedChips.join(', ')}`);
+    throw new Error(`Invalid chip name: must be one of the allowed chip types`);
   }
   
   return normalized;
@@ -138,7 +134,7 @@ function validateFplApiUrl(url) {
 }
 
 module.exports = {
-  validateObjectId,
+  validateId,
   validateEntryId,
   validateGameweek,
   validatePlayerId,

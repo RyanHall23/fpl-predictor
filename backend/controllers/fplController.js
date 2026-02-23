@@ -1,13 +1,13 @@
 const fplModel = require('../models/fplModel');
 const dataProvider = require('../models/dataProvider');
 const User = require('../models/userModel');
-const Squad = require('../models/squadModel');
+const { Squad } = require('../models/squadModel');
 const SquadHistory = require('../models/squadHistoryModel');
 
 /**
  * Find the most recent purchase price for a player by looking through squad history
  * This handles cases where a player was transferred in/out multiple times
- * @param {string} userId - MongoDB user ID
+ * @param {number} userId - PostgreSQL user ID
  * @param {number} playerId - FPL player element ID
  * @param {number} currentGameweek - Current gameweek to look back from
  * @returns {Promise<{purchasePrice: number, gameweekAdded: number} | null>}
@@ -15,10 +15,11 @@ const SquadHistory = require('../models/squadHistoryModel');
 async function findMostRecentPurchasePrice(userId, playerId) {
   try {
     // Get all squad history for this user, sorted by gameweek descending
-    const allHistory = await SquadHistory.find({ 
+    const allHistoryAsc = await SquadHistory.findAll({ 
       userId,
-      snapshotType: 'regular' // Only look at regular snapshots, not pre-chip
-    }).sort({ gameweek: -1 }).exec();
+      snapshotType: 'regular'
+    });
+    const allHistory = allHistoryAsc.slice().reverse();
     
     if (!allHistory || allHistory.length === 0) {
       return null;
@@ -627,10 +628,10 @@ const getRecommendedTransfers = async (req, res) => {
     console.log(`[getRecommendedTransfers] Attempting to fetch squad data for entryId: ${entryId}`);
     
     try {
-      const user = await User.findOne({ teamid: entryId });
+      const user = await User.findByTeamId(entryId);
       if (user) {
-        console.log(`[getRecommendedTransfers] User found: ${user._id}`);
-        squadData = await Squad.findOne({ userId: user._id });
+        console.log(`[getRecommendedTransfers] User found: ${user.id}`);
+        squadData = await Squad.findByUserId(user.id);
         console.log(`[getRecommendedTransfers] Squad data ${squadData ? 'found' : 'not found'}`);
         
         // For each player in the current squad, find their most recent purchase price
@@ -640,7 +641,7 @@ const getRecommendedTransfers = async (req, res) => {
           console.log(`[getRecommendedTransfers] Processing ${squadData.players.length} players from squad data`);
           for (const player of squadData.players) {
             const historyData = await findMostRecentPurchasePrice(
-              user._id, 
+              user.id, 
               player.playerId, 
               currentEvent.id
             );

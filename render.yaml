@@ -9,5 +9,12 @@ services:
         value: production
       - key: JWT_SECRET
         generateValue: true
-      - key: MONGODB_URI
-        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: fpl-predictor-db
+          property: connectionString
+
+databases:
+  - name: fpl-predictor-db
+    databaseName: fplpredictor
+    plan: free

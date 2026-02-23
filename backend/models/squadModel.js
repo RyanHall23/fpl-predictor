@@ -1,116 +1,74 @@
-const mongoose = require('mongoose');
+const { query } = require('../db');
 
 /**
- * Player in Squad Schema
- * Stores individual player with purchase and current price information
+ * Calculate the selling price for a player given purchase and current prices.
  */
-const squadPlayerSchema = new mongoose.Schema({
-  playerId: {
-    type: Number,
-    required: true
-  },
-  position: {
-    type: Number, // 1-15 (1-11 starting, 12-15 bench)
-    required: true
-  },
-  purchasePrice: {
-    type: Number, // Price in £0.1m units (e.g., 75 = £7.5m)
-    required: true
-  },
-  currentPrice: {
-    type: Number, // Current price in £0.1m units
-    required: true
-  },
-  isCaptain: {
-    type: Boolean,
-    default: false
-  },
-  isViceCaptain: {
-    type: Boolean,
-    default: false
-  },
-  multiplier: {
-    type: Number,
-    default: 1 // 1 = normal, 2 = captain, 3 = triple captain
-  }
-});
+function getSellingPrice(purchasePrice, currentPrice) {
+  if (currentPrice <= purchasePrice) return currentPrice;
+  const profit = currentPrice - purchasePrice;
+  return purchasePrice + Math.floor(profit / 2);
+}
 
 /**
- * Squad Schema
- * Stores a user's current FPL squad with all pricing information
+ * Calculate the point cost for extra transfers.
  */
-const squadSchema = new mongoose.Schema({
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true,
-    unique: true // Each user has one current squad
-  },
-  gameweek: {
-    type: Number,
-    required: true // Current gameweek this squad is for
-  },
-  players: [squadPlayerSchema],
-  bank: {
-    type: Number, // Money in bank in £0.1m units
-    default: 0
-  },
-  squadValue: {
-    type: Number, // Total squad value (sum of current prices + bank)
-    required: true
-  },
-  freeTransfers: {
-    type: Number,
-    default: 1,
-    min: 0,
-    max: 2 // Maximum 2 free transfers can be banked
-  },
-  transfersMadeThisWeek: {
-    type: Number,
-    default: 0
-  },
-  pointsDeducted: {
-    type: Number, // Points deducted this week from transfers
-    default: 0
-  },
-  activeChip: {
-    type: String,
-    enum: ['bench_boost', 'free_hit', 'triple_captain', 'wildcard', null],
-    default: null
-  }
-}, {
-  timestamps: true
-});
+function getTransferCost(activeChip, transfersMadeThisWeek, freeTransfers) {
+  if (activeChip === 'wildcard' || activeChip === 'free_hit') return 0;
+  const excess = Math.max(0, transfersMadeThisWeek - freeTransfers);
+  return excess * 4;
+}
 
-// Method to calculate selling price for a player
-squadPlayerSchema.methods.getSellingPrice = function() {
-  if (this.currentPrice <= this.purchasePrice) {
-    return this.currentPrice;
-  }
-  
-  // Keep half of the profit, rounded down to nearest 0.1m
-  const profit = this.currentPrice - this.purchasePrice;
-  const profitToKeep = Math.floor(profit / 2);
-  return this.purchasePrice + profitToKeep;
+const Squad = {
+  async findByUserId(userId) {
+    const result = await query('SELECT * FROM squads WHERE user_id = $1', [userId]);
+    return result.rows[0] || null;
+  },
+
+  async create({ userId, gameweek, players, bank, squadValue, freeTransfers, transfersMadeThisWeek, pointsDeducted, activeChip }) {
+    const result = await query(
+      `INSERT INTO squads
+         (user_id, gameweek, players, bank, squad_value, free_transfers,
+          transfers_made_this_week, points_deducted, active_chip)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+       RETURNING *`,
+      [
+        userId,
+        gameweek,
+        JSON.stringify(players),
+        bank,
+        squadValue,
+        freeTransfers ?? 1,
+        transfersMadeThisWeek ?? 0,
+        pointsDeducted ?? 0,
+        activeChip ?? null,
+      ]
+    );
+    return result.rows[0];
+  },
+
+  async updateByUserId(userId, fields) {
+    const colMap = {
+      gameweek: 'gameweek',
+      players: 'players',
+      bank: 'bank',
+      squadValue: 'squad_value',
+      freeTransfers: 'free_transfers',
+      transfersMadeThisWeek: 'transfers_made_this_week',
+      pointsDeducted: 'points_deducted',
+      activeChip: 'active_chip',
+    };
+    const entries = Object.entries(fields).filter(([k]) => colMap[k]);
+    if (entries.length === 0) return this.findByUserId(userId);
+    const setClauses = entries.map(([k], i) => `${colMap[k]} = $${i + 2}`).join(', ');
+    const values = entries.map(([k, v]) =>
+      k === 'players' ? JSON.stringify(v) : v
+    );
+    const result = await query(
+      `UPDATE squads SET ${setClauses}, updated_at = NOW() WHERE user_id = $1 RETURNING *`,
+      [userId, ...values]
+    );
+    return result.rows[0] || null;
+  },
 };
 
-// Method to calculate total selling value of squad
-squadSchema.methods.getTotalSellingValue = function() {
-  const playersValue = this.players.reduce((total, player) => {
-    const playerDoc = new mongoose.Document(player, squadPlayerSchema);
-    return total + playerDoc.getSellingPrice();
-  }, 0);
-  return playersValue + this.bank;
-};
-
-// Method to get transfer cost for this gameweek
-squadSchema.methods.getTransferCost = function() {
-  if (this.activeChip === 'wildcard' || this.activeChip === 'free_hit') {
-    return 0; // No cost when these chips are active
-  }
-  
-  const excessTransfers = Math.max(0, this.transfersMadeThisWeek - this.freeTransfers);
-  return excessTransfers * 4; // 4 points per extra transfer
-};
-
-module.exports = mongoose.model('Squad', squadSchema);
+module.exports = { Squad, getSellingPrice, getTransferCost };
