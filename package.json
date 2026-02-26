@@ -2,11 +2,10 @@
   "name": "fpl-predictor-root",
   "private": true,
   "scripts": {
-    "postinstall": "npm install --prefix backend && npm install --prefix frontend",
-    "start": "concurrently \"npm run start-backend\" \"npm run start-frontend\"",
     "build": "npm install --prefix frontend && npm run build --prefix frontend",
     "start-backend": "cd backend && npm start",
-    "start-frontend": "cd frontend && npm start",
+    "start": "concurrently \"npm run start-backend\" \"cd frontend && npm start\"",
+    "postinstall": "npm install --prefix backend && npm install --prefix frontend",
     "clean": "bash clean.sh"
   },
   "devDependencies": {
