@@ -36,6 +36,10 @@ if (fs.existsSync(distPath)) {
   });
 }
 
-app.listen(port, () => {
-  console.log(`Proxy server running on port ${port}`);
-});
+if (require.main === module) {
+  app.listen(port, () => {
+    console.log(`Proxy server running on port ${port}`);
+  });
+}
+
+module.exports = app;
