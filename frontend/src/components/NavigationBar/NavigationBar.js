@@ -7,7 +7,6 @@ import {
   Typography,
   Container,
   Button,
-  TextField,
   IconButton,
   Tooltip,
   Select,
@@ -22,21 +21,16 @@ import './styles.css';
 import TeamIdDialog from '../TeamIdDialog/TeamIdDialog';
 
 const TEAM_VIEW = {
-  SEARCHED: 'searched',
   USER: 'user',
   HIGHEST: 'highest'
 };
 
 const NavigationBar = ({
-  entryId,
-  setEntryId,
-  handleEntryIdSubmit,
   onSetTeamId,
   onClearTeamId,
   teamView,
   onSwitchTeamView,
   userTeamId,
-  searchedTeamName,
   selectedGameweek,
   setSelectedGameweek,
   currentGameweek
@@ -71,44 +65,6 @@ const NavigationBar = ({
           >
             FPL Predictor
           </Typography>
-          { /* Searched Team input and Search button */ }
-          <Box sx={ { display: 'flex', alignItems: 'center', maxWidth: '250px', mx: 2 } }>
-            <TextField
-              value={ entryId }
-              onChange={ (e) => {
-                const val = e.target.value.replace(/\D/g, '');
-                setEntryId(val);
-              } }
-              fullWidth
-              className='text-field'
-              size='small'
-              variant='outlined'
-              slotProps={ {
-                input: {
-                  inputMode: 'numeric',
-                  pattern: '[0-9]*'
-                }
-              } }
-            />
-            <Button
-              onClick={ handleEntryIdSubmit }
-              sx={ { ml: 1 } }
-              variant='contained'
-              color='secondary'
-            >
-              Search
-            </Button>
-          </Box>
-          <Button
-            onClick={ handleEntryIdSubmit }
-            sx={ { my: 2, color: 'white', display: 'block' } }
-            variant={ teamView === TEAM_VIEW.SEARCHED ? 'contained' : 'outlined' }
-            color='secondary'
-          >
-            { searchedTeamName
-              ? `${searchedTeamName}'s Team`
-              : 'View Your Team' }
-          </Button>
           <Box sx={ { display: 'flex', gap: 1, ml: 2 } }>
             { userTeamId && (
               <Button
@@ -177,15 +133,11 @@ const NavigationBar = ({
 };
 
 NavigationBar.propTypes = {
-  entryId: PropTypes.string.isRequired,
-  setEntryId: PropTypes.func.isRequired,
-  handleEntryIdSubmit: PropTypes.func.isRequired,
   onSetTeamId: PropTypes.func.isRequired,
   onClearTeamId: PropTypes.func.isRequired,
   teamView: PropTypes.string.isRequired,
   onSwitchTeamView: PropTypes.func.isRequired,
   userTeamId: PropTypes.string.isRequired,
-  searchedTeamName: PropTypes.string,
   selectedGameweek: PropTypes.number,
   setSelectedGameweek: PropTypes.func.isRequired,
   currentGameweek: PropTypes.number

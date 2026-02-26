@@ -15,19 +15,15 @@ import RecommendedTransfers from './components/RecommendedTransfers';
 const TEAM_ID_KEY = 'fpl-team-id';
 
 const TEAM_VIEW = {
-  SEARCHED: 'searched',
   USER: 'user',
   HIGHEST: 'highest'
 };
 
 const App = () => {
   const theme = useTheme();
-  const [searchedEntryId, setSearchedEntryId] = useState('');
-  const [pendingSearchId, setPendingSearchId] = useState(''); // For input box
   const [userEntryId, setUserEntryId] = useState('');
   const [currentEntryId, setCurrentEntryId] = useState('');
   const [teamView, setTeamView] = useState(TEAM_VIEW.HIGHEST);
-  const [searchedTeamName, setSearchedTeamName] = useState('');
   const [selectedGameweek, setSelectedGameweek] = useState(null); // null means current gameweek
   const [currentGameweek, setCurrentGameweek] = useState(null);
 
@@ -40,7 +36,6 @@ const App = () => {
     toggleTeamView,
     isHighestPredictedTeam,
     selectedPlayer,
-    teamName,
     // Add setters for transfer
     setMainTeamData,
     setBenchTeamData,
@@ -85,25 +80,6 @@ const App = () => {
     }
   }, [snackbarOpen]);
 
-  // Update searchedTeamName when teamName changes and in searched view
-  useEffect(() => {
-    if (teamView === TEAM_VIEW.SEARCHED && teamName) {
-      setSearchedTeamName(teamName);
-    } else if (teamView === TEAM_VIEW.SEARCHED && !teamName) {
-      setSearchedTeamName('');
-    }
-  }, [teamName, teamView]);
-
-  // Handle submit for searched team
-  const handleSearchedEntryIdSubmit = () => {
-    setSearchedEntryId(pendingSearchId);
-    setCurrentEntryId(pendingSearchId);
-    setTeamView(TEAM_VIEW.SEARCHED);
-    if (isHighestPredictedTeam) {
-      toggleTeamView();
-    }
-  };
-
   // Handle setting Team ID from localStorage
   const handleSetTeamId = (teamId) => {
     localStorage.setItem(TEAM_ID_KEY, teamId);
@@ -135,13 +111,6 @@ const App = () => {
     } else if (view === TEAM_VIEW.USER) {
       setCurrentEntryId(userEntryId);
       if (isHighestPredictedTeam) toggleTeamView();
-    } else if (view === TEAM_VIEW.SEARCHED) {
-      if (searchedEntryId) {
-        setCurrentEntryId(searchedEntryId);
-      } else {
-        setCurrentEntryId('');
-      }
-      if (isHighestPredictedTeam) toggleTeamView();
     }
   };
 
@@ -152,17 +121,11 @@ const App = () => {
   return (
     <Box sx={ { minHeight: '100vh', backgroundColor: theme.palette.background.default } }>
       <NavigationBar
-        entryId={ pendingSearchId }
-        setEntryId={ setPendingSearchId }
-        handleEntryIdSubmit={ handleSearchedEntryIdSubmit }
         onSetTeamId={ handleSetTeamId }
         onClearTeamId={ handleClearTeamId }
         teamView={ teamView }
         onSwitchTeamView={ handleSwitchTeamView }
         userTeamId={ userEntryId }
-        isHighestPredictedTeam={ isHighestPredictedTeam }
-        toggleTeamView={ toggleTeamView }
-        searchedTeamName={ searchedTeamName }
         selectedGameweek={ selectedGameweek }
         setSelectedGameweek={ setSelectedGameweek }
         currentGameweek={ currentGameweek }
@@ -170,13 +133,8 @@ const App = () => {
       <Container sx={ { marginTop: '4px' } }>
         <Box sx={ { display: 'flex', flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'center' } }>
           <Box sx={ { flex: 1, maxWidth: '900px' } }>
-            { teamView === TEAM_VIEW.SEARCHED && !searchedEntryId ? (
-              <Typography variant='h6' align='center' color='textSecondary' sx={ { mt: 4 } }>
-                Enter a Team ID above and click &quot;Search&quot; to view a team&apos;s predicted points.
-              </Typography>
-            ) : (
-              <>
-                <Typography variant='h6' align='center' gutterBottom>
+            <>
+              <Typography variant='h6' align='center' gutterBottom>
                   { gameweekInfo?.isPast ? 'Total Points' : 'Total Predicted Points' }:{ ' ' }
                   <Box component='span' sx={ { fontWeight: 'bold' } }>
                     { calculateTotalPredictedPoints(mainTeamData) }
@@ -241,15 +199,14 @@ const App = () => {
                   </Grid>
                 </Grid>
                 
-                { /* Show Recommended Transfers inline for user and searched teams - BELOW team formation */ }
-                { currentEntryId && currentGameweek && (
+                { /* Show Recommended Transfers for My Team only - BELOW team formation */ }
+                { teamView === TEAM_VIEW.USER && userEntryId && currentGameweek && (
                   <RecommendedTransfers
-                    entryId={ currentEntryId }
+                    entryId={ userEntryId }
                     currentGameweek={ currentGameweek }
                   />
                 ) }
               </>
-            ) }
           </Box>
           <Box
             sx={ {
