@@ -20,84 +20,78 @@ The main goal of this project is to create a model that can accurately predict t
 ### Squad Management
 - **Player Value Tracking**: Track purchase prices vs current prices for all players
 - **Selling Price Calculation**: Automatically calculates selling price with profit rules (keep 50% of profit, rounded down)
-- **Squad History**: Store and view squad snapshots for each gameweek
-- **Database Caching**: Reduce API calls by storing team data locally
 - **Recommended Transfers Price Display**: Shows purchase price, current market value, and selling price for players being transferred out
 
 ### Transfer System
 - **Free Transfer Management**: Track free transfers (1 per week, max 2 banked)
 - **Points Deduction**: Automatic calculation of -4 points for extra transfers
-- **Transfer History**: Complete record of all transfers made
 - **Transfer Validation**: Ensures valid position swaps and sufficient funds
+- **localStorage Persistence**: Planned transfers stored locally per team ID (`fpl_transfers_{teamId}`)
 
 ### Chip Management
 - **All FPL Chips Supported**: Wildcard, Free Hit, Bench Boost, Triple Captain
 - **Availability Windows**: Chips available at correct times (GW1-19, GW20-38)
 - **Usage Tracking**: Track which chips have been used
-- **Chip Rules Enforcement**: 
-  - One chip per gameweek
-  - Free Hit cannot be used in consecutive gameweeks
-  - Saved transfers retained when using Wildcard/Free Hit
-  - Wildcard and Free Hit cannot be cancelled once confirmed
+
+### Team ID Flow
+- On first load, a dialog prompts you to enter your FPL Team ID (a numeric ID found on the FPL website)
+- The Team ID is persisted in `localStorage` under the key `fpl_team_id`
+- Use the **"Change Team ID"** button in the navigation bar to update or clear your Team ID
+- No account or password required
 
 ### API Features
 - **Mock Data Support**: Test without FPL API access using local mock data
 - **RESTful API**: Clean, documented API endpoints
-- **Authentication & Security**: 
-  - JWT-based authentication
-  - NoSQL injection protection via input validation
-  - SSRF protection via URL whitelisting
-  - 4-tier rate limiting (auth, general API, read, write operations)
+- **SSRF protection** via URL whitelisting
+- **4-tier rate limiting** (general API, read operations)
 
-## Render Deployment
+## Vercel Deployment
 
-This application can be deployed on [Render](https://render.com) as two separate services.
+This application is deployed as a static frontend with Express serverless backend on [Vercel](https://vercel.com).
 
-### Backend (Web Service)
+### One-Click Deploy
 
-1. Create a new **Web Service** on Render
-2. Connect your GitHub repository and set the **Root Directory** to `backend`
-3. Configure the service:
-   - **Runtime:** Node
-   - **Build Command:** `npm install`
-   - **Start Command:** `npm start`
-4. Add the following environment variables in the Render dashboard:
-   - `MONGODB_URI` — MongoDB connection string (e.g. from Render's MongoDB add-on)
-   - `JWT_SECRET` — A strong random secret (generate with `openssl rand -base64 32`)
-   - `FRONTEND_URL` — The URL of your deployed frontend (e.g. `https://your-app.onrender.com`)
-   - `PORT` is automatically provided by Render
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/RyanHall23/fpl-predictor)
 
-### Frontend (Static Site)
+### Manual Deployment (Vercel CLI)
 
-1. Create a new **Static Site** on Render
-2. Connect your GitHub repository and set the **Root Directory** to `frontend`
-3. Configure the site:
-   - **Build Command:** `npm install && npm run build`
-   - **Publish Directory:** `dist`
-4. Add the following environment variable in the Render dashboard:
-   - `VITE_API_URL` — The URL of your deployed backend (e.g. `https://your-backend.onrender.com`)
+1. Install the Vercel CLI:
+   ```sh
+   npm install -g vercel
+   ```
 
-### How the Frontend Connects to the Backend
+2. Deploy from the repo root:
+   ```sh
+   vercel
+   ```
 
-In production, the frontend reads `VITE_API_URL` and uses it as the base URL for all API requests. In local development, Vite's proxy handles `/api` requests to `localhost:5000` and `VITE_API_URL` can be left empty.
+3. Set the following environment variable in the Vercel dashboard under your project settings:
+   - `FRONTEND_URL` — Your Vercel deployment URL (e.g. `https://fpl-predictor-cyan.vercel.app`)
 
-### Required Environment Variables Summary
+### How It Works on Vercel
 
-| Service  | Variable       | Description                            |
-|----------|---------------|----------------------------------------|
-| Backend  | `MONGODB_URI`  | MongoDB connection string              |
-| Backend  | `JWT_SECRET`   | Secret for JWT token signing           |
-| Backend  | `FRONTEND_URL` | Deployed frontend URL (for CORS)       |
-| Frontend | `VITE_API_URL` | Deployed backend URL                   |
+- The **frontend** (`frontend/dist`) is served as a static site.
+- All `/api/*` requests are handled by the Express app exported from `api/index.js` as a Vercel Serverless Function.
+- Local development uses Vite's proxy (`/api` → `http://localhost:5000`) — no change needed for local dev.
 
+### Required Environment Variables
 
+| Service  | Variable        | Description                                  |
+|----------|----------------|----------------------------------------------|
+| Backend  | `FRONTEND_URL`  | Deployed frontend URL (for CORS)             |
+| Backend  | `USE_FPL_API`   | `true` to use live FPL API, `false` for mock |
+| Backend  | `USE_COMPUTED_EP` | `true` for ML predictions, `false` for raw |
+| Backend  | `INCLUDE_MANAGERS` | `false` (default) — exclude manager placeholders |
 
 ```
-backend/           # Express.js backend (API, authentication, MongoDB models)
+backend/           # Express.js backend (API, FPL data proxy)
   controllers/     # Backend controllers (business logic)
-  models/          # Mongoose models and FPL data logic
-  routes/          # Express route definitions
-  server.js        # Backend entry point
+  models/          # FPL data logic
+  routes/          # Express route definitions (squad, chips, transfers)
+  server.js        # Backend entry point (also exported for Vercel)
+
+api/
+  index.js         # Vercel Serverless Function entry point
 
 frontend/          # React frontend (UI)
   public/          # Static assets and index.html
@@ -105,25 +99,20 @@ frontend/          # React frontend (UI)
     components/    # React components
     hooks/         # Custom React hooks
     App.js         # Main React app
-    index.js       # React entry point
+    index.jsx      # React entry point
 
+vercel.json        # Vercel deployment configuration
 package.json       # Root scripts for running both frontend and backend together
 ```
 
 ## Prerequisites
 
-- Node.js (v14 or higher, recommended v18+)
-- npm (v6 or higher, recommended v8+)
-- MongoDB (running locally on default port 27017)
+- Node.js (v18 or higher recommended)
+- npm (v8 or higher recommended)
 
 ## Environment Variables
 
-The backend supports several environment variables to configure behavior:
-
-### Authentication
-- `JWT_SECRET` - Secret key for JWT token generation (**required in production**, defaults to 'changeme' in development)
-  - ⚠️ Must be set to a secure random value in production
-  - Generate with: `openssl rand -base64 32`
+The backend supports several environment variables to configure behaviour:
 
 ### FPL API Configuration
 - `USE_FPL_API` - Controls data source for FPL data (default: `'true'`)
@@ -142,7 +131,6 @@ Create a `.env` file in the `backend` directory:
 
 ```sh
 # Example .env file
-JWT_SECRET=your-secret-key-here
 USE_FPL_API=true
 USE_COMPUTED_EP=true
 INCLUDE_MANAGERS=false
@@ -166,9 +154,6 @@ This will use mock data from `backend/mockData/` that matches the exact structur
 2. Install dependencies for all parts (root, frontend, backend):
     ```sh
     npm install
-    cd backend && npm install
-    cd ../frontend && npm install
-    cd ..
     ```
 
 ### Running the Application
@@ -179,7 +164,7 @@ You can start both the backend and frontend together from the root directory:
 npm start
 ```
 
-- This will run the backend on [http://localhost:5000](http://localhost:5000) and the frontend on [http://localhost:3000](http://localhost:3000).
+- This will run the backend on [http://localhost:5000](http://localhost:5000) and the frontend on [http://localhost:5173](http://localhost:5173).
 
 **Alternatively, to run them separately:**
 
@@ -196,29 +181,19 @@ npm start
 
 ## API Documentation
 
-The backend provides comprehensive REST API endpoints for squad management, transfers, and chips.
+The backend provides REST API endpoints for squad management, transfers, chips, and FPL data.
 
 ### Key Endpoints
-
-**Squad Management:**
-- `POST /api/squad/initialize` - Initialize user's squad from FPL account
-- `GET /api/squad/:userId` - Get current squad with calculated values
-- `GET /api/squad/history/:userId/:gameweek` - Get squad for specific gameweek
-
-**Transfers:**
-- `POST /api/transfers` - Make a player transfer
-- `GET /api/transfers/history/:userId` - Get transfer history
-- `GET /api/transfers/summary/:userId/:gameweek` - Get gameweek transfer summary
-
-**Chips:**
-- `GET /api/chips/:userId?gameweek=N` - Get available chips for gameweek
-- `POST /api/chips/activate` - Activate a chip
-- `POST /api/chips/cancel` - Cancel an active chip (if allowed)
 
 **FPL Data:**
 - `GET /api/bootstrap-static` - All players, teams, and gameweeks
 - `GET /api/predicted-team` - AI-predicted optimal team
 - `GET /api/entry/:entryId/event/:eventId/recommended-transfers` - Smart transfer suggestions
+- `GET /api/entry/:entryId/profile` - FPL manager profile and league standings
+
+**Transfers & Validation:**
+- `POST /api/validate-swap` - Validate a player swap
+- `POST /api/available-transfers/:playerCode` - Get available transfer targets
 
 For complete API documentation, see [backend/API_DOCUMENTATION.md](backend/API_DOCUMENTATION.md)
 
