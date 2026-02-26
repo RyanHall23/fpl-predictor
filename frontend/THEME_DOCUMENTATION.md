@@ -73,7 +73,7 @@ All components have been updated to support theming:
 - Striped field pattern adapts to mode
 - Bench area follows theme
 
-#### **AuthDialog & TransferPlayer**
+#### **TeamIdDialog & TransferPlayer**
 - Dialog backgrounds match theme gradient
 - Form inputs adapt to theme
 - Button styling consistent with theme
@@ -175,7 +175,7 @@ Potential improvements to consider:
 - ✅ UserProfilePane - Gradient backgrounds
 - ✅ PlayerCard - Card styling
 - ✅ TeamFormation - Field backgrounds
-- ✅ AuthDialog - Dialog styling
+- ✅ TeamIdDialog - Dialog styling
 - ✅ TransferPlayer - Dialog styling
 
 ## Notes

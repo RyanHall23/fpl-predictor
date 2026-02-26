@@ -43,11 +43,9 @@ Create a `.env` file in the `backend` directory:
 ```env
 # For production - use real FPL API
 USE_FPL_API=true
-JWT_SECRET=your-production-secret
 
 # For testing - use mock data
 # USE_FPL_API=false
-# JWT_SECRET=test-secret
 ```
 
 Then start the server normally:
