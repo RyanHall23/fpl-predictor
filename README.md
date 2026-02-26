@@ -17,86 +17,57 @@ The main goal of this project is to create a model that can accurately predict t
 - **Opponent Analysis**: Enriches players with opponent difficulty and fixture information
 - **Gameweek Forecasting**: Predict player performance for future gameweeks
 
-### Squad Management
-- **Player Value Tracking**: Track purchase prices vs current prices for all players
-- **Selling Price Calculation**: Automatically calculates selling price with profit rules (keep 50% of profit, rounded down)
-- **Squad History**: Store and view squad snapshots for each gameweek
-- **Database Caching**: Reduce API calls by storing team data locally
-- **Recommended Transfers Price Display**: Shows purchase price, current market value, and selling price for players being transferred out
+### Team ID (Local Session)
+- **No login required**: Simply enter your FPL Team ID once and it is stored in `localStorage` under the key `fpl-team-id`.
+- **Persists across reloads**: Your Team ID is remembered when you refresh the page.
+- **Clear at any time**: Click "Clear Team ID" in the navigation bar to remove the stored Team ID.
+- You can find your FPL Team ID in the URL of your FPL team page (e.g. `https://fantasy.premierleague.com/entry/<TEAM_ID>/...`).
 
 ### Transfer System
-- **Free Transfer Management**: Track free transfers (1 per week, max 2 banked)
-- **Points Deduction**: Automatic calculation of -4 points for extra transfers
-- **Transfer History**: Complete record of all transfers made
+- **Recommended Transfers**: Smart transfer suggestions based on predicted points
 - **Transfer Validation**: Ensures valid position swaps and sufficient funds
-
-### Chip Management
-- **All FPL Chips Supported**: Wildcard, Free Hit, Bench Boost, Triple Captain
-- **Availability Windows**: Chips available at correct times (GW1-19, GW20-38)
-- **Usage Tracking**: Track which chips have been used
-- **Chip Rules Enforcement**: 
-  - One chip per gameweek
-  - Free Hit cannot be used in consecutive gameweeks
-  - Saved transfers retained when using Wildcard/Free Hit
-  - Wildcard and Free Hit cannot be cancelled once confirmed
 
 ### API Features
 - **Mock Data Support**: Test without FPL API access using local mock data
-- **RESTful API**: Clean, documented API endpoints
-- **Authentication & Security**: 
-  - JWT-based authentication
-  - NoSQL injection protection via input validation
-  - SSRF protection via URL whitelisting
-  - 4-tier rate limiting (auth, general API, read, write operations)
+- **RESTful API**: Clean backend proxy for FPL API endpoints
+- **SSRF protection** via URL whitelisting
+- **Rate limiting** on all API endpoints
 
-## Render Deployment
+## Vercel / Static Hosting Deployment
 
-This application can be deployed on [Render](https://render.com) as two separate services.
-
-### Backend (Web Service)
-
-1. Create a new **Web Service** on Render
-2. Connect your GitHub repository and set the **Root Directory** to `backend`
-3. Configure the service:
-   - **Runtime:** Node
-   - **Build Command:** `npm install`
-   - **Start Command:** `npm start`
-4. Add the following environment variables in the Render dashboard:
-   - `MONGODB_URI` — MongoDB connection string (e.g. from Render's MongoDB add-on)
-   - `JWT_SECRET` — A strong random secret (generate with `openssl rand -base64 32`)
-   - `FRONTEND_URL` — The URL of your deployed frontend (e.g. `https://your-app.onrender.com`)
-   - `PORT` is automatically provided by Render
+This application can be deployed as a static frontend with a lightweight backend proxy (no database required).
 
 ### Frontend (Static Site)
 
-1. Create a new **Static Site** on Render
-2. Connect your GitHub repository and set the **Root Directory** to `frontend`
-3. Configure the site:
-   - **Build Command:** `npm install && npm run build`
-   - **Publish Directory:** `dist`
-4. Add the following environment variable in the Render dashboard:
-   - `VITE_API_URL` — The URL of your deployed backend (e.g. `https://your-backend.onrender.com`)
+1. Set the root directory to `frontend`
+2. Build command: `npm install && npm run build`
+3. Publish directory: `dist`
+4. Set the environment variable:
+   - `VITE_API_URL` — URL of your deployed backend (e.g. `https://your-backend.onrender.com`)
 
-### How the Frontend Connects to the Backend
+### Backend (Stateless Proxy)
 
-In production, the frontend reads `VITE_API_URL` and uses it as the base URL for all API requests. In local development, Vite's proxy handles `/api` requests to `localhost:5000` and `VITE_API_URL` can be left empty.
+1. Set the root directory to `backend`
+2. Build command: `npm install`
+3. Start command: `npm start`
+4. Set the environment variable:
+   - `FRONTEND_URL` — URL of your deployed frontend (for CORS)
+   - `PORT` is automatically provided by most hosting platforms
+
+**No database is required.** The backend only proxies requests to the official FPL API.
 
 ### Required Environment Variables Summary
 
 | Service  | Variable       | Description                            |
 |----------|---------------|----------------------------------------|
-| Backend  | `MONGODB_URI`  | MongoDB connection string              |
-| Backend  | `JWT_SECRET`   | Secret for JWT token signing           |
 | Backend  | `FRONTEND_URL` | Deployed frontend URL (for CORS)       |
 | Frontend | `VITE_API_URL` | Deployed backend URL                   |
 
-
-
 ```
-backend/           # Express.js backend (API, authentication, MongoDB models)
+backend/           # Express.js backend (FPL API proxy only, no DB)
   controllers/     # Backend controllers (business logic)
-  models/          # Mongoose models and FPL data logic
-  routes/          # Express route definitions
+  models/          # FPL data models
+  routes/          # (currently unused, all routes in server.js)
   server.js        # Backend entry point
 
 frontend/          # React frontend (UI)
@@ -114,26 +85,18 @@ package.json       # Root scripts for running both frontend and backend together
 
 - Node.js (v14 or higher, recommended v18+)
 - npm (v6 or higher, recommended v8+)
-- MongoDB (running locally on default port 27017)
 
 ## Environment Variables
 
-The backend supports several environment variables to configure behavior:
-
-### Authentication
-- `JWT_SECRET` - Secret key for JWT token generation (**required in production**, defaults to 'changeme' in development)
-  - ⚠️ Must be set to a secure random value in production
-  - Generate with: `openssl rand -base64 32`
+The backend supports several environment variables to configure behaviour:
 
 ### FPL API Configuration
 - `USE_FPL_API` - Controls data source for FPL data (default: `'true'`)
   - `'true'` - Use real FPL API (fantasy.premierleague.com)
-  - `'false'` - Use local mock data for testing (useful when API is unavailable or for development)
+  - `'false'` - Use local mock data for testing
 
 ### Prediction Model Settings
 - `USE_COMPUTED_EP` - Toggle between computed vs raw expected points (default: `'true'`)
-  - `'true'` - Use computed expected points from ML model
-  - `'false'` - Use raw API expected points
 - `INCLUDE_MANAGERS` - Include manager placeholders in squads (default: `'false'`)
 
 ### Setting Environment Variables
@@ -142,7 +105,6 @@ Create a `.env` file in the `backend` directory:
 
 ```sh
 # Example .env file
-JWT_SECRET=your-secret-key-here
 USE_FPL_API=true
 USE_COMPUTED_EP=true
 INCLUDE_MANAGERS=false
@@ -153,7 +115,7 @@ For testing without FPL API access:
 USE_FPL_API=false
 ```
 
-This will use mock data from `backend/mockData/` that matches the exact structure of FPL API responses.
+This will use mock data from `backend/mockData/`.
 
 ### Installation
 
@@ -179,7 +141,7 @@ You can start both the backend and frontend together from the root directory:
 npm start
 ```
 
-- This will run the backend on [http://localhost:5000](http://localhost:5000) and the frontend on [http://localhost:3000](http://localhost:3000).
+- This will run the backend on [http://localhost:5000](http://localhost:5000) and the frontend on [http://localhost:5173](http://localhost:5173).
 
 **Alternatively, to run them separately:**
 
@@ -196,65 +158,15 @@ npm start
 
 ## API Documentation
 
-The backend provides comprehensive REST API endpoints for squad management, transfers, and chips.
+The backend provides REST API endpoints as a proxy for the FPL API.
 
 ### Key Endpoints
-
-**Squad Management:**
-- `POST /api/squad/initialize` - Initialize user's squad from FPL account
-- `GET /api/squad/:userId` - Get current squad with calculated values
-- `GET /api/squad/history/:userId/:gameweek` - Get squad for specific gameweek
-
-**Transfers:**
-- `POST /api/transfers` - Make a player transfer
-- `GET /api/transfers/history/:userId` - Get transfer history
-- `GET /api/transfers/summary/:userId/:gameweek` - Get gameweek transfer summary
-
-**Chips:**
-- `GET /api/chips/:userId?gameweek=N` - Get available chips for gameweek
-- `POST /api/chips/activate` - Activate a chip
-- `POST /api/chips/cancel` - Cancel an active chip (if allowed)
 
 **FPL Data:**
 - `GET /api/bootstrap-static` - All players, teams, and gameweeks
 - `GET /api/predicted-team` - AI-predicted optimal team
+- `GET /api/entry/:entryId/event/:eventId/picks` - Team picks for a gameweek
+- `GET /api/entry/:entryId/profile` - FPL entry profile
 - `GET /api/entry/:entryId/event/:eventId/recommended-transfers` - Smart transfer suggestions
 
 For complete API documentation, see [backend/API_DOCUMENTATION.md](backend/API_DOCUMENTATION.md)
-
-## Player Value System
-
-The application implements FPL's player pricing rules:
-
-- **Purchase Price**: Price when player was added to squad
-- **Current Price**: Live market price from FPL API
-- **Selling Price**: `Purchase Price + floor((Current Price - Purchase Price) / 2)`
-
-**Example:**
-- Bought player at £7.5m
-- Current price rises to £7.8m
-- Profit = £0.3m
-- Selling price = £7.5m + floor(£0.3m / 2) = £7.5m + £0.1m = **£7.6m**
-
-## Transfer Rules
-
-- **1 Free Transfer per gameweek** (unused transfers carry over, max 2)
-- **-4 Points** for each additional transfer beyond free transfers
-- **Wildcard**: All transfers free for the gameweek
-- **Free Hit**: Unlimited free transfers, squad reverts next gameweek
-
-## Chip System
-
-| Chip | Effect | Availability |
-|------|--------|--------------|
-| **Bench Boost** | Bench players' points count | 2 chips: GW1-19, GW20-38 |
-| **Triple Captain** | Captain points tripled (3x) | 2 chips: GW1-19, GW20-38 |
-| **Free Hit** | Unlimited free transfers, reverts next GW | 2 chips: GW2-19, GW20-38 |
-| **Wildcard** | All transfers free for the gameweek | 2 chips: GW2-19, GW20-38 |
-
-**Rules:**
-- Only one chip per gameweek
-- Free Hit cannot be used in consecutive gameweeks
-- Wildcard and Free Hit cannot be cancelled once confirmed
-- Bench Boost and Triple Captain can be cancelled before deadline
-- Saved free transfers are retained when using Wildcard or Free Hit

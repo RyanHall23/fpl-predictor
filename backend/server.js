@@ -2,12 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
-const { initDb } = require('./db');
 const fplController = require('./controllers/fplController');
-const authRoutes = require('./routes/auth');
-const squadRoutes = require('./routes/squad');
-const transferRoutes = require('./routes/transfers');
-const chipRoutes = require('./routes/chips');
 const { apiLimiter, dbReadLimiter } = require('./middleware/rateLimiter');
 const app = express();
 const port = process.env.PORT || 5000;
@@ -17,25 +12,6 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 app.use(express.json());
-
-initDb()
-  .then(() => console.log('PostgreSQL connected and tables initialised'))
-  .catch((err) => {
-    console.error('PostgreSQL connection error:', err);
-    process.exit(1);
-  });
-
-// Authentication routes
-app.use('/api/auth', authRoutes);
-
-// Squad management routes
-app.use('/api/squad', squadRoutes);
-
-// Transfer routes
-app.use('/api/transfers', transferRoutes);
-
-// Chip routes
-app.use('/api/chips', chipRoutes);
 
 // FPL API proxy routes
 app.get('/api/bootstrap-static', apiLimiter, fplController.getBootstrapStatic);
