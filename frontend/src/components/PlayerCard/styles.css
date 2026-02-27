@@ -1,7 +1,7 @@
 /* Dark mode - default */
 body .player-card {
   width: 130px;
-  height: 180px;
+  height: 220px;
   display: flex;
   flex-direction: column;
   background: linear-gradient(135deg, #2a2d3a 0%, #1f2229 100%);
