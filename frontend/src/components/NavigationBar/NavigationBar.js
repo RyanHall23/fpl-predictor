@@ -64,7 +64,7 @@ const NavigationBar = ({
 
   return (
     <AppBar position='static'>
-      <Container maxWidth='xl'>
+      <Container disableGutters maxWidth={ false }>
         <Toolbar disableGutters>
           <Typography
             variant='h6'

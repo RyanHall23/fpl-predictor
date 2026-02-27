@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import NavigationBar from './components/NavigationBar/NavigationBar';
-import Container from '@mui/material/Container';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
@@ -133,9 +132,9 @@ const App = () => {
         setSelectedGameweek={ setSelectedGameweek }
         currentGameweek={ currentGameweek }
       />
-      <Container sx={ { marginTop: '4px' } }>
+      <Box sx={ { marginTop: '4px', width: '100%', px: '2rem', boxSizing: 'border-box' } }>
         <Box sx={ { display: 'flex', flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'center' } }>
-          <Box sx={ { flex: 1, maxWidth: '900px' } }>
+          <Box sx={ { flex: 1 } }>
             { /* Banner shown when viewing an opponent's team */ }
             { viewingOpponentId && (
               <Box sx={ { mb: 1, display: 'flex', alignItems: 'center', gap: 1 } }>
@@ -163,7 +162,7 @@ const App = () => {
             </Typography>
             
             <Grid container spacing={ 2 } justifyContent='center'>
-              <Grid item md={ 10 }>
+              <Grid item xs={ 12 }>
                 <TeamFormation
                   mainTeam={ mainTeamData }
                   benchTeam={ benchTeamData }
@@ -253,7 +252,7 @@ const App = () => {
           onClose={ handleSnackbarClose }
           message={ snackbar.message }
         />
-      </Container>
+      </Box>
     </Box>
   );
 };
