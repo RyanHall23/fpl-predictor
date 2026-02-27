@@ -106,8 +106,8 @@ const InvitationLeagueView = ({ league, onBack, onViewTeam }) => {
           <CircularProgress size={ 28 } />
         </Box>
       ) : standings ? (
-        <TableContainer>
-          <Table size='small'>
+        <TableContainer sx={ { maxHeight: '400px', overflow: 'auto' } }>
+          <Table size='small' stickyHeader>
             <TableHead>
               <TableRow>
                 <TableCell>Rank</TableCell>

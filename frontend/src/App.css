@@ -1,5 +1,8 @@
 .App {
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
 .App-logo {
@@ -34,5 +37,50 @@
   }
   to {
     transform: rotate(360deg);
+  }
+}
+
+/* Layout styling */
+.pitch-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.stats-bar {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  gap: 16px;
+}
+
+.two-column-layout {
+  display: flex;
+  gap: 16px;
+  flex: 1;
+  min-height: 0;
+}
+
+.left-panel {
+  flex: 0 0 60%;
+  display: flex;
+  flex-direction: column;
+}
+
+.right-panel {
+  flex: 0 0 38%;
+  display: flex;
+  flex-direction: column;
+  min-height: 600px;
+}
+
+@media (max-width: 1200px) {
+  .two-column-layout {
+    flex-direction: column;
+  }
+  
+  .left-panel,
+  .right-panel {
+    flex: 1 1 auto;
   }
 }
