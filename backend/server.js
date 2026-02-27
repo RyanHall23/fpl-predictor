@@ -2,13 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
-const { initDb } = require('./db');
 const fplController = require('./controllers/fplController');
-const authRoutes = require('./routes/auth');
-const squadRoutes = require('./routes/squad');
-const transferRoutes = require('./routes/transfers');
-const chipRoutes = require('./routes/chips');
-const { apiLimiter, dbReadLimiter } = require('./middleware/rateLimiter');
+const { apiLimiter } = require('./middleware/rateLimiter');
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -17,25 +12,6 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 app.use(express.json());
-
-initDb()
-  .then(() => console.log('PostgreSQL connected and tables initialised'))
-  .catch((err) => {
-    console.error('PostgreSQL connection error:', err);
-    process.exit(1);
-  });
-
-// Authentication routes
-app.use('/api/auth', authRoutes);
-
-// Squad management routes
-app.use('/api/squad', squadRoutes);
-
-// Transfer routes
-app.use('/api/transfers', transferRoutes);
-
-// Chip routes
-app.use('/api/chips', chipRoutes);
 
 // FPL API proxy routes
 app.get('/api/bootstrap-static', apiLimiter, fplController.getBootstrapStatic);
@@ -46,7 +22,7 @@ app.get('/api/event/:eventId/live', apiLimiter, fplController.getLiveGameweek);
 app.get('/api/predicted-team', apiLimiter, fplController.getPredictedTeam);
 app.get('/api/entry/:entryId/event/:eventId/team', apiLimiter, fplController.getUserTeam);
 app.get('/api/entry/:entryId/profile', apiLimiter, fplController.getUserProfile);
-app.get('/api/entry/:entryId/event/:eventId/recommended-transfers', dbReadLimiter, fplController.getRecommendedTransfers);
+app.get('/api/entry/:entryId/event/:eventId/recommended-transfers', apiLimiter, fplController.getRecommendedTransfers);
 app.post('/api/validate-swap', apiLimiter, fplController.validateSwap);
 app.post('/api/available-transfers/:playerCode', apiLimiter, fplController.getAvailableTransfers);
 
@@ -60,6 +36,11 @@ if (fs.existsSync(distPath)) {
   });
 }
 
-app.listen(port, () => {
-  console.log(`Proxy server running on port ${port}`);
-});
+// Export for Vercel serverless; also start listening for local/traditional deployments
+module.exports = app;
+
+if (require.main === module) {
+  app.listen(port, () => {
+    console.log(`Proxy server running on port ${port}`);
+  });
+}
