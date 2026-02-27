@@ -16,6 +16,11 @@ export default defineConfig({
       '/api': 'http://localhost:5000'
     }
   },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/setupTests.js',
+  },
   esbuild: {
     loader: 'jsx',
     include: /src\/.*\.[jt]sx?$/,
