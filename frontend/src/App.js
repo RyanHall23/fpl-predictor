@@ -19,9 +19,9 @@ const TEAM_VIEW = {
 
 const App = () => {
   const theme = useTheme();
-  const [userEntryId, setUserEntryId] = useState('');
-  const [currentEntryId, setCurrentEntryId] = useState('');
-  const [teamView, setTeamView] = useState(TEAM_VIEW.HIGHEST);
+  const [userEntryId, setUserEntryId] = useState(() => localStorage.getItem('teamId') || '');
+  const [currentEntryId, setCurrentEntryId] = useState(() => localStorage.getItem('teamId') || '');
+  const [teamView, setTeamView] = useState(() => localStorage.getItem('teamId') ? TEAM_VIEW.USER : TEAM_VIEW.HIGHEST);
   const [selectedGameweek, setSelectedGameweek] = useState(null); // null means current gameweek
   const [currentGameweek, setCurrentGameweek] = useState(null);
 
@@ -46,16 +46,6 @@ const App = () => {
   const { allPlayers } = useAllPlayers();
 
   const [snackbarOpen, setSnackbarOpen] = useState(false);
-
-  // Restore team ID from localStorage on app load
-  useEffect(() => {
-    const storedTeamId = localStorage.getItem('teamId');
-    if (storedTeamId) {
-      setUserEntryId(storedTeamId);
-      setCurrentEntryId(storedTeamId);
-      setTeamView(TEAM_VIEW.USER);
-    }
-  }, []);
 
   useEffect(() => {
     if (snackbar.message) setSnackbarOpen(true);
