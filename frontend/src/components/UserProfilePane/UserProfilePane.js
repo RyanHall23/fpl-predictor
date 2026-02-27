@@ -17,7 +17,7 @@ const getRankChangeIcon = (current, last) => {
 
 const MAX_LEAGUES_DISPLAYED = 5;
 
-const UserProfilePane = ({ entryId }) => {
+const UserProfilePane = ({ entryId, onLeagueClick }) => {
   const theme = useTheme();
   const [profile, setProfile] = useState(null);
   const [showAllInvitational, setShowAllInvitational] = useState(false);
@@ -64,9 +64,27 @@ const UserProfilePane = ({ entryId }) => {
           </ListItem>
         ) }
         { displayedInvitational.map(l => (
-          <ListItem key={ l.id }>
+          <ListItem key={ l.id } disablePadding>
             <ListItemText
-              primary={ l.name }
+              primary={
+                <Button
+                  size='small'
+                  variant='text'
+                  onClick={ () => onLeagueClick && onLeagueClick(l) }
+                  sx={ {
+                    p: 0,
+                    minWidth: 0,
+                    textTransform: 'none',
+                    fontWeight: 'normal',
+                    textAlign: 'left',
+                    justifyContent: 'flex-start',
+                    color: 'inherit',
+                    '&:hover': { textDecoration: 'underline', background: 'none' },
+                  } }
+                >
+                  { l.name }
+                </Button>
+              }
               secondary={
                 <>
                   Rank: { formatNumber(l.entry_rank) }{ ' ' }
@@ -142,6 +160,7 @@ const UserProfilePane = ({ entryId }) => {
 
 UserProfilePane.propTypes = {
   entryId: PropTypes.string,
+  onLeagueClick: PropTypes.func,
 };
 
 export default UserProfilePane;

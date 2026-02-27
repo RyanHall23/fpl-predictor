@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import NavigationBar from './components/NavigationBar/NavigationBar';
 import Container from '@mui/material/Container';
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import Grid from '@mui/material/Grid';
 import Snackbar from '@mui/material/Snackbar';
@@ -11,6 +12,7 @@ import useTeamData from './hooks/useTeamData';
 import useAllPlayers from './hooks/useAllPlayers';
 import UserProfilePane from './components/UserProfilePane/UserProfilePane';
 import RecommendedTransfers from './components/RecommendedTransfers';
+import InvitationLeagueView from './components/InvitationLeagueView/InvitationLeagueView';
 
 const TEAM_VIEW = {
   USER: 'user',
@@ -24,6 +26,8 @@ const App = () => {
   const [teamView, setTeamView] = useState(() => localStorage.getItem('teamId') ? TEAM_VIEW.USER : TEAM_VIEW.HIGHEST);
   const [selectedGameweek, setSelectedGameweek] = useState(null); // null means current gameweek
   const [currentGameweek, setCurrentGameweek] = useState(null);
+  const [selectedLeague, setSelectedLeague] = useState(null); // invitation league drill-down
+  const [viewingOpponentId, setViewingOpponentId] = useState(null); // opponent team being viewed
 
   const {
     mainTeamData,
@@ -91,16 +95,32 @@ const App = () => {
     setTeamView(view);
     if (view === TEAM_VIEW.HIGHEST) {
       setCurrentEntryId('');
+      setViewingOpponentId(null);
       if (!isHighestPredictedTeam) toggleTeamView();
     } else if (view === TEAM_VIEW.USER) {
       setCurrentEntryId(userEntryId);
+      setViewingOpponentId(null);
       if (isHighestPredictedTeam) toggleTeamView();
     }
   };
 
   useEffect(() => {
-    if (teamView === TEAM_VIEW.USER) setCurrentEntryId(userEntryId);
-  }, [userEntryId, teamView]);
+    if (teamView === TEAM_VIEW.USER && !viewingOpponentId) setCurrentEntryId(userEntryId);
+  }, [userEntryId, teamView, viewingOpponentId]);
+
+  // Handle clicking an opponent's team name from the league view
+  const handleViewOpponentTeam = (opponentEntryId) => {
+    setViewingOpponentId(String(opponentEntryId));
+    setCurrentEntryId(String(opponentEntryId));
+    setTeamView(TEAM_VIEW.USER);
+    if (isHighestPredictedTeam) toggleTeamView();
+  };
+
+  // Return from viewing an opponent's team back to the user's own team
+  const handleBackToMyTeam = () => {
+    setViewingOpponentId(null);
+    setCurrentEntryId(userEntryId);
+  };
 
   return (
     <Box sx={ { minHeight: '100vh', backgroundColor: theme.palette.background.default } }>
@@ -116,6 +136,19 @@ const App = () => {
       <Container sx={ { marginTop: '4px' } }>
         <Box sx={ { display: 'flex', flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'center' } }>
           <Box sx={ { flex: 1, maxWidth: '900px' } }>
+            { /* Banner shown when viewing an opponent's team */ }
+            { viewingOpponentId && (
+              <Box sx={ { mb: 1, display: 'flex', alignItems: 'center', gap: 1 } }>
+                <Typography variant='body2' color='text.secondary'>
+                  Viewing opponent&apos;s team
+                </Typography>
+                { userEntryId && (
+                  <Button size='small' variant='outlined' onClick={ handleBackToMyTeam }>
+                    Back to My Team
+                  </Button>
+                ) }
+              </Box>
+            ) }
             <Typography variant='h6' align='center' gutterBottom>
               { gameweekInfo?.isPast ? 'Total Points' : 'Total Predicted Points' }:{ ' ' }
               <Box component='span' sx={ { fontWeight: 'bold' } }>
@@ -181,8 +214,8 @@ const App = () => {
               </Grid>
             </Grid>
             
-            { /* Show Recommended Transfers inline for user teams - BELOW team formation */ }
-            { currentEntryId && currentGameweek && (
+            { /* Show Recommended Transfers inline for user's own team only */ }
+            { currentEntryId && !viewingOpponentId && currentGameweek && (
               <RecommendedTransfers
                 entryId={ currentEntryId }
                 currentGameweek={ currentGameweek }
@@ -196,7 +229,21 @@ const App = () => {
               minWidth: 250,
             } }
           >
-            <UserProfilePane entryId={ currentEntryId } />
+            { selectedLeague ? (
+              <InvitationLeagueView
+                league={ selectedLeague }
+                onBack={ () => setSelectedLeague(null) }
+                onViewTeam={ (opponentEntryId) => {
+                  handleViewOpponentTeam(opponentEntryId);
+                  setSelectedLeague(null);
+                } }
+              />
+            ) : (
+              <UserProfilePane
+                entryId={ viewingOpponentId || currentEntryId }
+                onLeagueClick={ setSelectedLeague }
+              />
+            ) }
           </Box>
         </Box>
         <Snackbar

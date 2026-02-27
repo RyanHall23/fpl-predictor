@@ -816,6 +816,119 @@ const getRecommendedTransfers = async (req, res) => {
   }
 };
 
+/**
+ * Calculate cumulative predicted points for a set of player IDs across one or more gameweeks.
+ * @param {Array} allPlayers - Enriched player list
+ * @param {Array} fixtures - Fixture list
+ * @param {Array} teams - Team list
+ * @param {number} currentEventId - Current gameweek ID
+ * @param {number} gameweeksAhead - Number of gameweeks ahead to sum (1-5)
+ * @returns {Object} Map of playerId -> cumulative predicted points
+ */
+function buildPlayerPointsMap(allPlayers, fixtures, teams, currentEventId, gameweeksAhead) {
+  const startEvent = currentEventId + 1;
+  const endEvent = currentEventId + gameweeksAhead;
+  const playerPointsMap = {};
+
+  for (let gw = startEvent; gw <= Math.min(endEvent, 38); gw++) {
+    let gwPlayers = allPlayers.map(p => ({ ...p }));
+    gwPlayers = fplModel.enrichPlayersWithOpponents(gwPlayers, fixtures, teams, gw);
+    gwPlayers = fplModel.recalculatePointsForGameweek(gwPlayers, gw, currentEventId);
+    gwPlayers.forEach(p => {
+      playerPointsMap[p.id] = (playerPointsMap[p.id] || 0) + (parseFloat(p.ep_next) || 0);
+    });
+  }
+
+  return playerPointsMap;
+}
+
+/**
+ * Get classic league standings with predicted points for each team.
+ *
+ * @route GET /api/leagues-classic/:leagueId/standings
+ * @param {string} leagueId - FPL classic league ID
+ * @param {string} [gameweeksAhead=1] - Number of gameweeks to forecast (1-5)
+ *
+ * @returns {Object} league - League metadata
+ * @returns {Array} standings - Standings with predicted_points added to each entry
+ * @returns {number} currentGameweek - Current gameweek number
+ * @returns {number} gameweeksAhead - Number of gameweeks forecast
+ */
+const getLeagueStandings = async (req, res) => {
+  const { leagueId } = req.params;
+
+  if (!/^\d+$/.test(leagueId)) {
+    return res.status(400).json({ error: 'Invalid leagueId format' });
+  }
+
+  let gameweeksAhead = 1;
+  if (req.query.gameweeksAhead !== undefined) {
+    if (!/^\d+$/.test(req.query.gameweeksAhead)) {
+      return res.status(400).json({ error: 'Invalid gameweeksAhead parameter' });
+    }
+    gameweeksAhead = parseInt(req.query.gameweeksAhead, 10);
+    if (gameweeksAhead < 1 || gameweeksAhead > MAX_GAMEWEEKS_AHEAD) {
+      return res.status(400).json({ error: `gameweeksAhead must be between 1 and ${MAX_GAMEWEEKS_AHEAD}` });
+    }
+  }
+
+  try {
+    const [standingsData, bootstrap, fixtures] = await Promise.all([
+      dataProvider.fetchLeagueStandings(leagueId),
+      fplModel.fetchBootstrapStatic(),
+      fplModel.fetchFixtures(),
+    ]);
+
+    const currentEvent = bootstrap.events.find(e => e.is_current) || bootstrap.events[0];
+
+    // Build base player list enriched with predicted points
+    let allPlayers = bootstrap.elements.map(p => ({
+      ...p,
+      ep_next: parseFloat(p.ep_next) || 0,
+    }));
+
+    // Pre-compute per-player cumulative predicted points map
+    const playerPointsMap = buildPlayerPointsMap(
+      allPlayers, fixtures, bootstrap.teams, currentEvent.id, gameweeksAhead
+    );
+
+    const entries = standingsData.standings?.results || [];
+
+    // Fetch picks for all entries in parallel
+    const picksResults = await Promise.allSettled(
+      entries.map(entry => fplModel.fetchPlayerPicks(entry.entry, currentEvent.id))
+    );
+
+    const standingsWithPredictions = entries.map((entry, i) => {
+      let predictedPoints = null;
+      const picksResult = picksResults[i];
+      if (picksResult.status === 'fulfilled' && picksResult.value?.picks) {
+        // Sum predicted points for starting 11 only (bench players have multiplier 0)
+        predictedPoints = picksResult.value.picks.reduce((sum, pick) => {
+          if (pick.multiplier <= 0) return sum;
+          const pts = playerPointsMap[pick.element] || 0;
+          return sum + pts * pick.multiplier;
+        }, 0);
+        predictedPoints = parseFloat(predictedPoints.toFixed(1));
+      }
+      return { ...entry, predicted_points: predictedPoints };
+    });
+
+    res.json({
+      league: standingsData.league,
+      standings: {
+        ...standingsData.standings,
+        results: standingsWithPredictions,
+      },
+      currentGameweek: currentEvent.id,
+      gameweeksAhead,
+    });
+  } catch (error) {
+    console.error('Error fetching league standings:', error.message);
+    res.status(500).json({ error: 'Error fetching league standings' });
+  }
+};
+
 module.exports = {
   getBootstrapStatic,
   getPlayerPicks,
@@ -827,5 +940,6 @@ module.exports = {
   getAllPlayersEnriched,
   validateSwap,
   getAvailableTransfers,
-  getRecommendedTransfers
+  getRecommendedTransfers,
+  getLeagueStandings
 };

@@ -133,6 +133,23 @@ function validateFplApiUrl(url) {
   }
 }
 
+/**
+ * Validate FPL classic league ID
+ * Must be a positive integer
+ * @param {string|number} leagueId - FPL classic league ID
+ * @returns {number} - Validated league ID
+ * @throws {Error} - If league ID is invalid
+ */
+function validateLeagueId(leagueId) {
+  const id = parseInt(leagueId, 10);
+
+  if (!Number.isInteger(id) || id <= 0 || id > 100000000) {
+    throw new Error('Invalid league ID: must be a positive integer');
+  }
+
+  return id;
+}
+
 module.exports = {
   validateId,
   validateEntryId,
@@ -140,4 +157,5 @@ module.exports = {
   validatePlayerId,
   validateChipName,
   validateFplApiUrl,
+  validateLeagueId,
 };

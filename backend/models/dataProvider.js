@@ -1,7 +1,7 @@
 const axios = require('axios');
 const fs = require('fs').promises;
 const path = require('path');
-const { validateEntryId, validateGameweek, validatePlayerId } = require('../utils/validation');
+const { validateEntryId, validateGameweek, validatePlayerId, validateLeagueId } = require('../utils/validation');
 
 // Environment flag to control data source
 // USE_FPL_API: 'true' (default) - Use real FPL API
@@ -157,6 +157,26 @@ const fetchHistory = async (entryId) => {
   }
 };
 
+/**
+ * Fetch classic league standings
+ * @param {number|string} leagueId - FPL classic league ID
+ * @param {number} [page=1] - Page number for standings pagination
+ * @returns {Promise<any>} - League standings data
+ */
+const fetchLeagueStandings = async (leagueId, page = 1) => {
+  // Validate input to prevent SSRF
+  const validatedLeagueId = validateLeagueId(leagueId);
+
+  if (USE_FPL_API) {
+    const url = `${FPL_API_BASE}/leagues-classic/${validatedLeagueId}/standings/?page_standings=${page}`;
+    const response = await axios.get(url);
+    return response.data;
+  } else {
+    console.log(`[Mock Mode] Fetching league standings for league ${validatedLeagueId} from local data`);
+    return await loadMockData('league-standings.json');
+  }
+};
+
 module.exports = {
   fetchBootstrapStatic,
   fetchPlayerPicks,
@@ -165,5 +185,6 @@ module.exports = {
   fetchLiveGameweek,
   fetchEntry,
   fetchHistory,
+  fetchLeagueStandings,
   USE_FPL_API
 };
