@@ -1,0 +1,61 @@
+{
+  "league": {
+    "id": 12345,
+    "name": "Test League",
+    "created": "2024-07-15T12:00:00Z",
+    "closed": false,
+    "max_entries": 50,
+    "league_type": "x",
+    "scoring": "c",
+    "admin_entry": 123456,
+    "start_event": 1,
+    "code_privacy": "p",
+    "has_cup": false,
+    "cup_league": null,
+    "rank": null
+  },
+  "new_entries": {
+    "has_next": false,
+    "page": 1,
+    "results": []
+  },
+  "standings": {
+    "has_next": false,
+    "page": 1,
+    "results": [
+      {
+        "id": 1001,
+        "event_total": 72,
+        "player_name": "Test User",
+        "rank": 1,
+        "last_rank": 2,
+        "rank_sort": 1,
+        "total": 450,
+        "entry": 123456,
+        "entry_name": "Test FC"
+      },
+      {
+        "id": 1002,
+        "event_total": 65,
+        "player_name": "Opponent One",
+        "rank": 2,
+        "last_rank": 1,
+        "rank_sort": 2,
+        "total": 445,
+        "entry": 234567,
+        "entry_name": "Opponent United"
+      },
+      {
+        "id": 1003,
+        "event_total": 58,
+        "player_name": "Opponent Two",
+        "rank": 3,
+        "last_rank": 3,
+        "rank_sort": 3,
+        "total": 430,
+        "entry": 345678,
+        "entry_name": "Rival City"
+      }
+    ]
+  }
+}
