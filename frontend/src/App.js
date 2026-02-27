@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import NavigationBar from './components/NavigationBar/NavigationBar';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
-import Grid from '@mui/material/Grid';
 import Snackbar from '@mui/material/Snackbar';
 import { useTheme } from '@mui/material/styles';
 import TeamFormation from './components/TeamFormation/TeamFormation';
@@ -132,9 +132,10 @@ const App = () => {
         setSelectedGameweek={ setSelectedGameweek }
         currentGameweek={ currentGameweek }
       />
-      <Box sx={ { marginTop: '4px', width: '100%', px: '2rem', boxSizing: 'border-box' } }>
-        <Box sx={ { display: 'flex', flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'center' } }>
-          <Box sx={ { flex: 1 } }>
+      <Box sx={ { pt: 1, px: '2rem', boxSizing: 'border-box', width: '100%' } }>
+        <Box sx={ { display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2, alignItems: 'flex-start' } }>
+          { /* Left column – ~60% */ }
+          <Box sx={ { flex: 3, minWidth: 0 } }>
             { /* Banner shown when viewing an opponent's team */ }
             { viewingOpponentId && (
               <Box sx={ { mb: 1, display: 'flex', alignItems: 'center', gap: 1 } }>
@@ -148,84 +149,86 @@ const App = () => {
                 ) }
               </Box>
             ) }
-            <Typography variant='h6' align='center' gutterBottom>
-              { gameweekInfo?.isPast ? 'Total Points' : 'Total Predicted Points' }:{ ' ' }
-              <Box component='span' sx={ { fontWeight: 'bold' } }>
-                { calculateTotalPredictedPoints(mainTeamData) }
-              </Box>
-            </Typography>
-            <Typography variant='h6' align='center' gutterBottom>
-              { gameweekInfo?.isPast ? 'Bench Points' : 'Bench Predicted Points' }:{ ' ' }
-              <Box component='span' sx={ { fontWeight: 'bold' } }>
-                { calculateTotalPredictedPoints(benchTeamData) }
-              </Box>
-            </Typography>
-            
-            <Grid container spacing={ 2 } justifyContent='center'>
-              <Grid item xs={ 12 }>
-                <TeamFormation
-                  mainTeam={ mainTeamData }
-                  benchTeam={ benchTeamData }
-                  onPlayerClick={ handlePlayerClick || (() => {}) }
-                  selectedPlayer={ selectedPlayer }
-                  team={ [...mainTeamData, ...benchTeamData] }
-                  allPlayers={ allPlayers }
-                  isHighestPredictedTeam={ isHighestPredictedTeam }
-                  onTransfer={ (playerOut, playerIn) => {
-                    // Prevent duplicate: do not allow transfer if playerIn is already in main or bench team
-                    const playerInExists = [...mainTeamData, ...benchTeamData].some(p => p.code === playerIn.code);
-                    if (playerInExists) {
-                      return;
-                    }
-                    // Find the full player object from allPlayers to ensure all fields are present
-                    const fullPlayerIn = allPlayers.find(p => p.code === playerIn.code) || playerIn;
-                    // Compose the new player object for the team (ensure all required fields)
-                    const newPlayer = {
-                      ...fullPlayerIn,
-                      user_team: true,
-                      name: fullPlayerIn.name || `${fullPlayerIn.first_name || ''} ${fullPlayerIn.second_name || ''}`.trim(),
-                      webName: fullPlayerIn.webName || fullPlayerIn.web_name || fullPlayerIn.name || `${fullPlayerIn.first_name || ''} ${fullPlayerIn.second_name || ''}`.trim(),
-                      predictedPoints: fullPlayerIn.predictedPoints ?? fullPlayerIn.ep_next ?? fullPlayerIn.ep_next_raw ?? 0,
-                      position: fullPlayerIn.position ?? fullPlayerIn.element_type,
-                      lastGwPoints: fullPlayerIn.lastGwPoints ?? fullPlayerIn.event_points ?? 0,
-                      inDreamteam: fullPlayerIn.inDreamteam ?? fullPlayerIn.in_dreamteam ?? false,
-                      totalPoints: fullPlayerIn.totalPoints ?? fullPlayerIn.total_points ?? 0,
-                      code: fullPlayerIn.code,
-                      team: fullPlayerIn.team,
-                      teamCode: fullPlayerIn.teamCode ?? fullPlayerIn.team_code,
-                      opponent: fullPlayerIn.opponent ?? fullPlayerIn.opponent_short ?? 'TBD',
-                      is_home: fullPlayerIn.is_home,
-                    };
-                    // Determine which team the playerOut is in, and only update that team
-                    const mainIdx = mainTeamData.findIndex(p => p.code === playerOut.code);
-                    const benchIdx = benchTeamData.findIndex(p => p.code === playerOut.code);
-                    if (mainIdx !== -1) {
-                      const newMain = [...mainTeamData];
-                      newMain[mainIdx] = newPlayer;
-                      setMainTeamData(newMain);
-                    } else if (benchIdx !== -1) {
-                      const newBench = [...benchTeamData];
-                      newBench[benchIdx] = newPlayer;
-                      setBenchTeamData(newBench);
-                    }
-                  } }
-                />
-              </Grid>
-            </Grid>
-            
-            { /* Show Recommended Transfers inline for user's own team only */ }
+            <Paper elevation={ 2 } sx={ { p: 2, mb: 2, borderRadius: 2 } }>
+              <Typography variant='h6' align='center' gutterBottom>
+                { gameweekInfo?.isPast ? 'Total Points' : 'Total Predicted Points' }:{ ' ' }
+                <Box component='span' sx={ { fontWeight: 'bold' } }>
+                  { calculateTotalPredictedPoints(mainTeamData) }
+                </Box>
+              </Typography>
+              <Typography variant='h6' align='center' gutterBottom>
+                { gameweekInfo?.isPast ? 'Bench Points' : 'Bench Predicted Points' }:{ ' ' }
+                <Box component='span' sx={ { fontWeight: 'bold' } }>
+                  { calculateTotalPredictedPoints(benchTeamData) }
+                </Box>
+              </Typography>
+            </Paper>
+            <TeamFormation
+              mainTeam={ mainTeamData }
+              benchTeam={ benchTeamData }
+              onPlayerClick={ handlePlayerClick || (() => {}) }
+              selectedPlayer={ selectedPlayer }
+              team={ [...mainTeamData, ...benchTeamData] }
+              allPlayers={ allPlayers }
+              isHighestPredictedTeam={ isHighestPredictedTeam }
+              onTransfer={ (playerOut, playerIn) => {
+                // Prevent duplicate: do not allow transfer if playerIn is already in main or bench team
+                const playerInExists = [...mainTeamData, ...benchTeamData].some(p => p.code === playerIn.code);
+                if (playerInExists) {
+                  return;
+                }
+                // Find the full player object from allPlayers to ensure all fields are present
+                const fullPlayerIn = allPlayers.find(p => p.code === playerIn.code) || playerIn;
+                // Compose the new player object for the team (ensure all required fields)
+                const newPlayer = {
+                  ...fullPlayerIn,
+                  user_team: true,
+                  name: fullPlayerIn.name || `${fullPlayerIn.first_name || ''} ${fullPlayerIn.second_name || ''}`.trim(),
+                  webName: fullPlayerIn.webName || fullPlayerIn.web_name || fullPlayerIn.name || `${fullPlayerIn.first_name || ''} ${fullPlayerIn.second_name || ''}`.trim(),
+                  predictedPoints: fullPlayerIn.predictedPoints ?? fullPlayerIn.ep_next ?? fullPlayerIn.ep_next_raw ?? 0,
+                  position: fullPlayerIn.position ?? fullPlayerIn.element_type,
+                  lastGwPoints: fullPlayerIn.lastGwPoints ?? fullPlayerIn.event_points ?? 0,
+                  inDreamteam: fullPlayerIn.inDreamteam ?? fullPlayerIn.in_dreamteam ?? false,
+                  totalPoints: fullPlayerIn.totalPoints ?? fullPlayerIn.total_points ?? 0,
+                  code: fullPlayerIn.code,
+                  team: fullPlayerIn.team,
+                  teamCode: fullPlayerIn.teamCode ?? fullPlayerIn.team_code,
+                  opponent: fullPlayerIn.opponent ?? fullPlayerIn.opponent_short ?? 'TBD',
+                  is_home: fullPlayerIn.is_home,
+                };
+                // Determine which team the playerOut is in, and only update that team
+                const mainIdx = mainTeamData.findIndex(p => p.code === playerOut.code);
+                const benchIdx = benchTeamData.findIndex(p => p.code === playerOut.code);
+                if (mainIdx !== -1) {
+                  const newMain = [...mainTeamData];
+                  newMain[mainIdx] = newPlayer;
+                  setMainTeamData(newMain);
+                } else if (benchIdx !== -1) {
+                  const newBench = [...benchTeamData];
+                  newBench[benchIdx] = newPlayer;
+                  setBenchTeamData(newBench);
+                }
+              } }
+            />
+            { /* Show Recommended Transfers below pitch for user's own team only */ }
             { currentEntryId && !viewingOpponentId && currentGameweek && (
-              <RecommendedTransfers
-                entryId={ currentEntryId }
-                currentGameweek={ currentGameweek }
-              />
+              <Paper elevation={ 2 } sx={ { p: 2, mt: 2, borderRadius: 2 } }>
+                <RecommendedTransfers
+                  entryId={ currentEntryId }
+                  currentGameweek={ currentGameweek }
+                />
+              </Paper>
             ) }
           </Box>
+          { /* Right column – ~40% */ }
           <Box
             sx={ {
-              ml: 2,
-              marginTop: '76px',
-              minWidth: 250,
+              flex: 2,
+              minWidth: 0,
+              position: { md: 'sticky' },
+              top: { md: '8px' },
+              maxHeight: { md: 'calc(100vh - 72px)' },
+              overflowY: { md: 'auto' },
             } }
           >
             { selectedLeague ? (
