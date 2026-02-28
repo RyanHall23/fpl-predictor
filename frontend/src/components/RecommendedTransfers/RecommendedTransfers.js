@@ -11,7 +11,6 @@ import {
   TableBody,
   TableCell,
   TableContainer,
-  TableHead,
   TableRow,
   Paper,
   Chip,
@@ -131,20 +130,6 @@ const RecommendedTransfers = ({ entryId, currentGameweek }) => {
 
       { !loading && !error && recommendations && (
         <Box>
-          { /* Show table header once at the top */ }
-          { Object.values(recommendations.recommendations).some(arr => arr && arr.length > 0) && (
-            <TableContainer component={ Paper } sx={ { backgroundColor: theme.palette.mode === 'dark' ? '#1e2127' : '#ffffff', mb: 2 } }>
-              <Table size='small'>
-                <TableHead>
-                  <TableRow>
-                    <TableCell><strong>Out</strong></TableCell>
-                    <TableCell align='center' colSpan={ 3 }><strong>In (Top Alternatives)</strong></TableCell>
-                  </TableRow>
-                </TableHead>
-              </Table>
-            </TableContainer>
-          ) }
-          
           { Object.keys(recommendations.recommendations).map((position) => {
             const posRecommendations = recommendations.recommendations[position];
             if (!posRecommendations || posRecommendations.length === 0) return null;
