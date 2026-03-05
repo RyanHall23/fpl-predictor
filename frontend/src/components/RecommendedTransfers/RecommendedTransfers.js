@@ -157,7 +157,7 @@ const RecommendedTransfers = ({ entryId, currentGameweek }) => {
                                   { rec.playerOut.web_name }
                                 </Typography>
                                 <Typography variant='caption' color='error'>
-                                  { rec.playerOut.predicted_points.toFixed(1) } pts
+                                  { Math.round(rec.playerOut.predicted_points) } pts
                                 </Typography>
                                 { /* Show price information in single line */ }
                                 { rec.playerOut.purchase_price != null ? (
@@ -195,11 +195,11 @@ const RecommendedTransfers = ({ entryId, currentGameweek }) => {
                                   </Typography>
                                   <Box sx={ { display: 'flex', alignItems: 'center', gap: 0.5 } }>
                                     <Typography variant='caption' color='success.main'>
-                                      { alt.predicted_points.toFixed(1) } pts
+                                      { Math.round(alt.predicted_points) } pts
                                     </Typography>
                                     <Chip
                                       icon={ <TrendingUpIcon /> }
-                                      label={ `+${alt.points_difference.toFixed(1)}` }
+                                      label={ `+${Math.round(alt.points_difference)}` }
                                       size='small'
                                       color='success'
                                       sx={ { height: 18, fontSize: '0.7rem' } }

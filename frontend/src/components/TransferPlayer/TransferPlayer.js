@@ -95,7 +95,7 @@ const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut, open, onClose
                                 <ListItem { ...props } key={ option.id }>
                                     <ListItemText 
                                         primary={ option.web_name || option.webName || option.name } 
-                                        secondary={ `${option.ep_next || 0} pts • ${opponentText}` } 
+                                        secondary={ `${Math.round(option.ep_next) || 0} pts • ${opponentText}` } 
                                     />
                                 </ListItem>
                             );

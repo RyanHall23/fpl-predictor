@@ -230,6 +230,30 @@ const computePredictions = (players, fixtures, teams, targetEventId) => {
     ? completedEvents.size
     : Math.max(1, targetEventId - 1);
 
+  // ── 3b. Per-team games played ─────────────────────────────────────────────
+  // Some teams have played fewer PL matches than the global completed-GW count
+  // due to postponements, FA Cup blank rounds, etc.  Using the global count as
+  // the denominator for starts/gamesPlayed would understate pStart for players
+  // on those teams (e.g. an Arsenal defender with 24 starts in 26 team matches
+  // would have pStart = 24/29 ≈ 0.83 instead of the correct 24/26 ≈ 0.92).
+  //
+  // Proxy: the maximum 'starts' value among all players on a team closely
+  // approximates how many PL matches that team has played — the most-used
+  // outfield player (or first-choice goalkeeper) will have starts ≈ team games.
+  const teamGamesPlayedMap = {};
+  players.forEach((p) => {
+    const tid = p.team;
+    const s = parseFloat(p.starts) || 0;  // starts is an integer in FPL data
+    if (s > (teamGamesPlayedMap[tid] || 0)) {
+      teamGamesPlayedMap[tid] = s;
+    }
+  });
+  // Fallback for teams with no players who have starts data (e.g. brand-new teams
+  // in test fixtures or mid-season transfers with no recorded appearances yet)
+  Object.keys(teamPlayerMap).forEach((tid) => {
+    if (teamGamesPlayedMap[tid] === undefined) teamGamesPlayedMap[tid] = seasonGamesPlayed;
+  });
+
   // ── 4. Identify gameweek fixtures ─────────────────────────────────────────
   const gwFixtures = fixtures.filter((f) => f.event === targetEventId);
 
@@ -327,9 +351,11 @@ const computePredictions = (players, fixtures, teams, targetEventId) => {
     let maxRed         = 0;
     let maxBonus       = 0;
 
+    const teamGamesPlayed = teamGamesPlayedMap[player.team] || seasonGamesPlayed;
+
     playerFixtures.forEach((fc) => {
       const simResults = fixtureSimResults[fc.fixtureId] || {};
-      const pred       = computeFixturePrediction(player, fc, teamPlayers, simResults, seasonGamesPlayed);
+      const pred       = computeFixturePrediction(player, fc, teamPlayers, simResults, teamGamesPlayed);
 
       totalPts     += pred.predictedPoints;
       totalGoals   += pred.expectedGoals;
