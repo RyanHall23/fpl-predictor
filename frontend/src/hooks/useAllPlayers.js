@@ -1,14 +1,25 @@
 import { useEffect, useState } from 'react';
 import axios from '../api';
 
-export default function useAllPlayers() {
+/**
+ * Fetches all enriched FPL players from the backend.
+ *
+ * @param {number|null} gameweek - Target gameweek for predictions.  When
+ *   provided the backend applies predictions for that specific gameweek so
+ *   that blank-GW teams correctly show 0 expected points in the transfer UI.
+ *   Omitting it (or passing null) lets the server default to the next event.
+ */
+export default function useAllPlayers(gameweek) {
   const [allPlayers, setAllPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     setLoading(true);
-    axios.get('/api/bootstrap-static/enriched')
+    const url = gameweek
+      ? `/api/bootstrap-static/enriched?gameweek=${gameweek}`
+      : '/api/bootstrap-static/enriched';
+    axios.get(url)
       .then(res => {
         setAllPlayers(res.data.elements.map(player => ({
           ...player,
@@ -26,7 +37,7 @@ export default function useAllPlayers() {
         setError(err);
         setLoading(false);
       });
-  }, []);
+  }, [gameweek]);
 
   return { allPlayers, loading, error };
 }

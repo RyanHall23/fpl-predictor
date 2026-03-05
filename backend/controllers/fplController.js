@@ -433,17 +433,36 @@ const getAllPlayersEnriched = async (req, res) => {
     const data = await fplModel.fetchBootstrapStatic();
     const fixtures = await fplModel.fetchFixtures();
     const currentEvent = data.events.find(e => e.is_current) || data.events[0];
-    
+
+    // Optional ?gameweek= param so the transfer dropdown can request predictions
+    // for the specific gameweek the user is currently viewing.  Without it,
+    // default to the next upcoming event (transfers are always for next GW).
+    let targetEvent;
+    if (req.query.gameweek !== undefined) {
+      if (!/^\d{1,2}$/.test(req.query.gameweek)) {
+        return res.status(400).json({ error: 'Invalid gameweek' });
+      }
+      targetEvent = parseInt(req.query.gameweek, 10);
+      if (targetEvent < 1 || targetEvent > 38) {
+        return res.status(400).json({ error: 'Gameweek must be between 1 and 38' });
+      }
+    } else {
+      // Default: next upcoming event; fall back to current if no next
+      const nextEvent = data.events.find(e => e.is_next);
+      targetEvent = nextEvent ? nextEvent.id : currentEvent.id;
+    }
+
     let players = data.elements.map((p) => ({
       ...p,
       ep_next: parseFloat(p.ep_next) || 0,
     }));
     
-    // Enrich players with opponent display data
-    players = fplModel.enrichPlayersWithOpponents(players, fixtures, data.teams, currentEvent.id);
+    // Enrich players with opponent display data for the target gameweek
+    players = fplModel.enrichPlayersWithOpponents(players, fixtures, data.teams, targetEvent);
     
-    // Apply the advanced prediction engine
-    players = fplModel.applyAdvancedPredictions(players, fixtures, data.teams, currentEvent.id);
+    // Apply the advanced prediction engine for the target gameweek so that
+    // blank-GW teams correctly receive 0 predicted points in the transfer UI.
+    players = fplModel.applyAdvancedPredictions(players, fixtures, data.teams, targetEvent);
     
     res.json({ elements: players, teams: data.teams, events: data.events });
   } catch (error) {

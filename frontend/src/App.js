@@ -44,7 +44,7 @@ const App = () => {
     selectedGameweek
   );
 
-  const { allPlayers } = useAllPlayers();
+  const { allPlayers } = useAllPlayers(selectedGameweek);
 
   const [snackbarOpen, setSnackbarOpen] = useState(false);
 
