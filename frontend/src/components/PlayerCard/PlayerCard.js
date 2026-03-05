@@ -103,7 +103,7 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
     // Check if player has multiple opponents (DGW)
     if (player.opponents && Array.isArray(player.opponents) && player.opponents.length > 0) {
       return player.opponents.map(opp => {
-        const teamName = opp.opponent_short || 'TBD';
+        const teamName = opp.opponent_short || '-';
         if (opp.is_home === null || opp.is_home === undefined) {
           return teamName;
         }
@@ -112,8 +112,8 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
     }
     
     // Fallback to legacy single opponent field
-    const opp = player.opponent || 'TBD';
-    if (opp === 'TBD' || player.is_home === null || player.is_home === undefined) {
+    const opp = player.opponent || '-';
+    if (opp === '-' || player.is_home === null || player.is_home === undefined) {
       return opp;
     }
     return player.is_home ? `${opp} (H)` : `${opp} (A)`;
