@@ -257,16 +257,17 @@ const getPredictedTeam = async (req, res) => {
       players = await fplModel.enrichPlayersWithGameweekStats(players, targetEvent);
     }
     
-    // Enrich players with opponent data for target gameweek
+    // Enrich players with opponent display data (opponent name, home/away, DGW support)
     players = fplModel.enrichPlayersWithOpponents(players, fixtures, data.teams, targetEvent);
     
-    // For future gameweeks, recalculate points based on specific opponents
-    if (isFutureGameweek) {
-      players = fplModel.recalculatePointsForGameweek(players, targetEvent, currentEvent.id);
+    // For non-past gameweeks, apply the advanced prediction engine which uses
+    // ELO team strength, Poisson distributions, Monte Carlo simulation, and the
+    // full FPL scoring rules to compute statistically grounded predictions.
+    if (!isPastGameweek) {
+      players = fplModel.applyAdvancedPredictions(players, fixtures, data.teams, targetEvent);
     }
     
-    // For past/present gameweeks, build team based on actual points from that gameweek
-    // For future gameweeks, build team based on predictions for that specific gameweek
+    // Build team based on actual points (past) or predictions (current/future)
     const team = fplModel.buildHighestPredictedTeam(players, isPastGameweek, isFutureGameweek, targetEvent);
     
     res.json({
@@ -340,12 +341,12 @@ const getUserTeam = async (req, res) => {
       players = await fplModel.enrichPlayersWithGameweekStats(players, targetEvent);
     }
     
-    // Enrich players with opponent data for the target gameweek
+    // Enrich players with opponent display data for the target gameweek
     players = fplModel.enrichPlayersWithOpponents(players, fixtures, bootstrap.teams, targetEvent);
     
-    // For future gameweeks, recalculate points based on specific opponents
-    if (isFutureGameweek) {
-      players = fplModel.recalculatePointsForGameweek(players, targetEvent, currentEvent.id);
+    // For non-past gameweeks, apply the advanced prediction engine
+    if (!isPastGameweek) {
+      players = fplModel.applyAdvancedPredictions(players, fixtures, bootstrap.teams, targetEvent);
     }
     
     const { mainTeam, bench, captainInfo } = fplModel.buildUserTeam(players, picksData.picks, isPastGameweek);
@@ -438,8 +439,11 @@ const getAllPlayersEnriched = async (req, res) => {
       ep_next: parseFloat(p.ep_next) || 0,
     }));
     
-    // Enrich players with opponent data
+    // Enrich players with opponent display data
     players = fplModel.enrichPlayersWithOpponents(players, fixtures, data.teams, currentEvent.id);
+    
+    // Apply the advanced prediction engine
+    players = fplModel.applyAdvancedPredictions(players, fixtures, data.teams, currentEvent.id);
     
     res.json({ elements: players, teams: data.teams, events: data.events });
   } catch (error) {
@@ -597,10 +601,7 @@ const getRecommendedTransfers = async (req, res) => {
       
       let gwPlayers = allPlayers.map(p => ({ ...p }));
       gwPlayers = fplModel.enrichPlayersWithOpponents(gwPlayers, fixtures, bootstrap.teams, gw);
-      
-      if (gw > currentEvent.id) {
-        gwPlayers = fplModel.recalculatePointsForGameweek(gwPlayers, gw, currentEvent.id);
-      }
+      gwPlayers = fplModel.applyAdvancedPredictions(gwPlayers, fixtures, bootstrap.teams, gw);
       
       gwPlayers.forEach(p => {
         if (!playerCumulativePoints[p.id]) {
@@ -833,7 +834,7 @@ function buildPlayerPointsMap(allPlayers, fixtures, teams, currentEventId, gamew
   for (let gw = startEvent; gw <= Math.min(endEvent, 38); gw++) {
     let gwPlayers = allPlayers.map(p => ({ ...p }));
     gwPlayers = fplModel.enrichPlayersWithOpponents(gwPlayers, fixtures, teams, gw);
-    gwPlayers = fplModel.recalculatePointsForGameweek(gwPlayers, gw, currentEventId);
+    gwPlayers = fplModel.applyAdvancedPredictions(gwPlayers, fixtures, teams, gw);
     gwPlayers.forEach(p => {
       playerPointsMap[p.id] = (playerPointsMap[p.id] || 0) + (parseFloat(p.ep_next) || 0);
     });
