@@ -206,9 +206,9 @@ const recalculatePointsForGameweek = (players, targetEventId, currentEventId) =>
   }
   
   return players.map(player => {
-    if (!player.opponent || !player.opponent_short) {
-      // No opponent data, keep original prediction
-      return player;
+    if (player.fixture_count === 0) {
+      // No fixture (blank gameweek) - predict zero points
+      return { ...player, ep_next: 0 };
     }
     
     // Basic recalculation based on opponent strength and player form
@@ -360,11 +360,12 @@ const enrichPlayersWithOpponents = (players, fixtures, teams, targetEventId) => 
       ...player,
       opponents: [], // Empty array when no fixtures
       opponent: null,
-      opponent_short: 'TBD',
+      opponent_short: '-',
       is_home: null,
       difficulty: null,
       fixture_event: null,
-      fixture_count: 0
+      fixture_count: 0,
+      ep_next: 0 // No fixture means no predicted points
     };
   });
 };

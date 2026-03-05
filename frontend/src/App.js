@@ -184,7 +184,7 @@ const App = () => {
                   code: fullPlayerIn.code,
                   team: fullPlayerIn.team,
                   teamCode: fullPlayerIn.teamCode ?? fullPlayerIn.team_code,
-                  opponent: fullPlayerIn.opponent ?? fullPlayerIn.opponent_short ?? 'TBD',
+                  opponent: fullPlayerIn.opponent ?? fullPlayerIn.opponent_short ?? '-',
                   is_home: fullPlayerIn.is_home,
                 };
                 // Determine which team the playerOut is in, and only update that team

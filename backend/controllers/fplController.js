@@ -615,7 +615,7 @@ const getRecommendedTransfers = async (req, res) => {
         playerCumulativePoints[p.id].gameweeks.push({
           gameweek: gw,
           points: points,
-          opponent: p.opponent_short || 'TBD',
+          opponent: p.opponent_short || '-',
           is_home: p.is_home
         });
       });
@@ -776,7 +776,7 @@ const getRecommendedTransfers = async (req, res) => {
               web_name: weakPlayer.web_name,
               team: weakPlayer.team,
               predicted_points: weakPlayerPoints,
-              opponent: weakPlayer.opponent_short || 'TBD',
+              opponent: weakPlayer.opponent_short || '-',
               is_home: weakPlayer.is_home,
               now_cost: weakPlayer.now_cost,
               purchase_price: purchasePrice,
@@ -790,7 +790,7 @@ const getRecommendedTransfers = async (req, res) => {
               web_name: alt.web_name,
               team: alt.team,
               predicted_points: parseFloat(alt.ep_next),
-              opponent: alt.opponent_short || 'TBD',
+              opponent: alt.opponent_short || '-',
               is_home: alt.is_home,
               now_cost: alt.now_cost,
               total_points: alt.total_points,

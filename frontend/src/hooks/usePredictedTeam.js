@@ -32,7 +32,7 @@ export default function usePredictedTeam() {
     lastGwPoints: player.event_points,
     inDreamteam: player.in_dreamteam,
     totalPoints: player.total_points,
-    opponent: player.opponent_short || 'TBD',
+    opponent: player.opponent_short || '-',
     is_home: player.is_home,
     opponents: player.opponents || [] // DGW support
   });

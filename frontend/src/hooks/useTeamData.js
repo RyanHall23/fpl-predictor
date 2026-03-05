@@ -43,7 +43,7 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
         inDreamteam: player.in_dreamteam,
         totalPoints: player.total_points,
         user_team: false,
-        opponent: player.opponent_short || 'TBD',
+        opponent: player.opponent_short || '-',
         is_home: player.is_home,
         opponents: player.opponents || [] // DGW support
       });
@@ -105,7 +105,7 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
           inDreamteam: player.in_dreamteam,
           totalPoints: player.total_points,
           user_team: true,
-          opponent: player.opponent_short || 'TBD',
+          opponent: player.opponent_short || '-',
           is_home: player.is_home,
           opponents: player.opponents || [] // DGW support
         };

@@ -80,10 +80,10 @@ const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut, open, onClose
                         renderInput={ (params) => <TextField { ...params } label='Player In' margin='normal' /> }
                         renderOption={ (props, option) => {
                             // Format opponents for DGW support
-                            let opponentText = 'TBD';
+                            let opponentText = '-';
                             if (option.opponents && Array.isArray(option.opponents) && option.opponents.length > 0) {
                                 opponentText = option.opponents.map(opp => {
-                                    const teamName = opp.opponent_short || 'TBD';
+                                    const teamName = opp.opponent_short || '-';
                                     if (opp.is_home === null || opp.is_home === undefined) return teamName;
                                     return opp.is_home ? `${teamName} (H)` : `${teamName} (A)`;
                                 }).join(', ');
