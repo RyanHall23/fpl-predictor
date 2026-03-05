@@ -1,4 +1,5 @@
 const dataProvider = require('./dataProvider');
+const predictionEngine = require('./predictionEngine');
 
 // Global toggles — can be overridden via env vars
 // USE_COMPUTED_EP: 'true' | 'false' (prefer computed EP and optionally overwrite ep_next)
@@ -42,11 +43,13 @@ const computeHeadToHead = (player, upcomingOpponentId = null) => {
 };
 
 /**
- * Compute expected points from multiple factors:
- * xG, xA, clean sheets, defensive contributions, head2head.
+ * Compute expected points for a single player.
  *
- * This is a simple weighted model that will fall back to the player's
- * ep_next value if the derived stats are not available.
+ * When the player object already carries `predicted_points` set by the
+ * advanced prediction engine (via applyAdvancedPredictions), that value
+ * is returned directly.  Otherwise, ep_next from the FPL API is used as
+ * a last-resort fallback so that the function remains safe to call
+ * without a prior engine run.
  */
 const computeExpectedPoints = (player) => {
   const num = (v) => {
@@ -55,53 +58,13 @@ const computeExpectedPoints = (player) => {
     return Number.isFinite(n) ? n : 0;
   };
 
-  const xG = num(player.xG ?? player.xg ?? player.xG90 ?? player.xg90 ?? player.expected_goals);
-  const xA = num(player.xA ?? player.xa ?? player.xA90 ?? player.xa90 ?? player.expected_assists);
-  const cleanSheets = num(player.clean_sheets ?? player.cleanSheets ?? player.clean_sheet ?? 0);
-  const defensiveContrib = num(player.defensive_contrib ?? player.def ?? player.def_contrib ?? 0);
+  // Prefer the advanced-engine output if available
+  if (player.predicted_points != null) {
+    return Number(Math.max(0, num(player.predicted_points)).toFixed(2));
+  }
 
-  const computedH2H = computeHeadToHead(player);
-  const head2head = computedH2H > 0 ? computedH2H : num(player.h2h ?? player.head2head ?? 0);
-
-  const baseEp = num(player.ep_next ?? player.ep_next_raw ?? player.ep ?? 0);
-
-  // Weights (reduced model influence so we don't push values below base)
-  const W_XG = 3.0;
-  const W_XA = 2.0;
-  const W_CS = 2.0;
-  const W_DEF = 1.0;
-  const W_H2H = 0.8;
-
-  let rawScore = xG * W_XG + xA * W_XA + cleanSheets * W_CS + defensiveContrib * W_DEF + head2head * W_H2H;
-
-  // If no advanced stats, return base ep_next
-  if (rawScore <= 0) return Number(baseEp.toFixed(2));
-
-  // Blend settings: keep baseEp dominant, small model uplift
-  const MODEL_WEIGHT = 0.35;
-  const BASE_WEIGHT = 0.65;
-
-  // Conservative normalization
-  const featureSum = xG + xA + cleanSheets + defensiveContrib + head2head;
-  const denom = Math.max(1, featureSum); // avoid tiny denom
-  const normalizedScore = rawScore / denom;
-
-  const MULTIPLIER = 1.2;
-  let modelContribution = normalizedScore * MULTIPLIER * MODEL_WEIGHT;
-
-  // Compose computed value
-  let computed = baseEp * BASE_WEIGHT + modelContribution + baseEp * (1 - BASE_WEIGHT - MODEL_WEIGHT);
-  // The extra term above ensures we don't unintentionally downscale baseEp when modelContribution is tiny.
-  // (effectively computed >= baseEp unless modelContribution is negative, which it isn't here)
-
-  // Enforce floor: never return less than baseEp
-  computed = Math.max(computed, baseEp);
-
-  // Cap uplift to avoid huge jumps
-  const MAX_UPLIFT = 4;
-  computed = Math.min(computed, baseEp + MAX_UPLIFT);
-
-  return Number(Math.max(0, computed).toFixed(2));
+  // Last-resort: raw FPL ep_next
+  return Number(Math.max(0, num(player.ep_next ?? player.ep ?? 0)).toFixed(2));
 };
 
 // Helper to read ep value (prefers computed expected points)
@@ -196,46 +159,45 @@ const enrichPlayersWithGameweekStats = async (players, targetEventId) => {
 };
 
 /**
- * Recalculate expected points for a specific future gameweek based on opponents.
- * This is needed because ep_next is only for the immediate next gameweek.
+ * Recalculate expected points for a specific future gameweek.
+ *
+ * Delegates to the advanced prediction engine, which uses ELO-based team
+ * strength, Poisson goal distributions, Monte Carlo simulation, and the full
+ * FPL scoring rules to produce statistically grounded predictions.
+ *
+ * The `fixtures` and `teams` parameters are required by the engine.  When
+ * called without them (legacy path), the function returns players unchanged.
+ *
+ * @param {Array}  players       - Enriched player list
+ * @param {number} targetEventId - Target gameweek ID
+ * @param {number} currentEventId - Current gameweek ID (unused, kept for API compat)
+ * @param {Array}  [fixtures]    - All fixtures (required for engine)
+ * @param {Array}  [teams]       - All teams from bootstrap-static (required for engine)
+ * @returns {Array} Players with updated ep_next and prediction fields
  */
-const recalculatePointsForGameweek = (players, targetEventId, currentEventId) => {
-  // Only recalculate for future gameweeks beyond the immediate next
-  if (targetEventId <= currentEventId + 1) {
-    return players; // Use existing ep_next for current or immediate next gameweek
+const recalculatePointsForGameweek = (players, targetEventId, currentEventId, fixtures, teams) => {
+  // If fixtures/teams are not provided we cannot run the engine — return unchanged.
+  if (!fixtures || !teams) {
+    return players;
   }
-  
-  return players.map(player => {
-    if (player.fixture_count === 0) {
-      // No fixture (blank gameweek) - predict zero points
-      return { ...player, ep_next: 0 };
-    }
-    
-    // Basic recalculation based on opponent strength and player form
-    // This is a simplified model - in reality you'd want more sophisticated prediction
-    let adjustedPoints = parseFloat(player.ep_next) || 0;
-    
-    // Get opponent team strength (inverse of strength_overall_away/home)
-    const isHome = player.is_home;
-    const basePoints = adjustedPoints;
-    
-    // Simple adjustment based on home/away
-    if (isHome) {
-      adjustedPoints *= 1.1; // 10% bonus for home games
-    } else {
-      adjustedPoints *= 0.95; // 5% penalty for away games
-    }
-    
-    // Add some variance based on player's recent form (using total_points as proxy)
-    const formFactor = Math.min(2.0, Math.max(0.5, (player.total_points || 0) / 100));
-    adjustedPoints *= (0.8 + 0.4 * formFactor);
-    
-    return {
-      ...player,
-      ep_next: Math.max(0, Math.round(adjustedPoints * 100) / 100), // Round to 2 decimals
-      original_ep_next: basePoints // Keep original for reference
-    };
-  });
+  return predictionEngine.computePredictions(players, fixtures, teams, targetEventId);
+};
+
+/**
+ * Apply the advanced prediction engine to all players for a given gameweek.
+ *
+ * This is the primary entry point for computing FPL predictions.  Call this
+ * for any non-past gameweek (current or future) after fetching bootstrap data
+ * and fixtures.
+ *
+ * @param {Array}  players       - Player array from bootstrap-static
+ * @param {Array}  fixtures      - All fixtures
+ * @param {Array}  teams         - Teams from bootstrap-static
+ * @param {number} targetEventId - Gameweek to predict
+ * @returns {Array} Players enriched with prediction fields
+ */
+const applyAdvancedPredictions = (players, fixtures, teams, targetEventId) => {
+  return predictionEngine.computePredictions(players, fixtures, teams, targetEventId);
 };
 
 /**
@@ -300,72 +262,32 @@ const enrichPlayersWithOpponents = (players, fixtures, teams, targetEventId) => 
       const firstFixture = fixtures[0];
       const firstOpponent = teamMap[firstFixture.opponent];
       
-      // Calculate expected points for DGW by evaluating each fixture separately
       const fixtureCount = fixtures.length;
-      const baseEpNext = parseFloat(player.ep_next) || 0;
-      
-      let adjustedEpNext = baseEpNext;
-      
-      if (fixtureCount >= 1) {
-        // Calculate expected points for each fixture separately
-        let totalExpectedPoints = 0;
-        
-        fixtures.forEach(fixture => {
-          let fixturePoints = baseEpNext; // Start with base prediction
-          
-          // Use FPL's difficulty rating (1=easy, 5=hard)
-          const difficulty = fixture.difficulty || 3; // Default to medium difficulty
-          
-          // Convert difficulty to multiplier
-          // Difficulty 1 (easiest) = 1.4x, Difficulty 5 (hardest) = 0.6x
-          // Linear scale: multiplier = 1.8 - (difficulty * 0.2)
-          const difficultyFactor = 1.8 - (difficulty * 0.2);
-          fixturePoints *= difficultyFactor;
-          
-          // Home advantage bonus (10% boost for home games)
-          if (fixture.is_home) {
-            fixturePoints *= 1.1;
-          } else {
-            // Away penalty (5% reduction)
-            fixturePoints *= 0.95;
-          }
-          
-          // Account for rotation risk and fatigue in DGW (each game worth ~85% of normal)
-          // For single gameweeks, no rotation penalty
-          if (fixtureCount > 1) {
-            fixturePoints *= 0.85;
-          }
-          
-          totalExpectedPoints += fixturePoints;
-        });
-        
-        adjustedEpNext = totalExpectedPoints;
-      }
-      
+
       return {
         ...player,
-        opponents: opponents, // Array of all fixtures
-        opponent: firstFixture.opponent, // Legacy: first opponent ID
-        opponent_short: firstOpponent?.short_name || 'TBD', // Legacy: first opponent short name
-        is_home: firstFixture.is_home, // Legacy: first fixture home/away status
-        difficulty: firstFixture.difficulty, // FPL difficulty rating for first fixture
+        opponents: opponents,      // Array of all fixtures (DGW support)
+        opponent: firstFixture.opponent,
+        opponent_short: firstOpponent?.short_name || 'TBD',
+        is_home: firstFixture.is_home,
+        difficulty: firstFixture.difficulty,
         fixture_event: firstFixture.event,
         fixture_count: fixtureCount,
-        ep_next: Math.round(adjustedEpNext * 100) / 100, // Adjusted for DGW with proper calculation
-        ep_next_base: baseEpNext // Original single-game prediction
+        // ep_next is intentionally NOT overwritten here — it is set by the
+        // prediction engine (applyAdvancedPredictions / recalculatePointsForGameweek)
+        // which should be called after this function.
       };
     }
     
     return {
       ...player,
-      opponents: [], // Empty array when no fixtures
+      opponents: [],
       opponent: null,
       opponent_short: '-',
       is_home: null,
       difficulty: null,
       fixture_event: null,
       fixture_count: 0,
-      ep_next: 0 // No fixture means no predicted points
     };
   });
 };
@@ -796,6 +718,7 @@ module.exports = {
   enrichPlayersWithOpponents,
   enrichPlayersWithGameweekStats,
   recalculatePointsForGameweek,
+  applyAdvancedPredictions,
   buildHighestPredictedTeam,
   buildUserTeam,
   validateSwap,
