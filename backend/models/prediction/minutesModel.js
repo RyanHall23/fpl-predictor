@@ -10,11 +10,50 @@
  *
  * Playing-time probabilities directly affect every FPL scoring component.
  *
- * Data sources used (all available from FPL bootstrap-static):
+ * The two key dimensions are modelled independently:
+ *   1. Start frequency  — how often the player starts (starts / season games played)
+ *   2. Playing duration — how long they last when they do play (avg mins / game)
+ *
+ * This correctly distinguishes a backup keeper with 3 starts in 24 games
+ * (pStart ≈ 0.13) from a first-choice keeper with 24 starts (pStart ≈ 1.0),
+ * even though both may average 90 minutes per start.
+ *
+ * Data sources (all from FPL bootstrap-static):
  *   - chance_of_playing_next_round (0–100 or null → assume fit)
  *   - minutes  (season total)
- *   - starts   (if available)
+ *   - starts   (season total starts in starting XI)
+ *   - seasonGamesPlayed (passed from engine: games completed so far)
  */
+
+// ── Named constants ────────────────────────────────────────────────────────
+
+/**
+ * Assumed average minutes per appearance when the starts field is absent.
+ * 70 is a conservative midpoint — a substitute plays ~20–30 mins, a starter
+ * plays ~80–90 mins, and many players fall somewhere between.
+ */
+const ESTIMATED_MINS_PER_APPEARANCE = 70;
+
+/**
+ * Fraction of non-starting games where a high-minute player (avg ≥ 60 mins/start)
+ * comes on as a substitute.  High-minute players are usually first-choice and
+ * rarely sit on the bench, so their sub rate is low.
+ */
+const SUB_FRACTION_HIGH_MINUTES = 0.15;
+
+/**
+ * Fraction of non-starting games where a low-minute player (avg < 60 mins/start)
+ * comes on as a substitute.  These players are more likely to be used as
+ * impact subs, giving a higher bench-to-pitch conversion rate.
+ */
+const SUB_FRACTION_LOW_MINUTES = 0.28;
+
+/**
+ * Expected minutes for a substitute appearance.
+ * EPL substitutes typically come on around the 60th–70th minute,
+ * yielding roughly 20–30 minutes of play.
+ */
+const AVG_SUB_MINUTES = 22;
 
 const num = (v) => {
   if (v == null) return 0;
@@ -23,31 +62,36 @@ const num = (v) => {
 };
 
 /**
- * Estimate per-game average minutes from season totals.
- * Falls back to a position-based heuristic when starts data is absent.
+ * Estimate average minutes per START (not per game — only when selected).
+ * This tells us how long the player lasts when they are picked, independent
+ * of how frequently they are picked.
  *
  * @param {Object} player - FPL element
- * @returns {number} Average minutes per appearance (0–90)
+ * @returns {number} Average minutes per start (0–90)
  */
-const avgMinutesPerGame = (player) => {
+const avgMinutesPerStart = (player) => {
   const totalMins = num(player.minutes);
-  const starts = num(player.starts);
+  const starts    = num(player.starts);
 
   if (starts > 0) {
-    // starts field is reliable — use it
     return Math.min(90, totalMins / starts);
   }
 
-  // Estimate number of appearances from total points as a rough proxy
-  const totalPts = num(player.total_points);
-  const estimatedApps = Math.max(1, totalPts / 4); // ~4 pts per game average
+  // Fallback when starts field is absent
+  const totalPts      = num(player.total_points);
+  const estimatedApps = Math.max(1, totalPts / 4);
   return Math.min(90, totalMins / estimatedApps);
 };
 
 /**
  * Derive playing-time probabilities for a player.
  *
- * @param {Object} player - FPL element from bootstrap-static
+ * @param {Object} player              - FPL element from bootstrap-static
+ * @param {number} [seasonGamesPlayed] - Games completed in the season so far.
+ *   When provided, P(start) is computed from the player's actual start rate
+ *   (starts / seasonGamesPlayed), which correctly differentiates first-choice
+ *   players from backup / fringe players who may average 90 mins per start
+ *   but rarely get selected.  Defaults to 20 when unknown.
  * @returns {{
  *   pStart: number,
  *   pSubAppearance: number,
@@ -55,7 +99,7 @@ const avgMinutesPerGame = (player) => {
  *   expectedMinutes: number
  * }}
  */
-const estimateMinutesProbabilities = (player) => {
+const estimateMinutesProbabilities = (player, seasonGamesPlayed = 20) => {
   // ── 1. Injury / availability adjustment ──────────────────────────────────
   const chanceOfPlaying =
     player.chance_of_playing_next_round != null
@@ -66,56 +110,78 @@ const estimateMinutesProbabilities = (player) => {
     return { pStart: 0, pSubAppearance: 0, p60Plus: 0, expectedMinutes: 0 };
   }
 
-  // ── 2. Base probabilities from recent minutes history ────────────────────
-  const avgMins = avgMinutesPerGame(player);
+  // ── 2. Start rate — how often this player actually starts ─────────────────
+  //
+  // This is the primary signal for P(start) and directly addresses the
+  // Trafford vs Donnarumma situation: both may average 90 mins per start,
+  // but Trafford starting 3/24 games vs Donnarumma starting 24/24 games
+  // should yield very different starting probabilities.
+  const starts          = num(player.starts);
+  const totalMins       = num(player.minutes);
+  const gamesPlayed     = Math.max(1, seasonGamesPlayed);
 
-  let pStart, pSubAppearance, p60Plus;
+  let historicalStartRate;
 
-  if (avgMins >= 78) {
-    // Reliable starter who rarely gets subbed
-    pStart = 0.88;
-    pSubAppearance = 0.04;
-    p60Plus = 0.82;
-  } else if (avgMins >= 62) {
-    // Regular starter, occasionally subbed off before 60
-    pStart = 0.78;
-    pSubAppearance = 0.07;
-    p60Plus = 0.65;
-  } else if (avgMins >= 45) {
-    // Rotation or frequent early substitution
-    pStart = 0.62;
-    pSubAppearance = 0.12;
-    p60Plus = 0.45;
-  } else if (avgMins >= 25) {
-    // Impact substitute / heavily rotated
-    pStart = 0.38;
-    pSubAppearance = 0.28;
-    p60Plus = 0.18;
-  } else if (avgMins >= 8) {
-    // Fringe player, rare appearances
-    pStart = 0.15;
-    pSubAppearance = 0.25;
-    p60Plus = 0.06;
+  if (starts > 0) {
+    // Reliable: directly use starts/gamesPlayed
+    historicalStartRate = Math.min(1, starts / gamesPlayed);
+  } else if (totalMins > 0) {
+    // starts field absent — estimate from minutes
+    const estimatedStarts = totalMins / ESTIMATED_MINS_PER_APPEARANCE;
+    historicalStartRate   = Math.min(1, estimatedStarts / gamesPlayed);
   } else {
-    // Rarely features
-    pStart = 0.05;
-    pSubAppearance = 0.10;
-    p60Plus = 0.02;
+    // No data — conservative estimate (new/uncapped player)
+    historicalStartRate = 0.10;
   }
 
-  // ── 3. Apply injury / availability scale ─────────────────────────────────
+  // ── 3. Playing duration — how long they last per start ───────────────────
+  //
+  // Separate from start frequency: this governs P(60+) and expected minutes
+  // conditional on actually being selected.
+  const avgMinsPerStart = avgMinutesPerStart(player);
+
+  // P(60+ minutes | started)
+  let p60PlusGivenStart;
+  if (avgMinsPerStart >= 82) {
+    p60PlusGivenStart = 0.92;
+  } else if (avgMinsPerStart >= 70) {
+    p60PlusGivenStart = 0.76;
+  } else if (avgMinsPerStart >= 58) {
+    p60PlusGivenStart = 0.56;
+  } else if (avgMinsPerStart >= 42) {
+    p60PlusGivenStart = 0.35;
+  } else {
+    p60PlusGivenStart = 0.15;
+  }
+
+  // ── 4. Sub-appearance probability ────────────────────────────────────────
+  //
+  // Players who rarely start still appear as substitutes.  The complement
+  // of the start rate (available but not selected) is split between bench
+  // and not being in the squad at all.  We approximate: players with a low
+  // start rate but solid appearances have a meaningful sub probability.
+  const nonStartRate = Math.max(0, 1 - historicalStartRate);
+  const subFraction = avgMinsPerStart >= 60 ? SUB_FRACTION_HIGH_MINUTES : SUB_FRACTION_LOW_MINUTES;
+  const pSubAppearance = nonStartRate * subFraction;
+
+  // ── 5. Compose final probabilities ───────────────────────────────────────
+  let pStart = historicalStartRate;
+
+  // p60Plus requires being started AND lasting 60+ mins
+  // (substitutes coming on late very rarely reach 60 minutes)
+  let p60Plus = pStart * p60PlusGivenStart;
+
+  // ── 6. Apply injury / availability scale ─────────────────────────────────
   pStart         *= chanceOfPlaying;
-  pSubAppearance *= chanceOfPlaying;
+  const pSubApp   = pSubAppearance * chanceOfPlaying;
   p60Plus        *= chanceOfPlaying;
 
-  // ── 4. Expected minutes ──────────────────────────────────────────────────
-  // Starters contribute ~avgMins, subs contribute roughly 20–30 mins
-  const subMins = Math.min(30, avgMins * 0.35);
-  const expectedMinutes = pStart * avgMins + pSubAppearance * subMins;
+  // ── 7. Expected minutes ──────────────────────────────────────────────────
+  const expectedMinutes = pStart * avgMinsPerStart + pSubApp * AVG_SUB_MINUTES;
 
   return {
     pStart:          Math.min(1, Math.max(0, pStart)),
-    pSubAppearance:  Math.min(1, Math.max(0, pSubAppearance)),
+    pSubAppearance:  Math.min(1, Math.max(0, pSubApp)),
     p60Plus:         Math.min(1, Math.max(0, p60Plus)),
     expectedMinutes: Math.min(90, Math.max(0, expectedMinutes)),
   };
@@ -139,5 +205,10 @@ const expectedPlayingTimePoints = (p60Plus, pStart, pSubAppearance) => {
 module.exports = {
   estimateMinutesProbabilities,
   expectedPlayingTimePoints,
-  avgMinutesPerGame,
+  avgMinutesPerStart,
+  ESTIMATED_MINS_PER_APPEARANCE,
+  SUB_FRACTION_HIGH_MINUTES,
+  SUB_FRACTION_LOW_MINUTES,
+  AVG_SUB_MINUTES,
 };
+

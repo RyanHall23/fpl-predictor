@@ -113,19 +113,20 @@ const buildSimulatorPlayers = (teamPlayers) => {
 /**
  * Compute the prediction for a single player in a single fixture.
  *
- * @param {Object} player        - FPL element
- * @param {Object} fixtureCtx   - { isHome, homeLambda, awayLambda }
- * @param {Array}  teamPlayers  - All players on the same team
- * @param {Object} simResults   - Output of matchSimulator.runSimulations()
+ * @param {Object} player             - FPL element
+ * @param {Object} fixtureCtx        - { isHome, homeLambda, awayLambda }
+ * @param {Array}  teamPlayers       - All players on the same team
+ * @param {Object} simResults        - Output of matchSimulator.runSimulations()
+ * @param {number} seasonGamesPlayed - Games completed in the season (used by minutes model)
  * @returns {Object} Per-fixture prediction fields
  */
-const computeFixturePrediction = (player, fixtureCtx, teamPlayers, simResults) => {
+const computeFixturePrediction = (player, fixtureCtx, teamPlayers, simResults, seasonGamesPlayed) => {
   const { isHome, homeLambda, awayLambda } = fixtureCtx;
   const teamLambda     = isHome ? homeLambda : awayLambda;
   const opponentLambda = isHome ? awayLambda : homeLambda;
 
   // ── Minutes ────────────────────────────────────────────────────────────────
-  const mins          = minutesModel.estimateMinutesProbabilities(player);
+  const mins          = minutesModel.estimateMinutesProbabilities(player, seasonGamesPlayed);
   const minutesFrac   = mins.expectedMinutes / 90;
   const pPlay         = Math.min(1, mins.pStart + mins.pSubAppearance);
 
@@ -213,7 +214,23 @@ const computePredictions = (players, fixtures, teams, targetEventId) => {
   // ── 2. Build team → players map ───────────────────────────────────────────
   const teamPlayerMap = buildTeamPlayerMap(players);
 
-  // ── 3. Identify gameweek fixtures ─────────────────────────────────────────
+  // ── 3. Compute season games played ───────────────────────────────────────
+  // Count distinct completed gameweeks (events) from the fixtures array.
+  // We accept fixtures where finished === true, OR where the finished field
+  // is absent (null/undefined) — the latter handles mock/test data that omits
+  // the field.  In both cases, event < targetEventId is the primary guard so
+  // we only count past gameweeks.
+  const completedEvents = new Set(
+    fixtures
+      .filter((f) => f.event != null && f.event < targetEventId && f.finished !== false)
+      .map((f) => f.event),
+  );
+  // Fall back to targetEventId - 1 if the fixtures data carries no finished flags.
+  const seasonGamesPlayed = completedEvents.size > 0
+    ? completedEvents.size
+    : Math.max(1, targetEventId - 1);
+
+  // ── 4. Identify gameweek fixtures ─────────────────────────────────────────
   const gwFixtures = fixtures.filter((f) => f.event === targetEventId);
 
   if (gwFixtures.length === 0) {
@@ -312,7 +329,7 @@ const computePredictions = (players, fixtures, teams, targetEventId) => {
 
     playerFixtures.forEach((fc) => {
       const simResults = fixtureSimResults[fc.fixtureId] || {};
-      const pred       = computeFixturePrediction(player, fc, teamPlayers, simResults);
+      const pred       = computeFixturePrediction(player, fc, teamPlayers, simResults, seasonGamesPlayed);
 
       totalPts     += pred.predictedPoints;
       totalGoals   += pred.expectedGoals;
