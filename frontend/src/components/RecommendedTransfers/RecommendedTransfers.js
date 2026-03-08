@@ -213,7 +213,7 @@ const RecommendedTransfers = ({ entryId, currentGameweek }) => {
                             )) }
                             { /* Fill empty cells if less than 3 alternatives */ }
                             { filteredAlternatives.length < 3 && [...Array(3 - filteredAlternatives.length)].map((_, emptyIdx) => (
-                              <TableCell key={ `empty-${emptyIdx}` } />
+                              <TableCell key={ `empty-${emptyIdx}` } sx={ { minWidth: 180 } } />
                             )) }
                           </TableRow>
                         );
