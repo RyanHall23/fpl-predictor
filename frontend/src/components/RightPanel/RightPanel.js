@@ -33,28 +33,30 @@ const RightPanel = ({
         flexDirection: 'column',
       } }
     >
-      <Box sx={ { p: 2 } }>
-        <Typography variant='h6' sx={ { mb: 2, fontWeight: 600 } }>
-          League Standings
-        </Typography>
-        { selectedLeague ? (
-          <InvitationLeagueView
-            league={ selectedLeague }
-            onBack={ onBackFromLeague }
-            onViewTeam={ onViewTeam }
-          />
-        ) : (
-          <UserProfilePane
-            entryId={ entryId }
-            onLeagueClick={ onLeagueClick }
-          />
-        ) }
-      </Box>
+      { entryId ? (
+        <Box sx={ { p: 2 } }>
+          <Typography variant='h6' sx={ { mb: 2, fontWeight: 600 } }>
+            League Standings
+          </Typography>
+          { selectedLeague ? (
+            <InvitationLeagueView
+              league={ selectedLeague }
+              onBack={ onBackFromLeague }
+              onViewTeam={ onViewTeam }
+            />
+          ) : (
+            <UserProfilePane
+              entryId={ entryId }
+              onLeagueClick={ onLeagueClick }
+            />
+          ) }
+        </Box>
+      ) : null }
 
       { displayGameweek && (
         <>
-          <Divider sx={ { my: 1 } } />
-          <Box sx={ { px: 2, pb: 2 } }>
+          { entryId && <Divider sx={ { my: 1 } } /> }
+          <Box sx={ { p: 2 } }>
             <FixturesPanel gameweek={ displayGameweek } />
           </Box>
         </>
