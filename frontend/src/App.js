@@ -10,6 +10,7 @@ import TeamFormation from './components/TeamFormation/TeamFormation';
 import useTeamData from './hooks/useTeamData';
 import useAllPlayers from './hooks/useAllPlayers';
 import RightPanel from './components/RightPanel';
+import RecommendedTransfers from './components/RecommendedTransfers';
 
 const TEAM_VIEW = {
   USER: 'user',
@@ -131,8 +132,8 @@ const App = () => {
         currentGameweek={ currentGameweek }
       />
       <Container maxWidth='xl' sx={ { flex: 1, marginTop: '8px', display: 'flex', flexDirection: 'column' } }>
-        <Box sx={ { display: 'flex', flexDirection: 'row', gap: 2, flex: 1 } }>
-          { /* Left side - Pitch */ }
+        <Box sx={ { display: 'flex', flexDirection: 'row', gap: 2, flex: 1, alignItems: 'flex-start' } }>
+          { /* Left side - Pitch + Recommended Transfers */ }
           <Box sx={ { flex: '0 0 60%', display: 'flex', flexDirection: 'column' } }>
             { /* Banner shown when viewing an opponent's team */ }
             { viewingOpponentId && (
@@ -201,6 +202,22 @@ const App = () => {
                 }
               } }
             />
+            { /* Recommended Transfers below the pitch */ }
+            { currentEntryId && !viewingOpponentId && currentGameweek && (
+              <Box
+                sx={ {
+                  mt: 2,
+                  p: 2,
+                  backgroundColor: theme.palette.background.paper,
+                  borderRadius: 1,
+                } }
+              >
+                <RecommendedTransfers
+                  entryId={ currentEntryId }
+                  currentGameweek={ currentGameweek }
+                />
+              </Box>
+            ) }
           </Box>
           
           { /* Right side - Panel */ }
@@ -215,6 +232,7 @@ const App = () => {
                 setSelectedLeague(null);
               } }
               currentGameweek={ currentGameweek }
+              selectedGameweek={ selectedGameweek }
               viewingOpponentId={ viewingOpponentId }
             />
           </Box>

@@ -21,6 +21,8 @@ import {
 } from '@mui/material';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { useThemeMode } from '../../theme/ThemeContext';
 import './styles.css';
 
@@ -101,8 +103,23 @@ const NavigationBar = ({
             </Button>
           </Box>
           { /* Gameweek Selector */ }
-          <Box sx={ { ml: 2, minWidth: 120 } }>
-            <FormControl size='small' fullWidth>
+          <Box sx={ { ml: 2, display: 'flex', alignItems: 'center', gap: 0.5 } }>
+            <Tooltip title='Previous gameweek'>
+              <span>
+                <IconButton
+                  size='small'
+                  color='inherit'
+                  disabled={ (selectedGameweek || currentGameweek || 1) <= 1 }
+                  onClick={ () => {
+                    const current = selectedGameweek || currentGameweek || 1;
+                    setSelectedGameweek(current - 1 === currentGameweek ? null : current - 1);
+                  } }
+                >
+                  <ChevronLeftIcon />
+                </IconButton>
+              </span>
+            </Tooltip>
+            <FormControl size='small' sx={ { minWidth: 120 } }>
               <InputLabel id='gameweek-select-label'>Gameweek</InputLabel>
               <Select
                 labelId='gameweek-select-label'
@@ -121,6 +138,21 @@ const NavigationBar = ({
                 )) }
               </Select>
             </FormControl>
+            <Tooltip title='Next gameweek'>
+              <span>
+                <IconButton
+                  size='small'
+                  color='inherit'
+                  disabled={ (selectedGameweek || currentGameweek || 1) >= 38 }
+                  onClick={ () => {
+                    const current = selectedGameweek || currentGameweek || 1;
+                    setSelectedGameweek(current + 1 === currentGameweek ? null : current + 1);
+                  } }
+                >
+                  <ChevronRightIcon />
+                </IconButton>
+              </span>
+            </Tooltip>
           </Box>
           { /* Right side: team ID / theme toggle */ }
           <Box sx={ { ml: 'auto', display: 'flex', alignItems: 'center' } }>

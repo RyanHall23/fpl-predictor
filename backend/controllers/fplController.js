@@ -175,6 +175,49 @@ const getBootstrapStatic = async (req, res) => {
   }
 };
 
+const getFixtures = async (req, res) => {
+  try {
+    const { gameweek } = req.query;
+    const [fixtures, bootstrap] = await Promise.all([
+      fplModel.fetchFixtures(),
+      fplModel.fetchBootstrapStatic(),
+    ]);
+
+    const teamsById = {};
+    bootstrap.teams.forEach(t => { teamsById[t.id] = t; });
+
+    let filtered = fixtures;
+    if (gameweek !== undefined) {
+      if (!/^\d+$/.test(gameweek)) {
+        return res.status(400).json({ error: 'Gameweek must be a valid number' });
+      }
+      const gw = parseInt(gameweek, 10);
+      filtered = fixtures.filter(f => f.event === gw);
+    }
+
+    const result = filtered.map(f => ({
+      id: f.id,
+      event: f.event,
+      kickoff_time: f.kickoff_time,
+      started: f.started,
+      finished: f.finished,
+      team_h: f.team_h,
+      team_a: f.team_a,
+      team_h_score: f.team_h_score,
+      team_a_score: f.team_a_score,
+      team_h_name: teamsById[f.team_h]?.name || '',
+      team_a_name: teamsById[f.team_a]?.name || '',
+      team_h_short: teamsById[f.team_h]?.short_name || '',
+      team_a_short: teamsById[f.team_a]?.short_name || '',
+    }));
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error fetching fixtures:', error);
+    res.status(500).json({ error: 'Error fetching fixtures' });
+  }
+};
+
 const getPlayerPicks = async (req, res) => {
   const { entryId, eventId } = req.params;
   // Validate entryId and eventId are positive integers
@@ -951,6 +994,7 @@ const getLeagueStandings = async (req, res) => {
 
 module.exports = {
   getBootstrapStatic,
+  getFixtures,
   getPlayerPicks,
   getElementSummary,
   getLiveGameweek,

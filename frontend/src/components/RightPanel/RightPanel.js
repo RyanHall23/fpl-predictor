@@ -6,7 +6,7 @@ import Divider from '@mui/material/Divider';
 import { useTheme } from '@mui/material/styles';
 import UserProfilePane from '../UserProfilePane/UserProfilePane';
 import InvitationLeagueView from '../InvitationLeagueView/InvitationLeagueView';
-import RecommendedTransfers from '../RecommendedTransfers';
+import FixturesPanel from '../FixturesPanel';
 
 const RightPanel = ({ 
   entryId, 
@@ -15,9 +15,11 @@ const RightPanel = ({
   onBackFromLeague, 
   onViewTeam,
   currentGameweek,
+  selectedGameweek,
   viewingOpponentId
 }) => {
   const theme = useTheme();
+  const displayGameweek = selectedGameweek || currentGameweek;
 
   return (
     <Box
@@ -49,14 +51,11 @@ const RightPanel = ({
         ) }
       </Box>
 
-      { entryId && !viewingOpponentId && currentGameweek && (
+      { displayGameweek && (
         <>
-          <Divider sx={ { my: 2 } } />
+          <Divider sx={ { my: 1 } } />
           <Box sx={ { px: 2, pb: 2 } }>
-            <RecommendedTransfers
-              entryId={ entryId }
-              currentGameweek={ currentGameweek }
-            />
+            <FixturesPanel gameweek={ displayGameweek } />
           </Box>
         </>
       ) }
@@ -71,6 +70,7 @@ RightPanel.propTypes = {
   onBackFromLeague: PropTypes.func,
   onViewTeam: PropTypes.func,
   currentGameweek: PropTypes.number,
+  selectedGameweek: PropTypes.number,
   viewingOpponentId: PropTypes.string,
 };
 
