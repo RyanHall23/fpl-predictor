@@ -11,6 +11,7 @@ import useTeamData from './hooks/useTeamData';
 import useAllPlayers from './hooks/useAllPlayers';
 import RightPanel from './components/RightPanel';
 import RecommendedTransfers from './components/RecommendedTransfers';
+import TeamActivityPanel from './components/TeamActivityPanel';
 
 const TEAM_VIEW = {
   USER: 'user',
@@ -130,11 +131,14 @@ const App = () => {
         selectedGameweek={ selectedGameweek }
         setSelectedGameweek={ setSelectedGameweek }
         currentGameweek={ currentGameweek }
+        mainPoints={ calculateTotalPredictedPoints(mainTeamData) }
+        benchPoints={ calculateTotalPredictedPoints(benchTeamData) }
+        isPast={ gameweekInfo?.isPast }
       />
-      <Container maxWidth='xl' sx={ { flex: 1, marginTop: '8px', display: 'flex', flexDirection: 'column' } }>
+      <Container maxWidth={ false } sx={ { flex: 1, marginTop: '8px', display: 'flex', flexDirection: 'column', px: 2 } }>
         <Box sx={ { display: 'flex', flexDirection: 'row', gap: 2, flex: 1, alignItems: 'flex-start' } }>
-          { /* Left side - Pitch + Recommended Transfers */ }
-          <Box sx={ { flex: '0 0 60%', display: 'flex', flexDirection: 'column' } }>
+          { /* Left - Pitch */ }
+          <Box sx={ { flex: '0 0 43%', display: 'flex', flexDirection: 'column' } }>
             { /* Banner shown when viewing an opponent's team */ }
             { viewingOpponentId && (
               <Box sx={ { mb: 1, display: 'flex', alignItems: 'center', gap: 1 } }>
@@ -148,13 +152,6 @@ const App = () => {
                 ) }
               </Box>
             ) }
-            <Box sx={ { mb: 2, textAlign: 'center' } }>
-              <Typography variant='body2' sx={ { fontWeight: 500 } }>
-                { gameweekInfo?.isPast ? 'Total Points' : 'Total Predicted Points' }: <Box component='span' sx={ { fontWeight: 'bold' } }>{ calculateTotalPredictedPoints(mainTeamData) }</Box>
-                { ' | ' }
-                { gameweekInfo?.isPast ? 'Bench Points' : 'Bench Predicted Points' }: <Box component='span' sx={ { fontWeight: 'bold' } }>{ calculateTotalPredictedPoints(benchTeamData) }</Box>
-              </Typography>
-            </Box>
             <TeamFormation
               mainTeam={ mainTeamData }
               benchTeam={ benchTeamData }
@@ -202,26 +199,10 @@ const App = () => {
                 }
               } }
             />
-            { /* Recommended Transfers below the pitch */ }
-            { currentEntryId && !viewingOpponentId && currentGameweek && (
-              <Box
-                sx={ {
-                  mt: 2,
-                  p: 2,
-                  backgroundColor: theme.palette.background.paper,
-                  borderRadius: 1,
-                } }
-              >
-                <RecommendedTransfers
-                  entryId={ currentEntryId }
-                  currentGameweek={ currentGameweek }
-                />
-              </Box>
-            ) }
           </Box>
           
-          { /* Right side - Panel */ }
-          <Box sx={ { flex: '0 0 38%', display: 'flex', flexDirection: 'column', minHeight: '600px' } }>
+          { /* Middle - Panel */ }
+          <Box sx={ { flex: '0 0 28%', display: 'flex', flexDirection: 'column', minHeight: '600px' } }>
             <RightPanel
               entryId={ viewingOpponentId || currentEntryId }
               onLeagueClick={ setSelectedLeague }
@@ -233,6 +214,18 @@ const App = () => {
               } }
               currentGameweek={ currentGameweek }
               selectedGameweek={ selectedGameweek }
+              viewingOpponentId={ viewingOpponentId }
+              currentEntryId={ currentEntryId }
+              userEntryId={ userEntryId }
+            />
+          </Box>
+
+          { /* Right - Activity & Stats */ }
+          <Box sx={ { flex: '1 1 0', display: 'flex', flexDirection: 'column', minHeight: '600px' } }>
+            <TeamActivityPanel
+              entryId={ viewingOpponentId || currentEntryId }
+              currentGameweek={ currentGameweek }
+              currentEntryId={ currentEntryId }
               viewingOpponentId={ viewingOpponentId }
             />
           </Box>

@@ -16,7 +16,6 @@ const RightPanel = ({
   onViewTeam,
   currentGameweek,
   selectedGameweek,
-  viewingOpponentId
 }) => {
   const theme = useTheme();
   const displayGameweek = selectedGameweek || currentGameweek;
@@ -61,6 +60,8 @@ const RightPanel = ({
           </Box>
         </>
       ) }
+
+
     </Box>
   );
 };
@@ -73,7 +74,6 @@ RightPanel.propTypes = {
   onViewTeam: PropTypes.func,
   currentGameweek: PropTypes.number,
   selectedGameweek: PropTypes.number,
-  viewingOpponentId: PropTypes.string,
 };
 
 export default RightPanel;

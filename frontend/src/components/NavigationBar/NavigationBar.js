@@ -38,7 +38,10 @@ const NavigationBar = ({
   onSetTeamId,
   selectedGameweek,
   setSelectedGameweek,
-  currentGameweek
+  currentGameweek,
+  mainPoints,
+  benchPoints,
+  isPast,
 }) => {
   const { mode, toggleTheme } = useThemeMode();
   const [teamIdDialogOpen, setTeamIdDialogOpen] = React.useState(false);
@@ -66,104 +69,124 @@ const NavigationBar = ({
 
   return (
     <AppBar position='static'>
-      <Container maxWidth='xl'>
+      <Container maxWidth={ false } sx={ { px: 2 } }>
         <Toolbar disableGutters>
-          <Typography
-            variant='h6'
-            noWrap
-            component='a'
-            sx={ {
-              mr: 2,
-              display: { xs: 'none', md: 'flex' },
-              fontFamily: 'monospace',
-              fontWeight: 700,
-              letterSpacing: '.3rem',
-              color: 'inherit',
-              textDecoration: 'none',
-            } }
-          >
-            FPL Predictor
-          </Typography>
-          <Box sx={ { display: 'flex', gap: 1, ml: 2 } }>
-            { userTeamId && (
-              <Button
-                variant={ teamView === TEAM_VIEW.USER ? 'contained' : 'outlined' }
-                color='secondary'
-                onClick={ () => onSwitchTeamView(TEAM_VIEW.USER) }
-              >
-                My Team
-              </Button>
-            ) }
-            <Button
-              variant={ teamView === TEAM_VIEW.HIGHEST ? 'contained' : 'outlined' }
-              color='secondary'
-              onClick={ () => onSwitchTeamView(TEAM_VIEW.HIGHEST) }
+          { /* Left bucket — aligns with the pitch column below */ }
+          <Box sx={ { flex: '0 0 43%', display: 'flex', alignItems: 'center', minWidth: 0 } }>
+            <Typography
+              variant='h6'
+              noWrap
+              component='a'
+              sx={ {
+                flexShrink: 0,
+                display: { xs: 'none', md: 'flex' },
+                fontFamily: 'monospace',
+                fontWeight: 700,
+                letterSpacing: '.3rem',
+                color: 'inherit',
+                textDecoration: 'none',
+              } }
             >
-              Highest Team
-            </Button>
-          </Box>
-          { /* Gameweek Selector */ }
-          <Box sx={ { ml: 2, display: 'flex', alignItems: 'center', gap: 0.5 } }>
-            <Tooltip title='Previous gameweek'>
-              <span>
-                <IconButton
-                  size='small'
-                  color='inherit'
-                  disabled={ (selectedGameweek || currentGameweek || 1) <= 1 }
-                  onClick={ () => {
-                    const current = selectedGameweek || currentGameweek || 1;
-                    setSelectedGameweek(current - 1 === currentGameweek ? null : current - 1);
-                  } }
-                >
-                  <ChevronLeftIcon />
-                </IconButton>
-              </span>
-            </Tooltip>
-            <FormControl size='small' sx={ { minWidth: 120 } }>
-              <InputLabel id='gameweek-select-label'>Gameweek</InputLabel>
-              <Select
-                labelId='gameweek-select-label'
-                value={ selectedGameweek || currentGameweek || '' }
-                label='Gameweek'
-                onChange={ (e) => setSelectedGameweek(e.target.value === currentGameweek ? null : e.target.value) }
-                sx={ { 
-                  bgcolor: 'background.paper',
-                  '& .MuiSelect-select': { py: 1 }
-                } }
+              FPL Predictor
+            </Typography>
+            { mainPoints != null && (
+              <Typography
+                variant='body2'
+                noWrap
+                sx={ { flex: 1, textAlign: 'center', fontWeight: 500, color: 'inherit', opacity: 0.9 } }
               >
-                { Array.from({ length: 38 }, (_, i) => i + 1).map((gw) => (
-                  <MenuItem key={ gw } value={ gw }>
-                    GW { gw }{ gw === currentGameweek ? ' (Current)' : '' }
-                  </MenuItem>
-                )) }
-              </Select>
-            </FormControl>
-            <Tooltip title='Next gameweek'>
-              <span>
-                <IconButton
-                  size='small'
-                  color='inherit'
-                  disabled={ (selectedGameweek || currentGameweek || 1) >= 38 }
-                  onClick={ () => {
-                    const current = selectedGameweek || currentGameweek || 1;
-                    setSelectedGameweek(current + 1 === currentGameweek ? null : current + 1);
+                { isPast ? 'Total Points' : 'Total Predicted Points' }:{ ' ' }
+                <Box component='span' sx={ { fontWeight: 'bold' } }>{ mainPoints }</Box>
+                { ' | ' }
+                { isPast ? 'Bench Points' : 'Bench Predicted Points' }:{ ' ' }
+                <Box component='span' sx={ { fontWeight: 'bold' } }>{ benchPoints }</Box>
+              </Typography>
+            ) }
+          </Box>
+
+          { /* Right bucket — all navigation controls */ }
+          <Box sx={ { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1 } }>
+            <Box sx={ { display: 'flex', gap: 1 } }>
+              { userTeamId && (
+                <Button
+                  variant={ teamView === TEAM_VIEW.USER ? 'contained' : 'outlined' }
+                  color='secondary'
+                  onClick={ () => onSwitchTeamView(TEAM_VIEW.USER) }
+                >
+                  My Team
+                </Button>
+              ) }
+              <Button
+                variant={ teamView === TEAM_VIEW.HIGHEST ? 'contained' : 'outlined' }
+                color='secondary'
+                onClick={ () => onSwitchTeamView(TEAM_VIEW.HIGHEST) }
+              >
+                Highest Team
+              </Button>
+            </Box>
+            { /* Gameweek Selector */ }
+            <Box sx={ { display: 'flex', alignItems: 'center', gap: 0.5 } }>
+              <Tooltip title='Previous gameweek'>
+                <span>
+                  <IconButton
+                    size='small'
+                    color='inherit'
+                    disabled={ (selectedGameweek || currentGameweek || 1) <= 1 }
+                    onClick={ () => {
+                      const current = selectedGameweek || currentGameweek || 1;
+                      setSelectedGameweek(current - 1 === currentGameweek ? null : current - 1);
+                    } }
+                  >
+                    <ChevronLeftIcon />
+                  </IconButton>
+                </span>
+              </Tooltip>
+              <FormControl size='small' sx={ { minWidth: 120 } }>
+                <InputLabel id='gameweek-select-label'>Gameweek</InputLabel>
+                <Select
+                  labelId='gameweek-select-label'
+                  value={ selectedGameweek || currentGameweek || '' }
+                  label='Gameweek'
+                  onChange={ (e) => setSelectedGameweek(e.target.value === currentGameweek ? null : e.target.value) }
+                  sx={ { 
+                    bgcolor: 'background.paper',
+                    '& .MuiSelect-select': { py: 1 }
                   } }
                 >
-                  <ChevronRightIcon />
+                  { Array.from({ length: 38 }, (_, i) => i + 1).map((gw) => (
+                    <MenuItem key={ gw } value={ gw }>
+                      GW { gw }{ gw === currentGameweek ? ' (Current)' : '' }
+                    </MenuItem>
+                  )) }
+                </Select>
+              </FormControl>
+              <Tooltip title='Next gameweek'>
+                <span>
+                  <IconButton
+                    size='small'
+                    color='inherit'
+                    disabled={ (selectedGameweek || currentGameweek || 1) >= 38 }
+                    onClick={ () => {
+                      const current = selectedGameweek || currentGameweek || 1;
+                      setSelectedGameweek(current + 1 === currentGameweek ? null : current + 1);
+                    } }
+                  >
+                    <ChevronRightIcon />
+                  </IconButton>
+                </span>
+              </Tooltip>
+            </Box>
+            { /* Theme toggle + Team ID */ }
+            <Box sx={ { display: 'flex', alignItems: 'center' } }>
+              <Tooltip title={ mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode' }>
+                <IconButton onClick={ toggleTheme } color='inherit' sx={ { mr: 1 } }>
+                  { mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon /> }
                 </IconButton>
-              </span>
-            </Tooltip>
-          </Box>
-          { /* Right side: team ID / theme toggle */ }
-          <Box sx={ { ml: 'auto', display: 'flex', alignItems: 'center' } }>
-            <Tooltip title={ mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode' }>
-              <IconButton onClick={ toggleTheme } color='inherit' sx={ { mr: 1 } }>
-                { mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon /> }
-              </IconButton>
-            </Tooltip>
-            <Button color='inherit' onClick={ handleOpenTeamIdDialog }>
-              { userTeamId ? `Team ID: ${userTeamId}` : 'Set Team ID' }
-            </Button>
+              </Tooltip>
+              <Button color='inherit' onClick={ handleOpenTeamIdDialog }>
+                { userTeamId ? `Team ID: ${userTeamId}` : 'Set Team ID' }
+              </Button>
+            </Box>
           </Box>
         </Toolbar>
       </Container>
@@ -205,13 +228,16 @@ const NavigationBar = ({
 };
 
 NavigationBar.propTypes = {
-  teamView: PropTypes.string.isRequired,
-  onSwitchTeamView: PropTypes.func.isRequired,
-  userTeamId: PropTypes.string.isRequired,
-  onSetTeamId: PropTypes.func.isRequired,
+  teamView: PropTypes.string,
+  onSwitchTeamView: PropTypes.func,
+  userTeamId: PropTypes.string,
+  onSetTeamId: PropTypes.func,
   selectedGameweek: PropTypes.number,
-  setSelectedGameweek: PropTypes.func.isRequired,
-  currentGameweek: PropTypes.number
+  setSelectedGameweek: PropTypes.func,
+  currentGameweek: PropTypes.number,
+  mainPoints: PropTypes.number,
+  benchPoints: PropTypes.number,
+  isPast: PropTypes.bool,
 };
 
 export default NavigationBar;
