@@ -163,12 +163,9 @@ This will use mock data from `backend/mockData/` that matches the exact structur
     cd fpl-predictor
     ```
 
-2. Install dependencies for all parts (root, frontend, backend):
+2. Install dependencies for all packages (npm workspaces handles frontend and backend automatically):
     ```sh
     npm install
-    cd backend && npm install
-    cd ../frontend && npm install
-    cd ..
     ```
 
 ### Running the Application
@@ -185,13 +182,11 @@ npm start
 
 - Start the backend:
     ```sh
-    cd backend
-    npm start
+    npm run start-backend
     ```
 - In a new terminal, start the frontend:
     ```sh
-    cd frontend
-    npm start
+    npm run start-frontend
     ```
 
 ## API Documentation

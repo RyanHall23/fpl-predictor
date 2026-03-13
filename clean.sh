@@ -25,22 +25,14 @@ rm -rf frontend/node_modules
 
 echo "Removing package-lock files..."
 rm -f package-lock.json
-rm -f backend/package-lock.json
-rm -f frontend/package-lock.json
 
 # Clear npm cache
 echo "Clearing npm cache..."
 npm cache clean --force
 
-# Reinstall dependencies
-echo "Installing root dependencies..."
+# Reinstall dependencies (npm workspaces installs all workspace deps from root)
+echo "Installing dependencies..."
 npm install
-
-echo "Installing backend dependencies..."
-cd backend && npm install && cd ..
-
-echo "Installing frontend dependencies..."
-cd frontend && npm install && cd ..
 
 echo "✅ Clean process completed!"
 echo ""
