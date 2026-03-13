@@ -17,7 +17,8 @@ import {
   CircularProgress,
   Alert,
   FormControlLabel,
-  Checkbox
+  Checkbox,
+  Divider
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
@@ -30,7 +31,7 @@ const positionLabels = {
   ATT: 'FWD'
 };
 
-const RecommendedTransfers = ({ entryId, currentGameweek }) => {
+const RecommendedTransfers = ({ entryId, currentGameweek, compact = false }) => {
   const theme = useTheme();
   const [gameweeksAhead, setGameweeksAhead] = useState(1);
   const [similarPricingOnly, setSimilarPricingOnly] = useState(false);
@@ -70,51 +71,78 @@ const RecommendedTransfers = ({ entryId, currentGameweek }) => {
 
   // Filter recommendations based on Similar Pricing toggle
   const filterAlternativesByPrice = (alternatives, playerOutPrice) => {
-    if (!similarPricingOnly) return alternatives;
-    
-    // Only show alternatives within ±£0.5m
-    return alternatives.filter(alt => {
-      const altPrice = alt.now_cost / 10;
-      const playerPrice = playerOutPrice / 10;
-      return Math.abs(altPrice - playerPrice) <= 0.5;
-    });
+    // Always exclude alternatives with no visible points gain (rounds to 0 or less)
+    let filtered = alternatives.filter(alt => Math.round(alt.points_difference) > 0);
+
+    if (similarPricingOnly) {
+      // Only show alternatives within ±£0.5m
+      filtered = filtered.filter(alt => {
+        const altPrice = alt.now_cost / 10;
+        const playerPrice = playerOutPrice / 10;
+        return Math.abs(altPrice - playerPrice) <= 0.5;
+      });
+    }
+
+    return filtered;
   };
 
   if (!entryId || !currentGameweek) return null;
 
   return (
-    <Box sx={ { mb: 3, mt: 2 } }>
-      <Box sx={ { display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 2 } }>
-        <Typography variant='h6' fontWeight='bold'>
-          Recommended Transfers
-        </Typography>
-        <Box sx={ { display: 'flex', gap: 2, alignItems: 'center' } }>
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={ similarPricingOnly }
-                onChange={ handleSimilarPricingToggle }
-                color='primary'
-              />
-            }
-            label='Similar Pricing'
-          />
-          <FormControl size='small' sx={ { minWidth: 200 } }>
-            <InputLabel>Forecast Period</InputLabel>
+    <Box sx={ { mb: compact ? 0 : 3, mt: compact ? 0 : 2 } }>
+      { compact ? (
+        <Box sx={ { display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5, flexWrap: 'wrap', gap: 1 } }>
+          <Typography variant='h6' fontWeight='bold'>
+            Recommended Transfers
+          </Typography>
+          <FormControl size='small' sx={ { minWidth: 0, flex: '1 1 auto', maxWidth: 180 } }>
+            <InputLabel>Period</InputLabel>
             <Select
               value={ gameweeksAhead }
               onChange={ handleGameweekChange }
-              label='Forecast Period'
+              label='Period'
             >
-              <MenuItem value={ 1 }>Next GW ({ currentGameweek + 1 })</MenuItem>
-              <MenuItem value={ 2 }>Next 2 GWs (Cumulative)</MenuItem>
-              <MenuItem value={ 3 }>Next 3 GWs (Cumulative)</MenuItem>
-              <MenuItem value={ 4 }>Next 4 GWs (Cumulative)</MenuItem>
-              <MenuItem value={ 5 }>Next 5 GWs (Cumulative)</MenuItem>
+              <MenuItem value={ 1 }>GW { currentGameweek + 1 }</MenuItem>
+              <MenuItem value={ 2 }>Next 2 GWs</MenuItem>
+              <MenuItem value={ 3 }>Next 3 GWs</MenuItem>
+              <MenuItem value={ 4 }>Next 4 GWs</MenuItem>
+              <MenuItem value={ 5 }>Next 5 GWs</MenuItem>
             </Select>
           </FormControl>
         </Box>
-      </Box>
+      ) : (
+        <Box sx={ { display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 2 } }>
+          <Typography variant='h6' fontWeight='bold'>
+            Recommended Transfers
+          </Typography>
+          <Box sx={ { display: 'flex', gap: 2, alignItems: 'center' } }>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={ similarPricingOnly }
+                  onChange={ handleSimilarPricingToggle }
+                  color='primary'
+                />
+              }
+              label='Similar Pricing'
+            />
+            <FormControl size='small' sx={ { minWidth: 200 } }>
+              <InputLabel>Forecast Period</InputLabel>
+              <Select
+                value={ gameweeksAhead }
+                onChange={ handleGameweekChange }
+                label='Forecast Period'
+              >
+                <MenuItem value={ 1 }>Next GW ({ currentGameweek + 1 })</MenuItem>
+                <MenuItem value={ 2 }>Next 2 GWs (Cumulative)</MenuItem>
+                <MenuItem value={ 3 }>Next 3 GWs (Cumulative)</MenuItem>
+                <MenuItem value={ 4 }>Next 4 GWs (Cumulative)</MenuItem>
+                <MenuItem value={ 5 }>Next 5 GWs (Cumulative)</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+        </Box>
+      ) }
 
       { loading && (
         <Box sx={ { display: 'flex', justifyContent: 'center', py: 2 } }>
@@ -130,19 +158,95 @@ const RecommendedTransfers = ({ entryId, currentGameweek }) => {
 
       { !loading && !error && recommendations && (
         <Box>
-          { Object.keys(recommendations.recommendations).map((position) => {
-            const posRecommendations = recommendations.recommendations[position];
-            if (!posRecommendations || posRecommendations.length === 0) return null;
+          { (() => {
+            // Flatten all recommendations across positions
+            const allRecs = [];
+            Object.keys(recommendations.recommendations).forEach((position) => {
+              const posRecommendations = recommendations.recommendations[position];
+              if (posRecommendations && posRecommendations.length > 0) {
+                posRecommendations.forEach(rec => {
+                  allRecs.push({ ...rec, position });
+                });
+              }
+            });
+
+            // Limit GK recommendations to 1 (keep the best one by filtered alternatives)
+            let gkSeen = 0;
+            const dedupedRecs = allRecs.filter(rec => {
+              if (rec.position === 'GK') {
+                gkSeen += 1;
+                return gkSeen <= 1;
+              }
+              return true;
+            });
+
+            // Limit to 3 if compact mode
+            const displayRecs = compact ? dedupedRecs.slice(0, 3) : dedupedRecs;
+
+            if (displayRecs.length === 0) return null;
+
+            if (compact) {
+              return (
+                <Box sx={ { display: 'flex', flexDirection: 'column' } }>
+                  { displayRecs.map((rec, idx) => {
+                    const filteredAlternatives = filterAlternativesByPrice(rec.alternatives, rec.playerOut.now_cost);
+                    if (filteredAlternatives.length === 0) return null;
+                    const altsToShow = filteredAlternatives.slice(0, 3);
+                    return (
+                      <Box key={ idx }>
+                        { idx > 0 && <Divider sx={ { my: 1 } } /> }
+                        <Box sx={ { display: 'flex', alignItems: 'flex-start', gap: 0 } }>
+                          { /* OUT — border-right acts as divider, only as tall as this box */ }
+                          <Box sx={ {
+                            flex: '0 0 20%',
+                            minWidth: 0,
+                            borderRight: `1px solid ${theme.palette.divider}`,
+                          } }>
+                            <Typography variant='body2' fontWeight='bold' noWrap>
+                              { rec.playerOut.web_name }
+                            </Typography>
+                            <Typography variant='caption' color='error'>
+                              { Math.round(rec.playerOut.predicted_points) } pts · £{ (rec.playerOut.now_cost / 10).toFixed(1) }m
+                            </Typography>
+                          </Box>
+                          { /* IN — 3-column grid */ }
+                          <Box sx={ { flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 1, pl: 0.75, minWidth: 0 } }>
+                            { altsToShow.map((alt, altIdx) => (
+                              <Box key={ altIdx } sx={ { minWidth: 0 } }>
+                                <Typography variant='body2' fontWeight='bold' noWrap>
+                                  { alt.web_name }
+                                </Typography>
+                                <Box sx={ { display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' } }>
+                                  <Typography variant='caption' color='success.main'>
+                                    { Math.round(alt.predicted_points) } pts
+                                  </Typography>
+                                  <Chip
+                                    icon={ <TrendingUpIcon /> }
+                                    label={ `+${Math.round(alt.points_difference)}` }
+                                    size='small'
+                                    color='success'
+                                    sx={ { height: 18, fontSize: '0.65rem' } }
+                                  />
+                                </Box>
+                                <Typography variant='caption' color='text.secondary' sx={ { fontSize: '0.65rem' } }>
+                                  £{ (alt.now_cost / 10).toFixed(1) }m
+                                </Typography>
+                              </Box>
+                            )) }
+                          </Box>
+                        </Box>
+                      </Box>
+                    );
+                  }) }
+                </Box>
+              );
+            }
 
             return (
-              <Box key={ position } sx={ { mb: 3 } }>
-                <Typography variant='subtitle1' fontWeight='bold' sx={ { mb: 1, color: theme.palette.primary.main } }>
-                  { positionLabels[position] }
-                </Typography>
-                <TableContainer component={ Paper } sx={ { backgroundColor: theme.palette.mode === 'dark' ? '#1e2127' : '#ffffff' } }>
-                  <Table size='small'>
-                    <TableBody>
-                      { posRecommendations.map((rec, idx) => {
+              <TableContainer component={ Paper } sx={ { backgroundColor: theme.palette.mode === 'dark' ? '#1e2127' : '#ffffff' } }>
+                <Table size='small'>
+                  <TableBody>
+                    { displayRecs.map((rec, idx) => {
                         // Filter alternatives based on Similar Pricing toggle
                         const filteredAlternatives = filterAlternativesByPrice(rec.alternatives, rec.playerOut.now_cost);
                         
@@ -213,17 +317,16 @@ const RecommendedTransfers = ({ entryId, currentGameweek }) => {
                             )) }
                             { /* Fill empty cells if less than 3 alternatives */ }
                             { filteredAlternatives.length < 3 && [...Array(3 - filteredAlternatives.length)].map((_, emptyIdx) => (
-                              <TableCell key={ `empty-${emptyIdx}` } />
+                              <TableCell key={ `empty-${emptyIdx}` } sx={ { minWidth: 180 } } />
                             )) }
                           </TableRow>
                         );
-                      }) }
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </Box>
+                    }) }
+                  </TableBody>
+                </Table>
+              </TableContainer>
             );
-          }) }
+          })() }
 
           { Object.values(recommendations.recommendations).every(arr => !arr || arr.length === 0) && (
             <Alert severity='info'>
@@ -245,6 +348,7 @@ const RecommendedTransfers = ({ entryId, currentGameweek }) => {
 RecommendedTransfers.propTypes = {
   entryId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
   currentGameweek: PropTypes.number,
+  compact: PropTypes.bool,
 };
 
 export default RecommendedTransfers;

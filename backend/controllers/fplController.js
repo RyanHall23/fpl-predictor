@@ -464,6 +464,7 @@ const getUserProfile = async (req, res) => {
       totalPoints,
       futurePoints,
       classicLeagues,
+      history: historyData.current || [],
     });
   } catch (error) {
     console.error('Error fetching user profile:', error);

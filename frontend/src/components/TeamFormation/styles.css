@@ -1,37 +1,177 @@
 /* Dark mode - default */
 body .main-paper {
+  position: relative;
   background: repeating-linear-gradient(
     0deg,
-    #2d572f,
-    #2d572f 20px,
-    #3a6e3c 20px,
-    #3a6e3c 40px
+    #1a4d1a,
+    #1a4d1a 40px,
+    #225522 40px,
+    #225522 80px
   );
-  border-radius: 12px;
+  border-radius: 8px;
+  border: 3px solid #ffffff;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
   transition: all 0.3s ease;
+  overflow: hidden;
+  min-height: 600px;
+}
+
+/* Halfway line */
+body .main-paper::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.5);
+  transform: translateY(-50%);
+  z-index: 0;
+}
+
+/* Center circle */
+body .main-paper::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 180px;
+  height: 180px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 0;
+}
+
+/* Top byline/goal line */
+.main-paper .pitch-top-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.5);
+  z-index: 0;
+}
+
+/* Bottom byline/goal line */
+.main-paper .pitch-bottom-line {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.5);
+  z-index: 0;
+}
+
+/* 18-yard box (penalty area) - top */
+.main-paper .penalty-box-top {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 40%;
+  height: 80px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-top: none;
+  transform: translateX(-50%);
+  z-index: 0;
+}
+
+/* 6-yard box (goal area) - top */
+.main-paper .goal-box-top {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 20%;
+  height: 30px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-top: none;
+  transform: translateX(-50%);
+  z-index: 0;
+}
+
+/* Penalty arc (D) - top */
+.main-paper .penalty-arc-top {
+  position: absolute;
+  top: 80px;
+  left: 50%;
+  width: 80px;
+  height: 40px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-top-left-radius: 80px;
+  border-top-right-radius: 80px;
+  border-bottom: none;
+  transform: translateX(-50%);
+  z-index: 0;
 }
 
 body .bench-paper {
-  background: linear-gradient(135deg, #2d572f 0%, #1b5e20 100%);
-  border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  position: relative;
+  background: linear-gradient(135deg, #1a2332 0%, #2d3748 50%, #1a2332 100%);
+  border-radius: 8px;
+  border: 2px solid #4a5568;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3), inset 0 2px 8px rgba(0, 0, 0, 0.2);
   transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+body .bench-paper::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(255, 193, 7, 0.6) 25%, 
+    rgba(255, 193, 7, 0.8) 50%, 
+    rgba(255, 193, 7, 0.6) 75%, 
+    transparent 100%
+  );
+  z-index: 0;
+}
+
+body .bench-paper::after {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 0;
 }
 
 /* Light mode */
 html[data-mui-color-scheme='light'] body .main-paper {
   background: repeating-linear-gradient(
     0deg,
-    #81c784,
-    #81c784 20px,
-    #a5d6a7 20px,
-    #a5d6a7 40px
+    #4caf50,
+    #4caf50 40px,
+    #66bb6a 40px,
+    #66bb6a 80px
   );
+  border: 3px solid #ffffff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 html[data-mui-color-scheme='light'] body .bench-paper {
-  background: linear-gradient(135deg, #a8e6a3 0%, #81c784 100%);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 50%, #e3f2fd 100%);
+  border: 2px solid #90caf9;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1), inset 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+html[data-mui-color-scheme='light'] body .bench-paper::before {
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(33, 150, 243, 0.4) 25%, 
+    rgba(33, 150, 243, 0.6) 50%, 
+    rgba(33, 150, 243, 0.4) 75%, 
+    transparent 100%
+  );
+}
+
+html[data-mui-color-scheme='light'] body .bench-paper::after {
+  border: 1px dashed rgba(0, 0, 0, 0.15);
 }

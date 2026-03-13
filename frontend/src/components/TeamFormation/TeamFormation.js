@@ -46,9 +46,16 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
 
   return (
     <Grid container spacing={ 2 } justifyContent='center'>
-      <Grid size={ 10 }>
-        <Paper className='main-paper'>
-          <Box>
+      <Grid size={ 12 }>
+        <Paper className='main-paper' sx={ { position: 'relative', p: 2 } }>
+          { /* Pitch markings */ }
+          <div className='pitch-top-line' />
+          <div className='pitch-bottom-line' />
+          <div className='penalty-box-top' />
+          <div className='goal-box-top' />
+          <div className='penalty-arc-top' />
+          
+          <Box sx={ { position: 'relative', zIndex: 1 } }>
             { /* GK and Manager row, centered together */ }
             <Grid container justifyContent='center' alignItems='center' spacing={ 2 }>
               { gks.map((player) => (
@@ -153,9 +160,9 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
           </Box>
         </Paper>
       </Grid>
-      <Grid size={ 10 }>
-        <Paper className='bench-paper'>
-          <Box>
+      <Grid size={ 12 }>
+        <Paper className='bench-paper' sx={ { p: 2, position: 'relative' } }>
+          <Box sx={ { position: 'relative', zIndex: 1 } }>
             <Grid container spacing={ 2 } justifyContent='center'>
               { /* Bench manager first */ }
               { benchManager && (
