@@ -49,9 +49,38 @@ The main goal of this project is to create a model that can accurately predict t
   - SSRF protection via URL whitelisting
   - 4-tier rate limiting (auth, general API, read, write operations)
 
-## Render Deployment
+## Vercel Deployment
 
-This application can be deployed on [Render](https://render.com) as two separate services.
+This application is hosted on [Vercel](https://vercel.com) and is configured via the `vercel.json` in the repository root. Vercel automatically deploys on every push to the main branch.
+
+### How it works
+
+Vercel serves the React frontend as a static site and routes `/api/*` requests to a serverless Node.js function running the Express backend — all from a single deployment.
+
+### Deploying your own instance
+
+1. Fork this repository and import it into your [Vercel dashboard](https://vercel.com/new).
+2. Add the following environment variables in your Vercel project settings:
+
+| Variable       | Required | Description                                       |
+|----------------|----------|---------------------------------------------------|
+| `JWT_SECRET`   | Yes      | Secret for JWT token signing (see below)          |
+| `FRONTEND_URL` | No       | Your Vercel deployment URL (for CORS)             |
+
+3. Deploy — Vercel will run `npm install && npm run build` in the `frontend` directory automatically.
+
+> **Generate a secure JWT secret:**
+> ```sh
+> openssl rand -base64 32
+> ```
+
+### Running locally
+
+See the [Installation](#installation) and [Running the Application](#running-the-application) sections below.
+
+## Alternative: Render Deployment
+
+You can also self-host on [Render](https://render.com) as two separate services.
 
 ### Backend (Web Service)
 
@@ -61,8 +90,7 @@ This application can be deployed on [Render](https://render.com) as two separate
    - **Runtime:** Node
    - **Build Command:** `npm install`
    - **Start Command:** `npm start`
-4. Add the following environment variables in the Render dashboard:
-   - `MONGODB_URI` — MongoDB connection string (e.g. from Render's MongoDB add-on)
+4. Add the following environment variables:
    - `JWT_SECRET` — A strong random secret (generate with `openssl rand -base64 32`)
    - `FRONTEND_URL` — The URL of your deployed frontend (e.g. `https://your-app.onrender.com`)
    - `PORT` is automatically provided by Render
@@ -74,28 +102,19 @@ This application can be deployed on [Render](https://render.com) as two separate
 3. Configure the site:
    - **Build Command:** `npm install && npm run build`
    - **Publish Directory:** `dist`
-4. Add the following environment variable in the Render dashboard:
+4. Add the following environment variable:
    - `VITE_API_URL` — The URL of your deployed backend (e.g. `https://your-backend.onrender.com`)
 
 ### How the Frontend Connects to the Backend
 
 In production, the frontend reads `VITE_API_URL` and uses it as the base URL for all API requests. In local development, Vite's proxy handles `/api` requests to `localhost:5000` and `VITE_API_URL` can be left empty.
 
-### Required Environment Variables Summary
-
-| Service  | Variable       | Description                            |
-|----------|---------------|----------------------------------------|
-| Backend  | `MONGODB_URI`  | MongoDB connection string              |
-| Backend  | `JWT_SECRET`   | Secret for JWT token signing           |
-| Backend  | `FRONTEND_URL` | Deployed frontend URL (for CORS)       |
-| Frontend | `VITE_API_URL` | Deployed backend URL                   |
-
 
 
 ```
-backend/           # Express.js backend (API, authentication, MongoDB models)
+backend/           # Express.js backend (API, FPL data proxy)
   controllers/     # Backend controllers (business logic)
-  models/          # Mongoose models and FPL data logic
+  models/          # FPL data models and prediction logic
   routes/          # Express route definitions
   server.js        # Backend entry point
 
@@ -105,16 +124,16 @@ frontend/          # React frontend (UI)
     components/    # React components
     hooks/         # Custom React hooks
     App.js         # Main React app
-    index.js       # React entry point
+    index.jsx      # React entry point
 
 package.json       # Root scripts for running both frontend and backend together
+vercel.json        # Vercel deployment configuration
 ```
 
 ## Prerequisites
 
-- Node.js (v14 or higher, recommended v18+)
-- npm (v6 or higher, recommended v8+)
-- MongoDB (running locally on default port 27017)
+- Node.js (v18 or higher)
+- npm (v8 or higher)
 
 ## Environment Variables
 
@@ -176,7 +195,7 @@ You can start both the backend and frontend together from the root directory:
 npm start
 ```
 
-- This will run the backend on [http://localhost:5000](http://localhost:5000) and the frontend on [http://localhost:3000](http://localhost:3000).
+- This will run the backend on [http://localhost:5000](http://localhost:5000) and the frontend on [http://localhost:5173](http://localhost:5173).
 
 **Alternatively, to run them separately:**
 

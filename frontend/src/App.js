@@ -343,10 +343,10 @@ const App = () => {
         benchPoints={ calculateTotalPredictedPoints(effectiveBenchTeam) }
         isPast={ gameweekInfo?.isPast }
       />
-      <Container maxWidth={ false } sx={ { flex: 1, marginTop: '8px', display: 'flex', flexDirection: 'column', px: 2 } }>
-        <Box sx={ { display: 'flex', flexDirection: 'row', gap: 2, flex: 1, alignItems: 'flex-start' } }>
+      <Container maxWidth={ false } sx={ { flex: 1, marginTop: '8px', display: 'flex', flexDirection: 'column', px: { xs: 1, sm: 2 } } }>
+        <Box sx={ { display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, gap: 2, flex: 1, alignItems: 'flex-start' } }>
           { /* Left - Pitch */ }
-          <Box sx={ { flex: '0 0 43%', display: 'flex', flexDirection: 'column' } }>
+          <Box sx={ { flex: { xs: '1 1 auto', lg: '0 0 43%' }, width: { xs: '100%', lg: 'auto' }, display: 'flex', flexDirection: 'column' } }>
             { /* Banner shown when viewing an opponent's team */ }
             { viewingOpponentId && (
               <Box sx={ { mb: 1, display: 'flex', alignItems: 'center', gap: 1 } }>
@@ -386,7 +386,7 @@ const App = () => {
           </Box>
           
           { /* Middle - Panel */ }
-          <Box sx={ { flex: '0 0 28%', display: 'flex', flexDirection: 'column', minHeight: '600px' } }>
+          <Box sx={ { flex: { xs: '1 1 auto', lg: '0 0 28%' }, width: { xs: '100%', lg: 'auto' }, display: 'flex', flexDirection: 'column', minHeight: { xs: 'auto', lg: '600px' } } }>
             <RightPanel
               entryId={ viewingOpponentId || currentEntryId }
               onLeagueClick={ setSelectedLeague }
@@ -405,7 +405,7 @@ const App = () => {
           </Box>
 
           { /* Right - Activity & Stats */ }
-          <Box sx={ { flex: '1 1 0', display: 'flex', flexDirection: 'column', minHeight: '600px' } }>
+          <Box sx={ { flex: { xs: '1 1 auto', lg: '1 1 0' }, width: { xs: '100%', lg: 'auto' }, display: 'flex', flexDirection: 'column', minHeight: { xs: 'auto', lg: '600px' } } }>
             <TeamActivityPanel
               entryId={ viewingOpponentId || currentEntryId }
               currentGameweek={ currentGameweek }

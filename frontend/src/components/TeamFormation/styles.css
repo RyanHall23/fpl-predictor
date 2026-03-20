@@ -175,3 +175,31 @@ html[data-mui-color-scheme='light'] body .bench-paper::before {
 html[data-mui-color-scheme='light'] body .bench-paper::after {
   border: 1px dashed rgba(0, 0, 0, 0.15);
 }
+
+/* Mobile responsive - small screens */
+@media (max-width: 600px) {
+  body .main-paper {
+    min-height: 380px;
+  }
+
+  body .main-paper::after {
+    width: 110px;
+    height: 110px;
+  }
+
+  body .main-paper .penalty-box-top {
+    height: 55px;
+  }
+
+  body .main-paper .goal-box-top {
+    height: 20px;
+  }
+
+  body .main-paper .penalty-arc-top {
+    top: 55px;
+    width: 55px;
+    height: 28px;
+    border-top-left-radius: 55px;
+    border-top-right-radius: 55px;
+  }
+}
