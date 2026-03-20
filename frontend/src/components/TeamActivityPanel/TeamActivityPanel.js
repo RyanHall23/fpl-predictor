@@ -4,8 +4,20 @@ import { Box, Paper, Typography, Divider } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import axios from '../../api';
 import RecommendedTransfers from '../RecommendedTransfers';
+import PlannedTransfers from '../PlannedTransfers';
 
-const TeamActivityPanel = ({ entryId, currentGameweek, currentEntryId, viewingOpponentId }) => {
+const TeamActivityPanel = ({
+  entryId,
+  currentGameweek,
+  currentEntryId,
+  viewingOpponentId,
+  plannedTransfers,
+  onRemovePlannedTransfer,
+  onUpdatePlannedTransferGameweek,
+  onAddPlannedTransfer,
+  team,
+  allPlayers,
+}) => {
   const theme = useTheme();
   const [profile, setProfile] = useState(null);
   const [history, setHistory] = useState([]);
@@ -201,6 +213,29 @@ const TeamActivityPanel = ({ entryId, currentGameweek, currentEntryId, viewingOp
           />
         </Paper>
       ) }
+
+      { /* Planned Transfers Section – shown for own team only */ }
+      { currentEntryId && !viewingOpponentId && currentGameweek && onAddPlannedTransfer && (
+        <Paper
+          sx={ {
+            backgroundColor: theme.palette.background.paper,
+            borderRadius: 1,
+            p: 2,
+            flex: '0 0 auto',
+          } }
+        >
+          <PlannedTransfers
+            plannedTransfers={ plannedTransfers }
+            onRemove={ onRemovePlannedTransfer }
+            onUpdateGameweek={ onUpdatePlannedTransferGameweek }
+            onAdd={ onAddPlannedTransfer }
+            team={ team }
+            allPlayers={ allPlayers }
+            currentGameweek={ currentGameweek }
+            compact={ true }
+          />
+        </Paper>
+      ) }
     </Box>
   );
 };
@@ -210,6 +245,12 @@ TeamActivityPanel.propTypes = {
   currentGameweek: PropTypes.number,
   currentEntryId: PropTypes.string,
   viewingOpponentId: PropTypes.string,
+  plannedTransfers: PropTypes.array,
+  onRemovePlannedTransfer: PropTypes.func,
+  onUpdatePlannedTransferGameweek: PropTypes.func,
+  onAddPlannedTransfer: PropTypes.func,
+  team: PropTypes.array,
+  allPlayers: PropTypes.array,
 };
 
 export default TeamActivityPanel;

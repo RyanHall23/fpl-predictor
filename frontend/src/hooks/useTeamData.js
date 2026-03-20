@@ -303,8 +303,6 @@ const isValidSwap = (player1, player2, teamType1, teamType2) => {
   return { valid: true, error: '' };
 };
 
-// Calculate total predicted points for a team
-// The team array's predictedPoints values already include any captain multiplier applied by the frontend formatting
 const calculateTotalPredictedPoints = (team) => {
   if (!team || team.length === 0) return 0;
 
@@ -313,6 +311,32 @@ const calculateTotalPredictedPoints = (team) => {
     return total + points;
   }, 0);
 };
+
+  // Change the captain of the current user team.
+  // The player identified by playerCode becomes captain (multiplier 2×),
+  // all other players revert to their base points (multiplier 1×).
+  const setCaptain = useCallback((playerCode) => {
+    setMainTeamData((prev) =>
+      prev.map((player) => {
+        // Derive true base points: prefer explicit basePoints field, otherwise
+        // divide predictedPoints by current multiplier to avoid double-counting.
+        const getBase = (p) =>
+          p.basePoints != null
+            ? p.basePoints
+            : Math.round((p.predictedPoints ?? 0) / (p.multiplier || 1));
+
+        if (player.code === playerCode) {
+          const base = getBase(player);
+          return { ...player, is_captain: true, multiplier: 2, predictedPoints: Math.round(base * 2) };
+        }
+        if (player.is_captain) {
+          const base = getBase(player);
+          return { ...player, is_captain: false, multiplier: 1, predictedPoints: Math.round(base) };
+        }
+        return player;
+      })
+    );
+  }, []);
 
   const toggleTeamView = () => {
     setIsHighestPredictedTeam((prev) => !prev);
@@ -335,7 +359,8 @@ const calculateTotalPredictedPoints = (team) => {
     teamName,
     setMainTeamData,
     setBenchTeamData,
-    gameweekInfo
+    gameweekInfo,
+    setCaptain,
   };
 };
 

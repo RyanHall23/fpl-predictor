@@ -13,7 +13,7 @@ const positionLabels = {
   5: 'MAN'
 };
 
-const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, onTransfer, isHighestPredictedTeam, onPlayerClick }) => {
+const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, onTransfer, isHighestPredictedTeam, onPlayerClick, onSetCaptain, currentGameweek, onAddPlannedTransfer }) => {
   // Find the captain from the team data (for user teams, this comes from picks)
   // For highest predicted teams, calculate based on highest points
   const captain = mainTeam && mainTeam.length
@@ -72,6 +72,9 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                     onPlayerClick={ onPlayerClick }
                     mainTeamData={ mainTeam }
                     benchTeamData={ benchTeam }
+                    onSetCaptain={ !isHighestPredictedTeam ? onSetCaptain : undefined }
+                    currentGameweek={ currentGameweek }
+                    onAddPlannedTransfer={ !isHighestPredictedTeam ? onAddPlannedTransfer : undefined }
                   />
                 </Grid>
               )) }
@@ -92,6 +95,9 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                       onPlayerClick={ onPlayerClick }
                       mainTeamData={ mainTeam }
                       benchTeamData={ benchTeam }
+                      onSetCaptain={ !isHighestPredictedTeam ? onSetCaptain : undefined }
+                      currentGameweek={ currentGameweek }
+                      onAddPlannedTransfer={ !isHighestPredictedTeam ? onAddPlannedTransfer : undefined }
                     />
                   </Box>
                 </Grid>
@@ -113,6 +119,9 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                     onPlayerClick={ onPlayerClick }
                     mainTeamData={ mainTeam }
                     benchTeamData={ benchTeam }
+                    onSetCaptain={ !isHighestPredictedTeam ? onSetCaptain : undefined }
+                    currentGameweek={ currentGameweek }
+                    onAddPlannedTransfer={ !isHighestPredictedTeam ? onAddPlannedTransfer : undefined }
                   />
                 </Grid>
               )) }
@@ -133,6 +142,9 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                     onPlayerClick={ onPlayerClick }
                     mainTeamData={ mainTeam }
                     benchTeamData={ benchTeam }
+                    onSetCaptain={ !isHighestPredictedTeam ? onSetCaptain : undefined }
+                    currentGameweek={ currentGameweek }
+                    onAddPlannedTransfer={ !isHighestPredictedTeam ? onAddPlannedTransfer : undefined }
                   />
                 </Grid>
               )) }
@@ -153,6 +165,9 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                     onPlayerClick={ onPlayerClick }
                     mainTeamData={ mainTeam }
                     benchTeamData={ benchTeam }
+                    onSetCaptain={ !isHighestPredictedTeam ? onSetCaptain : undefined }
+                    currentGameweek={ currentGameweek }
+                    onAddPlannedTransfer={ !isHighestPredictedTeam ? onAddPlannedTransfer : undefined }
                   />
                 </Grid>
               )) }
@@ -183,6 +198,8 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                       onPlayerClick={ onPlayerClick }
                       mainTeamData={ mainTeam }
                       benchTeamData={ benchTeam }
+                      currentGameweek={ currentGameweek }
+                      onAddPlannedTransfer={ !isHighestPredictedTeam ? onAddPlannedTransfer : undefined }
                     />
                   </Box>
                 </Grid>
@@ -206,6 +223,8 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                       onPlayerClick={ onPlayerClick }
                       mainTeamData={ mainTeam }
                       benchTeamData={ benchTeam }
+                      currentGameweek={ currentGameweek }
+                      onAddPlannedTransfer={ !isHighestPredictedTeam ? onAddPlannedTransfer : undefined }
                     />
                   </Box>
                 </Grid>
@@ -229,6 +248,8 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                       onPlayerClick={ onPlayerClick }
                       mainTeamData={ mainTeam }
                       benchTeamData={ benchTeam }
+                      currentGameweek={ currentGameweek }
+                      onAddPlannedTransfer={ !isHighestPredictedTeam ? onAddPlannedTransfer : undefined }
                     />
                   </Box>
                 </Grid>
@@ -253,6 +274,9 @@ TeamFormation.propTypes = {
   onTransfer: PropTypes.func,
   isHighestPredictedTeam: PropTypes.bool,
   onPlayerClick: PropTypes.func,
+  onSetCaptain: PropTypes.func,
+  currentGameweek: PropTypes.number,
+  onAddPlannedTransfer: PropTypes.func,
 };
 
 export default TeamFormation;

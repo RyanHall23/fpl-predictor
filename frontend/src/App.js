@@ -9,6 +9,7 @@ import { useTheme } from '@mui/material/styles';
 import TeamFormation from './components/TeamFormation/TeamFormation';
 import useTeamData from './hooks/useTeamData';
 import useAllPlayers from './hooks/useAllPlayers';
+import usePlannedTransfers from './hooks/usePlannedTransfers';
 import RightPanel from './components/RightPanel';
 import RecommendedTransfers from './components/RecommendedTransfers';
 import TeamActivityPanel from './components/TeamActivityPanel';
@@ -39,7 +40,8 @@ const App = () => {
     selectedPlayer,
     setMainTeamData,
     setBenchTeamData,
-    gameweekInfo
+    gameweekInfo,
+    setCaptain,
   } = useTeamData(
     currentEntryId,
     teamView === TEAM_VIEW.HIGHEST,
@@ -47,6 +49,13 @@ const App = () => {
   );
 
   const { allPlayers } = useAllPlayers(selectedGameweek);
+
+  const {
+    plannedTransfers,
+    addPlannedTransfer,
+    removePlannedTransfer,
+    updateTransferGameweek,
+  } = usePlannedTransfers();
 
   const [snackbarOpen, setSnackbarOpen] = useState(false);
 
@@ -160,7 +169,10 @@ const App = () => {
               team={ [...mainTeamData, ...benchTeamData] }
               allPlayers={ allPlayers }
               isHighestPredictedTeam={ isHighestPredictedTeam }
-              onTransfer={ (playerOut, playerIn) => {
+              onSetCaptain={ !isHighestPredictedTeam ? setCaptain : undefined }
+              currentGameweek={ currentGameweek }
+              onAddPlannedTransfer={ !isHighestPredictedTeam ? addPlannedTransfer : undefined }
+              onTransfer={ (playerOut, playerIn, gameweek) => {
                 // Prevent duplicate: do not allow transfer if playerIn is already in main or bench team
                 const playerInExists = [...mainTeamData, ...benchTeamData].some(p => p.code === playerIn.code);
                 if (playerInExists) {
@@ -197,6 +209,10 @@ const App = () => {
                   newBench[benchIdx] = newPlayer;
                   setBenchTeamData(newBench);
                 }
+                // Also add to planned transfers list (with the selected gameweek)
+                if (gameweek && currentGameweek) {
+                  addPlannedTransfer(playerOut, playerIn, gameweek);
+                }
               } }
             />
           </Box>
@@ -227,6 +243,12 @@ const App = () => {
               currentGameweek={ currentGameweek }
               currentEntryId={ currentEntryId }
               viewingOpponentId={ viewingOpponentId }
+              plannedTransfers={ plannedTransfers }
+              onRemovePlannedTransfer={ removePlannedTransfer }
+              onUpdatePlannedTransferGameweek={ updateTransferGameweek }
+              onAddPlannedTransfer={ addPlannedTransfer }
+              team={ [...mainTeamData, ...benchTeamData] }
+              allPlayers={ allPlayers }
             />
           </Box>
         </Box>
