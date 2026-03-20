@@ -186,6 +186,7 @@ const PlannedTransfers = ({
   allPlayers,
   currentGameweek,
   compact = false,
+  voidedTransferIds = new Set(),
 }) => {
   const theme = useTheme();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -218,20 +219,44 @@ const PlannedTransfers = ({
           <Box sx={ { display: 'flex', flexDirection: 'column', gap: 1 } }>
             { sorted.map((t, idx) => {
               const diff = (t.playerIn.predictedPoints || 0) - (t.playerOut.predictedPoints || 0);
+              const isVoided = voidedTransferIds.has(t.id);
               return (
                 <Box key={ t.id }>
                   { idx > 0 && <Divider sx={ { mb: 1 } } /> }
-                  <Box sx={ { display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' } }>
+                  { isVoided && (
+                    <Typography variant='caption' color='warning.main' sx={ { display: 'block', mb: 0.25, fontStyle: 'italic' } }>
+                      Not made – transfer was not executed in FPL
+                    </Typography>
+                  ) }
+                  <Box
+                    sx={ {
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.5,
+                      flexWrap: 'wrap',
+                      opacity: isVoided ? 0.5 : 1,
+                    } }
+                  >
                     <Box sx={ { flex: '1 1 0', minWidth: 0 } }>
-                      <Typography variant='body2' fontWeight='bold' noWrap>{ t.playerOut.name }</Typography>
+                      <Typography
+                        variant='body2'
+                        fontWeight='bold'
+                        noWrap
+                        sx={ isVoided ? { textDecoration: 'line-through' } : {} }
+                      >{ t.playerOut.name }</Typography>
                       <Typography variant='caption' color='error'>{ Math.round(t.playerOut.predictedPoints) } pts</Typography>
                     </Box>
                     <SwapHorizIcon sx={ { fontSize: 18, color: 'text.secondary', flexShrink: 0 } } />
                     <Box sx={ { flex: '1 1 0', minWidth: 0 } }>
-                      <Typography variant='body2' fontWeight='bold' noWrap>{ t.playerIn.name }</Typography>
+                      <Typography
+                        variant='body2'
+                        fontWeight='bold'
+                        noWrap
+                        sx={ isVoided ? { textDecoration: 'line-through' } : {} }
+                      >{ t.playerIn.name }</Typography>
                       <Box sx={ { display: 'flex', alignItems: 'center', gap: 0.5 } }>
                         <Typography variant='caption' color='success.main'>{ Math.round(t.playerIn.predictedPoints) } pts</Typography>
-                        { diff > 0 && (
+                        { diff > 0 && !isVoided && (
                           <Chip label={ `+${Math.round(diff)}` } size='small' color='success' sx={ { height: 16, fontSize: '0.6rem' } } />
                         ) }
                       </Box>
@@ -241,6 +266,7 @@ const PlannedTransfers = ({
                       value={ t.gameweek }
                       onChange={ (e) => onUpdateGameweek(t.id, e.target.value) }
                       sx={ { fontSize: '0.7rem', height: 24, minWidth: 60 } }
+                      disabled={ isVoided }
                     >
                       { gwOptions.map((gw) => (
                         <MenuItem key={ gw } value={ gw } sx={ { fontSize: '0.75rem' } }>GW { gw }</MenuItem>
@@ -294,11 +320,27 @@ const PlannedTransfers = ({
             <TableBody>
               { sorted.map((t) => {
                 const diff = (t.playerIn.predictedPoints || 0) - (t.playerOut.predictedPoints || 0);
+                const isVoided = voidedTransferIds.has(t.id);
                 return (
-                  <TableRow key={ t.id } sx={ { '&:hover': { backgroundColor: theme.palette.action.hover } } }>
+                  <TableRow
+                    key={ t.id }
+                    sx={ {
+                      '&:hover': { backgroundColor: theme.palette.action.hover },
+                      opacity: isVoided ? 0.55 : 1,
+                    } }
+                  >
                     { /* Player Out */ }
                     <TableCell sx={ { borderRight: `2px solid ${theme.palette.divider}`, minWidth: 130 } }>
-                      <Typography variant='body2' fontWeight='bold'>{ t.playerOut.name }</Typography>
+                      { isVoided && (
+                        <Typography variant='caption' color='warning.main' sx={ { display: 'block', fontStyle: 'italic' } }>
+                          Not made
+                        </Typography>
+                      ) }
+                      <Typography
+                        variant='body2'
+                        fontWeight='bold'
+                        sx={ isVoided ? { textDecoration: 'line-through' } : {} }
+                      >{ t.playerOut.name }</Typography>
                       <Typography variant='caption' color='error'>{ Math.round(t.playerOut.predictedPoints) } pts</Typography>
                     </TableCell>
                     { /* Arrow */ }
@@ -307,10 +349,14 @@ const PlannedTransfers = ({
                     </TableCell>
                     { /* Player In */ }
                     <TableCell sx={ { minWidth: 130 } }>
-                      <Typography variant='body2' fontWeight='bold'>{ t.playerIn.name }</Typography>
+                      <Typography
+                        variant='body2'
+                        fontWeight='bold'
+                        sx={ isVoided ? { textDecoration: 'line-through' } : {} }
+                      >{ t.playerIn.name }</Typography>
                       <Box sx={ { display: 'flex', alignItems: 'center', gap: 0.5 } }>
                         <Typography variant='caption' color='success.main'>{ Math.round(t.playerIn.predictedPoints) } pts</Typography>
-                        { diff > 0 && (
+                        { diff > 0 && !isVoided && (
                           <Chip label={ `+${Math.round(diff)}` } size='small' color='success' sx={ { height: 18, fontSize: '0.65rem' } } />
                         ) }
                       </Box>
@@ -322,6 +368,7 @@ const PlannedTransfers = ({
                         value={ t.gameweek }
                         onChange={ (e) => onUpdateGameweek(t.id, e.target.value) }
                         sx={ { fontSize: '0.75rem' } }
+                        disabled={ isVoided }
                       >
                         { gwOptions.map((gw) => (
                           <MenuItem key={ gw } value={ gw } sx={ { fontSize: '0.75rem' } }>GW { gw }</MenuItem>
@@ -363,6 +410,7 @@ PlannedTransfers.propTypes = {
   allPlayers: PropTypes.array,
   currentGameweek: PropTypes.number,
   compact: PropTypes.bool,
+  voidedTransferIds: PropTypes.instanceOf(Set),
 };
 
 export default PlannedTransfers;

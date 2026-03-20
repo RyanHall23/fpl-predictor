@@ -10,7 +10,6 @@ import {
 } from '@mui/material';
 import StarIcon from '@mui/icons-material/Star';
 import SyncIcon from '@mui/icons-material/Sync';
-import StarBorderIcon from '@mui/icons-material/StarBorder';
 import AddIcon from '@mui/icons-material/Add';
 import PropTypes from 'prop-types';
 import './styles.css';
@@ -25,6 +24,9 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
   // predictedPoints here is already multiplied for captain/triple captain in the frontend
   // (e.g. via formatPlayer in useTeamData.js); the backend sends raw points + multiplier.
   const predictedPoints = parseFloat(player.predictedPoints) || 0;
+
+  // Captain eligibility: only outfield players (not GK, not manager) on the user's team
+  const isCaptainEligible = !!onSetCaptain && player.position !== POSITION_MANAGER && player.position !== POSITION_GK;
 
   // Helper function to check if swap maintains formation requirements
   // This is kept for instant UI feedback (green borders)
@@ -165,55 +167,90 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
         { /* Action Buttons */ }
         { showTransferButtons && team && allPlayers && onTransfer && (
           <Grid container spacing={ 1 } sx={ { mt: 0.5 } }>
-            <Grid size={ 6 }>
-              <IconButton
-                size='small'
-                className='action-button-small substitute-button'
-                title='Substitute'
-                onClick={ () => {
-                  if (onPlayerClick) {
-                    onPlayerClick(player, teamType);
-                  }
-                } }
-                sx={ { padding: '4px !important' } }
-              >
-                <SyncIcon sx={ { fontSize: 28 } } className='sync-icon' />
-              </IconButton>
-            </Grid>
-            <Grid size={ 6 }>
-              <IconButton
-                size='small'
-                className='action-button-small transfer-button'
-                title='Transfer'
-                onClick={ () => setTransferDialogOpen(true) }
-                sx={ { padding: '4px !important' } }
-              >
-                <Box className='transfer-arrows-icon'>
-                  <svg width='28' height='28' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
-                    <path d='M3 8 L12 8 L12 6 L18 10 L12 14 L12 12 L3 12 Z' fill='#4caf50' />
-                    <path d='M21 16 L12 16 L12 18 L6 14 L12 10 L12 12 L21 12 Z' fill='#f44336' />
-                  </svg>
-                </Box>
-              </IconButton>
-            </Grid>
-            { /* Captain toggle – only for user team outfield non-manager players */ }
-            { onSetCaptain && player.position !== POSITION_MANAGER && player.position !== POSITION_GK && (
-              <Grid size={ 6 }>
-                <Tooltip title={ isCaptain ? 'Captain' : 'Set as Captain' }>
+            { /* Row 1: Substitute | [Captain] | Transfer */ }
+            { isCaptainEligible ? (
+              <>
+                <Grid size={ 4 }>
                   <IconButton
                     size='small'
-                    className='action-button-small'
-                    onClick={ () => { if (!isCaptain && onSetCaptain) onSetCaptain(player.code); } }
-                    sx={ { padding: '4px !important', color: isCaptain ? '#ffeb3b !important' : undefined } }
+                    className='action-button-small substitute-button'
+                    title='Substitute'
+                    onClick={ () => { if (onPlayerClick) onPlayerClick(player, teamType); } }
+                    sx={ { padding: '4px !important' } }
                   >
-                    { isCaptain ? <StarIcon sx={ { fontSize: 22 } } /> : <StarBorderIcon sx={ { fontSize: 22 } } /> }
+                    <SyncIcon sx={ { fontSize: 24 } } className='sync-icon' />
                   </IconButton>
-                </Tooltip>
-              </Grid>
+                </Grid>
+                <Grid size={ 4 }>
+                  <Tooltip title={ isCaptain ? 'Captain' : 'Set as Captain' }>
+                    <IconButton
+                      size='small'
+                      className='action-button-small captain-button'
+                      onClick={ () => { if (!isCaptain && onSetCaptain) onSetCaptain(player.code); } }
+                      sx={ {
+                        padding: '4px !important',
+                        fontWeight: 'bold',
+                        fontSize: '14px',
+                        color: isCaptain ? '#000 !important' : undefined,
+                        backgroundColor: isCaptain ? '#ffeb3b !important' : undefined,
+                        '&:hover': isCaptain ? { backgroundColor: '#fdd835 !important' } : {},
+                      } }
+                    >
+                      C
+                    </IconButton>
+                  </Tooltip>
+                </Grid>
+                <Grid size={ 4 }>
+                  <IconButton
+                    size='small'
+                    className='action-button-small transfer-button'
+                    title='Transfer'
+                    onClick={ () => setTransferDialogOpen(true) }
+                    sx={ { padding: '4px !important' } }
+                  >
+                    <Box className='transfer-arrows-icon'>
+                      <svg width='24' height='24' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                        <path d='M3 8 L12 8 L12 6 L18 10 L12 14 L12 12 L3 12 Z' fill='#4caf50' />
+                        <path d='M21 16 L12 16 L12 18 L6 14 L12 10 L12 12 L21 12 Z' fill='#f44336' />
+                      </svg>
+                    </Box>
+                  </IconButton>
+                </Grid>
+              </>
+            ) : (
+              <>
+                <Grid size={ 6 }>
+                  <IconButton
+                    size='small'
+                    className='action-button-small substitute-button'
+                    title='Substitute'
+                    onClick={ () => { if (onPlayerClick) onPlayerClick(player, teamType); } }
+                    sx={ { padding: '4px !important' } }
+                  >
+                    <SyncIcon sx={ { fontSize: 28 } } className='sync-icon' />
+                  </IconButton>
+                </Grid>
+                <Grid size={ 6 }>
+                  <IconButton
+                    size='small'
+                    className='action-button-small transfer-button'
+                    title='Transfer'
+                    onClick={ () => setTransferDialogOpen(true) }
+                    sx={ { padding: '4px !important' } }
+                  >
+                    <Box className='transfer-arrows-icon'>
+                      <svg width='28' height='28' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                        <path d='M3 8 L12 8 L12 6 L18 10 L12 14 L12 12 L3 12 Z' fill='#4caf50' />
+                        <path d='M21 16 L12 16 L12 18 L6 14 L12 10 L12 12 L21 12 Z' fill='#f44336' />
+                      </svg>
+                    </Box>
+                  </IconButton>
+                </Grid>
+              </>
             ) }
-            { /* Add planned transfer button */ }
+            { /* Row 2: Add planned transfer (full width) */ }
             { onAddPlannedTransfer && (
-              <Grid size={ onSetCaptain && player.position !== POSITION_MANAGER && player.position !== POSITION_GK ? 6 : 12 }>
+              <Grid size={ 12 }>
                 <Tooltip title='Add planned transfer'>
                   <IconButton
                     size='small'
