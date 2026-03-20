@@ -16,6 +16,9 @@ import PropTypes from 'prop-types';
 import './styles.css';
 import TransferPlayer from '../TransferPlayer/TransferPlayer';
 
+const POSITION_GK = 1;
+const POSITION_MANAGER = 5;
+
 const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTransferButtons = true, teamType, onPlayerClick, selectedPlayer, mainTeamData, benchTeamData, onSetCaptain, currentGameweek, onAddPlannedTransfer }) => {
   const [transferDialogOpen, setTransferDialogOpen] = React.useState(false);
 
@@ -193,8 +196,8 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
                 </Box>
               </IconButton>
             </Grid>
-            { /* Captain toggle – only for user team outfield players */ }
-            { onSetCaptain && player.position !== 5 && player.position !== 1 && (
+            { /* Captain toggle – only for user team outfield non-manager players */ }
+            { onSetCaptain && player.position !== POSITION_MANAGER && player.position !== POSITION_GK && (
               <Grid size={ 6 }>
                 <Tooltip title={ isCaptain ? 'Captain' : 'Set as Captain' }>
                   <IconButton
@@ -210,7 +213,7 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
             ) }
             { /* Add planned transfer button */ }
             { onAddPlannedTransfer && (
-              <Grid size={ onSetCaptain && player.position !== 5 && player.position !== 1 ? 6 : 12 }>
+              <Grid size={ onSetCaptain && player.position !== POSITION_MANAGER && player.position !== POSITION_GK ? 6 : 12 }>
                 <Tooltip title='Add planned transfer'>
                   <IconButton
                     size='small'

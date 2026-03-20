@@ -318,12 +318,19 @@ const calculateTotalPredictedPoints = (team) => {
   const setCaptain = useCallback((playerCode) => {
     setMainTeamData((prev) =>
       prev.map((player) => {
+        // Derive true base points: prefer explicit basePoints field, otherwise
+        // divide predictedPoints by current multiplier to avoid double-counting.
+        const getBase = (p) =>
+          p.basePoints != null
+            ? p.basePoints
+            : Math.round((p.predictedPoints ?? 0) / (p.multiplier || 1));
+
         if (player.code === playerCode) {
-          const base = player.basePoints ?? player.predictedPoints ?? 0;
+          const base = getBase(player);
           return { ...player, is_captain: true, multiplier: 2, predictedPoints: Math.round(base * 2) };
         }
         if (player.is_captain) {
-          const base = player.basePoints ?? player.predictedPoints ?? 0;
+          const base = getBase(player);
           return { ...player, is_captain: false, multiplier: 1, predictedPoints: Math.round(base) };
         }
         return player;
