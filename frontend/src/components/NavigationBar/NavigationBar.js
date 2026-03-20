@@ -159,6 +159,7 @@ const NavigationBar = ({
                 <InputLabel id='gameweek-select-label'>GW</InputLabel>
                 <Select
                   labelId='gameweek-select-label'
+                  inputProps={ { 'aria-label': 'Gameweek' } }
                   value={ selectedGameweek || currentGameweek || '' }
                   label='GW'
                   onChange={ (e) => setSelectedGameweek(e.target.value === currentGameweek ? null : e.target.value) }
