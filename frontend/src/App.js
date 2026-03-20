@@ -360,7 +360,6 @@ const App = () => {
               onSetCaptain={ !isHighestPredictedTeam ? setCaptain : undefined }
               currentGameweek={ currentGameweek }
               onAddPlannedTransfer={ !isHighestPredictedTeam ? addPlannedTransfer : undefined }
-              isLive={ !!gameweekInfo?.isActive }
               onTransfer={ (playerOut, playerIn, gameweek) => {
                 // Prevent duplicate: do not allow transfer if playerIn is already in effective team
                 const playerInExists = [...effectiveMainTeam, ...effectiveBenchTeam].some(p => p.code === playerIn.code);

@@ -17,7 +17,8 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  Chip,
 } from '@mui/material';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
@@ -93,23 +94,44 @@ const NavigationBar = ({
 
           { /* Points display — abbreviated on mobile, full text on larger screens */ }
           { mainPoints != null && (
-            <Typography
-              variant='body2'
-              noWrap
-              sx={ { flex: { xs: '1 1 auto', md: 1 }, fontWeight: 500, color: 'inherit', opacity: 0.9 } }
-            >
-              <Box component='span' sx={ { display: { xs: 'none', sm: 'inline' } } }>
-                { isPast ? 'Total Points' : isActive ? 'Live Points' : 'Total Predicted Points' }:{ ' ' }
-              </Box>
-              <Box component='span' sx={ { display: { xs: 'inline', sm: 'none' } } }>Pts: </Box>
-              <Box component='span' sx={ { fontWeight: 'bold' } }>{ mainPoints }</Box>
-              { ' | ' }
-              <Box component='span' sx={ { display: { xs: 'none', sm: 'inline' } } }>
-                { isPast ? 'Bench Points' : isActive ? 'Live Bench Points' : 'Bench Predicted Points' }:{ ' ' }
-              </Box>
-              <Box component='span' sx={ { display: { xs: 'inline', sm: 'none' } } }>Bench: </Box>
-              <Box component='span' sx={ { fontWeight: 'bold' } }>{ benchPoints }</Box>
-            </Typography>
+            <Box sx={ { display: 'flex', alignItems: 'center', gap: 1, flex: { xs: '1 1 auto', md: 1 } } }>
+              { isActive && (
+                <Chip
+                  label='LIVE'
+                  size='small'
+                  sx={ {
+                    backgroundColor: '#f44336',
+                    color: '#fff',
+                    fontWeight: 'bold',
+                    fontSize: '0.65rem',
+                    height: '20px',
+                    flexShrink: 0,
+                    animation: 'fpl-live-pulse 1.5s ease-in-out infinite',
+                    '@keyframes fpl-live-pulse': {
+                      '0%, 100%': { opacity: 1 },
+                      '50%': { opacity: 0.6 },
+                    },
+                  } }
+                />
+              ) }
+              <Typography
+                variant='body2'
+                noWrap
+                sx={ { fontWeight: 500, color: 'inherit', opacity: 0.9 } }
+              >
+                <Box component='span' sx={ { display: { xs: 'none', sm: 'inline' } } }>
+                  { isPast ? 'Total Points' : 'Points' }:{ ' ' }
+                </Box>
+                <Box component='span' sx={ { display: { xs: 'inline', sm: 'none' } } }>Pts: </Box>
+                <Box component='span' sx={ { fontWeight: 'bold' } }>{ mainPoints }</Box>
+                { ' | ' }
+                <Box component='span' sx={ { display: { xs: 'none', sm: 'inline' } } }>
+                  { isPast ? 'Bench Points' : 'Bench' }:{ ' ' }
+                </Box>
+                <Box component='span' sx={ { display: { xs: 'inline', sm: 'none' } } }>Bench: </Box>
+                <Box component='span' sx={ { fontWeight: 'bold' } }>{ benchPoints }</Box>
+              </Typography>
+            </Box>
           ) }
 
           { /* Right controls */ }
