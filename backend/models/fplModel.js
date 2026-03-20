@@ -197,7 +197,22 @@ const recalculatePointsForGameweek = (players, targetEventId, currentEventId, fi
  * @returns {Array} Players enriched with prediction fields
  */
 const applyAdvancedPredictions = (players, fixtures, teams, targetEventId) => {
-  return predictionEngine.computePredictions(players, fixtures, teams, targetEventId);
+  const rawPredictions = predictionEngine.computePredictions(players, fixtures, teams, targetEventId);
+
+  // If calibration has been run, apply the stored scale factor to improve accuracy.
+  // The calibrationEngine module maintains an in-memory singleton that is populated
+  // whenever the /api/calibrate endpoint is called.
+  try {
+    const calibrationEngine = require('./calibration/calibrationEngine');
+    const calibrationState  = calibrationEngine.getCalibrationState();
+    if (calibrationState && Number.isFinite(calibrationState.overallScale)) {
+      return calibrationEngine.applyCalibration(rawPredictions, calibrationState);
+    }
+  } catch (_) {
+    // Calibration module unavailable — fall through to raw predictions
+  }
+
+  return rawPredictions;
 };
 
 /**

@@ -998,6 +998,136 @@ const getLeagueStandings = async (req, res) => {
   }
 };
 
+// ─── Calibration endpoint ──────────────────────────────────────────────────────
+
+/**
+ * POST /api/calibrate
+ *
+ * Calibrates the prediction engine against historical per-GW element-summary
+ * data, then re-runs predictions for the target gameweek with the derived
+ * correction applied.
+ *
+ * Query params:
+ *   gameweek       (int, 1–38)  — Target gameweek to predict. Defaults to current GW.
+ *   sampleSize     (int, 1–200) — Number of players to pull element-summaries for.
+ *                                 Defaults to 50.
+ *   maxGWsPerPlayer (int, 1–38) — How many past GWs to include per player.
+ *                                 Defaults to 10.
+ */
+const calibrateEngine = async (req, res) => {
+  try {
+    const { gameweek, sampleSize = '50', maxGWsPerPlayer = '10' } = req.query;
+
+    // ── Input validation ────────────────────────────────────────────────────
+    const parsedSampleSize = parseInt(sampleSize, 10);
+    if (!Number.isInteger(parsedSampleSize) || parsedSampleSize < 1 || parsedSampleSize > 200) {
+      return res.status(400).json({ error: 'sampleSize must be an integer between 1 and 200' });
+    }
+
+    const parsedMaxGWs = parseInt(maxGWsPerPlayer, 10);
+    if (!Number.isInteger(parsedMaxGWs) || parsedMaxGWs < 1 || parsedMaxGWs > 38) {
+      return res.status(400).json({ error: 'maxGWsPerPlayer must be an integer between 1 and 38' });
+    }
+
+    if (gameweek !== undefined && !/^\d+$/.test(gameweek)) {
+      return res.status(400).json({ error: 'gameweek must be a valid positive integer' });
+    }
+
+    // ── Fetch core data ─────────────────────────────────────────────────────
+    const [bootstrap, fixtures] = await Promise.all([
+      fplModel.fetchBootstrapStatic(),
+      fplModel.fetchFixtures(),
+    ]);
+
+    const currentEvent = bootstrap.events.find(e => e.is_current) || bootstrap.events[0];
+
+    const targetGW = gameweek !== undefined
+      ? parseInt(gameweek, 10)
+      : currentEvent.id;
+
+    if (targetGW < 1 || targetGW > 38) {
+      return res.status(400).json({ error: 'gameweek must be between 1 and 38' });
+    }
+
+    // ── Select sample players (highest minutes → richest historical data) ───
+    const players = bootstrap.elements.map(p => ({
+      ...p,
+      ep_next: parseFloat(p.ep_next) || 0,
+    }));
+
+    const samplePlayers = [...players]
+      .filter(p => (parseFloat(p.minutes) || 0) > 90)   // At least one full game
+      .sort((a, b) => (parseFloat(b.minutes) || 0) - (parseFloat(a.minutes) || 0))
+      .slice(0, parsedSampleSize);
+
+    if (samplePlayers.length === 0) {
+      return res.status(422).json({ error: 'No eligible players found (none with more than 90 minutes)' });
+    }
+
+    // ── Fetch element summaries in parallel ─────────────────────────────────
+    const summaryResults = await Promise.allSettled(
+      samplePlayers.map(p => fplModel.fetchElementSummary(p.id)),
+    );
+
+    const elementSummaryMap = {};
+    samplePlayers.forEach((player, i) => {
+      const result = summaryResults[i];
+      if (result.status === 'fulfilled' && result.value) {
+        elementSummaryMap[player.id] = result.value;
+      }
+    });
+
+    const availableCount = Object.keys(elementSummaryMap).length;
+    if (availableCount === 0) {
+      return res.status(422).json({
+        error: 'Could not fetch element-summary data for any sampled player',
+      });
+    }
+
+    // ── Run calibration + calibrated predictions ────────────────────────────
+    const calibrationEngine = require('../models/calibration/calibrationEngine');
+    const result = calibrationEngine.runCalibratedPredictions(
+      players,
+      fixtures,
+      bootstrap.teams,
+      elementSummaryMap,
+      targetGW,
+      { maxGWsPerPlayer: parsedMaxGWs },
+    );
+
+    // ── Shape response ──────────────────────────────────────────────────────
+    const topPlayers = result.players
+      .filter(p => (p.predicted_points || 0) > 0)
+      .sort((a, b) => b.predicted_points - a.predicted_points)
+      .slice(0, 25)
+      .map(p => ({
+        id:                  p.id,
+        web_name:            p.web_name,
+        team:                p.team,
+        element_type:        p.element_type,
+        predicted_points:    p.predicted_points,
+        floor_points:        p.floor_points,
+        ceiling_points:      p.ceiling_points,
+        ep_next:             p.ep_next,
+        calibration_applied: p.calibration_applied || false,
+        calibration_scale:   p.calibration_scale   || 1.0,
+      }));
+
+    res.json({
+      gameweek:              targetGW,
+      playersInSample:       samplePlayers.length,
+      summariesFetched:      availableCount,
+      calibration:           result.calibration,
+      metrics:               result.metrics,
+      report:                result.report,
+      topPredictedPlayers:   topPlayers,
+    });
+  } catch (error) {
+    console.error('Error running calibration engine:', error);
+    res.status(500).json({ error: 'Error running calibration engine' });
+  }
+};
+
 module.exports = {
   getBootstrapStatic,
   getFixtures,
@@ -1011,5 +1141,6 @@ module.exports = {
   validateSwap,
   getAvailableTransfers,
   getRecommendedTransfers,
-  getLeagueStandings
+  getLeagueStandings,
+  calibrateEngine,
 };
