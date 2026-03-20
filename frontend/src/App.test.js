@@ -34,5 +34,5 @@ test('does not show My Team button when no teamId is stored', () => {
 test('shows stored teamId in nav bar immediately on render', () => {
   localStorage.setItem('teamId', '99999');
   render(<App />);
-  expect(screen.getByText(/Team ID: 99999/i)).toBeInTheDocument();
+  expect(screen.getByText(/ID: 99999/i)).toBeInTheDocument();
 });

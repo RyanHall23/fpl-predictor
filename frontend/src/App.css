@@ -84,3 +84,11 @@
     flex: 1 1 auto;
   }
 }
+
+@media (max-width: 600px) {
+  .stats-bar {
+    padding: 4px 8px;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+}

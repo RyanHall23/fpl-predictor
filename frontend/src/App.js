@@ -19,9 +19,7 @@ const TEAM_VIEW = {
   HIGHEST: 'highest'
 };
 
-// Apply automatic substitutions for a future-GW view:
-// Players with no fixture (opponent === '-') and 0 predicted pts are replaced
-// by the best available bench player if the formation remains valid.
+// Position and formation constants used by selectOptimalLineup below.
 const POSITION_GK = 1;
 const POSITION_MANAGER = 5;
 const POSITION_DEF = 2;
@@ -31,89 +29,77 @@ const MIN_DEFENDERS = 3;
 const MIN_MIDFIELDERS = 3;
 const MIN_FORWARDS = 1;
 
-const isPlayerBlank = (player) =>
-  (!player.opponent || player.opponent === '-') && (parseFloat(player.predictedPoints) || 0) <= 0;
+// For future-GW user-team views, select the optimal starting XI from all 15 squad
+// players: pick the GK with the highest predicted points, then greedily fill the
+// 10 outfield slots (≥ MIN_DEFENDERS DEF, ≥ MIN_MIDFIELDERS MID, ≥ MIN_FORWARDS FWD)
+// with whichever players maximise total predicted points.  The designated captain is
+// always kept in the starting XI regardless of their individual point ranking.
+const selectOptimalLineup = (mainTeam, benchTeam) => {
+  const allPlayers = [...mainTeam, ...benchTeam];
 
-const isValidFormation = (team) => {
-  const counts = team
-    .filter(p => p.position !== POSITION_MANAGER)
-    .reduce((acc, p) => { acc[p.position] = (acc[p.position] || 0) + 1; return acc; }, {});
-  return (counts[POSITION_DEF] || 0) >= MIN_DEFENDERS &&
-         (counts[POSITION_MID] || 0) >= MIN_MIDFIELDERS &&
-         (counts[POSITION_FWD] || 0) >= MIN_FORWARDS;
-};
+  // Keep manager in the same zone they started in (main or bench).
+  const mainManager = mainTeam.find(p => p.position === POSITION_MANAGER);
+  const benchManager = benchTeam.find(p => p.position === POSITION_MANAGER);
+  const nonManagers = allPlayers.filter(p => p.position !== POSITION_MANAGER);
 
-const applyAutoSubs = (mainTeam, benchTeam) => {
-  const main = [...mainTeam];
-  const bench = [...benchTeam];
+  // GK: start whichever has the higher predicted points (first GK if tied or only one available).
+  const gks = nonManagers.filter(p => p.position === POSITION_GK);
+  const sortedGKs = [...gks].sort(
+    (a, b) => (parseFloat(b.predictedPoints) || 0) - (parseFloat(a.predictedPoints) || 0)
+  );
+  const startingGK = sortedGKs[0];
+  const benchGKs = sortedGKs.slice(1);
 
-  // GK auto-sub
-  const mainGKIdx = main.findIndex(p => p.position === POSITION_GK);
-  const benchGKIdx = bench.findIndex(p => p.position === POSITION_GK);
-  if (mainGKIdx !== -1 && benchGKIdx !== -1) {
-    const benchGKActive = (parseFloat(bench[benchGKIdx].predictedPoints) || 0) > 0;
-    if (isPlayerBlank(main[mainGKIdx]) && benchGKActive) {
-      [main[mainGKIdx], bench[benchGKIdx]] = [bench[benchGKIdx], main[mainGKIdx]];
-    }
+  // Outfield: choose 10 players satisfying formation constraints.
+  const outfield = nonManagers.filter(p => p.position !== POSITION_GK);
+  const sortedOutfield = [...outfield].sort(
+    (a, b) => (parseFloat(b.predictedPoints) || 0) - (parseFloat(a.predictedPoints) || 0)
+  );
+
+  // Step 1 – mandatory minimums: top N from each position.
+  const defs = sortedOutfield.filter(p => p.position === POSITION_DEF);
+  const mids = sortedOutfield.filter(p => p.position === POSITION_MID);
+  const fwds = sortedOutfield.filter(p => p.position === POSITION_FWD);
+
+  const mandatoryStarters = [
+    ...defs.slice(0, MIN_DEFENDERS),
+    ...mids.slice(0, MIN_MIDFIELDERS),
+    ...fwds.slice(0, MIN_FORWARDS),
+  ];
+  const mandatoryStarterCodes = new Set(mandatoryStarters.map(p => p.code));
+
+  // Step 2 – always keep the captain in the starting XI.
+  const captain = outfield.find(p => p.is_captain);
+  if (captain && !mandatoryStarterCodes.has(captain.code)) {
+    mandatoryStarters.push(captain);
+    mandatoryStarterCodes.add(captain.code);
   }
 
-  // Collect blank outfield starters and eligible bench outfield players
-  const blankIndices = main
-    .map((p, i) => ({ p, i }))
-    .filter(({ p }) => p.position !== POSITION_GK && p.position !== POSITION_MANAGER && isPlayerBlank(p))
-    .map(({ i }) => i);
+  // Step 3 – fill remaining flex spots from the highest-predicted players not yet selected.
+  const remaining = sortedOutfield.filter(p => !mandatoryStarterCodes.has(p.code));
+  const flexCount = 10 - mandatoryStarters.length;
+  const flexStarters = remaining.slice(0, Math.max(0, flexCount));
 
-  if (blankIndices.length === 0) return { effectiveMainTeam: main, effectiveBenchTeam: bench };
+  const starterCodes = new Set([
+    ...mandatoryStarters.map(p => p.code),
+    ...flexStarters.map(p => p.code),
+  ]);
+  const benchOutfield = sortedOutfield.filter(p => !starterCodes.has(p.code));
 
-  const eligibleBenchItems = bench
-    .map((bp, bi) => ({ bp, bi }))
-    .filter(({ bp }) => bp.position !== POSITION_GK && bp.position !== POSITION_MANAGER && (parseFloat(bp.predictedPoints) || 0) > 0);
+  const newMain = [
+    ...(mainManager ? [mainManager] : []),
+    ...(startingGK ? [startingGK] : []),
+    ...mandatoryStarters,
+    ...flexStarters,
+  ];
 
-  // Use backtracking to find the assignment of bench players to blank starters that
-  // maximises the total predicted points of the main team while keeping the formation valid.
-  let bestMain = null;
-  let bestBench = null;
-  let bestPoints = -Infinity;
+  const newBench = [
+    ...(benchManager ? [benchManager] : []),
+    ...benchGKs,
+    ...benchOutfield,
+  ];
 
-  const tryAssign = (blankPos, currentMain, currentBench, usedBenchIndices) => {
-    if (blankPos === blankIndices.length) {
-      const total = currentMain.reduce((s, p) => s + (parseFloat(p.predictedPoints) || 0), 0);
-      if (total > bestPoints) {
-        bestPoints = total;
-        bestMain = [...currentMain];
-        bestBench = [...currentBench];
-      }
-      return;
-    }
-
-    const starterIdx = blankIndices[blankPos];
-
-    for (const { bp, bi } of eligibleBenchItems) {
-      if (usedBenchIndices.has(bi)) continue;
-
-      const tempMain = [...currentMain];
-      tempMain[starterIdx] = bp;
-      if (!isValidFormation(tempMain)) continue;
-
-      const tempBench = [...currentBench];
-      tempBench[bi] = currentMain[starterIdx];
-
-      usedBenchIndices.add(bi);
-      tryAssign(blankPos + 1, tempMain, tempBench, usedBenchIndices);
-      usedBenchIndices.delete(bi);
-    }
-
-    // Always explore the "leave this blank starter without a sub" branch too,
-    // so the backtracking finds the globally optimal assignment.
-    tryAssign(blankPos + 1, currentMain, currentBench, usedBenchIndices);
-  };
-
-  tryAssign(0, main, bench, new Set());
-
-  return {
-    effectiveMainTeam: bestMain || main,
-    effectiveBenchTeam: bestBench || bench,
-  };
+  return { effectiveMainTeam: newMain, effectiveBenchTeam: newBench };
 };
 
 const App = () => {
@@ -274,8 +260,10 @@ const App = () => {
       }
     }
 
-    // Apply automatic substitutions for blank-GW players
-    return applyAutoSubs(main, bench);
+    // Optimise the starting XI for the future GW: higher-predicted players are
+    // moved into the XI while lower scorers (including blank-GW players with 0 pts)
+    // drop to the bench.
+    return selectOptimalLineup(main, bench);
   }, [mainTeamData, benchTeamData, plannedTransfers, selectedGameweek, currentGameweek, gameweekInfo, allPlayers, isHighestPredictedTeam, voidedTransferIds]);
 
   // Handle setting team ID (saves to localStorage)
@@ -343,10 +331,10 @@ const App = () => {
         benchPoints={ calculateTotalPredictedPoints(effectiveBenchTeam) }
         isPast={ gameweekInfo?.isPast }
       />
-      <Container maxWidth={ false } sx={ { flex: 1, marginTop: '8px', display: 'flex', flexDirection: 'column', px: 2 } }>
-        <Box sx={ { display: 'flex', flexDirection: 'row', gap: 2, flex: 1, alignItems: 'flex-start' } }>
+      <Container maxWidth={ false } sx={ { flex: 1, marginTop: '8px', display: 'flex', flexDirection: 'column', px: { xs: 1, sm: 2 } } }>
+        <Box sx={ { display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, gap: 2, flex: 1, alignItems: 'flex-start' } }>
           { /* Left - Pitch */ }
-          <Box sx={ { flex: '0 0 43%', display: 'flex', flexDirection: 'column' } }>
+          <Box sx={ { flex: { xs: '1 1 auto', lg: '0 0 43%' }, width: { xs: '100%', lg: 'auto' }, display: 'flex', flexDirection: 'column' } }>
             { /* Banner shown when viewing an opponent's team */ }
             { viewingOpponentId && (
               <Box sx={ { mb: 1, display: 'flex', alignItems: 'center', gap: 1 } }>
@@ -386,7 +374,7 @@ const App = () => {
           </Box>
           
           { /* Middle - Panel */ }
-          <Box sx={ { flex: '0 0 28%', display: 'flex', flexDirection: 'column', minHeight: '600px' } }>
+          <Box sx={ { flex: { xs: '1 1 auto', lg: '0 0 28%' }, width: { xs: '100%', lg: 'auto' }, display: 'flex', flexDirection: 'column', minHeight: { xs: 'auto', lg: '600px' } } }>
             <RightPanel
               entryId={ viewingOpponentId || currentEntryId }
               onLeagueClick={ setSelectedLeague }
@@ -405,7 +393,7 @@ const App = () => {
           </Box>
 
           { /* Right - Activity & Stats */ }
-          <Box sx={ { flex: '1 1 0', display: 'flex', flexDirection: 'column', minHeight: '600px' } }>
+          <Box sx={ { flex: { xs: '1 1 auto', lg: '1 1 0' }, width: { xs: '100%', lg: 'auto' }, display: 'flex', flexDirection: 'column', minHeight: { xs: 'auto', lg: '600px' } } }>
             <TeamActivityPanel
               entryId={ viewingOpponentId || currentEntryId }
               currentGameweek={ currentGameweek }

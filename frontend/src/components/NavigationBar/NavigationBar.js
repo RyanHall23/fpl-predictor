@@ -69,49 +69,59 @@ const NavigationBar = ({
 
   return (
     <AppBar position='static'>
-      <Container maxWidth={ false } sx={ { px: 2 } }>
-        <Toolbar disableGutters>
-          { /* Left bucket — aligns with the pitch column below */ }
-          <Box sx={ { flex: '0 0 43%', display: 'flex', alignItems: 'center', minWidth: 0 } }>
-            <Typography
-              variant='h6'
-              noWrap
-              component='a'
-              sx={ {
-                flexShrink: 0,
-                display: { xs: 'none', md: 'flex' },
-                fontFamily: 'monospace',
-                fontWeight: 700,
-                letterSpacing: '.3rem',
-                color: 'inherit',
-                textDecoration: 'none',
-              } }
-            >
-              FPL Predictor
-            </Typography>
-            { mainPoints != null && (
-              <Typography
-                variant='body2'
-                noWrap
-                sx={ { flex: 1, textAlign: 'center', fontWeight: 500, color: 'inherit', opacity: 0.9 } }
-              >
-                { isPast ? 'Total Points' : 'Total Predicted Points' }:{ ' ' }
-                <Box component='span' sx={ { fontWeight: 'bold' } }>{ mainPoints }</Box>
-                { ' | ' }
-                { isPast ? 'Bench Points' : 'Bench Predicted Points' }:{ ' ' }
-                <Box component='span' sx={ { fontWeight: 'bold' } }>{ benchPoints }</Box>
-              </Typography>
-            ) }
-          </Box>
+      <Container maxWidth={ false } sx={ { px: { xs: 1, sm: 2 } } }>
+        <Toolbar disableGutters sx={ { flexWrap: { xs: 'wrap', md: 'nowrap' }, py: { xs: 0.5, md: 0 }, gap: { xs: 0.5, md: 0 }, minHeight: { xs: 'auto', md: '64px' } } }>
+          { /* App title — hidden on mobile */ }
+          <Typography
+            variant='h6'
+            noWrap
+            component='a'
+            sx={ {
+              flexShrink: 0,
+              display: { xs: 'none', md: 'flex' },
+              fontFamily: 'monospace',
+              fontWeight: 700,
+              letterSpacing: '.3rem',
+              color: 'inherit',
+              textDecoration: 'none',
+              mr: 2,
+            } }
+          >
+            FPL Predictor
+          </Typography>
 
-          { /* Right bucket — all navigation controls */ }
-          <Box sx={ { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1 } }>
-            <Box sx={ { display: 'flex', gap: 1 } }>
+          { /* Points display — abbreviated on mobile, full text on larger screens */ }
+          { mainPoints != null && (
+            <Typography
+              variant='body2'
+              noWrap
+              sx={ { flex: { xs: '1 1 auto', md: 1 }, fontWeight: 500, color: 'inherit', opacity: 0.9 } }
+            >
+              <Box component='span' sx={ { display: { xs: 'none', sm: 'inline' } } }>
+                { isPast ? 'Total Points' : 'Total Predicted Points' }:{ ' ' }
+              </Box>
+              <Box component='span' sx={ { display: { xs: 'inline', sm: 'none' } } }>Pts: </Box>
+              <Box component='span' sx={ { fontWeight: 'bold' } }>{ mainPoints }</Box>
+              { ' | ' }
+              <Box component='span' sx={ { display: { xs: 'none', sm: 'inline' } } }>
+                { isPast ? 'Bench Points' : 'Bench Predicted Points' }:{ ' ' }
+              </Box>
+              <Box component='span' sx={ { display: { xs: 'inline', sm: 'none' } } }>Bench: </Box>
+              <Box component='span' sx={ { fontWeight: 'bold' } }>{ benchPoints }</Box>
+            </Typography>
+          ) }
+
+          { /* Right controls */ }
+          <Box sx={ { display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 }, flexShrink: 0 } }>
+            { /* Team view toggle buttons */ }
+            <Box sx={ { display: 'flex', gap: 0.5 } }>
               { userTeamId && (
                 <Button
                   variant={ teamView === TEAM_VIEW.USER ? 'contained' : 'outlined' }
                   color='secondary'
                   onClick={ () => onSwitchTeamView(TEAM_VIEW.USER) }
+                  size='small'
+                  sx={ { whiteSpace: 'nowrap', px: { xs: 1, sm: 2 }, fontSize: { xs: '0.7rem', sm: '0.875rem' } } }
                 >
                   My Team
                 </Button>
@@ -120,12 +130,16 @@ const NavigationBar = ({
                 variant={ teamView === TEAM_VIEW.HIGHEST ? 'contained' : 'outlined' }
                 color='secondary'
                 onClick={ () => onSwitchTeamView(TEAM_VIEW.HIGHEST) }
+                size='small'
+                sx={ { whiteSpace: 'nowrap', px: { xs: 1, sm: 2 }, fontSize: { xs: '0.7rem', sm: '0.875rem' } } }
               >
-                Highest Team
+                <Box component='span' sx={ { display: { xs: 'none', sm: 'inline' } } }>Highest Team</Box>
+                <Box component='span' sx={ { display: { xs: 'inline', sm: 'none' } } }>Best</Box>
               </Button>
             </Box>
+
             { /* Gameweek Selector */ }
-            <Box sx={ { display: 'flex', alignItems: 'center', gap: 0.5 } }>
+            <Box sx={ { display: 'flex', alignItems: 'center', gap: 0.25 } }>
               <Tooltip title='Previous gameweek'>
                 <span>
                   <IconButton
@@ -141,12 +155,13 @@ const NavigationBar = ({
                   </IconButton>
                 </span>
               </Tooltip>
-              <FormControl size='small' sx={ { minWidth: 120 } }>
-                <InputLabel id='gameweek-select-label'>Gameweek</InputLabel>
+              <FormControl size='small' sx={ { minWidth: { xs: 80, sm: 120 } } }>
+                <InputLabel id='gameweek-select-label'>GW</InputLabel>
                 <Select
                   labelId='gameweek-select-label'
+                  inputProps={ { 'aria-label': 'Gameweek' } }
                   value={ selectedGameweek || currentGameweek || '' }
-                  label='Gameweek'
+                  label='GW'
                   onChange={ (e) => setSelectedGameweek(e.target.value === currentGameweek ? null : e.target.value) }
                   sx={ { 
                     bgcolor: 'background.paper',
@@ -176,15 +191,16 @@ const NavigationBar = ({
                 </span>
               </Tooltip>
             </Box>
+
             { /* Theme toggle + Team ID */ }
             <Box sx={ { display: 'flex', alignItems: 'center' } }>
               <Tooltip title={ mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode' }>
-                <IconButton onClick={ toggleTheme } color='inherit' sx={ { mr: 1 } }>
+                <IconButton onClick={ toggleTheme } color='inherit' sx={ { mr: { xs: 0, sm: 1 } } }>
                   { mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon /> }
                 </IconButton>
               </Tooltip>
-              <Button color='inherit' onClick={ handleOpenTeamIdDialog }>
-                { userTeamId ? `Team ID: ${userTeamId}` : 'Set Team ID' }
+              <Button color='inherit' onClick={ handleOpenTeamIdDialog } size='small' sx={ { fontSize: { xs: '0.7rem', sm: '0.875rem' }, px: { xs: 0.5, sm: 1 } } }>
+                { userTeamId ? `ID: ${userTeamId}` : 'Set ID' }
               </Button>
             </Box>
           </Box>
