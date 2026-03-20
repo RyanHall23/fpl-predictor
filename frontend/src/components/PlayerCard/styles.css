@@ -315,3 +315,27 @@ body .action-button.clicked {
 body .action-button.not-clicked {
   background-color: #3f51b5;
 }
+
+body .captain-button {
+  background: linear-gradient(135deg, rgba(42, 45, 58, 0.6) 0%, rgba(31, 34, 41, 0.6) 100%);
+  color: #ab47bc !important;
+  border: 1px solid rgba(171, 71, 188, 0.3);
+  font-weight: bold;
+  font-size: 14px !important;
+}
+
+body .captain-button:hover {
+  background: linear-gradient(135deg, rgba(42, 45, 58, 0.8) 0%, rgba(31, 34, 41, 0.8) 100%);
+  border-color: rgba(171, 71, 188, 0.5);
+}
+
+html[data-mui-color-scheme='light'] body .captain-button {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.6) 0%, rgba(245, 245, 245, 0.6) 100%);
+  color: #6a1b9a !important;
+  border: 1px solid rgba(106, 27, 154, 0.3);
+}
+
+html[data-mui-color-scheme='light'] body .captain-button:hover {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(245, 245, 245, 0.9) 100%);
+  border-color: rgba(106, 27, 154, 0.5);
+}

@@ -57,36 +57,63 @@ const applyAutoSubs = (mainTeam, benchTeam) => {
     }
   }
 
-  // Outfield auto-subs (up to 3 passes to handle multiple blanks)
-  for (let pass = 0; pass < 3; pass++) {
-    let swapMade = false;
-    for (let i = 0; i < main.length; i++) {
-      const starter = main[i];
-      if (starter.position === POSITION_GK || starter.position === POSITION_MANAGER) continue;
-      if (!isPlayerBlank(starter)) continue;
+  // Collect blank outfield starters and eligible bench outfield players
+  const blankIndices = main
+    .map((p, i) => ({ p, i }))
+    .filter(({ p }) => p.position !== POSITION_GK && p.position !== POSITION_MANAGER && isPlayerBlank(p))
+    .map(({ i }) => i);
 
-      // Find the best available bench outfield player with positive predicted pts
-      const eligibleBench = bench
-        .map((bp, bi) => ({ bp, bi }))
-        .filter(({ bp }) => bp.position !== POSITION_GK && bp.position !== POSITION_MANAGER && (parseFloat(bp.predictedPoints) || 0) > 0)
-        .sort((a, b) => (parseFloat(b.bp.predictedPoints) || 0) - (parseFloat(a.bp.predictedPoints) || 0));
+  if (blankIndices.length === 0) return { effectiveMainTeam: main, effectiveBenchTeam: bench };
 
-      for (const { bi: benchIdx } of eligibleBench) {
-        // Simulate the swap and verify formation constraints
-        const tempMain = [...main];
-        tempMain[i] = bench[benchIdx];
-        if (isValidFormation(tempMain)) {
-          bench[benchIdx] = main[i];
-          main[i] = tempMain[i];
-          swapMade = true;
-          break;
-        }
+  const eligibleBenchItems = bench
+    .map((bp, bi) => ({ bp, bi }))
+    .filter(({ bp }) => bp.position !== POSITION_GK && bp.position !== POSITION_MANAGER && (parseFloat(bp.predictedPoints) || 0) > 0);
+
+  // Use backtracking to find the assignment of bench players to blank starters that
+  // maximises the total predicted points of the main team while keeping the formation valid.
+  let bestMain = null;
+  let bestBench = null;
+  let bestPoints = -Infinity;
+
+  const tryAssign = (blankPos, currentMain, currentBench, usedBenchIndices) => {
+    if (blankPos === blankIndices.length) {
+      const total = currentMain.reduce((s, p) => s + (parseFloat(p.predictedPoints) || 0), 0);
+      if (total > bestPoints) {
+        bestPoints = total;
+        bestMain = [...currentMain];
+        bestBench = [...currentBench];
       }
+      return;
     }
-    if (!swapMade) break;
-  }
 
-  return { effectiveMainTeam: main, effectiveBenchTeam: bench };
+    const starterIdx = blankIndices[blankPos];
+
+    for (const { bp, bi } of eligibleBenchItems) {
+      if (usedBenchIndices.has(bi)) continue;
+
+      const tempMain = [...currentMain];
+      tempMain[starterIdx] = bp;
+      if (!isValidFormation(tempMain)) continue;
+
+      const tempBench = [...currentBench];
+      tempBench[bi] = currentMain[starterIdx];
+
+      usedBenchIndices.add(bi);
+      tryAssign(blankPos + 1, tempMain, tempBench, usedBenchIndices);
+      usedBenchIndices.delete(bi);
+    }
+
+    // Always explore the "leave this blank starter without a sub" branch too,
+    // so the backtracking finds the globally optimal assignment.
+    tryAssign(blankPos + 1, currentMain, currentBench, usedBenchIndices);
+  };
+
+  tryAssign(0, main, bench, new Set());
+
+  return {
+    effectiveMainTeam: bestMain || main,
+    effectiveBenchTeam: bestBench || bench,
+  };
 };
 
 const App = () => {
@@ -147,6 +174,19 @@ const App = () => {
     }
   }, [snackbarOpen]);
 
+  // Determine which planned transfers have been "voided" – i.e., their gameweek
+  // has already been reached but the playerOut is still in the current team
+  // (meaning the user never actually made that FPL transfer).
+  const voidedTransferIds = useMemo(() => {
+    if (!currentGameweek || isHighestPredictedTeam) return new Set();
+    const currentTeamCodes = new Set([...mainTeamData, ...benchTeamData].map(p => p.code));
+    return new Set(
+      plannedTransfers
+        .filter(t => t.gameweek <= currentGameweek && currentTeamCodes.has(t.playerOut.code))
+        .map(t => t.id)
+    );
+  }, [plannedTransfers, mainTeamData, benchTeamData, currentGameweek, isHighestPredictedTeam]);
+
   // Compute the team to display on the pitch, applying planned transfers and
   // auto-subs only when viewing a future gameweek for the user's own team.
   const { effectiveMainTeam, effectiveBenchTeam } = useMemo(() => {
@@ -158,12 +198,12 @@ const App = () => {
       return { effectiveMainTeam: mainTeamData, effectiveBenchTeam: benchTeamData };
     }
 
-    // Apply planned transfers in gameweek order
+    // Apply non-voided planned transfers in gameweek order
     const main = [...mainTeamData];
     const bench = [...benchTeamData];
 
     const transfersToApply = [...plannedTransfers]
-      .filter(t => t.gameweek <= viewedGW)
+      .filter(t => t.gameweek <= viewedGW && !voidedTransferIds.has(t.id))
       .sort((a, b) => a.gameweek - b.gameweek);
 
     for (const transfer of transfersToApply) {
@@ -236,7 +276,7 @@ const App = () => {
 
     // Apply automatic substitutions for blank-GW players
     return applyAutoSubs(main, bench);
-  }, [mainTeamData, benchTeamData, plannedTransfers, selectedGameweek, currentGameweek, gameweekInfo, allPlayers, isHighestPredictedTeam]);
+  }, [mainTeamData, benchTeamData, plannedTransfers, selectedGameweek, currentGameweek, gameweekInfo, allPlayers, isHighestPredictedTeam, voidedTransferIds]);
 
   // Handle setting team ID (saves to localStorage)
   const handleSetTeamId = (teamId) => {
@@ -377,6 +417,7 @@ const App = () => {
               onAddPlannedTransfer={ addPlannedTransfer }
               team={ [...effectiveMainTeam, ...effectiveBenchTeam] }
               allPlayers={ allPlayers }
+              voidedTransferIds={ voidedTransferIds }
             />
           </Box>
         </Box>
