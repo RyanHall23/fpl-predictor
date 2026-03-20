@@ -3,7 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const fplController = require('./controllers/fplController');
-const { apiLimiter } = require('./middleware/rateLimiter');
+const { apiLimiter, calibrateLimiter } = require('./middleware/rateLimiter');
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -27,7 +27,10 @@ app.get('/api/leagues-classic/:leagueId/standings', apiLimiter, fplController.ge
 app.get('/api/entry/:entryId/event/:eventId/recommended-transfers', apiLimiter, fplController.getRecommendedTransfers);
 app.post('/api/validate-swap', apiLimiter, fplController.validateSwap);
 app.post('/api/available-transfers/:playerCode', apiLimiter, fplController.getAvailableTransfers);
-app.get('/api/calibrate', apiLimiter, fplController.calibrateEngine);
+app.post('/api/calibrate', calibrateLimiter, (req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  return fplController.calibrateEngine(req, res, next);
+});
 
 // Serve built Vite frontend from the same process
 const distPath = path.join(__dirname, '..', 'frontend', 'dist');

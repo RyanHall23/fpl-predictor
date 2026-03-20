@@ -1007,16 +1007,23 @@ const getLeagueStandings = async (req, res) => {
  * data, then re-runs predictions for the target gameweek with the derived
  * correction applied.
  *
- * Query params:
- *   gameweek       (int, 1–38)  — Target gameweek to predict. Defaults to current GW.
- *   sampleSize     (int, 1–200) — Number of players to pull element-summaries for.
- *                                 Defaults to 50.
- *   maxGWsPerPlayer (int, 1–38) — How many past GWs to include per player.
- *                                 Defaults to 10.
+ * Request body (JSON):
+ *   gameweek        (int, 1–38)  — Target gameweek to predict. Defaults to current GW.
+ *   sampleSize      (int, 1–200) — Number of players to pull element-summaries for.
+ *                                  Defaults to 50.
+ *   maxGWsPerPlayer (int, 1–38)  — How many past GWs to include per player.
+ *                                  Defaults to 10.
+ *   concurrency     (int, 1–20)  — Max simultaneous upstream FPL API requests.
+ *                                  Defaults to 5.
  */
 const calibrateEngine = async (req, res) => {
   try {
-    const { gameweek, sampleSize = '50', maxGWsPerPlayer = '10' } = req.query;
+    const {
+      gameweek,
+      sampleSize      = 50,
+      maxGWsPerPlayer = 10,
+      concurrency     = 5,
+    } = req.body || {};
 
     // ── Input validation ────────────────────────────────────────────────────
     const parsedSampleSize = parseInt(sampleSize, 10);
@@ -1029,8 +1036,20 @@ const calibrateEngine = async (req, res) => {
       return res.status(400).json({ error: 'maxGWsPerPlayer must be an integer between 1 and 38' });
     }
 
-    if (gameweek !== undefined && !/^\d+$/.test(gameweek)) {
-      return res.status(400).json({ error: 'gameweek must be a valid positive integer' });
+    const parsedConcurrency = parseInt(concurrency, 10);
+    if (!Number.isInteger(parsedConcurrency) || parsedConcurrency < 1 || parsedConcurrency > 20) {
+      return res.status(400).json({ error: 'concurrency must be an integer between 1 and 20' });
+    }
+
+    if (gameweek !== undefined && gameweek !== null) {
+      const gwStr = String(gameweek);
+      if (!/^\d+$/.test(gwStr)) {
+        return res.status(400).json({ error: 'gameweek must be a valid positive integer' });
+      }
+      const gwNum = parseInt(gwStr, 10);
+      if (gwNum < 1 || gwNum > 38) {
+        return res.status(400).json({ error: 'gameweek must be between 1 and 38' });
+      }
     }
 
     // ── Fetch core data ─────────────────────────────────────────────────────
@@ -1041,8 +1060,8 @@ const calibrateEngine = async (req, res) => {
 
     const currentEvent = bootstrap.events.find(e => e.is_current) || bootstrap.events[0];
 
-    const targetGW = gameweek !== undefined
-      ? parseInt(gameweek, 10)
+    const targetGW = (gameweek !== undefined && gameweek !== null)
+      ? parseInt(String(gameweek), 10)
       : currentEvent.id;
 
     if (targetGW < 1 || targetGW > 38) {
@@ -1064,16 +1083,28 @@ const calibrateEngine = async (req, res) => {
       return res.status(422).json({ error: 'No eligible players found (none with more than 90 minutes)' });
     }
 
-    // ── Fetch element summaries in parallel ─────────────────────────────────
-    const summaryResults = await Promise.allSettled(
-      samplePlayers.map(p => fplModel.fetchElementSummary(p.id)),
-    );
-
+    // ── Fetch element summaries with bounded concurrency ────────────────────
+    // Use a sliding-window pool so new requests start as soon as a slot is
+    // freed, rather than waiting for a whole batch to drain. This bounds the
+    // number of simultaneous upstream FPL API requests at parsedConcurrency
+    // while minimising total elapsed time.
     const elementSummaryMap = {};
-    samplePlayers.forEach((player, i) => {
-      const result = summaryResults[i];
+    const summaryResults = new Array(samplePlayers.length);
+    let nextIdx = 0;
+    const worker = async () => {
+      while (nextIdx < samplePlayers.length) {
+        const idx = nextIdx++;
+        try {
+          summaryResults[idx] = { status: 'fulfilled', value: await fplModel.fetchElementSummary(samplePlayers[idx].id) };
+        } catch (reason) {
+          summaryResults[idx] = { status: 'rejected', reason };
+        }
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(parsedConcurrency, samplePlayers.length) }, worker));
+    summaryResults.forEach((result, i) => {
       if (result.status === 'fulfilled' && result.value) {
-        elementSummaryMap[player.id] = result.value;
+        elementSummaryMap[samplePlayers[i].id] = result.value;
       }
     });
 

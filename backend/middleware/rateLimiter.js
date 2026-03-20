@@ -48,9 +48,23 @@ const dbReadLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+/**
+ * Strict rate limiter for the calibration endpoint.
+ * Calibration fans out many upstream FPL API requests and mutates
+ * server-side state, so it must be called sparingly.
+ */
+const calibrateLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 3, // 3 calibration runs per 10-minute window
+  message: 'Too many calibration requests, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 module.exports = {
   authLimiter,
   apiLimiter,
   dbWriteLimiter,
   dbReadLimiter,
+  calibrateLimiter,
 };

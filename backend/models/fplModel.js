@@ -208,8 +208,12 @@ const applyAdvancedPredictions = (players, fixtures, teams, targetEventId) => {
     if (calibrationState && Number.isFinite(calibrationState.overallScale)) {
       return calibrationEngine.applyCalibration(rawPredictions, calibrationState);
     }
-  } catch (_) {
-    // Calibration module unavailable — fall through to raw predictions
+  } catch (err) {
+    // Calibration module unavailable or failed — fall through to raw predictions.
+    if (process.env.CALIBRATION_DEBUG === 'true') {
+      // eslint-disable-next-line no-console
+      console.error('Calibration error in applyAdvancedPredictions:', err);
+    }
   }
 
   return rawPredictions;

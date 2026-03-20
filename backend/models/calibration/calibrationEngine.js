@@ -48,6 +48,14 @@ const num = (v) => {
 const round2 = (v) => Math.round(v * 100) / 100;
 
 // ─── Module-level calibration state (in-memory singleton) ─────────────────────
+//
+// NOTE: This singleton only persists within a single Node.js process. In
+// serverless deployments (e.g., Vercel) each function invocation may spin up
+// a fresh process, so calibration weights set by one request may not be visible
+// to another. To guarantee persistence across instances, persist weights to a
+// shared store (database, Redis, etc.) and load them at startup or per-request.
+// For single-process deployments (traditional Node server, local dev) the
+// singleton works reliably.
 
 let _calibrationState = null;
 
@@ -120,8 +128,18 @@ const deterministicScore = (h, position) => {
  * Simulate what the prediction engine would output for a historical GW entry
  * using the game's actual per-match xG/xA as the "expected" values.
  *
- * Non-goal components (saves, CS, cards, bonus) use the actual realised
- * values so we isolate xG→goals as the variance source.
+ * Most inputs use the realised binary outcome (played/didn't play, clean sheet
+ * or not, cards or not) so we isolate xG→goals as the primary variance source.
+ * A few inputs remain probabilistic by design to mirror the live engine:
+ *   • p60Plus uses minutesFrac (not a binary 0/1) — matches the engine convention
+ *     where partial-minute credit is applied in long-run averages.
+ *   • pYellowCard / pRedCard use minutesFrac as a fractional probability when a
+ *     card was received, again mirroring the engine's expected-value convention.
+ *   • goalsConcededLambda uses the raw goals-conceded count, which is treated as
+ *     a Poisson expectation inside fplScorer (consistent with the live engine).
+ * These choices produce small systematic biases relative to the binary-event
+ * truth; the bias is captured in the calibration metrics and corrected by the
+ * derived scale factor.
  *
  * @param {Object} h        - element-summary history entry
  * @param {number} position - FPL element_type
