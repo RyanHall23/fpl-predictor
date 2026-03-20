@@ -8,6 +8,7 @@ import {
   Grid,
   Tooltip,
 } from '@mui/material';
+import StarIcon from '@mui/icons-material/Star';
 import SyncIcon from '@mui/icons-material/Sync';
 import AddIcon from '@mui/icons-material/Add';
 import PropTypes from 'prop-types';
