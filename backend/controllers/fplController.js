@@ -287,7 +287,8 @@ const getPredictedTeam = async (req, res) => {
     }
     
     const targetEventData = data.events.find(e => e.id === targetEvent);
-    const isPastGameweek = targetEventData && targetEventData.finished;
+    const isPastGameweek = !!(targetEventData && targetEventData.finished);
+    const isActiveGameweek = !!(targetEventData && targetEventData.is_current && !targetEventData.finished);
     const isFutureGameweek = targetEvent > currentEvent.id;
     
     let players = data.elements.map((p) => ({
@@ -295,29 +296,30 @@ const getPredictedTeam = async (req, res) => {
       ep_next: parseFloat(p.ep_next) || 0,
     }));
     
-    // For past gameweeks, enrich with actual points from that gameweek
-    if (isPastGameweek) {
+    // For past or active gameweeks, enrich with live/actual points
+    if (isPastGameweek || isActiveGameweek) {
       players = await fplModel.enrichPlayersWithGameweekStats(players, targetEvent);
     }
     
     // Enrich players with opponent display data (opponent name, home/away, DGW support)
     players = fplModel.enrichPlayersWithOpponents(players, fixtures, data.teams, targetEvent);
     
-    // For non-past gameweeks, apply the advanced prediction engine which uses
+    // For non-past/non-active gameweeks, apply the advanced prediction engine which uses
     // ELO team strength, Poisson distributions, Monte Carlo simulation, and the
     // full FPL scoring rules to compute statistically grounded predictions.
-    if (!isPastGameweek) {
+    if (!isPastGameweek && !isActiveGameweek) {
       players = fplModel.applyAdvancedPredictions(players, fixtures, data.teams, targetEvent);
     }
     
-    // Build team based on actual points (past) or predictions (current/future)
-    const team = fplModel.buildHighestPredictedTeam(players, isPastGameweek, isFutureGameweek, targetEvent);
+    // Build team based on actual points (past/active) or predictions (current/future)
+    const team = fplModel.buildHighestPredictedTeam(players, isPastGameweek || isActiveGameweek, isFutureGameweek, targetEvent);
     
     res.json({
       ...team,
       gameweek: targetEvent,
       currentGameweek: currentEvent.id,
       isPastGameweek,
+      isActiveGameweek,
       isFutureGameweek,
       gameweekData: targetEventData
     });
@@ -377,22 +379,24 @@ const getUserTeam = async (req, res) => {
     }));
     
     // For past gameweeks, use actual points; for future, use predicted
-    const isPastGameweek = targetEventData && targetEventData.finished;
+    const isPastGameweek = !!(targetEventData && targetEventData.finished);
+    // Active gameweek: deadline has passed (is_current) but games not yet finished
+    const isActiveGameweek = !!(targetEventData && targetEventData.is_current && !targetEventData.finished);
     
-    // For past gameweeks, enrich with actual points from that gameweek
-    if (isPastGameweek) {
+    // For past or active gameweeks, enrich with live/actual points
+    if (isPastGameweek || isActiveGameweek) {
       players = await fplModel.enrichPlayersWithGameweekStats(players, targetEvent);
     }
     
     // Enrich players with opponent display data for the target gameweek
     players = fplModel.enrichPlayersWithOpponents(players, fixtures, bootstrap.teams, targetEvent);
     
-    // For non-past gameweeks, apply the advanced prediction engine
-    if (!isPastGameweek) {
+    // For non-past/non-active gameweeks, apply the advanced prediction engine
+    if (!isPastGameweek && !isActiveGameweek) {
       players = fplModel.applyAdvancedPredictions(players, fixtures, bootstrap.teams, targetEvent);
     }
     
-    const { mainTeam, bench, captainInfo } = fplModel.buildUserTeam(players, picksData.picks, isPastGameweek);
+    const { mainTeam, bench, captainInfo } = fplModel.buildUserTeam(players, picksData.picks, isPastGameweek || isActiveGameweek);
 
     // Fetch the entry info for the team name
     let teamName = '';
@@ -412,6 +416,7 @@ const getUserTeam = async (req, res) => {
       gameweek: targetEvent,
       currentGameweek: currentEvent.id,
       isPastGameweek,
+      isActiveGameweek,
       isFutureGameweek,
       gameweekData: targetEventData,
       captainInfo
