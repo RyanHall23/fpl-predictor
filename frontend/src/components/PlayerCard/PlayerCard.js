@@ -5,15 +5,18 @@ import {
   Typography,
   Box,
   IconButton,
-  Grid
+  Grid,
+  Tooltip,
 } from '@mui/material';
 import StarIcon from '@mui/icons-material/Star';
 import SyncIcon from '@mui/icons-material/Sync';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
+import AddIcon from '@mui/icons-material/Add';
 import PropTypes from 'prop-types';
 import './styles.css';
 import TransferPlayer from '../TransferPlayer/TransferPlayer';
 
-const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTransferButtons = true, teamType, onPlayerClick, selectedPlayer, mainTeamData, benchTeamData }) => {
+const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTransferButtons = true, teamType, onPlayerClick, selectedPlayer, mainTeamData, benchTeamData, onSetCaptain, currentGameweek, onAddPlannedTransfer }) => {
   const [transferDialogOpen, setTransferDialogOpen] = React.useState(false);
 
   // predictedPoints here is already multiplied for captain/triple captain in the frontend
@@ -190,6 +193,36 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
                 </Box>
               </IconButton>
             </Grid>
+            { /* Captain toggle – only for user team outfield players */ }
+            { onSetCaptain && player.position !== 5 && player.position !== 1 && (
+              <Grid size={ 6 }>
+                <Tooltip title={ isCaptain ? 'Captain' : 'Set as Captain' }>
+                  <IconButton
+                    size='small'
+                    className='action-button-small'
+                    onClick={ () => { if (!isCaptain && onSetCaptain) onSetCaptain(player.code); } }
+                    sx={ { padding: '4px !important', color: isCaptain ? '#ffeb3b !important' : undefined } }
+                  >
+                    { isCaptain ? <StarIcon sx={ { fontSize: 22 } } /> : <StarBorderIcon sx={ { fontSize: 22 } } /> }
+                  </IconButton>
+                </Tooltip>
+              </Grid>
+            ) }
+            { /* Add planned transfer button */ }
+            { onAddPlannedTransfer && (
+              <Grid size={ onSetCaptain && player.position !== 5 && player.position !== 1 ? 6 : 12 }>
+                <Tooltip title='Add planned transfer'>
+                  <IconButton
+                    size='small'
+                    className='action-button-small'
+                    onClick={ () => setTransferDialogOpen(true) }
+                    sx={ { padding: '4px !important' } }
+                  >
+                    <AddIcon sx={ { fontSize: 22 } } />
+                  </IconButton>
+                </Tooltip>
+              </Grid>
+            ) }
           </Grid>
         ) }
       </CardContent>
@@ -199,9 +232,12 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
           team={ team }
           allPlayers={ allPlayers }
           playerOut={ player }
-          onTransfer={ onTransfer }
+          onTransfer={ (playerOut, playerIn, gameweek) => {
+            onTransfer(playerOut, playerIn, gameweek);
+          } }
           open={ transferDialogOpen }
           onClose={ () => setTransferDialogOpen(false) }
+          currentGameweek={ currentGameweek }
         />
       ) }
     </Card>
@@ -239,6 +275,9 @@ PlayerCard.propTypes = {
   }),
   mainTeamData: PropTypes.array,
   benchTeamData: PropTypes.array,
+  onSetCaptain: PropTypes.func,
+  currentGameweek: PropTypes.number,
+  onAddPlannedTransfer: PropTypes.func,
 };
 
 export default PlayerCard;
