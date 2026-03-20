@@ -20,13 +20,14 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
     try {
       const gameweekParam = selectedGameweek ? `?gameweek=${selectedGameweek}` : '';
       const response = await axios.get(`/api/predicted-team${gameweekParam}`);
-      const { mainTeam, bench, gameweek, currentGameweek, isPastGameweek, isFutureGameweek, gameweekData } = response.data;
+      const { mainTeam, bench, gameweek, currentGameweek, isPastGameweek, isFutureGameweek, isActiveGameweek, gameweekData } = response.data;
       
       setGameweekInfo({
         selected: gameweek,
         current: currentGameweek,
         isPast: isPastGameweek,
         isFuture: isFutureGameweek,
+        isActive: isActiveGameweek,
         data: gameweekData
       });
       
@@ -35,8 +36,8 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
         team: player.team,
         teamCode: player.team_code,
         position: player.element_type,
-        // For past gameweeks, show actual points; for future, show predictions
-        predictedPoints: isPastGameweek ? Math.round(player.event_points) : Math.round(player.ep_next),
+        // For past/active gameweeks, show actual points; for future, show predictions
+        predictedPoints: (isPastGameweek || isActiveGameweek) ? Math.round(player.event_points) : Math.round(player.ep_next),
         code: player.code,
         webName: player.web_name,
         lastGwPoints: player.event_points,
@@ -74,20 +75,24 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
       // Fetch sorted user team from backend with optional gameweek parameter
       const gameweekParam = selectedGameweek ? `?gameweek=${selectedGameweek}` : '';
       const response = await axios.get(`/api/entry/${entryId}/event/${eventId}/team${gameweekParam}`);
-      const { mainTeam, bench, teamName: fetchedTeamName, gameweek, currentGameweek, isPastGameweek, isFutureGameweek, gameweekData } = response.data;
+      const { mainTeam, bench, teamName: fetchedTeamName, gameweek, currentGameweek, isPastGameweek, isFutureGameweek, isActiveGameweek, gameweekData } = response.data;
 
       setGameweekInfo({
         selected: gameweek,
         current: currentGameweek,
         isPast: isPastGameweek,
         isFuture: isFutureGameweek,
+        isActive: isActiveGameweek,
         data: gameweekData
       });
 
       const formatPlayer = (player) => {
-        const basePoints = isPastGameweek ? player.event_points : player.ep_next;
+        const basePoints = (isPastGameweek || isActiveGameweek) ? player.event_points : player.ep_next;
         const multiplier = player.multiplier || 1;
-        const displayPoints = Math.round(basePoints * multiplier);
+        // Round the base first, then apply the multiplier so that the
+        // result is always a whole number and captain-switching stays consistent.
+        const roundedBase = Math.round(basePoints);
+        const displayPoints = roundedBase * multiplier;
         
         return {
           name: `${player.first_name} ${player.second_name}`,
@@ -95,7 +100,7 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
           teamCode: player.team_code,
           position: player.element_type,
           predictedPoints: displayPoints,
-          basePoints: Math.round(basePoints),
+          basePoints: roundedBase,
           multiplier: multiplier,
           is_captain: player.is_captain || false,
           is_vice_captain: player.is_vice_captain || false,
@@ -327,11 +332,11 @@ const calculateTotalPredictedPoints = (team) => {
 
         if (player.code === playerCode) {
           const base = getBase(player);
-          return { ...player, is_captain: true, multiplier: 2, predictedPoints: Math.round(base * 2) };
+          return { ...player, is_captain: true, multiplier: 2, predictedPoints: base * 2 };
         }
         if (player.is_captain) {
           const base = getBase(player);
-          return { ...player, is_captain: false, multiplier: 1, predictedPoints: Math.round(base) };
+          return { ...player, is_captain: false, multiplier: 1, predictedPoints: base };
         }
         return player;
       })

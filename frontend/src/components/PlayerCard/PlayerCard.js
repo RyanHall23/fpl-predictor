@@ -7,6 +7,7 @@ import {
   IconButton,
   Grid,
   Tooltip,
+  Chip,
 } from '@mui/material';
 import StarIcon from '@mui/icons-material/Star';
 import SyncIcon from '@mui/icons-material/Sync';
@@ -18,7 +19,7 @@ import TransferPlayer from '../TransferPlayer/TransferPlayer';
 const POSITION_GK = 1;
 const POSITION_MANAGER = 5;
 
-const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTransferButtons = true, teamType, onPlayerClick, selectedPlayer, mainTeamData, benchTeamData, onSetCaptain, currentGameweek, onAddPlannedTransfer }) => {
+const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTransferButtons = true, teamType, onPlayerClick, selectedPlayer, mainTeamData, benchTeamData, onSetCaptain, currentGameweek, onAddPlannedTransfer, isLive }) => {
   const [transferDialogOpen, setTransferDialogOpen] = React.useState(false);
 
   // predictedPoints here is already multiplied for captain/triple captain in the frontend
@@ -153,9 +154,26 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
         { /* Points and Opponent Row */ }
         <Grid container spacing={ 0 }>
           <Grid size={ 6 } sx={ { display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
-            <Typography variant='h6' className='points-display'>
-              { predictedPoints }
-            </Typography>
+            <Box sx={ { display: 'flex', flexDirection: 'column', alignItems: 'center' } }>
+              <Typography variant='h6' className='points-display'>
+                { predictedPoints }
+              </Typography>
+              { isLive && (
+                <Chip
+                  label='LIVE'
+                  size='small'
+                  sx={ {
+                    height: '14px',
+                    fontSize: '9px',
+                    fontWeight: 'bold',
+                    backgroundColor: '#f44336',
+                    color: '#fff',
+                    '& .MuiChip-label': { px: '4px' },
+                    mt: '-4px',
+                  } }
+                />
+              ) }
+            </Box>
           </Grid>
           <Grid size={ 6 } sx={ { display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
             <Typography variant='body2' className='opponent-display'>
@@ -318,6 +336,7 @@ PlayerCard.propTypes = {
   onSetCaptain: PropTypes.func,
   currentGameweek: PropTypes.number,
   onAddPlannedTransfer: PropTypes.func,
+  isLive: PropTypes.bool,
 };
 
 export default PlayerCard;

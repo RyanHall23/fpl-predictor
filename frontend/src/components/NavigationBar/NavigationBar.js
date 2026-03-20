@@ -42,6 +42,7 @@ const NavigationBar = ({
   mainPoints,
   benchPoints,
   isPast,
+  isActive,
 }) => {
   const { mode, toggleTheme } = useThemeMode();
   const [teamIdDialogOpen, setTeamIdDialogOpen] = React.useState(false);
@@ -98,13 +99,13 @@ const NavigationBar = ({
               sx={ { flex: { xs: '1 1 auto', md: 1 }, fontWeight: 500, color: 'inherit', opacity: 0.9 } }
             >
               <Box component='span' sx={ { display: { xs: 'none', sm: 'inline' } } }>
-                { isPast ? 'Total Points' : 'Total Predicted Points' }:{ ' ' }
+                { isPast ? 'Total Points' : isActive ? 'Live Points' : 'Total Predicted Points' }:{ ' ' }
               </Box>
               <Box component='span' sx={ { display: { xs: 'inline', sm: 'none' } } }>Pts: </Box>
               <Box component='span' sx={ { fontWeight: 'bold' } }>{ mainPoints }</Box>
               { ' | ' }
               <Box component='span' sx={ { display: { xs: 'none', sm: 'inline' } } }>
-                { isPast ? 'Bench Points' : 'Bench Predicted Points' }:{ ' ' }
+                { isPast ? 'Bench Points' : isActive ? 'Live Bench Points' : 'Bench Predicted Points' }:{ ' ' }
               </Box>
               <Box component='span' sx={ { display: { xs: 'inline', sm: 'none' } } }>Bench: </Box>
               <Box component='span' sx={ { fontWeight: 'bold' } }>{ benchPoints }</Box>
@@ -254,6 +255,7 @@ NavigationBar.propTypes = {
   mainPoints: PropTypes.number,
   benchPoints: PropTypes.number,
   isPast: PropTypes.bool,
+  isActive: PropTypes.bool,
 };
 
 export default NavigationBar;

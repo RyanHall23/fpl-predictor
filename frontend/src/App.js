@@ -330,6 +330,7 @@ const App = () => {
         mainPoints={ calculateTotalPredictedPoints(effectiveMainTeam) }
         benchPoints={ calculateTotalPredictedPoints(effectiveBenchTeam) }
         isPast={ gameweekInfo?.isPast }
+        isActive={ gameweekInfo?.isActive }
       />
       <Container maxWidth={ false } sx={ { flex: 1, marginTop: '8px', display: 'flex', flexDirection: 'column', px: { xs: 1, sm: 2 } } }>
         <Box sx={ { display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, gap: 2, flex: 1, alignItems: 'flex-start' } }>
@@ -359,6 +360,7 @@ const App = () => {
               onSetCaptain={ !isHighestPredictedTeam ? setCaptain : undefined }
               currentGameweek={ currentGameweek }
               onAddPlannedTransfer={ !isHighestPredictedTeam ? addPlannedTransfer : undefined }
+              isLive={ !!gameweekInfo?.isActive }
               onTransfer={ (playerOut, playerIn, gameweek) => {
                 // Prevent duplicate: do not allow transfer if playerIn is already in effective team
                 const playerInExists = [...effectiveMainTeam, ...effectiveBenchTeam].some(p => p.code === playerIn.code);
