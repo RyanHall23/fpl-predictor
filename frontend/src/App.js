@@ -42,19 +42,19 @@ const selectOptimalLineup = (mainTeam, benchTeam) => {
   const benchManager = benchTeam.find(p => p.position === POSITION_MANAGER);
   const nonManagers = allPlayers.filter(p => p.position !== POSITION_MANAGER);
 
-  // GK: start whichever has the higher predicted points (first GK if tied or only one available).
+  // Sort by base points (ignoring the captain 2× multiplier on predictedPoints) so
+  // that changing captain does not reorder players in the squad display.
+  const getBase = (p) => parseFloat(p.basePoints ?? p.predictedPoints) || 0;
+
+  // GK: start whichever has the higher base points (first GK if tied or only one available).
   const gks = nonManagers.filter(p => p.position === POSITION_GK);
-  const sortedGKs = [...gks].sort(
-    (a, b) => (parseFloat(b.predictedPoints) || 0) - (parseFloat(a.predictedPoints) || 0)
-  );
+  const sortedGKs = [...gks].sort((a, b) => getBase(b) - getBase(a));
   const startingGK = sortedGKs[0];
   const benchGKs = sortedGKs.slice(1);
 
   // Outfield: choose 10 players satisfying formation constraints.
   const outfield = nonManagers.filter(p => p.position !== POSITION_GK);
-  const sortedOutfield = [...outfield].sort(
-    (a, b) => (parseFloat(b.predictedPoints) || 0) - (parseFloat(a.predictedPoints) || 0)
-  );
+  const sortedOutfield = [...outfield].sort((a, b) => getBase(b) - getBase(a));
 
   // Step 1 – mandatory minimums: top N from each position.
   const defs = sortedOutfield.filter(p => p.position === POSITION_DEF);
