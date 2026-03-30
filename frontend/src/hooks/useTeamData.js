@@ -31,25 +31,52 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
         data: gameweekData
       });
       
-      const formatPlayer = (player) => ({
-        name: `${player.first_name} ${player.second_name}`,
-        team: player.team,
-        teamCode: player.team_code,
-        position: player.element_type,
-        // For past/active gameweeks, show actual points; for future, show predictions
-        predictedPoints: (isPastGameweek || isActiveGameweek) ? Math.round(player.event_points) : Math.round(player.ep_next),
-        code: player.code,
-        webName: player.web_name,
-        lastGwPoints: player.event_points,
-        inDreamteam: player.in_dreamteam,
-        totalPoints: player.total_points,
-        user_team: false,
-        opponent: player.opponent_short || '-',
-        is_home: player.is_home,
-        opponents: player.opponents || [] // DGW support
-      });
-      setMainTeamData(mainTeam.map(formatPlayer));
-      setBenchTeamData(bench.map(formatPlayer));
+      const formatPlayer = (player) => {
+        const basePoints = (isPastGameweek || isActiveGameweek) ? Math.round(player.event_points) : Math.round(player.ep_next);
+        return {
+          name: `${player.first_name} ${player.second_name}`,
+          team: player.team,
+          teamCode: player.team_code,
+          position: player.element_type,
+          // predictedPoints starts as rounded base; captain's will be doubled below
+          predictedPoints: basePoints,
+          basePoints,
+          multiplier: 1,
+          is_captain: false,
+          code: player.code,
+          webName: player.web_name,
+          lastGwPoints: player.event_points,
+          inDreamteam: player.in_dreamteam,
+          totalPoints: player.total_points,
+          user_team: false,
+          opponent: player.opponent_short || '-',
+          is_home: player.is_home,
+          opponents: player.opponents || [] // DGW support
+        };
+      };
+
+      const formattedMain = mainTeam.map(formatPlayer);
+      const formattedBench = bench.map(formatPlayer);
+
+      // Identify the best outfield starter (non-GK, non-manager) as captain and
+      // double their predicted points. In FPL the captain scores 2×, so reflecting
+      // this gives an accurate total-points estimate in the "highest predicted team" view.
+      // The result is always round(base) × 2, so odd primes cannot appear as the
+      // captain's displayed score.
+      const outfieldStarters = formattedMain.filter(p => p.position !== 1 && p.position !== 5);
+      const captainCode = outfieldStarters.length > 0
+        ? outfieldStarters.reduce(
+            (max, p) => (p.predictedPoints || 0) > (max.predictedPoints || 0) ? p : max,
+            outfieldStarters[0],
+          ).code
+        : null;
+
+      setMainTeamData(formattedMain.map(p =>
+        p.code === captainCode
+          ? { ...p, is_captain: true, multiplier: 2, predictedPoints: (p.basePoints || 0) * 2 }
+          : p,
+      ));
+      setBenchTeamData(formattedBench);
     } catch (error) {
       console.error('Error fetching highest predicted team data:', error);
     }
