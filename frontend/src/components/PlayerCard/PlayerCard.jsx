@@ -25,8 +25,10 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
   // (e.g. via formatPlayer in useTeamData.js); the backend sends raw points + multiplier.
   const predictedPoints = parseFloat(player.predictedPoints) || 0;
 
-  // Captain eligibility: only outfield players (not GK, not manager) on the user's team
-  const isCaptainEligible = !!onSetCaptain && player.position !== POSITION_MANAGER && player.position !== POSITION_GK;
+  // Captain eligibility: any starting (non-bench) player except the manager.
+  // Bench players never receive onSetCaptain from TeamFormation, so they are
+  // already excluded without an explicit position check here.
+  const isCaptainEligible = !!onSetCaptain && player.position !== POSITION_MANAGER;
 
   // Helper function to check if swap maintains formation requirements
   // This is kept for instant UI feedback (green borders)

@@ -324,10 +324,10 @@ const calculateTotalPredictedPoints = (team) => {
   // correctly for future GWs where selectOptimalLineup may have promoted bench
   // players into the effective starting XI.
   const setCaptain = useCallback((playerCode) => {
-    // Derive true base points: prefer explicit basePoints field (already rounded),
-    // otherwise divide predictedPoints by current multiplier to avoid double-counting.
-    // The result is always rounded in the caller via Math.round() to guarantee that
-    // captain scores (base × 2) are always even and never prime (other than 2).
+    // Derive true base points before the captain multiplier is applied.
+    // Prefer the explicit basePoints field (already an integer); otherwise
+    // undo the current multiplier.  Math.round() is applied at each call site
+    // so that the captain score (base × 2) is always a whole even number.
     const getBase = (p) =>
       p.basePoints != null
         ? p.basePoints

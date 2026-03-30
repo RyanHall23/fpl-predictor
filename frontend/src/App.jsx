@@ -56,7 +56,6 @@ const selectOptimalLineup = (mainTeam, benchTeam) => {
     (a, b) => getBasePoints(b) - getBasePoints(a)
   );
   const startingGK = sortedGKs[0];
-  const benchGKs = sortedGKs.slice(1);
 
   // Outfield: choose 10 players satisfying formation constraints.
   const outfield = nonManagers.filter(p => p.position !== POSITION_GK);
@@ -88,23 +87,31 @@ const selectOptimalLineup = (mainTeam, benchTeam) => {
   const flexCount = 10 - mandatoryStarters.length;
   const flexStarters = remaining.slice(0, Math.max(0, flexCount));
 
+  // Build the full set of codes that belong in the starting XI (including GK).
   const starterCodes = new Set([
+    ...(startingGK ? [startingGK.code] : []),
     ...mandatoryStarters.map(p => p.code),
     ...flexStarters.map(p => p.code),
   ]);
-  const benchOutfield = sortedOutfield.filter(p => !starterCodes.has(p.code));
 
+  // Preserve the original relative order of players within each zone.
+  // Players who stay in the same zone keep their position; promotions/demotions
+  // are appended at the end of their new zone.  This prevents captain changes
+  // (or any other re-selection) from reordering players that haven't moved.
+  const mainStarting = mainTeam.filter(p => p.position !== POSITION_MANAGER && starterCodes.has(p.code));
+  const benchPromoted = benchTeam.filter(p => p.position !== POSITION_MANAGER && starterCodes.has(p.code));
   const newMain = [
     ...(mainManager ? [mainManager] : []),
-    ...(startingGK ? [startingGK] : []),
-    ...mandatoryStarters,
-    ...flexStarters,
+    ...mainStarting,
+    ...benchPromoted,
   ];
 
+  const benchStaying = benchTeam.filter(p => p.position !== POSITION_MANAGER && !starterCodes.has(p.code));
+  const mainDemoted = mainTeam.filter(p => p.position !== POSITION_MANAGER && !starterCodes.has(p.code));
   const newBench = [
     ...(benchManager ? [benchManager] : []),
-    ...benchGKs,
-    ...benchOutfield,
+    ...benchStaying,
+    ...mainDemoted,
   ];
 
   return { effectiveMainTeam: newMain, effectiveBenchTeam: newBench };
