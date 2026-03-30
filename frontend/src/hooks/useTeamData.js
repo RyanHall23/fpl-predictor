@@ -320,27 +320,34 @@ const calculateTotalPredictedPoints = (team) => {
   // Change the captain of the current user team.
   // The player identified by playerCode becomes captain (multiplier 2×),
   // all other players revert to their base points (multiplier 1×).
+  // Both mainTeamData and benchTeamData are updated so that captaincy works
+  // correctly for future GWs where selectOptimalLineup may have promoted bench
+  // players into the effective starting XI.
   const setCaptain = useCallback((playerCode) => {
-    setMainTeamData((prev) =>
-      prev.map((player) => {
-        // Derive true base points: prefer explicit basePoints field, otherwise
-        // divide predictedPoints by current multiplier to avoid double-counting.
-        const getBase = (p) =>
-          p.basePoints != null
-            ? p.basePoints
-            : Math.round((p.predictedPoints ?? 0) / (p.multiplier || 1));
+    // Derive true base points: prefer explicit basePoints field (already rounded),
+    // otherwise divide predictedPoints by current multiplier to avoid double-counting.
+    // The result is always rounded in the caller via Math.round() to guarantee that
+    // captain scores (base × 2) are always even and never prime (other than 2).
+    const getBase = (p) =>
+      p.basePoints != null
+        ? p.basePoints
+        : (p.predictedPoints ?? 0) / (p.multiplier || 1);
 
+    const applyToTeam = (prev) =>
+      prev.map((player) => {
         if (player.code === playerCode) {
-          const base = getBase(player);
+          const base = Math.round(getBase(player));
           return { ...player, is_captain: true, multiplier: 2, predictedPoints: base * 2 };
         }
         if (player.is_captain) {
-          const base = getBase(player);
+          const base = Math.round(getBase(player));
           return { ...player, is_captain: false, multiplier: 1, predictedPoints: base };
         }
         return player;
-      })
-    );
+      });
+
+    setMainTeamData(applyToTeam);
+    setBenchTeamData(applyToTeam);
   }, []);
 
   const toggleTeamView = () => {

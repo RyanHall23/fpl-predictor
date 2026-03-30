@@ -37,15 +37,23 @@ const MIN_FORWARDS = 1;
 const selectOptimalLineup = (mainTeam, benchTeam) => {
   const allPlayers = [...mainTeam, ...benchTeam];
 
+  // Sort by base points (pre-captain multiplier) so that changing captain does
+  // not affect player ordering.  Falls back to predictedPoints / multiplier when
+  // basePoints is not explicitly stored.
+  const getBasePoints = (p) =>
+    p.basePoints != null
+      ? p.basePoints
+      : (parseFloat(p.predictedPoints) || 0) / (p.multiplier || 1);
+
   // Keep manager in the same zone they started in (main or bench).
   const mainManager = mainTeam.find(p => p.position === POSITION_MANAGER);
   const benchManager = benchTeam.find(p => p.position === POSITION_MANAGER);
   const nonManagers = allPlayers.filter(p => p.position !== POSITION_MANAGER);
 
-  // GK: start whichever has the higher predicted points (first GK if tied or only one available).
+  // GK: start whichever has the higher base points (first GK if tied or only one available).
   const gks = nonManagers.filter(p => p.position === POSITION_GK);
   const sortedGKs = [...gks].sort(
-    (a, b) => (parseFloat(b.predictedPoints) || 0) - (parseFloat(a.predictedPoints) || 0)
+    (a, b) => getBasePoints(b) - getBasePoints(a)
   );
   const startingGK = sortedGKs[0];
   const benchGKs = sortedGKs.slice(1);
@@ -53,7 +61,7 @@ const selectOptimalLineup = (mainTeam, benchTeam) => {
   // Outfield: choose 10 players satisfying formation constraints.
   const outfield = nonManagers.filter(p => p.position !== POSITION_GK);
   const sortedOutfield = [...outfield].sort(
-    (a, b) => (parseFloat(b.predictedPoints) || 0) - (parseFloat(a.predictedPoints) || 0)
+    (a, b) => getBasePoints(b) - getBasePoints(a)
   );
 
   // Step 1 – mandatory minimums: top N from each position.
