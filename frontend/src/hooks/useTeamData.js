@@ -209,16 +209,41 @@ const swapPlayers = (player1, player2, teamType1, teamType2) => {
     const newMainTeam = [...mainTeamData];
     const newBenchTeam = [...benchTeamData];
 
+    // If the captain is moving from main to bench, transfer captaincy to the
+    // incoming player so that selectOptimalLineup (future GWs) does not pull
+    // the substituted captain back into the starting XI on every re-render.
+    const getBase = (p) =>
+      p.basePoints != null
+        ? p.basePoints
+        : (p.predictedPoints ?? 0) / (p.multiplier || 1);
+
+    let p1 = { ...player1 };
+    let p2 = { ...player2 };
+
+    // Determine which player is the captain going to bench and which is the
+    // bench player coming into main (handles both click-order permutations).
+    const captainIsP1 = p1.is_captain && teamType1 === 'main' && teamType2 === 'bench';
+    const captainIsP2 = p2.is_captain && teamType2 === 'main' && teamType1 === 'bench';
+
+    if (captainIsP1 || captainIsP2) {
+      const [capPlayer, inPlayer] = captainIsP1 ? [p1, p2] : [p2, p1];
+      const capBase = Math.round(getBase(capPlayer));
+      const inBase = Math.round(getBase(inPlayer));
+      const updatedCap = { ...capPlayer, is_captain: false, multiplier: 1, predictedPoints: capBase };
+      const updatedIn = { ...inPlayer, is_captain: true, multiplier: 2, predictedPoints: inBase * 2 };
+      [p1, p2] = captainIsP1 ? [updatedCap, updatedIn] : [updatedIn, updatedCap];
+    }
+
     if (teamType1 === 'bench') {
-      newBenchTeam[index1] = player2;
+      newBenchTeam[index1] = p2;
     } else {
-      newMainTeam[index1] = player2;
+      newMainTeam[index1] = p2;
     }
 
     if (teamType2 === 'bench') {
-      newBenchTeam[index2] = player1;
+      newBenchTeam[index2] = p1;
     } else {
-      newMainTeam[index2] = player1;
+      newMainTeam[index2] = p1;
     }
 
     setMainTeamData(newMainTeam);
