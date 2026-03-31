@@ -545,6 +545,21 @@ const buildHighestPredictedTeam = (players, useActualPoints = false) => {
     isPastGameweek: useActualPoints,
   });
 
+  // Identify the best outfield active player — they become captain (×2 multiplier).
+  // Reads ep_next (which buildTeam overwrites with the computed prediction value).
+  const getPoints = (p) => parseFloat(p.ep_next || p.event_points || 0);
+  const outfieldActive = result.activePlayers.filter(
+    p => p.element_type !== 1 && p.element_type !== 5,
+  );
+  const captainRaw = outfieldActive.length
+    ? outfieldActive.reduce((best, p) => (getPoints(p) > getPoints(best) ? p : best))
+    : null;
+  const captainId = captainRaw ? captainRaw.id : null;
+
+  const captainInfo = captainId
+    ? { captainId, viceCaptainId: null, multiplier: 2 }
+    : null;
+
   /**
    * Bench slots start immediately after the last active slot.
    * Using the active player count keeps this robust if formation rules ever change
@@ -553,20 +568,22 @@ const buildHighestPredictedTeam = (players, useActualPoints = false) => {
   const activeCount = result.activePlayers.length;
   const squad = [
     ...result.activePlayers.map((raw, i) => new Player(raw, {
-      isActive:       true,
-      slot:           i + 1,
+      isActive:        true,
+      slot:            i + 1,
       useActualPoints,
-      userTeam:       false,
+      userTeam:        false,
+      is_captain:      raw.id === captainId,
+      multiplier:      raw.id === captainId ? 2 : 1,
     })),
     ...result.reservePlayers.map((raw, i) => new Player(raw, {
-      isActive:       false,
-      slot:           activeCount + 1 + i,
+      isActive:        false,
+      slot:            activeCount + 1 + i,
       useActualPoints,
-      userTeam:       false,
+      userTeam:        false,
     })),
   ];
 
-  return new Team(squad, { captainInfo: result.captainInfo ?? null });
+  return new Team(squad, { captainInfo });
 };
 
 /**

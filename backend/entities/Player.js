@@ -60,7 +60,12 @@ class Player {
       ? (raw.event_points ?? 0)
       : (raw.ep_next       ?? 0);
 
-    this.multiplier        = enrichment.multiplier     ?? 1;
+    // For bench players (isActive explicitly false), always use ×1 for display.
+    // For active/starting XI players, use the actual pick multiplier (1, 2, or 3)
+    // but guard against the pathological case of 0 on an active player.
+    const isActivePick = enrichment.isActive ?? true; // null/undefined → treat as active
+    const pickMultiplier = enrichment.multiplier ?? 1;
+    this.multiplier        = isActivePick ? (pickMultiplier || 1) : 1;
     this.basePoints        = Math.round(rawBase);
     this.predictedPoints   = this.basePoints * this.multiplier;
 
@@ -73,12 +78,35 @@ class Player {
     this.is_home   = raw.is_home        ?? null;
     this.opponents = raw.opponents      ?? [];
 
+    // Pre-formatted opponent display string so the frontend never needs to
+    // derive it inline. Supports Double Gameweeks (multiple opponents).
+    this.opponentDisplay = this._buildOpponentDisplay();
+
     // Squad slot state — set by Team when building the flat squad
     this.isActive = enrichment.isActive ?? false;  // true = starting XI
     this.slot     = enrichment.slot     ?? null;   // 1–15, never changes when isActive flips
 
     // Ownership flag
     this.user_team = enrichment.userTeam ?? false;
+  }
+
+  /**
+   * Builds the pre-formatted opponent display string for use in the UI.
+   * Supports Double Gameweeks by joining multiple opponents.
+   * Example outputs: "MUN (H)", "LIV (A) EVE (H)", "-"
+   * @private
+   */
+  _buildOpponentDisplay() {
+    if (this.opponents && this.opponents.length > 0) {
+      return this.opponents.map(opp => {
+        const name = opp.opponent_short || '-';
+        if (opp.is_home === null || opp.is_home === undefined) return name;
+        return opp.is_home ? `${name} (H)` : `${name} (A)`;
+      }).join(' ');
+    }
+    const opp = this.opponent || '-';
+    if (opp === '-' || this.is_home === null || this.is_home === undefined) return opp;
+    return this.is_home ? `${opp} (H)` : `${opp} (A)`;
   }
 
   /**
@@ -112,6 +140,7 @@ class Player {
       opponent:                   this.opponent,
       is_home:                    this.is_home,
       opponents:                  this.opponents,
+      opponentDisplay:            this.opponentDisplay,
       isActive:                   this.isActive,
       slot:                       this.slot,
       user_team:                  this.user_team,

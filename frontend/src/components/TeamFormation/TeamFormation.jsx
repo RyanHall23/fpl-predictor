@@ -14,17 +14,11 @@ const positionLabels = {
 };
 
 const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, allPlayers, onTransfer, isHighestPredictedTeam, onPlayerClick, onSetCaptain, currentGameweek, onAddPlannedTransfer }) => {
-  // Find the captain from the team data (for user teams, this comes from picks)
-  // For highest predicted teams, calculate based on highest points
+  // Captain is always provided by the backend (is_captain flag on player).
+  // For user teams it comes from picks; for highest-predicted teams the backend
+  // marks the best outfield starter as captain.
   const captain = activePlayers && activePlayers.length
-    ? (activePlayers.find(p => p.is_captain) || 
-       activePlayers.filter(p => p.position !== 5).reduce(
-        (max, player) =>
-          parseFloat(player.basePoints || player.predictedPoints) > parseFloat(max.basePoints || max.predictedPoints)
-            ? player
-            : max,
-        activePlayers.filter(p => p.position !== 5)[0],
-      ))
+    ? activePlayers.find(p => p.is_captain) ?? null
     : null;
 
   // Manager is always first in activePlayers
@@ -35,13 +29,12 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
   const mids = activePlayers.filter(p => p.position === 3);
   const atts = activePlayers.filter(p => p.position === 4);
 
-  // For the bench: manager first, then GK, then outfield by points
+  // For the bench: manager first, then GK, then outfield in slot order.
+  // Ordering is preserved from the backend (reservePlayers sorted by slot).
   const benchManager = reservePlayers && reservePlayers.find(p => p.position === 5);
   const benchGK = reservePlayers && reservePlayers.find(p => p.position === 1);
   const benchOutfield = reservePlayers
-    ? reservePlayers
-        .filter(p => p.position !== 1 && p.position !== 5)
-        .sort((a, b) => (b.predictedPoints || 0) - (a.predictedPoints || 0))
+    ? reservePlayers.filter(p => p.position !== 1 && p.position !== 5)
     : [];
 
   return (
