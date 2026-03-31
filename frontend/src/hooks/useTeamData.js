@@ -66,11 +66,23 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
     if (!entryId) return;
 
     try {
-      // Get current event
-      const bootstrap = await axios.get('/api/bootstrap-static');
-      const CurrentEvent = bootstrap.data.events.find((event) => event.is_current === true);
-      if (!CurrentEvent) throw new Error('No current event found.');
-      const eventId = selectedGameweek || CurrentEvent.id;
+      let eventId;
+      if (selectedGameweek) {
+        // Specific gameweek selected – no need to call bootstrap-static
+        eventId = selectedGameweek;
+      } else {
+        // No specific GW selected: resolve the current event from bootstrap.
+        // Mirror the backend fallback so we always have an event even between GWs
+        // (when the FPL API temporarily clears the is_current flag).
+        const bootstrap = await axios.get('/api/bootstrap-static');
+        const events = bootstrap.data.events || [];
+        const CurrentEvent =
+          events.find(e => e.is_current === true) ||
+          events.find(e => !e.finished) ||
+          events[0];
+        if (!CurrentEvent) throw new Error('No events found in bootstrap data.');
+        eventId = CurrentEvent.id;
+      }
 
       // Fetch sorted user team from backend with optional gameweek parameter
       const gameweekParam = selectedGameweek ? `?gameweek=${selectedGameweek}` : '';
