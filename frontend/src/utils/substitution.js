@@ -183,8 +183,9 @@ export const applySubstitution = (mainTeam, benchTeam, player1, player2, teamTyp
       p1 = { ...p1, is_captain: false, multiplier: 1, predictedPoints: outBase };
       p2 = { ...p2, is_captain: true,  multiplier: 2, predictedPoints: inBase * 2 };
     } else {
-      p2 = { ...p2, is_captain: false, multiplier: 1, predictedPoints: Math.round(getBase(p2)) };
-      p1 = { ...p1, is_captain: true,  multiplier: 2, predictedPoints: Math.round(getBase(p1)) * 2 };
+      // p2 is the outgoing captain; p1 is the incoming player.
+      p2 = { ...p2, is_captain: false, multiplier: 1, predictedPoints: outBase };
+      p1 = { ...p1, is_captain: true,  multiplier: 2, predictedPoints: inBase * 2 };
     }
   }
 

@@ -300,7 +300,7 @@ describe('validateSubstitution — same-position swaps', () => {
 });
 
 describe('validateSubstitution — cross-position swaps', () => {
-  test('allows MID ↔ FWD swap when formation stays valid (4-3-3 → 4-2-4 violates MID min ⟹ should reject)', () => {
+  test('rejects MID ↔ FWD swap when it would drop MID below minimum', () => {
     // The 4-3-3 squad has 3 MIDs; swapping the only spare MID for a FWD drops
     // MID to 2, which violates the ≥3 MID rule.
     const { mainTeam, benchTeam } = makeSquad433();

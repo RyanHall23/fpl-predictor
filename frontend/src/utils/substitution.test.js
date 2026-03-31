@@ -44,7 +44,7 @@ const makeSquad433 = () => {
     makePlayer({ position: POSITION.DEF, code: 104, predictedPoints: 6, basePoints: 6 }),
     makePlayer({ position: POSITION.MID, code: 105, predictedPoints: 7, basePoints: 7 }),
     makePlayer({ position: POSITION.MID, code: 106, predictedPoints: 7, basePoints: 7 }),
-    makePlayer({ position: POSITION.MID, code: 107, predictedPoints: 7, basePoints: 7, is_captain: true, multiplier: 2, predictedPoints: 14, basePoints: 7 }),
+    makePlayer({ position: POSITION.MID, code: 107, predictedPoints: 14, basePoints: 7, is_captain: true, multiplier: 2 }),
     makePlayer({ position: POSITION.FWD, code: 108, predictedPoints: 8, basePoints: 8, is_vice_captain: true }),
     makePlayer({ position: POSITION.FWD, code: 109, predictedPoints: 8, basePoints: 8 }),
     makePlayer({ position: POSITION.FWD, code: 110, predictedPoints: 8, basePoints: 8 }),
@@ -258,7 +258,7 @@ describe('validateSubstitution — same-position valid swaps', () => {
 // ---------------------------------------------------------------------------
 
 describe('validateSubstitution — cross-position formation enforcement', () => {
-  it('rejects MID → bench when only 3 MID remain after substitution', () => {
+  it('rejects MID ↔ FWD swap when it would drop MID below minimum', () => {
     // 4-3-3: removing any MID → 2 MID violates minimum
     const { mainTeam, benchTeam } = makeSquad433();
     const mainMID  = mainTeam.find(p => p.position === POSITION.MID && !p.is_captain);
