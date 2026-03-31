@@ -524,7 +524,7 @@ const buildTeam = (players, picks = null, { filterZeroEp = false, includeManager
     }));
   }
 
-  return { mainTeam, bench, captainInfo };
+  return { activePlayers: mainTeam, reservePlayers: bench, captainInfo };
 };
 
 const buildHighestPredictedTeam = (players, isPastGameweek = false) => {
@@ -583,21 +583,22 @@ const buildUserTeam = (players, picks, isPastGameweek = false) => {
     }
   });
 
-  return { mainTeam, bench, captainInfo };
+  return { activePlayers: mainTeam, reservePlayers: bench, captainInfo };
 };
+
 
 /**
  * Validate if a swap between two players is allowed
  * @param {Object} player1 - First player
  * @param {Object} player2 - Second player
- * @param {string} teamType1 - 'main' or 'bench'
- * @param {string} teamType2 - 'main' or 'bench'
- * @param {Array} mainTeam - Current main team
- * @param {Array} benchTeam - Current bench team
+ * @param {string} zone1 - 'active' or 'reserve'
+ * @param {string} zone2 - 'active' or 'reserve'
+ * @param {Array} activePlayers  - Current active (starting) team
+ * @param {Array} reservePlayers - Current reserve (bench) team
  * @returns {Object} { valid: boolean, error: string }
  */
-const validateSwap = (player1, player2, teamType1, teamType2, mainTeam, benchTeam) => {
-  return validateSubstitution(player1, player2, teamType1, teamType2, mainTeam, benchTeam);
+const validateSwap = (player1, player2, zone1, zone2, activePlayers, reservePlayers) => {
+  return validateSubstitution(player1, player2, zone1, zone2, activePlayers, reservePlayers);
 };
 
 /**

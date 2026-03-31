@@ -18,7 +18,7 @@ import TransferPlayer from '../TransferPlayer/TransferPlayer';
 const POSITION_GK = 1;
 const POSITION_MANAGER = 5;
 
-const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTransferButtons = true, teamType, onPlayerClick, selectedPlayer, mainTeamData, benchTeamData, onSetCaptain, currentGameweek, onAddPlannedTransfer }) => {
+const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTransferButtons = true, teamType, onPlayerClick, selectedPlayer, activePlayers, reservePlayers, onSetCaptain, currentGameweek, onAddPlannedTransfer }) => {
   const [transferDialogOpen, setTransferDialogOpen] = React.useState(false);
 
   // predictedPoints here is already multiplied for captain/triple captain in the frontend
@@ -33,30 +33,30 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
   // Helper function to check if swap maintains formation requirements
   // This is kept for instant UI feedback (green borders)
   // Backend validation is authoritative when actually performing swap
-  const checkFormationAfterSwap = (player1, player2, teamType1, teamType2) => {
-    if (!mainTeamData || !benchTeamData) return false;
+  const checkFormationAfterSwap = (player1, player2, zone1, zone2) => {
+    if (!activePlayers || !reservePlayers) return false;
     
-    let newMain = [...mainTeamData];
-    let newBench = [...benchTeamData];
+    let newActive  = [...activePlayers];
+    let newReserve = [...reservePlayers];
     
     // Perform the swap
-    const idx1 = teamType1 === 'bench'
-      ? newBench.findIndex(p => p.code === player1.code)
-      : newMain.findIndex(p => p.code === player1.code);
-    const idx2 = teamType2 === 'bench'
-      ? newBench.findIndex(p => p.code === player2.code)
-      : newMain.findIndex(p => p.code === player2.code);
+    const idx1 = zone1 === 'reserve'
+      ? newReserve.findIndex(p => p.code === player1.code)
+      : newActive.findIndex(p => p.code === player1.code);
+    const idx2 = zone2 === 'reserve'
+      ? newReserve.findIndex(p => p.code === player2.code)
+      : newActive.findIndex(p => p.code === player2.code);
     
     if (idx1 === -1 || idx2 === -1) return false;
     
-    if (teamType1 === 'main' && teamType2 === 'bench') {
-      [newMain[idx1], newBench[idx2]] = [newBench[idx2], newMain[idx1]];
-    } else if (teamType1 === 'bench' && teamType2 === 'main') {
-      [newBench[idx1], newMain[idx2]] = [newMain[idx2], newBench[idx1]];
+    if (zone1 === 'active' && zone2 === 'reserve') {
+      [newActive[idx1], newReserve[idx2]] = [newReserve[idx2], newActive[idx1]];
+    } else if (zone1 === 'reserve' && zone2 === 'active') {
+      [newReserve[idx1], newActive[idx2]] = [newActive[idx2], newReserve[idx1]];
     }
     
-    // Count positions in new main team
-    const positionCounts = newMain.reduce((counts, p) => {
+    // Count positions in new active team
+    const positionCounts = newActive.reduce((counts, p) => {
       counts[p.position] = (counts[p.position] || 0) + 1;
       return counts;
     }, {});
@@ -77,11 +77,11 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
     const thisPos = player.position;
     const isDifferentZone = selectedPlayer.teamType !== teamType;
     
-    // Must be in different zone (main vs bench)
+    // Must be in different zone (active vs reserve)
     if (isDifferentZone) {
-      // Manager swap rule: managers can only swap with managers
+      // Managers cannot be substituted — only transferred
       if (selectedPos === 5 || thisPos === 5) {
-        isValidTarget = selectedPos === 5 && thisPos === 5;
+        isValidTarget = false;
       }
       // Goalkeeper swap rule: goalkeepers can only swap with goalkeepers
       else if (selectedPos === 1 || thisPos === 1) {
@@ -315,8 +315,8 @@ PlayerCard.propTypes = {
     player: PropTypes.object,
     teamType: PropTypes.string,
   }),
-  mainTeamData: PropTypes.array,
-  benchTeamData: PropTypes.array,
+  activePlayers: PropTypes.array,
+  reservePlayers: PropTypes.array,
   onSetCaptain: PropTypes.func,
   currentGameweek: PropTypes.number,
   onAddPlannedTransfer: PropTypes.func,

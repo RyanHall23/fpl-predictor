@@ -106,7 +106,7 @@ const selectOptimalLineup = (mainTeam, benchTeam) => {
     ...mainDemoted,
   ];
 
-  return { effectiveMainTeam: newMain, effectiveBenchTeam: newBench };
+  return { effectiveActivePlayers: newMain, effectiveReservePlayers: newBench };
 };
 
 const App = () => {
@@ -120,8 +120,8 @@ const App = () => {
   const [viewingOpponentId, setViewingOpponentId] = useState(null); // opponent team being viewed
 
   const {
-    mainTeamData,
-    benchTeamData,
+    activePlayers,
+    reservePlayers,
     snackbar,
     handlePlayerClick,
     calculateTotalPredictedPoints,
@@ -130,6 +130,7 @@ const App = () => {
     selectedPlayer,
     gameweekInfo,
     setCaptain,
+    swapVersion,
   } = useTeamData(
     currentEntryId,
     teamView === TEAM_VIEW.HIGHEST,
@@ -172,28 +173,36 @@ const App = () => {
   // (meaning the user never actually made that FPL transfer).
   const voidedTransferIds = useMemo(() => {
     if (!currentGameweek || isHighestPredictedTeam) return new Set();
-    const currentTeamCodes = new Set([...mainTeamData, ...benchTeamData].map(p => p.code));
+    const currentTeamCodes = new Set([...activePlayers, ...reservePlayers].map(p => p.code));
     return new Set(
       plannedTransfers
         .filter(t => t.gameweek <= currentGameweek && currentTeamCodes.has(t.playerOut.code))
         .map(t => t.id)
     );
-  }, [plannedTransfers, mainTeamData, benchTeamData, currentGameweek, isHighestPredictedTeam]);
+  }, [plannedTransfers, activePlayers, reservePlayers, currentGameweek, isHighestPredictedTeam]);
+
+  // lineupAdjusted is set to true whenever the user performs a manual substitution.
+  // While true, selectOptimalLineup is skipped so the user's explicit choice is
+  // preserved (otherwise the algorithm re-promotes the subbed-out player).
+  // It resets whenever the viewed gameweek changes (new data loaded).
+  const [lineupAdjusted, setLineupAdjusted] = useState(false);
+  useEffect(() => { setLineupAdjusted(false); }, [selectedGameweek, gameweekInfo?.selected]);
+  useEffect(() => { if (swapVersion > 0) setLineupAdjusted(true); }, [swapVersion]);
 
   // Compute the team to display on the pitch, applying planned transfers and
   // auto-subs only when viewing a future gameweek for the user's own team.
-  const { effectiveMainTeam, effectiveBenchTeam } = useMemo(() => {
+  const { effectiveActivePlayers, effectiveReservePlayers } = useMemo(() => {
     const isFutureGW = gameweekInfo?.isFuture;
     const viewedGW = selectedGameweek || currentGameweek;
 
     if (!isFutureGW || !viewedGW || isHighestPredictedTeam) {
       // Current / past gameweek, or highest-predicted team – show raw fetched data
-      return { effectiveMainTeam: mainTeamData, effectiveBenchTeam: benchTeamData };
+      return { effectiveActivePlayers: activePlayers, effectiveReservePlayers: reservePlayers };
     }
 
     // Apply non-voided planned transfers in gameweek order
-    const main = [...mainTeamData];
-    const bench = [...benchTeamData];
+    const active  = [...activePlayers];
+    const reserve = [...reservePlayers];
 
     const transfersToApply = [...plannedTransfers]
       .filter(t => t.gameweek <= viewedGW && !voidedTransferIds.has(t.id))
@@ -247,14 +256,14 @@ const App = () => {
         };
       }
 
-      const mainIdx = main.findIndex(p => p.code === transfer.playerOut.code);
-      const benchIdx = bench.findIndex(p => p.code === transfer.playerOut.code);
+      const activeIdx  = active.findIndex(p => p.code === transfer.playerOut.code);
+      const reserveIdx = reserve.findIndex(p => p.code === transfer.playerOut.code);
 
-      if (mainIdx !== -1) {
-        const wasCaptain = main[mainIdx].is_captain;
-        const wasViceCaptain = main[mainIdx].is_vice_captain;
+      if (activeIdx !== -1) {
+        const wasCaptain = active[activeIdx].is_captain;
+        const wasViceCaptain = active[activeIdx].is_vice_captain;
         const basePoints = newPlayer.basePoints || 0;
-        main[mainIdx] = {
+        active[activeIdx] = {
           ...newPlayer,
           is_captain: wasCaptain,
           is_vice_captain: wasViceCaptain,
@@ -262,26 +271,30 @@ const App = () => {
           basePoints: Math.round(basePoints),
           predictedPoints: wasCaptain ? Math.round(basePoints * 2) : Math.round(basePoints),
         };
-      } else if (benchIdx !== -1) {
-        bench[benchIdx] = { ...newPlayer };
+      } else if (reserveIdx !== -1) {
+        reserve[reserveIdx] = { ...newPlayer };
       }
     }
 
-    // Optimise the starting XI for the future GW: higher-predicted players are
-    // moved into the XI while lower scorers (including blank-GW players with 0 pts)
-    // drop to the bench.
-    return selectOptimalLineup(main, bench);
-  }, [mainTeamData, benchTeamData, plannedTransfers, selectedGameweek, currentGameweek, gameweekInfo, allPlayers, isHighestPredictedTeam, voidedTransferIds]);
+    // Optimise the starting XI for the future GW only when the user has not
+    // manually adjusted the lineup.  Once they sub a player in/out, their
+    // explicit choice must be preserved — otherwise the algorithm would
+    // re-promote the subbed-out player on the next render.
+    if (lineupAdjusted) {
+      return { effectiveActivePlayers: active, effectiveReservePlayers: reserve };
+    }
+    return selectOptimalLineup(active, reserve);
+  }, [activePlayers, reservePlayers, plannedTransfers, selectedGameweek, currentGameweek, gameweekInfo, allPlayers, isHighestPredictedTeam, voidedTransferIds, lineupAdjusted]);
 
   // Wrap handlePlayerClick so it always receives the *effective* (displayed) team
-  // data. This ensures that players demoted to the effective bench by
-  // selectOptimalLineup (while still present in raw mainTeamData) are correctly
-  // identified as bench players when the user tries to swap them.
+  // data. This ensures that players demoted to the effective reserve by
+  // selectOptimalLineup (while still present in raw activePlayers) are correctly
+  // identified as reserve players when the user tries to swap them.
   const effectivePlayerClick = useCallback(
     handlePlayerClick
-      ? (player, teamType) => handlePlayerClick(player, teamType, effectiveMainTeam, effectiveBenchTeam)
+      ? (player, zone) => handlePlayerClick(player, zone, effectiveActivePlayers, effectiveReservePlayers)
       : undefined,
-    [handlePlayerClick, effectiveMainTeam, effectiveBenchTeam],
+    [handlePlayerClick, effectiveActivePlayers, effectiveReservePlayers],
   );
 
   // Handle setting team ID (saves to localStorage)
@@ -345,8 +358,8 @@ const App = () => {
         selectedGameweek={ selectedGameweek }
         setSelectedGameweek={ setSelectedGameweek }
         currentGameweek={ currentGameweek }
-        mainPoints={ calculateTotalPredictedPoints(effectiveMainTeam) }
-        benchPoints={ calculateTotalPredictedPoints(effectiveBenchTeam) }
+        mainPoints={ calculateTotalPredictedPoints(effectiveActivePlayers) }
+        benchPoints={ calculateTotalPredictedPoints(effectiveReservePlayers) }
         isPast={ gameweekInfo?.isPast }
         isActive={ gameweekInfo?.isActive }
       />
@@ -368,11 +381,11 @@ const App = () => {
               </Box>
             ) }
             <TeamFormation
-              mainTeam={ effectiveMainTeam }
-              benchTeam={ effectiveBenchTeam }
+              activePlayers={ effectiveActivePlayers }
+              reservePlayers={ effectiveReservePlayers }
               onPlayerClick={ effectivePlayerClick || (() => {}) }
               selectedPlayer={ selectedPlayer }
-              team={ [...effectiveMainTeam, ...effectiveBenchTeam] }
+              team={ [...effectiveActivePlayers, ...effectiveReservePlayers] }
               allPlayers={ allPlayers }
               isHighestPredictedTeam={ isHighestPredictedTeam }
               onSetCaptain={ !isHighestPredictedTeam ? setCaptain : undefined }
@@ -380,11 +393,11 @@ const App = () => {
               onAddPlannedTransfer={ !isHighestPredictedTeam ? addPlannedTransfer : undefined }
               onTransfer={ (playerOut, playerIn, gameweek) => {
                 // Prevent duplicate: do not allow transfer if playerIn is already in effective team
-                const playerInExists = [...effectiveMainTeam, ...effectiveBenchTeam].some(p => p.code === playerIn.code);
+                const playerInExists = [...effectiveActivePlayers, ...effectiveReservePlayers].some(p => p.code === playerIn.code);
                 if (playerInExists) {
                   return;
                 }
-                // Record the planned transfer; the pitch will update via effectiveMainTeam/effectiveBenchTeam
+                // Record the planned transfer; the pitch will update via effectiveActivePlayers/effectiveReservePlayers
                 if (gameweek && currentGameweek) {
                   addPlannedTransfer(playerOut, playerIn, gameweek);
                 }
@@ -422,7 +435,7 @@ const App = () => {
               onRemovePlannedTransfer={ removePlannedTransfer }
               onUpdatePlannedTransferGameweek={ updateTransferGameweek }
               onAddPlannedTransfer={ addPlannedTransfer }
-              team={ [...effectiveMainTeam, ...effectiveBenchTeam] }
+              team={ [...effectiveActivePlayers, ...effectiveReservePlayers] }
               allPlayers={ allPlayers }
               voidedTransferIds={ voidedTransferIds }
             />

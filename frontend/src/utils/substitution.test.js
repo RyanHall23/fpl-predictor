@@ -32,11 +32,11 @@ const makePlayer = (overrides = {}) => ({
 
 /**
  * Build a standard 4-3-3 squad (11 main, 4 bench).
- * Returns { mainTeam, benchTeam }.
+ * Returns { activePlayers, reservePlayers }.
  */
 const makeSquad433 = () => {
   _code = 100;
-  const mainTeam = [
+  const activePlayers = [
     makePlayer({ position: POSITION.GK,  code: 100, predictedPoints: 5, basePoints: 5 }),
     makePlayer({ position: POSITION.DEF, code: 101, predictedPoints: 6, basePoints: 6 }),
     makePlayer({ position: POSITION.DEF, code: 102, predictedPoints: 6, basePoints: 6 }),
@@ -49,13 +49,13 @@ const makeSquad433 = () => {
     makePlayer({ position: POSITION.FWD, code: 109, predictedPoints: 8, basePoints: 8 }),
     makePlayer({ position: POSITION.FWD, code: 110, predictedPoints: 8, basePoints: 8 }),
   ];
-  const benchTeam = [
+  const reservePlayers = [
     makePlayer({ position: POSITION.GK,  code: 111, predictedPoints: 3, basePoints: 3 }),
     makePlayer({ position: POSITION.DEF, code: 112, predictedPoints: 4, basePoints: 4 }),
     makePlayer({ position: POSITION.MID, code: 113, predictedPoints: 4, basePoints: 4 }),
     makePlayer({ position: POSITION.FWD, code: 114, predictedPoints: 4, basePoints: 4 }),
   ];
-  return { mainTeam, benchTeam };
+  return { activePlayers, reservePlayers };
 };
 
 // ---------------------------------------------------------------------------
@@ -64,8 +64,8 @@ const makeSquad433 = () => {
 
 describe('countPositions', () => {
   it('correctly tallies a 4-3-3', () => {
-    const { mainTeam } = makeSquad433();
-    const counts = countPositions(mainTeam);
+    const { activePlayers } = makeSquad433();
+    const counts = countPositions(activePlayers);
     expect(counts[POSITION.GK]).toBe(1);
     expect(counts[POSITION.DEF]).toBe(4);
     expect(counts[POSITION.MID]).toBe(3);
@@ -88,13 +88,13 @@ describe('countPositions', () => {
 
 describe('isValidFormation', () => {
   it('accepts a valid 4-3-3', () => {
-    const { mainTeam } = makeSquad433();
-    expect(isValidFormation(mainTeam)).toBe(true);
+    const { activePlayers } = makeSquad433();
+    expect(isValidFormation(activePlayers)).toBe(true);
   });
 
   it('accepts a 5-3-2 (max DEF, min FWD)', () => {
     _code = 200;
-    const mainTeam = [
+    const activePlayers = [
       makePlayer({ position: POSITION.GK  }),
       makePlayer({ position: POSITION.DEF }),
       makePlayer({ position: POSITION.DEF }),
@@ -107,12 +107,12 @@ describe('isValidFormation', () => {
       makePlayer({ position: POSITION.FWD }),
       makePlayer({ position: POSITION.FWD }),
     ];
-    expect(isValidFormation(mainTeam)).toBe(true);
+    expect(isValidFormation(activePlayers)).toBe(true);
   });
 
   it('rejects exactly 2 DEF', () => {
     _code = 300;
-    const mainTeam = [
+    const activePlayers = [
       makePlayer({ position: POSITION.GK  }),
       makePlayer({ position: POSITION.DEF }),
       makePlayer({ position: POSITION.DEF }),
@@ -125,12 +125,12 @@ describe('isValidFormation', () => {
       makePlayer({ position: POSITION.FWD }),
       makePlayer({ position: POSITION.FWD }),
     ];
-    expect(isValidFormation(mainTeam)).toBe(false);
+    expect(isValidFormation(activePlayers)).toBe(false);
   });
 
   it('rejects exactly 2 MID', () => {
     _code = 400;
-    const mainTeam = [
+    const activePlayers = [
       makePlayer({ position: POSITION.GK  }),
       makePlayer({ position: POSITION.DEF }),
       makePlayer({ position: POSITION.DEF }),
@@ -143,23 +143,23 @@ describe('isValidFormation', () => {
       makePlayer({ position: POSITION.FWD }),
       makePlayer({ position: POSITION.FWD }),
     ];
-    expect(isValidFormation(mainTeam)).toBe(false);
+    expect(isValidFormation(activePlayers)).toBe(false);
   });
 
   it('rejects 0 FWD', () => {
     _code = 500;
-    const mainTeam = [
+    const activePlayers = [
       makePlayer({ position: POSITION.GK  }),
       ...Array.from({ length: 5 }, () => makePlayer({ position: POSITION.DEF })),
       ...Array.from({ length: 5 }, () => makePlayer({ position: POSITION.MID })),
     ];
-    expect(isValidFormation(mainTeam)).toBe(false);
+    expect(isValidFormation(activePlayers)).toBe(false);
   });
 
   it('rejects 0 GK', () => {
     _code = 600;
-    const mainTeam = Array.from({ length: 11 }, () => makePlayer({ position: POSITION.DEF }));
-    expect(isValidFormation(mainTeam)).toBe(false);
+    const activePlayers = Array.from({ length: 11 }, () => makePlayer({ position: POSITION.DEF }));
+    expect(isValidFormation(activePlayers)).toBe(false);
   });
 });
 
@@ -169,15 +169,15 @@ describe('isValidFormation', () => {
 
 describe('validateSubstitution — zone rules', () => {
   it('rejects main-main swap', () => {
-    const { mainTeam, benchTeam } = makeSquad433();
-    const r = validateSubstitution(mainTeam[1], mainTeam[2], 'main', 'main', mainTeam, benchTeam);
+    const { activePlayers, reservePlayers } = makeSquad433();
+    const r = validateSubstitution(activePlayers[1], activePlayers[2], 'active', 'active', activePlayers, reservePlayers);
     expect(r.valid).toBe(false);
-    expect(r.error).toMatch(/bench/i);
+    expect(r.error).toMatch(/reserve/i);
   });
 
   it('rejects bench-bench swap', () => {
-    const { mainTeam, benchTeam } = makeSquad433();
-    const r = validateSubstitution(benchTeam[0], benchTeam[1], 'bench', 'bench', mainTeam, benchTeam);
+    const { activePlayers, reservePlayers } = makeSquad433();
+    const r = validateSubstitution(reservePlayers[0], reservePlayers[1], 'reserve', 'reserve', activePlayers, reservePlayers);
     expect(r.valid).toBe(false);
   });
 });
@@ -188,36 +188,36 @@ describe('validateSubstitution — zone rules', () => {
 
 describe('validateSubstitution — GK rule (GK can only swap with GK)', () => {
   it('allows GK ↔ GK swap', () => {
-    const { mainTeam, benchTeam } = makeSquad433();
-    const mainGK  = mainTeam.find(p => p.position === POSITION.GK);
-    const benchGK = benchTeam.find(p => p.position === POSITION.GK);
-    const r = validateSubstitution(mainGK, benchGK, 'main', 'bench', mainTeam, benchTeam);
+    const { activePlayers, reservePlayers } = makeSquad433();
+    const mainGK  = activePlayers.find(p => p.position === POSITION.GK);
+    const benchGK = reservePlayers.find(p => p.position === POSITION.GK);
+    const r = validateSubstitution(mainGK, benchGK, 'active', 'reserve', activePlayers, reservePlayers);
     expect(r.valid).toBe(true);
   });
 
   it('rejects GK ↔ DEF swap', () => {
-    const { mainTeam, benchTeam } = makeSquad433();
-    const mainGK   = mainTeam.find(p => p.position === POSITION.GK);
-    const benchDEF = benchTeam.find(p => p.position === POSITION.DEF);
-    const r = validateSubstitution(mainGK, benchDEF, 'main', 'bench', mainTeam, benchTeam);
+    const { activePlayers, reservePlayers } = makeSquad433();
+    const mainGK   = activePlayers.find(p => p.position === POSITION.GK);
+    const benchDEF = reservePlayers.find(p => p.position === POSITION.DEF);
+    const r = validateSubstitution(mainGK, benchDEF, 'active', 'reserve', activePlayers, reservePlayers);
     expect(r.valid).toBe(false);
     expect(r.error).toMatch(/goalkeeper/i);
   });
 
   it('rejects DEF ↔ GK swap (bench GK coming in)', () => {
-    const { mainTeam, benchTeam } = makeSquad433();
-    const mainDEF = mainTeam.find(p => p.position === POSITION.DEF);
-    const benchGK = benchTeam.find(p => p.position === POSITION.GK);
-    const r = validateSubstitution(mainDEF, benchGK, 'main', 'bench', mainTeam, benchTeam);
+    const { activePlayers, reservePlayers } = makeSquad433();
+    const mainDEF = activePlayers.find(p => p.position === POSITION.DEF);
+    const benchGK = reservePlayers.find(p => p.position === POSITION.GK);
+    const r = validateSubstitution(mainDEF, benchGK, 'active', 'reserve', activePlayers, reservePlayers);
     expect(r.valid).toBe(false);
     expect(r.error).toMatch(/goalkeeper/i);
   });
 
   it('rejects GK ↔ FWD swap', () => {
-    const { mainTeam, benchTeam } = makeSquad433();
-    const mainGK   = mainTeam.find(p => p.position === POSITION.GK);
-    const benchFWD = benchTeam.find(p => p.position === POSITION.FWD);
-    const r = validateSubstitution(mainGK, benchFWD, 'main', 'bench', mainTeam, benchTeam);
+    const { activePlayers, reservePlayers } = makeSquad433();
+    const mainGK   = activePlayers.find(p => p.position === POSITION.GK);
+    const benchFWD = reservePlayers.find(p => p.position === POSITION.FWD);
+    const r = validateSubstitution(mainGK, benchFWD, 'active', 'reserve', activePlayers, reservePlayers);
     expect(r.valid).toBe(false);
     expect(r.error).toMatch(/goalkeeper/i);
   });
@@ -229,26 +229,26 @@ describe('validateSubstitution — GK rule (GK can only swap with GK)', () => {
 
 describe('validateSubstitution — same-position valid swaps', () => {
   it('allows DEF ↔ DEF swap', () => {
-    const { mainTeam, benchTeam } = makeSquad433();
-    const mainDEF  = mainTeam.find(p => p.position === POSITION.DEF);
-    const benchDEF = benchTeam.find(p => p.position === POSITION.DEF);
-    const r = validateSubstitution(mainDEF, benchDEF, 'main', 'bench', mainTeam, benchTeam);
+    const { activePlayers, reservePlayers } = makeSquad433();
+    const mainDEF  = activePlayers.find(p => p.position === POSITION.DEF);
+    const benchDEF = reservePlayers.find(p => p.position === POSITION.DEF);
+    const r = validateSubstitution(mainDEF, benchDEF, 'active', 'reserve', activePlayers, reservePlayers);
     expect(r.valid).toBe(true);
   });
 
   it('allows MID ↔ MID swap', () => {
-    const { mainTeam, benchTeam } = makeSquad433();
-    const mainMID  = mainTeam.find(p => p.position === POSITION.MID);
-    const benchMID = benchTeam.find(p => p.position === POSITION.MID);
-    const r = validateSubstitution(mainMID, benchMID, 'main', 'bench', mainTeam, benchTeam);
+    const { activePlayers, reservePlayers } = makeSquad433();
+    const mainMID  = activePlayers.find(p => p.position === POSITION.MID);
+    const benchMID = reservePlayers.find(p => p.position === POSITION.MID);
+    const r = validateSubstitution(mainMID, benchMID, 'active', 'reserve', activePlayers, reservePlayers);
     expect(r.valid).toBe(true);
   });
 
   it('allows FWD ↔ FWD swap', () => {
-    const { mainTeam, benchTeam } = makeSquad433();
-    const mainFWD  = mainTeam.find(p => p.position === POSITION.FWD);
-    const benchFWD = benchTeam.find(p => p.position === POSITION.FWD);
-    const r = validateSubstitution(mainFWD, benchFWD, 'main', 'bench', mainTeam, benchTeam);
+    const { activePlayers, reservePlayers } = makeSquad433();
+    const mainFWD  = activePlayers.find(p => p.position === POSITION.FWD);
+    const benchFWD = reservePlayers.find(p => p.position === POSITION.FWD);
+    const r = validateSubstitution(mainFWD, benchFWD, 'active', 'reserve', activePlayers, reservePlayers);
     expect(r.valid).toBe(true);
   });
 });
@@ -260,27 +260,27 @@ describe('validateSubstitution — same-position valid swaps', () => {
 describe('validateSubstitution — cross-position formation enforcement', () => {
   it('rejects MID ↔ FWD swap when it would drop MID below minimum', () => {
     // 4-3-3: removing any MID → 2 MID violates minimum
-    const { mainTeam, benchTeam } = makeSquad433();
-    const mainMID  = mainTeam.find(p => p.position === POSITION.MID && !p.is_captain);
-    const benchFWD = benchTeam.find(p => p.position === POSITION.FWD);
-    const r = validateSubstitution(mainMID, benchFWD, 'main', 'bench', mainTeam, benchTeam);
+    const { activePlayers, reservePlayers } = makeSquad433();
+    const mainMID  = activePlayers.find(p => p.position === POSITION.MID && !p.is_captain);
+    const benchFWD = reservePlayers.find(p => p.position === POSITION.FWD);
+    const r = validateSubstitution(mainMID, benchFWD, 'active', 'reserve', activePlayers, reservePlayers);
     expect(r.valid).toBe(false);
     expect(r.error).toMatch(/midfielder/i);
   });
 
   it('allows DEF ↔ MID swap when DEF stays ≥ 3', () => {
     // 4-3-3: remove one DEF, add bench MID → 3 DEF, 4 MID, 3 FWD (valid)
-    const { mainTeam, benchTeam } = makeSquad433();
-    const mainDEF  = mainTeam.find(p => p.position === POSITION.DEF);
-    const benchMID = benchTeam.find(p => p.position === POSITION.MID);
-    const r = validateSubstitution(mainDEF, benchMID, 'main', 'bench', mainTeam, benchTeam);
+    const { activePlayers, reservePlayers } = makeSquad433();
+    const mainDEF  = activePlayers.find(p => p.position === POSITION.DEF);
+    const benchMID = reservePlayers.find(p => p.position === POSITION.MID);
+    const r = validateSubstitution(mainDEF, benchMID, 'active', 'reserve', activePlayers, reservePlayers);
     expect(r.valid).toBe(true);
   });
 
   it('rejects DEF ↔ MID swap when it would drop DEF below 3', () => {
     // Build 3-3-4 (minimum DEF); removing one DEF → 2 DEF
     _code = 1000;
-    const mainTeam = [
+    const activePlayers = [
       makePlayer({ position: POSITION.GK  }),
       makePlayer({ position: POSITION.DEF }),
       makePlayer({ position: POSITION.DEF }),
@@ -293,22 +293,22 @@ describe('validateSubstitution — cross-position formation enforcement', () => 
       makePlayer({ position: POSITION.FWD }),
       makePlayer({ position: POSITION.FWD }),
     ];
-    const benchTeam = [
+    const reservePlayers = [
       makePlayer({ position: POSITION.GK  }),
       makePlayer({ position: POSITION.MID }),
       makePlayer({ position: POSITION.MID }),
       makePlayer({ position: POSITION.FWD }),
     ];
-    const mainDEF  = mainTeam.find(p => p.position === POSITION.DEF);
-    const benchMID = benchTeam.find(p => p.position === POSITION.MID);
-    const r = validateSubstitution(mainDEF, benchMID, 'main', 'bench', mainTeam, benchTeam);
+    const mainDEF  = activePlayers.find(p => p.position === POSITION.DEF);
+    const benchMID = reservePlayers.find(p => p.position === POSITION.MID);
+    const r = validateSubstitution(mainDEF, benchMID, 'active', 'reserve', activePlayers, reservePlayers);
     expect(r.valid).toBe(false);
     expect(r.error).toMatch(/defender/i);
   });
 
   it('rejects FWD ↔ MID swap when it would drop FWD below 1', () => {
     _code = 1100;
-    const mainTeam = [
+    const activePlayers = [
       makePlayer({ position: POSITION.GK  }),
       makePlayer({ position: POSITION.DEF }),
       makePlayer({ position: POSITION.DEF }),
@@ -321,15 +321,15 @@ describe('validateSubstitution — cross-position formation enforcement', () => 
       makePlayer({ position: POSITION.MID }),
       makePlayer({ position: POSITION.FWD }),
     ];
-    const benchTeam = [
+    const reservePlayers = [
       makePlayer({ position: POSITION.GK  }),
       makePlayer({ position: POSITION.MID }),
       makePlayer({ position: POSITION.DEF }),
       makePlayer({ position: POSITION.DEF }),
     ];
-    const mainFWD  = mainTeam.find(p => p.position === POSITION.FWD);
-    const benchMID = benchTeam.find(p => p.position === POSITION.MID);
-    const r = validateSubstitution(mainFWD, benchMID, 'main', 'bench', mainTeam, benchTeam);
+    const mainFWD  = activePlayers.find(p => p.position === POSITION.FWD);
+    const benchMID = reservePlayers.find(p => p.position === POSITION.MID);
+    const r = validateSubstitution(mainFWD, benchMID, 'active', 'reserve', activePlayers, reservePlayers);
     expect(r.valid).toBe(false);
     expect(r.error).toMatch(/forward/i);
   });
@@ -341,11 +341,11 @@ describe('validateSubstitution — cross-position formation enforcement', () => 
 
 describe('validateSubstitution — player not found', () => {
   it('rejects when player is not in the stated zone', () => {
-    const { mainTeam, benchTeam } = makeSquad433();
+    const { activePlayers, reservePlayers } = makeSquad433();
     _code = 9999;
     const stranger = makePlayer({ position: POSITION.MID });
-    const benchMID = benchTeam.find(p => p.position === POSITION.MID);
-    const r = validateSubstitution(stranger, benchMID, 'main', 'bench', mainTeam, benchTeam);
+    const benchMID = reservePlayers.find(p => p.position === POSITION.MID);
+    const r = validateSubstitution(stranger, benchMID, 'active', 'reserve', activePlayers, reservePlayers);
     expect(r.valid).toBe(false);
     expect(r.error).toMatch(/not found/i);
   });
@@ -357,42 +357,42 @@ describe('validateSubstitution — player not found', () => {
 
 describe('applySubstitution — slot preservation', () => {
   it('incoming player occupies the exact slot of the outgoing player', () => {
-    const { mainTeam, benchTeam } = makeSquad433();
-    const mainDEF  = mainTeam.find(p => p.position === POSITION.DEF);
-    const benchDEF = benchTeam.find(p => p.position === POSITION.DEF);
-    const slotIndex = mainTeam.indexOf(mainDEF);
+    const { activePlayers, reservePlayers } = makeSquad433();
+    const mainDEF  = activePlayers.find(p => p.position === POSITION.DEF);
+    const benchDEF = reservePlayers.find(p => p.position === POSITION.DEF);
+    const slotIndex = activePlayers.indexOf(mainDEF);
 
-    const { mainTeam: newMain } = applySubstitution(
-      mainTeam, benchTeam, mainDEF, benchDEF, 'main', 'bench'
+    const { activePlayers: newMain } = applySubstitution(
+      activePlayers, reservePlayers, mainDEF, benchDEF, 'active', 'reserve'
     );
 
     expect(newMain[slotIndex].code).toBe(benchDEF.code);
   });
 
   it('outgoing player occupies the exact bench slot of the incoming player', () => {
-    const { mainTeam, benchTeam } = makeSquad433();
-    const mainDEF  = mainTeam.find(p => p.position === POSITION.DEF);
-    const benchDEF = benchTeam.find(p => p.position === POSITION.DEF);
-    const benchSlot = benchTeam.indexOf(benchDEF);
+    const { activePlayers, reservePlayers } = makeSquad433();
+    const mainDEF  = activePlayers.find(p => p.position === POSITION.DEF);
+    const benchDEF = reservePlayers.find(p => p.position === POSITION.DEF);
+    const benchSlot = reservePlayers.indexOf(benchDEF);
 
-    const { benchTeam: newBench } = applySubstitution(
-      mainTeam, benchTeam, mainDEF, benchDEF, 'main', 'bench'
+    const { reservePlayers: newBench } = applySubstitution(
+      activePlayers, reservePlayers, mainDEF, benchDEF, 'active', 'reserve'
     );
 
     expect(newBench[benchSlot].code).toBe(mainDEF.code);
   });
 
   it('does not change the order of players not involved in the swap', () => {
-    const { mainTeam, benchTeam } = makeSquad433();
-    const mainGK  = mainTeam.find(p => p.position === POSITION.GK);
-    const benchGK = benchTeam.find(p => p.position === POSITION.GK);
+    const { activePlayers, reservePlayers } = makeSquad433();
+    const mainGK  = activePlayers.find(p => p.position === POSITION.GK);
+    const benchGK = reservePlayers.find(p => p.position === POSITION.GK);
 
-    const { mainTeam: newMain } = applySubstitution(
-      mainTeam, benchTeam, mainGK, benchGK, 'main', 'bench'
+    const { activePlayers: newMain } = applySubstitution(
+      activePlayers, reservePlayers, mainGK, benchGK, 'active', 'reserve'
     );
 
     // All other main team players should be in the same slots.
-    mainTeam.forEach((p, idx) => {
+    activePlayers.forEach((p, idx) => {
       if (p.code !== mainGK.code) {
         expect(newMain[idx].code).toBe(p.code);
       }
@@ -400,14 +400,14 @@ describe('applySubstitution — slot preservation', () => {
   });
 
   it('does not mutate the original arrays', () => {
-    const { mainTeam, benchTeam } = makeSquad433();
-    const snapshot = mainTeam.map(p => p.code);
-    const mainDEF  = mainTeam.find(p => p.position === POSITION.DEF);
-    const benchDEF = benchTeam.find(p => p.position === POSITION.DEF);
+    const { activePlayers, reservePlayers } = makeSquad433();
+    const snapshot = activePlayers.map(p => p.code);
+    const mainDEF  = activePlayers.find(p => p.position === POSITION.DEF);
+    const benchDEF = reservePlayers.find(p => p.position === POSITION.DEF);
 
-    applySubstitution(mainTeam, benchTeam, mainDEF, benchDEF, 'main', 'bench');
+    applySubstitution(activePlayers, reservePlayers, mainDEF, benchDEF, 'active', 'reserve');
 
-    expect(mainTeam.map(p => p.code)).toEqual(snapshot);
+    expect(activePlayers.map(p => p.code)).toEqual(snapshot);
   });
 });
 
@@ -417,12 +417,12 @@ describe('applySubstitution — slot preservation', () => {
 
 describe('applySubstitution — captain logic', () => {
   it('incoming player becomes captain when captain is substituted off', () => {
-    const { mainTeam, benchTeam } = makeSquad433();
-    const captain  = mainTeam.find(p => p.is_captain);
-    const benchMID = benchTeam.find(p => p.position === POSITION.MID);
+    const { activePlayers, reservePlayers } = makeSquad433();
+    const captain  = activePlayers.find(p => p.is_captain);
+    const benchMID = reservePlayers.find(p => p.position === POSITION.MID);
 
-    const { mainTeam: newMain, benchTeam: newBench } = applySubstitution(
-      mainTeam, benchTeam, captain, benchMID, 'main', 'bench'
+    const { activePlayers: newMain, reservePlayers: newBench } = applySubstitution(
+      activePlayers, reservePlayers, captain, benchMID, 'active', 'reserve'
     );
 
     // Incoming player (was benchMID) is now in the starting XI and is captain.
@@ -440,15 +440,15 @@ describe('applySubstitution — captain logic', () => {
   });
 
   it('captain is never left on the bench after the swap', () => {
-    const { mainTeam, benchTeam } = makeSquad433();
-    const captain  = mainTeam.find(p => p.is_captain);
-    const benchFWD = benchTeam.find(p => p.position === POSITION.FWD);
+    const { activePlayers, reservePlayers } = makeSquad433();
+    const captain  = activePlayers.find(p => p.is_captain);
+    const benchFWD = reservePlayers.find(p => p.position === POSITION.FWD);
 
     // We need a valid swap - captain is MID, bench is FWD. In 4-3-3 this removes
     // a MID making 2 MID which is invalid. Use bench MID instead.
-    const benchMID = benchTeam.find(p => p.position === POSITION.MID);
-    const { benchTeam: newBench } = applySubstitution(
-      mainTeam, benchTeam, captain, benchMID, 'main', 'bench'
+    const benchMID = reservePlayers.find(p => p.position === POSITION.MID);
+    const { reservePlayers: newBench } = applySubstitution(
+      activePlayers, reservePlayers, captain, benchMID, 'active', 'reserve'
     );
 
     const captainOnBench = newBench.some(p => p.is_captain);
@@ -456,13 +456,13 @@ describe('applySubstitution — captain logic', () => {
   });
 
   it('non-captain swap leaves captaincy unchanged', () => {
-    const { mainTeam, benchTeam } = makeSquad433();
-    const captainCode = mainTeam.find(p => p.is_captain).code;
-    const mainDEF  = mainTeam.find(p => p.position === POSITION.DEF);
-    const benchDEF = benchTeam.find(p => p.position === POSITION.DEF);
+    const { activePlayers, reservePlayers } = makeSquad433();
+    const captainCode = activePlayers.find(p => p.is_captain).code;
+    const mainDEF  = activePlayers.find(p => p.position === POSITION.DEF);
+    const benchDEF = reservePlayers.find(p => p.position === POSITION.DEF);
 
-    const { mainTeam: newMain } = applySubstitution(
-      mainTeam, benchTeam, mainDEF, benchDEF, 'main', 'bench'
+    const { activePlayers: newMain } = applySubstitution(
+      activePlayers, reservePlayers, mainDEF, benchDEF, 'active', 'reserve'
     );
 
     const newCaptain = newMain.find(p => p.is_captain);
@@ -477,15 +477,15 @@ describe('applySubstitution — captain logic', () => {
 
 describe('applySubstitution — vice-captain logic', () => {
   it('incoming player becomes vice when vice-captain is substituted off', () => {
-    const { mainTeam, benchTeam } = makeSquad433();
-    const vice     = mainTeam.find(p => p.is_vice_captain && !p.is_captain);
-    const benchDEF = benchTeam.find(p => p.position === POSITION.DEF);
+    const { activePlayers, reservePlayers } = makeSquad433();
+    const vice     = activePlayers.find(p => p.is_vice_captain && !p.is_captain);
+    const benchDEF = reservePlayers.find(p => p.position === POSITION.DEF);
 
     // vice is a FWD; swap for bench DEF — 4-3-3 → 3 DEF+1 DEF back = valid (4 DEF, 3 MID, 2 FWD)
     // Actually need to check this is valid. Let's just use bench FWD.
-    const benchFWD = benchTeam.find(p => p.position === POSITION.FWD);
-    const { mainTeam: newMain, benchTeam: newBench } = applySubstitution(
-      mainTeam, benchTeam, vice, benchFWD, 'main', 'bench'
+    const benchFWD = reservePlayers.find(p => p.position === POSITION.FWD);
+    const { activePlayers: newMain, reservePlayers: newBench } = applySubstitution(
+      activePlayers, reservePlayers, vice, benchFWD, 'active', 'reserve'
     );
 
     const incomingInMain = newMain.find(p => p.code === benchFWD.code);
@@ -496,12 +496,12 @@ describe('applySubstitution — vice-captain logic', () => {
   });
 
   it('vice-captain is never on bench after the swap', () => {
-    const { mainTeam, benchTeam } = makeSquad433();
-    const vice    = mainTeam.find(p => p.is_vice_captain && !p.is_captain);
-    const benchFWD = benchTeam.find(p => p.position === POSITION.FWD);
+    const { activePlayers, reservePlayers } = makeSquad433();
+    const vice    = activePlayers.find(p => p.is_vice_captain && !p.is_captain);
+    const benchFWD = reservePlayers.find(p => p.position === POSITION.FWD);
 
-    const { benchTeam: newBench } = applySubstitution(
-      mainTeam, benchTeam, vice, benchFWD, 'main', 'bench'
+    const { reservePlayers: newBench } = applySubstitution(
+      activePlayers, reservePlayers, vice, benchFWD, 'active', 'reserve'
     );
 
     const viceOnBench = newBench.some(p => p.is_vice_captain);
@@ -509,13 +509,13 @@ describe('applySubstitution — vice-captain logic', () => {
   });
 
   it('non-vice swap leaves vice-captain unchanged', () => {
-    const { mainTeam, benchTeam } = makeSquad433();
-    const viceCode = mainTeam.find(p => p.is_vice_captain).code;
-    const mainDEF  = mainTeam.find(p => p.position === POSITION.DEF);
-    const benchDEF = benchTeam.find(p => p.position === POSITION.DEF);
+    const { activePlayers, reservePlayers } = makeSquad433();
+    const viceCode = activePlayers.find(p => p.is_vice_captain).code;
+    const mainDEF  = activePlayers.find(p => p.position === POSITION.DEF);
+    const benchDEF = reservePlayers.find(p => p.position === POSITION.DEF);
 
-    const { mainTeam: newMain } = applySubstitution(
-      mainTeam, benchTeam, mainDEF, benchDEF, 'main', 'bench'
+    const { activePlayers: newMain } = applySubstitution(
+      activePlayers, reservePlayers, mainDEF, benchDEF, 'active', 'reserve'
     );
 
     const newVice = newMain.find(p => p.is_vice_captain);
@@ -530,47 +530,47 @@ describe('applySubstitution — vice-captain logic', () => {
 
 describe('calculateScore', () => {
   it('sums starting XI predictedPoints as totalPoints', () => {
-    const { mainTeam, benchTeam } = makeSquad433();
-    const expected = mainTeam.reduce((s, p) => s + p.predictedPoints, 0);
-    const { totalPoints } = calculateScore(mainTeam, benchTeam);
+    const { activePlayers, reservePlayers } = makeSquad433();
+    const expected = activePlayers.reduce((s, p) => s + p.predictedPoints, 0);
+    const { totalPoints } = calculateScore(activePlayers, reservePlayers);
     expect(totalPoints).toBe(expected);
   });
 
-  it('sums bench predictedPoints as benchPoints', () => {
-    const { mainTeam, benchTeam } = makeSquad433();
-    const expected = benchTeam.reduce((s, p) => s + p.predictedPoints, 0);
-    const { benchPoints } = calculateScore(mainTeam, benchTeam);
-    expect(benchPoints).toBe(expected);
+  it('sums bench predictedPoints as reservePoints', () => {
+    const { activePlayers, reservePlayers } = makeSquad433();
+    const expected = reservePlayers.reduce((s, p) => s + p.predictedPoints, 0);
+    const { reservePoints } = calculateScore(activePlayers, reservePlayers);
+    expect(reservePoints).toBe(expected);
   });
 
   it('bench points do not affect totalPoints', () => {
-    const { mainTeam, benchTeam } = makeSquad433();
-    const { totalPoints } = calculateScore(mainTeam, benchTeam);
-    const mainOnly = mainTeam.reduce((s, p) => s + p.predictedPoints, 0);
+    const { activePlayers, reservePlayers } = makeSquad433();
+    const { totalPoints } = calculateScore(activePlayers, reservePlayers);
+    const mainOnly = activePlayers.reduce((s, p) => s + p.predictedPoints, 0);
     expect(totalPoints).toBe(mainOnly);
   });
 
   it('captain doubling is reflected in totalPoints (already baked into predictedPoints)', () => {
-    const { mainTeam, benchTeam } = makeSquad433();
-    const captain = mainTeam.find(p => p.is_captain);
+    const { activePlayers, reservePlayers } = makeSquad433();
+    const captain = activePlayers.find(p => p.is_captain);
     // Captain has predictedPoints = basePoints * 2
     expect(captain.predictedPoints).toBe(captain.basePoints * 2);
-    const { totalPoints } = calculateScore(mainTeam, benchTeam);
+    const { totalPoints } = calculateScore(activePlayers, reservePlayers);
     // Removing captain and adding base confirms the doubling is included
-    const withoutCaptain = mainTeam.filter(p => !p.is_captain).reduce((s, p) => s + p.predictedPoints, 0);
+    const withoutCaptain = activePlayers.filter(p => !p.is_captain).reduce((s, p) => s + p.predictedPoints, 0);
     expect(totalPoints).toBe(withoutCaptain + captain.predictedPoints);
   });
 
   it('score recalculates correctly after a substitution', () => {
-    const { mainTeam, benchTeam } = makeSquad433();
-    const mainDEF  = mainTeam.find(p => p.position === POSITION.DEF);
-    const benchDEF = benchTeam.find(p => p.position === POSITION.DEF);
+    const { activePlayers, reservePlayers } = makeSquad433();
+    const mainDEF  = activePlayers.find(p => p.position === POSITION.DEF);
+    const benchDEF = reservePlayers.find(p => p.position === POSITION.DEF);
 
-    const { mainTeam: newMain, benchTeam: newBench } = applySubstitution(
-      mainTeam, benchTeam, mainDEF, benchDEF, 'main', 'bench'
+    const { activePlayers: newMain, reservePlayers: newBench } = applySubstitution(
+      activePlayers, reservePlayers, mainDEF, benchDEF, 'active', 'reserve'
     );
 
-    const { totalPoints: before } = calculateScore(mainTeam, benchTeam);
+    const { totalPoints: before } = calculateScore(activePlayers, reservePlayers);
     const { totalPoints: after  } = calculateScore(newMain, newBench);
 
     // Difference = benchDEF.predictedPoints - mainDEF.predictedPoints
@@ -585,22 +585,22 @@ describe('calculateScore', () => {
 
 describe('normalizeCaptaincy', () => {
   it('is a no-op when captain is already in starting XI', () => {
-    const { mainTeam, benchTeam } = makeSquad433();
-    const { mainTeam: newMain } = normalizeCaptaincy(mainTeam, benchTeam);
+    const { activePlayers, reservePlayers } = makeSquad433();
+    const { activePlayers: newMain } = normalizeCaptaincy(activePlayers, reservePlayers);
     const cap = newMain.find(p => p.is_captain);
     expect(cap).toBeDefined();
-    expect(mainTeam.find(p => p.is_captain).code).toBe(cap.code);
+    expect(activePlayers.find(p => p.is_captain).code).toBe(cap.code);
   });
 
   it('promotes vice-captain to captain when captain is on bench', () => {
-    const { mainTeam, benchTeam } = makeSquad433();
+    const { activePlayers, reservePlayers } = makeSquad433();
     // Corrupt state: move captain to bench without proper transfer
-    const captainIdx = mainTeam.findIndex(p => p.is_captain);
-    const captain = mainTeam[captainIdx];
-    const corruptedMain  = mainTeam.map((p, i) => i === captainIdx ? { ...p, is_captain: false } : p);
-    const corruptedBench = [...benchTeam, { ...captain, is_captain: true }];
+    const captainIdx = activePlayers.findIndex(p => p.is_captain);
+    const captain = activePlayers[captainIdx];
+    const corruptedMain  = activePlayers.map((p, i) => i === captainIdx ? { ...p, is_captain: false } : p);
+    const corruptedBench = [...reservePlayers, { ...captain, is_captain: true }];
 
-    const { mainTeam: fixed } = normalizeCaptaincy(corruptedMain, corruptedBench);
+    const { activePlayers: fixed } = normalizeCaptaincy(corruptedMain, corruptedBench);
 
     // The vice-captain should now be the captain.
     const viceCode = corruptedMain.find(p => p.is_vice_captain).code;
@@ -611,13 +611,13 @@ describe('normalizeCaptaincy', () => {
   });
 
   it('strips captain from bench when normalizing', () => {
-    const { mainTeam, benchTeam } = makeSquad433();
-    const captainIdx = mainTeam.findIndex(p => p.is_captain);
-    const captain = mainTeam[captainIdx];
-    const corruptedMain  = mainTeam.map((p, i) => i === captainIdx ? { ...p, is_captain: false } : p);
-    const corruptedBench = [...benchTeam, { ...captain, is_captain: true }];
+    const { activePlayers, reservePlayers } = makeSquad433();
+    const captainIdx = activePlayers.findIndex(p => p.is_captain);
+    const captain = activePlayers[captainIdx];
+    const corruptedMain  = activePlayers.map((p, i) => i === captainIdx ? { ...p, is_captain: false } : p);
+    const corruptedBench = [...reservePlayers, { ...captain, is_captain: true }];
 
-    const { benchTeam: fixedBench } = normalizeCaptaincy(corruptedMain, corruptedBench);
+    const { reservePlayers: fixedBench } = normalizeCaptaincy(corruptedMain, corruptedBench);
     expect(fixedBench.some(p => p.is_captain)).toBe(false);
   });
 });
@@ -628,50 +628,50 @@ describe('normalizeCaptaincy', () => {
 
 describe('sequential substitutions — regression coverage', () => {
   it('two consecutive valid swaps preserve 11 starters and a valid formation', () => {
-    let { mainTeam, benchTeam } = makeSquad433();
+    let { activePlayers, reservePlayers } = makeSquad433();
 
     // Swap 1: main DEF ↔ bench DEF
-    const def1 = mainTeam.find(p => p.position === POSITION.DEF);
-    const bDef = benchTeam.find(p => p.position === POSITION.DEF);
-    ({ mainTeam, benchTeam } = applySubstitution(mainTeam, benchTeam, def1, bDef, 'main', 'bench'));
-    expect(mainTeam).toHaveLength(11);
-    expect(isValidFormation(mainTeam)).toBe(true);
+    const def1 = activePlayers.find(p => p.position === POSITION.DEF);
+    const bDef = reservePlayers.find(p => p.position === POSITION.DEF);
+    ({ activePlayers, reservePlayers } = applySubstitution(activePlayers, reservePlayers, def1, bDef, 'active', 'reserve'));
+    expect(activePlayers).toHaveLength(11);
+    expect(isValidFormation(activePlayers)).toBe(true);
 
     // Swap 2: main GK ↔ bench GK
-    const gk1  = mainTeam.find(p => p.position === POSITION.GK);
-    const bGk  = benchTeam.find(p => p.position === POSITION.GK);
-    ({ mainTeam, benchTeam } = applySubstitution(mainTeam, benchTeam, gk1, bGk, 'main', 'bench'));
-    expect(mainTeam).toHaveLength(11);
-    expect(isValidFormation(mainTeam)).toBe(true);
+    const gk1  = activePlayers.find(p => p.position === POSITION.GK);
+    const bGk  = reservePlayers.find(p => p.position === POSITION.GK);
+    ({ activePlayers, reservePlayers } = applySubstitution(activePlayers, reservePlayers, gk1, bGk, 'active', 'reserve'));
+    expect(activePlayers).toHaveLength(11);
+    expect(isValidFormation(activePlayers)).toBe(true);
   });
 
   it('no state corruption after multiple swaps: all player codes remain unique', () => {
-    let { mainTeam, benchTeam } = makeSquad433();
+    let { activePlayers, reservePlayers } = makeSquad433();
 
     // Swap 1
-    const def1 = mainTeam.find(p => p.position === POSITION.DEF);
-    const bDef = benchTeam.find(p => p.position === POSITION.DEF);
-    ({ mainTeam, benchTeam } = applySubstitution(mainTeam, benchTeam, def1, bDef, 'main', 'bench'));
+    const def1 = activePlayers.find(p => p.position === POSITION.DEF);
+    const bDef = reservePlayers.find(p => p.position === POSITION.DEF);
+    ({ activePlayers, reservePlayers } = applySubstitution(activePlayers, reservePlayers, def1, bDef, 'active', 'reserve'));
 
     // Swap 2 (swap back)
-    const defBack = mainTeam.find(p => p.code === bDef.code);
-    const bDefBack = benchTeam.find(p => p.code === def1.code);
-    ({ mainTeam, benchTeam } = applySubstitution(mainTeam, benchTeam, defBack, bDefBack, 'main', 'bench'));
+    const defBack = activePlayers.find(p => p.code === bDef.code);
+    const bDefBack = reservePlayers.find(p => p.code === def1.code);
+    ({ activePlayers, reservePlayers } = applySubstitution(activePlayers, reservePlayers, defBack, bDefBack, 'active', 'reserve'));
 
-    const allCodes = [...mainTeam, ...benchTeam].map(p => p.code);
+    const allCodes = [...activePlayers, ...reservePlayers].map(p => p.code);
     expect(new Set(allCodes).size).toBe(allCodes.length);
   });
 
   it('captain survives multiple substitutions and always stays in starting XI', () => {
-    let { mainTeam, benchTeam } = makeSquad433();
+    let { activePlayers, reservePlayers } = makeSquad433();
 
     for (let i = 0; i < 3; i++) {
-      const mainDEF = mainTeam.find(p => p.position === POSITION.DEF);
-      const benchDEF = benchTeam.find(p => p.position === POSITION.DEF);
+      const mainDEF = activePlayers.find(p => p.position === POSITION.DEF);
+      const benchDEF = reservePlayers.find(p => p.position === POSITION.DEF);
       if (!mainDEF || !benchDEF) break;
-      ({ mainTeam, benchTeam } = applySubstitution(mainTeam, benchTeam, mainDEF, benchDEF, 'main', 'bench'));
-      expect(mainTeam.some(p => p.is_captain)).toBe(true);
-      expect(benchTeam.some(p => p.is_captain)).toBe(false);
+      ({ activePlayers, reservePlayers } = applySubstitution(activePlayers, reservePlayers, mainDEF, benchDEF, 'active', 'reserve'));
+      expect(activePlayers.some(p => p.is_captain)).toBe(true);
+      expect(reservePlayers.some(p => p.is_captain)).toBe(false);
     }
   });
 });
@@ -688,36 +688,36 @@ describe('property-based fuzz tests', () => {
     const nFwd = rng(1, Math.min(3, 10 - nDef - 3));
     const nMid = 10 - nDef - nFwd;
     _code = 5000 + rng(0, 1000);
-    const mainTeam = [
+    const activePlayers = [
       makePlayer({ position: POSITION.GK, predictedPoints: rng(2, 10), basePoints: rng(2, 10) }),
       ...Array.from({ length: nDef }, () => makePlayer({ position: POSITION.DEF, predictedPoints: rng(2, 10), basePoints: rng(2, 10) })),
       ...Array.from({ length: nMid }, () => makePlayer({ position: POSITION.MID, predictedPoints: rng(2, 10), basePoints: rng(2, 10) })),
       ...Array.from({ length: nFwd }, () => makePlayer({ position: POSITION.FWD, predictedPoints: rng(2, 10), basePoints: rng(2, 10) })),
     ];
-    const benchTeam = [
+    const reservePlayers = [
       makePlayer({ position: POSITION.GK }),
       makePlayer({ position: [POSITION.DEF, POSITION.MID, POSITION.FWD][rng(0, 2)] }),
       makePlayer({ position: [POSITION.DEF, POSITION.MID, POSITION.FWD][rng(0, 2)] }),
       makePlayer({ position: [POSITION.DEF, POSITION.MID, POSITION.FWD][rng(0, 2)] }),
     ];
-    return { mainTeam, benchTeam };
+    return { activePlayers, reservePlayers };
   };
 
   it('random valid squads always satisfy isValidFormation', () => {
     for (let i = 0; i < 100; i++) {
-      const { mainTeam } = buildRandomSquad();
-      expect(isValidFormation(mainTeam)).toBe(true);
+      const { activePlayers } = buildRandomSquad();
+      expect(isValidFormation(activePlayers)).toBe(true);
     }
   });
 
   it('GK ↔ GK swap always valid and formation stays valid', () => {
     for (let i = 0; i < 50; i++) {
-      const { mainTeam, benchTeam } = buildRandomSquad();
-      const mainGK  = mainTeam.find(p => p.position === POSITION.GK);
-      const benchGK = benchTeam.find(p => p.position === POSITION.GK);
-      const r = validateSubstitution(mainGK, benchGK, 'main', 'bench', mainTeam, benchTeam);
+      const { activePlayers, reservePlayers } = buildRandomSquad();
+      const mainGK  = activePlayers.find(p => p.position === POSITION.GK);
+      const benchGK = reservePlayers.find(p => p.position === POSITION.GK);
+      const r = validateSubstitution(mainGK, benchGK, 'active', 'reserve', activePlayers, reservePlayers);
       expect(r.valid).toBe(true);
-      const { mainTeam: newMain } = applySubstitution(mainTeam, benchTeam, mainGK, benchGK, 'main', 'bench');
+      const { activePlayers: newMain } = applySubstitution(activePlayers, reservePlayers, mainGK, benchGK, 'active', 'reserve');
       expect(isValidFormation(newMain)).toBe(true);
       expect(newMain).toHaveLength(11);
     }
@@ -725,11 +725,11 @@ describe('property-based fuzz tests', () => {
 
   it('no duplicate codes after any random valid GK swap', () => {
     for (let i = 0; i < 50; i++) {
-      const { mainTeam, benchTeam } = buildRandomSquad();
-      const mainGK  = mainTeam.find(p => p.position === POSITION.GK);
-      const benchGK = benchTeam.find(p => p.position === POSITION.GK);
-      const { mainTeam: newMain, benchTeam: newBench } = applySubstitution(
-        mainTeam, benchTeam, mainGK, benchGK, 'main', 'bench'
+      const { activePlayers, reservePlayers } = buildRandomSquad();
+      const mainGK  = activePlayers.find(p => p.position === POSITION.GK);
+      const benchGK = reservePlayers.find(p => p.position === POSITION.GK);
+      const { activePlayers: newMain, reservePlayers: newBench } = applySubstitution(
+        activePlayers, reservePlayers, mainGK, benchGK, 'active', 'reserve'
       );
       const codes = [...newMain, ...newBench].map(p => p.code);
       expect(new Set(codes).size).toBe(codes.length);
@@ -740,18 +740,18 @@ describe('property-based fuzz tests', () => {
     // Verify that validateSubstitution correctly blocks formation-breaking swaps
     // by re-checking the post-swap formation when it reports invalid.
     for (let i = 0; i < 50; i++) {
-      const { mainTeam, benchTeam } = buildRandomSquad();
+      const { activePlayers, reservePlayers } = buildRandomSquad();
       // Pick a random main outfield player and random bench outfield player.
-      const outfield = mainTeam.filter(p => p.position !== POSITION.GK);
-      const benchOut = benchTeam.filter(p => p.position !== POSITION.GK);
+      const outfield = activePlayers.filter(p => p.position !== POSITION.GK);
+      const benchOut = reservePlayers.filter(p => p.position !== POSITION.GK);
       if (!outfield.length || !benchOut.length) continue;
       const mPlayer = outfield[rng(0, outfield.length - 1)];
       const bPlayer = benchOut[rng(0, benchOut.length - 1)];
-      const r = validateSubstitution(mPlayer, bPlayer, 'main', 'bench', mainTeam, benchTeam);
+      const r = validateSubstitution(mPlayer, bPlayer, 'active', 'reserve', activePlayers, reservePlayers);
       if (!r.valid) {
         // Manually simulate and confirm it would have been invalid.
-        const newMain = [...mainTeam];
-        const newBench = [...benchTeam];
+        const newMain = [...activePlayers];
+        const newBench = [...reservePlayers];
         const i1 = newMain.findIndex(p => p.code === mPlayer.code);
         const i2 = newBench.findIndex(p => p.code === bPlayer.code);
         newMain[i1] = bPlayer;
@@ -772,7 +772,7 @@ describe('property-based fuzz tests', () => {
 // ---------------------------------------------------------------------------
 
 describe('future-GW demoted-player captain swap (regression)', () => {
-  it('rejects the swap when callers mistakenly pass raw mainTeam for both zones', () => {
+  it('rejects the swap when callers mistakenly pass raw activePlayers for both zones', () => {
     // Set up: MID4 has low pts and has been demoted to the effective bench by
     // selectOptimalLineup, but it is still present in rawMain.
     const MID4 = makePlayer({ code: 201, position: POSITION.MID, predictedPoints: 3, basePoints: 3 });
@@ -799,11 +799,11 @@ describe('future-GW demoted-player captain swap (regression)', () => {
       makePlayer({ code: 223, position: POSITION.FWD }),
     ];
 
-    // Simulating the old bug: rawTeamType resolves MID4 as 'main' (it is in rawMain)
-    // so the caller passes teamType='main' for both captain and MID4 → rejected.
-    const buggyResult = validateSubstitution(captain, MID4, 'main', 'main', rawMain, rawBench);
+    // Simulating the old bug: rawTeamType resolves MID4 as 'active' (it is in rawMain)
+    // so the caller passes teamType='active' for both captain and MID4 → rejected.
+    const buggyResult = validateSubstitution(captain, MID4, 'active', 'active', rawMain, rawBench);
     expect(buggyResult.valid).toBe(false);
-    expect(buggyResult.error).toMatch(/swapped between the starting squad and the bench/i);
+    expect(buggyResult.error).toMatch(/swapped between the active squad and the reserve/i);
   });
 
   it('accepts the captain swap when called with the effective (displayed) teams', () => {
@@ -833,8 +833,8 @@ describe('future-GW demoted-player captain swap (regression)', () => {
       makePlayer({ code: 223, position: POSITION.FWD }),
     ];
 
-    // Fix: zone resolved from effective teams → captain='main', MID4='bench'
-    const result = validateSubstitution(captain, MID4, 'main', 'bench', effectiveMain, effectiveBench);
+    // Fix: zone resolved from effective teams → captain='active', MID4='reserve'
+    const result = validateSubstitution(captain, MID4, 'active', 'reserve', effectiveMain, effectiveBench);
     expect(result.valid).toBe(true);
     expect(result.error).toBe('');
   });
@@ -866,8 +866,8 @@ describe('future-GW demoted-player captain swap (regression)', () => {
       makePlayer({ code: 223, position: POSITION.FWD }),
     ];
 
-    const { mainTeam: newMain, benchTeam: newBench } = applySubstitution(
-      effectiveMain, effectiveBench, captain, MID4, 'main', 'bench'
+    const { activePlayers: newMain, reservePlayers: newBench } = applySubstitution(
+      effectiveMain, effectiveBench, captain, MID4, 'active', 'reserve'
     );
 
     // MID4 should now be at the captain's slot in main, and inherit captaincy

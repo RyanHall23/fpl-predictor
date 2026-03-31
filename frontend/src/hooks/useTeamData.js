@@ -6,13 +6,16 @@ import {
 } from '../utils/substitution';
 
 const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGameweek = null) => {
-  const [mainTeamData, setMainTeamData] = useState([]);
-  const [benchTeamData, setBenchTeamData] = useState([]);
+  const [activePlayers, setActivePlayers] = useState([]);
+  const [reservePlayers, setReservePlayers] = useState([]);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [snackbar, setSnackbar] = useState({ message: '', key: 0 });
   const [isHighestPredictedTeam, setIsHighestPredictedTeam] = useState(isHighestPredictedTeamInit);
   const [teamName, setTeamName] = useState('');
   const [gameweekInfo, setGameweekInfo] = useState(null);
+  // Incremented each time the user successfully performs a manual substitution.
+  // App.jsx watches this to skip selectOptimalLineup after a manual sub.
+  const [swapVersion, setSwapVersion] = useState(0);
 
   // Sync internal state with prop changes (e.g., when restoring session)
   useEffect(() => {
@@ -24,7 +27,7 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
     try {
       const gameweekParam = selectedGameweek ? `?gameweek=${selectedGameweek}` : '';
       const response = await axios.get(`/api/predicted-team${gameweekParam}`);
-      const { mainTeam, bench, gameweek, currentGameweek, isPastGameweek, isFutureGameweek, isActiveGameweek, gameweekData } = response.data;
+      const { activePlayers: active, reservePlayers: reserve, gameweek, currentGameweek, isPastGameweek, isFutureGameweek, isActiveGameweek, gameweekData } = response.data;
       
       setGameweekInfo({
         selected: gameweek,
@@ -52,8 +55,8 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
         is_home: player.is_home,
         opponents: player.opponents || [] // DGW support
       });
-      setMainTeamData(mainTeam.map(formatPlayer));
-      setBenchTeamData(bench.map(formatPlayer));
+      setActivePlayers(active.map(formatPlayer));
+      setReservePlayers(reserve.map(formatPlayer));
     } catch (error) {
       console.error('Error fetching highest predicted team data:', error);
     }
@@ -91,7 +94,7 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
       // Fetch sorted user team from backend with optional gameweek parameter
       const gameweekParam = selectedGameweek ? `?gameweek=${selectedGameweek}` : '';
       const response = await axios.get(`/api/entry/${entryId}/event/${eventId}/team${gameweekParam}`);
-      const { mainTeam, bench, teamName: fetchedTeamName, gameweek, currentGameweek, isPastGameweek, isFutureGameweek, isActiveGameweek, gameweekData } = response.data;
+      const { activePlayers: active, reservePlayers: reserve, teamName: fetchedTeamName, gameweek, currentGameweek, isPastGameweek, isFutureGameweek, isActiveGameweek, gameweekData } = response.data;
 
       setGameweekInfo({
         selected: gameweek,
@@ -132,8 +135,8 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
         };
       };
 
-      setMainTeamData(mainTeam.map(formatPlayer));
-      setBenchTeamData(bench.map(formatPlayer));
+      setActivePlayers(active.map(formatPlayer));
+      setReservePlayers(reserve.map(formatPlayer));
       setTeamName(fetchedTeamName || '');
     } catch (error) {
       setTeamName('');
@@ -150,28 +153,28 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
 
   // Handle player selection and swapping (only for user's team)
   //
-  // effectiveMain / effectiveBench are the *displayed* teams after applying
+  // effectiveActive / effectiveReserve are the *displayed* teams after applying
   // planned transfers and selectOptimalLineup (passed in from App.jsx).  For
-  // future GWs these can differ from mainTeamData/benchTeamData because
-  // selectOptimalLineup may promote bench players or demote main players.
+  // future GWs these can differ from activePlayers/reservePlayers because
+  // selectOptimalLineup may promote reserve players or demote active players.
   // Validation and swap must always operate on the displayed (effective) teams
   // so that zone membership reflects what the user actually sees on screen.
   //
-  // @param {Object} player        - The player the user clicked.
-  // @param {string} teamType      - The effective zone ('main'|'bench') from the UI.
-  // @param {Array}  [effectiveMain]  - Effective starting XI; falls back to mainTeamData.
-  // @param {Array}  [effectiveBench] - Effective bench;      falls back to benchTeamData.
+  // @param {Object} player           - The player the user clicked.
+  // @param {string} zone             - The effective zone ('active'|'reserve') from the UI.
+  // @param {Array}  [effectiveActive]  - Effective starting XI; falls back to activePlayers.
+  // @param {Array}  [effectiveReserve] - Effective bench;      falls back to reservePlayers.
   const handlePlayerClick = isHighestPredictedTeam
   ? undefined
-  : async (player, teamType, effectiveMain, effectiveBench) => {
-      const activeMain  = effectiveMain  ?? mainTeamData;
-      const activeBench = effectiveBench ?? benchTeamData;
+  : async (player, zone, effectiveActive, effectiveReserve) => {
+      const currentActive  = effectiveActive  ?? activePlayers;
+      const currentReserve = effectiveReserve ?? reservePlayers;
 
       // Resolve the player's zone from the effective (displayed) teams.
-      const activeTeamType = activeMain.some(p => p.code === player.code) ? 'main' : 'bench';
+      const playerZone = currentActive.some(p => p.code === player.code) ? 'active' : 'reserve';
 
       if (selectedPlayer === null) {
-        setSelectedPlayer({ player, teamType: activeTeamType });
+        setSelectedPlayer({ player, teamType: playerZone });
       } else {
         // If clicking the same player, deselect them
         if (selectedPlayer.player.code === player.code) {
@@ -185,10 +188,10 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
           const response = await axios.post('/api/validate-swap', {
             player1: selectedPlayer.player,
             player2: player,
-            teamType1: selectedPlayer.teamType,
-            teamType2: activeTeamType,
-            mainTeam: activeMain,
-            benchTeam: activeBench
+            zone1: selectedPlayer.teamType,
+            zone2: playerZone,
+            activePlayers: currentActive,
+            reservePlayers: currentReserve
           });
 
           if (response.data.valid) {
@@ -196,9 +199,9 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
               selectedPlayer.player,
               player,
               selectedPlayer.teamType,
-              activeTeamType,
-              activeMain,
-              activeBench,
+              playerZone,
+              currentActive,
+              currentReserve,
             );
             setSelectedPlayer(null);
             setSnackbar({ message: '', key: Date.now() });
@@ -213,9 +216,9 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
             selectedPlayer.player,
             player,
             selectedPlayer.teamType,
-            activeTeamType,
-            activeMain,
-            activeBench,
+            playerZone,
+            currentActive,
+            currentReserve,
           );
 
           if (swapResult.valid) {
@@ -223,9 +226,9 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
               selectedPlayer.player,
               player,
               selectedPlayer.teamType,
-              activeTeamType,
-              activeMain,
-              activeBench,
+              playerZone,
+              currentActive,
+              currentReserve,
             );
             setSelectedPlayer(null);
             setSnackbar({ message: '', key: Date.now() });
@@ -237,24 +240,25 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
       }
     };
 
-const swapPlayers = (player1, player2, teamType1, teamType2, activeMain, activeBench) => {
-  const { mainTeam: newMain, benchTeam: newBench } = applySubstitution(
-    activeMain  ?? mainTeamData,
-    activeBench ?? benchTeamData,
+const swapPlayers = (player1, player2, zone1, zone2, currentActive, currentReserve) => {
+  const { activePlayers: newActive, reservePlayers: newReserve } = applySubstitution(
+    currentActive  ?? activePlayers,
+    currentReserve ?? reservePlayers,
     player1,
     player2,
-    teamType1,
-    teamType2,
+    zone1,
+    zone2,
   );
-  setMainTeamData(newMain);
-  setBenchTeamData(newBench);
+  setActivePlayers(newActive);
+  setReservePlayers(newReserve);
+  setSwapVersion(v => v + 1);
 };
 
-const isValidSwap = (player1, player2, teamType1, teamType2, activeMain, activeBench) => {
+const isValidSwap = (player1, player2, zone1, zone2, currentActive, currentReserve) => {
   return validateSubstitution(
-    player1, player2, teamType1, teamType2,
-    activeMain  ?? mainTeamData,
-    activeBench ?? benchTeamData,
+    player1, player2, zone1, zone2,
+    currentActive  ?? activePlayers,
+    currentReserve ?? reservePlayers,
   );
 };
 
@@ -270,8 +274,8 @@ const calculateTotalPredictedPoints = (team) => {
   // Change the captain of the current user team.
   // The player identified by playerCode becomes captain (multiplier 2×),
   // all other players revert to their base points (multiplier 1×).
-  // Both mainTeamData and benchTeamData are updated so that captaincy works
-  // correctly for future GWs where selectOptimalLineup may have promoted bench
+  // Both activePlayers and reservePlayers are updated so that captaincy works
+  // correctly for future GWs where selectOptimalLineup may have promoted reserve
   // players into the effective starting XI.
   const setCaptain = useCallback((playerCode) => {
     // Derive true base points before the captain multiplier is applied.
@@ -296,8 +300,8 @@ const calculateTotalPredictedPoints = (team) => {
         return player;
       });
 
-    setMainTeamData(applyToTeam);
-    setBenchTeamData(applyToTeam);
+    setActivePlayers(applyToTeam);
+    setReservePlayers(applyToTeam);
   }, []);
 
   const toggleTeamView = () => {
@@ -310,8 +314,8 @@ const calculateTotalPredictedPoints = (team) => {
   };
 
   return {
-    mainTeamData,
-    benchTeamData,
+    activePlayers,
+    reservePlayers,
     snackbar,
     handlePlayerClick,
     calculateTotalPredictedPoints,
@@ -319,11 +323,13 @@ const calculateTotalPredictedPoints = (team) => {
     isHighestPredictedTeam,
     selectedPlayer,
     teamName,
-    setMainTeamData,
-    setBenchTeamData,
+    setActivePlayers,
+    setReservePlayers,
     gameweekInfo,
     setCaptain,
+    swapVersion,
   };
 };
 
 export default useTeamData;
+
