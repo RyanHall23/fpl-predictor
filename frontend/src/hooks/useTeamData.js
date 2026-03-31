@@ -156,6 +156,11 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
   // selectOptimalLineup may promote bench players or demote main players.
   // Validation and swap must always operate on the displayed (effective) teams
   // so that zone membership reflects what the user actually sees on screen.
+  //
+  // @param {Object} player        - The player the user clicked.
+  // @param {string} teamType      - The effective zone ('main'|'bench') from the UI.
+  // @param {Array}  [effectiveMain]  - Effective starting XI; falls back to mainTeamData.
+  // @param {Array}  [effectiveBench] - Effective bench;      falls back to benchTeamData.
   const handlePlayerClick = isHighestPredictedTeam
   ? undefined
   : async (player, teamType, effectiveMain, effectiveBench) => {

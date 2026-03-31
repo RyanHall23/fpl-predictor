@@ -281,7 +281,7 @@ const App = () => {
     handlePlayerClick
       ? (player, teamType) => handlePlayerClick(player, teamType, effectiveMainTeam, effectiveBenchTeam)
       : undefined,
-    [handlePlayerClick, effectiveMainTeam, effectiveBenchTeam], // eslint-disable-line react-hooks/exhaustive-deps
+    [handlePlayerClick, effectiveMainTeam, effectiveBenchTeam],
   );
 
   // Handle setting team ID (saves to localStorage)
