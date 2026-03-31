@@ -396,7 +396,7 @@ const getUserTeam = async (req, res) => {
       players = fplModel.applyAdvancedPredictions(players, fixtures, bootstrap.teams, targetEvent);
     }
     
-    const { mainTeam, bench, captainInfo } = fplModel.buildUserTeam(players, picksData.picks, isPastGameweek || isActiveGameweek);
+    const { activePlayers, reservePlayers, captainInfo } = fplModel.buildUserTeam(players, picksData.picks, isPastGameweek || isActiveGameweek);
 
     // Fetch the entry info for the team name
     let teamName = '';
@@ -410,8 +410,8 @@ const getUserTeam = async (req, res) => {
     }
 
     res.json({ 
-      mainTeam, 
-      bench, 
+      activePlayers, 
+      reservePlayers, 
       teamName,
       gameweek: targetEvent,
       currentGameweek: currentEvent.id,
@@ -522,13 +522,13 @@ const getAllPlayersEnriched = async (req, res) => {
 
 const validateSwap = async (req, res) => {
   try {
-    const { player1, player2, teamType1, teamType2, mainTeam, benchTeam } = req.body;
+    const { player1, player2, zone1, zone2, activePlayers, reservePlayers } = req.body;
     
-    if (!player1 || !player2 || !teamType1 || !teamType2 || !mainTeam || !benchTeam) {
+    if (!player1 || !player2 || !zone1 || !zone2 || !activePlayers || !reservePlayers) {
       return res.status(400).json({ error: 'Missing required parameters' });
     }
     
-    const result = fplModel.validateSwap(player1, player2, teamType1, teamType2, mainTeam, benchTeam);
+    const result = fplModel.validateSwap(player1, player2, zone1, zone2, activePlayers, reservePlayers);
     res.json(result);
   } catch (error) {
     console.error('Error validating swap:', error);

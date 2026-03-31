@@ -13,33 +13,33 @@ const positionLabels = {
   5: 'MAN'
 };
 
-const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, onTransfer, isHighestPredictedTeam, onPlayerClick, onSetCaptain, currentGameweek, onAddPlannedTransfer }) => {
+const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, allPlayers, onTransfer, isHighestPredictedTeam, onPlayerClick, onSetCaptain, currentGameweek, onAddPlannedTransfer }) => {
   // Find the captain from the team data (for user teams, this comes from picks)
   // For highest predicted teams, calculate based on highest points
-  const captain = mainTeam && mainTeam.length
-    ? (mainTeam.find(p => p.is_captain) || 
-       mainTeam.filter(p => p.position !== 5).reduce(
+  const captain = activePlayers && activePlayers.length
+    ? (activePlayers.find(p => p.is_captain) || 
+       activePlayers.filter(p => p.position !== 5).reduce(
         (max, player) =>
           parseFloat(player.basePoints || player.predictedPoints) > parseFloat(max.basePoints || max.predictedPoints)
             ? player
             : max,
-        mainTeam.filter(p => p.position !== 5)[0],
+        activePlayers.filter(p => p.position !== 5)[0],
       ))
     : null;
 
-  // Manager is always first in mainTeam
-  const manager = mainTeam && mainTeam[0] && mainTeam[0].position === 5 ? mainTeam[0] : null;
-  const gks = mainTeam.filter(p => p.position === 1);
+  // Manager is always first in activePlayers
+  const manager = activePlayers && activePlayers[0] && activePlayers[0].position === 5 ? activePlayers[0] : null;
+  const gks = activePlayers.filter(p => p.position === 1);
 
-  const defs = mainTeam.filter(p => p.position === 2);
-  const mids = mainTeam.filter(p => p.position === 3);
-  const atts = mainTeam.filter(p => p.position === 4);
+  const defs = activePlayers.filter(p => p.position === 2);
+  const mids = activePlayers.filter(p => p.position === 3);
+  const atts = activePlayers.filter(p => p.position === 4);
 
   // For the bench: manager first, then GK, then outfield by points
-  const benchManager = benchTeam && benchTeam.find(p => p.position === 5);
-  const benchGK = benchTeam && benchTeam.find(p => p.position === 1);
-  const benchOutfield = benchTeam
-    ? benchTeam
+  const benchManager = reservePlayers && reservePlayers.find(p => p.position === 5);
+  const benchGK = reservePlayers && reservePlayers.find(p => p.position === 1);
+  const benchOutfield = reservePlayers
+    ? reservePlayers
         .filter(p => p.position !== 1 && p.position !== 5)
         .sort((a, b) => (b.predictedPoints || 0) - (a.predictedPoints || 0))
     : [];
@@ -64,14 +64,14 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                     player={ player }
                     isCaptain={ player === captain }
                     selectedPlayer={ selectedPlayer }
-                    teamType='main'
+                    teamType='active'
                     team={ team }
                     allPlayers={ allPlayers }
                     onTransfer={ onTransfer }
                     showTransferButtons={ !isHighestPredictedTeam }
                     onPlayerClick={ onPlayerClick }
-                    mainTeamData={ mainTeam }
-                    benchTeamData={ benchTeam }
+                    activePlayers={ activePlayers }
+                    reservePlayers={ reservePlayers }
                     onSetCaptain={ !isHighestPredictedTeam ? onSetCaptain : undefined }
                     currentGameweek={ currentGameweek }
                     onAddPlannedTransfer={ !isHighestPredictedTeam ? onAddPlannedTransfer : undefined }
@@ -87,14 +87,14 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                       player={ manager }
                       isCaptain={ manager === captain }
                       selectedPlayer={ selectedPlayer }
-                      teamType='main'
+                      teamType='active'
                       team={ team }
                       allPlayers={ allPlayers }
                       onTransfer={ onTransfer }
                       showTransferButtons={ !isHighestPredictedTeam }
                       onPlayerClick={ onPlayerClick }
-                      mainTeamData={ mainTeam }
-                      benchTeamData={ benchTeam }
+                      activePlayers={ activePlayers }
+                      reservePlayers={ reservePlayers }
                       onSetCaptain={ !isHighestPredictedTeam ? onSetCaptain : undefined }
                       currentGameweek={ currentGameweek }
                       onAddPlannedTransfer={ !isHighestPredictedTeam ? onAddPlannedTransfer : undefined }
@@ -111,14 +111,14 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                     player={ player }
                     isCaptain={ player === captain }
                     selectedPlayer={ selectedPlayer }
-                    teamType='main'
+                    teamType='active'
                     team={ team }
                     allPlayers={ allPlayers }
                     onTransfer={ onTransfer }
                     showTransferButtons={ !isHighestPredictedTeam }
                     onPlayerClick={ onPlayerClick }
-                    mainTeamData={ mainTeam }
-                    benchTeamData={ benchTeam }
+                    activePlayers={ activePlayers }
+                    reservePlayers={ reservePlayers }
                     onSetCaptain={ !isHighestPredictedTeam ? onSetCaptain : undefined }
                     currentGameweek={ currentGameweek }
                     onAddPlannedTransfer={ !isHighestPredictedTeam ? onAddPlannedTransfer : undefined }
@@ -134,14 +134,14 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                     player={ player }
                     isCaptain={ player === captain }
                     selectedPlayer={ selectedPlayer }
-                    teamType='main'
+                    teamType='active'
                     team={ team }
                     allPlayers={ allPlayers }
                     onTransfer={ onTransfer }
                     showTransferButtons={ !isHighestPredictedTeam }
                     onPlayerClick={ onPlayerClick }
-                    mainTeamData={ mainTeam }
-                    benchTeamData={ benchTeam }
+                    activePlayers={ activePlayers }
+                    reservePlayers={ reservePlayers }
                     onSetCaptain={ !isHighestPredictedTeam ? onSetCaptain : undefined }
                     currentGameweek={ currentGameweek }
                     onAddPlannedTransfer={ !isHighestPredictedTeam ? onAddPlannedTransfer : undefined }
@@ -157,14 +157,14 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                     player={ player }
                     isCaptain={ player === captain }
                     selectedPlayer={ selectedPlayer }
-                    teamType='main'
+                    teamType='active'
                     team={ team }
                     allPlayers={ allPlayers }
                     onTransfer={ onTransfer }
                     showTransferButtons={ !isHighestPredictedTeam }
                     onPlayerClick={ onPlayerClick }
-                    mainTeamData={ mainTeam }
-                    benchTeamData={ benchTeam }
+                    activePlayers={ activePlayers }
+                    reservePlayers={ reservePlayers }
                     onSetCaptain={ !isHighestPredictedTeam ? onSetCaptain : undefined }
                     currentGameweek={ currentGameweek }
                     onAddPlannedTransfer={ !isHighestPredictedTeam ? onAddPlannedTransfer : undefined }
@@ -190,14 +190,14 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                       player={ benchManager }
                       isCaptain={ false }
                       selectedPlayer={ selectedPlayer }
-                      teamType='bench'
+                      teamType='reserve'
                       team={ team }
                       allPlayers={ allPlayers }
                       onTransfer={ onTransfer }
                       showTransferButtons={ !isHighestPredictedTeam }
                       onPlayerClick={ onPlayerClick }
-                      mainTeamData={ mainTeam }
-                      benchTeamData={ benchTeam }
+                      activePlayers={ activePlayers }
+                      reservePlayers={ reservePlayers }
                       currentGameweek={ currentGameweek }
                       onAddPlannedTransfer={ !isHighestPredictedTeam ? onAddPlannedTransfer : undefined }
                     />
@@ -215,14 +215,14 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                       player={ benchGK }
                       isCaptain={ false }
                       selectedPlayer={ selectedPlayer }
-                      teamType='bench'
+                      teamType='reserve'
                       team={ team }
                       allPlayers={ allPlayers }
                       onTransfer={ onTransfer }
                       showTransferButtons={ !isHighestPredictedTeam }
                       onPlayerClick={ onPlayerClick }
-                      mainTeamData={ mainTeam }
-                      benchTeamData={ benchTeam }
+                      activePlayers={ activePlayers }
+                      reservePlayers={ reservePlayers }
                       currentGameweek={ currentGameweek }
                       onAddPlannedTransfer={ !isHighestPredictedTeam ? onAddPlannedTransfer : undefined }
                     />
@@ -240,14 +240,14 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
                       player={ player }
                       isCaptain={ false }
                       selectedPlayer={ selectedPlayer }
-                      teamType='bench'
+                      teamType='reserve'
                       team={ team }
                       allPlayers={ allPlayers }
                       onTransfer={ onTransfer }
                       showTransferButtons={ !isHighestPredictedTeam }
                       onPlayerClick={ onPlayerClick }
-                      mainTeamData={ mainTeam }
-                      benchTeamData={ benchTeam }
+                      activePlayers={ activePlayers }
+                      reservePlayers={ reservePlayers }
                       currentGameweek={ currentGameweek }
                       onAddPlannedTransfer={ !isHighestPredictedTeam ? onAddPlannedTransfer : undefined }
                     />
@@ -263,8 +263,8 @@ const TeamFormation = ({ mainTeam, benchTeam, selectedPlayer, team, allPlayers, 
 };
 
 TeamFormation.propTypes = {
-  mainTeam: PropTypes.array,
-  benchTeam: PropTypes.array,
+  activePlayers: PropTypes.array,
+  reservePlayers: PropTypes.array,
   selectedPlayer: PropTypes.shape({
     player: PropTypes.object,
     teamType: PropTypes.string,
