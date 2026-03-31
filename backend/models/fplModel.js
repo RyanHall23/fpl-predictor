@@ -1,5 +1,6 @@
 const dataProvider = require('./dataProvider');
 const predictionEngine = require('./predictionEngine');
+const { validateSubstitution } = require('../utils/substitution');
 
 // Global toggles — can be overridden via env vars
 // USE_COMPUTED_EP: 'true' | 'false' (prefer computed EP and optionally overwrite ep_next)
@@ -596,89 +597,7 @@ const buildUserTeam = (players, picks, isPastGameweek = false) => {
  * @returns {Object} { valid: boolean, error: string }
  */
 const validateSwap = (player1, player2, teamType1, teamType2, mainTeam, benchTeam) => {
-  // Don't allow swaps within the same zone
-  if (teamType1 === teamType2) {
-    return {
-      valid: false,
-      error: 'Players can only be swapped between the starting squad and the bench.',
-    };
-  }
-
-  const pos1 = player1.element_type || player1.position;
-  const pos2 = player2.element_type || player2.position;
-
-  // Only allow manager swaps if both are managers (position === 5)
-  if (pos1 === 5 || pos2 === 5) {
-    if (pos1 === 5 && pos2 === 5) {
-      return { valid: true, error: '' };
-    } else {
-      return {
-        valid: false,
-        error: 'Managers can only be swapped with other managers.',
-      };
-    }
-  }
-
-  // Goalkeeper swap rule
-  if (pos1 === 1 || pos2 === 1) {
-    if (pos1 !== pos2) {
-      return {
-        valid: false,
-        error: 'Goalkeepers can only be swapped with other goalkeepers.',
-      };
-    }
-  }
-
-  // Simulate the swap
-  let newMain = [...mainTeam];
-  let newBench = [...benchTeam];
-
-  // Find indexes
-  const idx1 = teamType1 === 'bench'
-    ? newBench.findIndex(p => p.code === player1.code)
-    : newMain.findIndex(p => p.code === player1.code);
-  const idx2 = teamType2 === 'bench'
-    ? newBench.findIndex(p => p.code === player2.code)
-    : newMain.findIndex(p => p.code === player2.code);
-
-  if (idx1 === -1 || idx2 === -1) {
-    return { valid: false, error: 'Player not found in team.' };
-  }
-
-  // Perform the swap
-  if (teamType1 === 'main' && teamType2 === 'bench') {
-    [newMain[idx1], newBench[idx2]] = [newBench[idx2], newMain[idx1]];
-  } else if (teamType1 === 'bench' && teamType2 === 'main') {
-    [newBench[idx1], newMain[idx2]] = [newMain[idx2], newBench[idx1]];
-  }
-
-  // Count positions in new main team
-  const positionCounts = newMain.reduce((counts, player) => {
-    const pos = player.element_type || player.position;
-    counts[pos] = (counts[pos] || 0) + 1;
-    return counts;
-  }, {});
-
-  if ((positionCounts[2] || 0) < 3) {
-    return {
-      valid: false,
-      error: 'The team must have at least 3 defenders.',
-    };
-  }
-  if ((positionCounts[3] || 0) < 3) {
-    return {
-      valid: false,
-      error: 'The team must have at least 3 midfielders.',
-    };
-  }
-  if ((positionCounts[4] || 0) < 1) {
-    return {
-      valid: false,
-      error: 'The team must have at least 1 forward.',
-    };
-  }
-
-  return { valid: true, error: '' };
+  return validateSubstitution(player1, player2, teamType1, teamType2, mainTeam, benchTeam);
 };
 
 /**

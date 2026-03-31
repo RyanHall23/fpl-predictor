@@ -1,5 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import axios from '../api';
+import {
+  validateSubstitution,
+  applySubstitution,
+} from '../utils/substitution';
 
 const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGameweek = null) => {
   const [mainTeamData, setMainTeamData] = useState([]);
@@ -215,139 +219,20 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
     };
 
 const swapPlayers = (player1, player2, teamType1, teamType2) => {
-  const fromTeam1 = teamType1 === 'bench' ? benchTeamData : mainTeamData;
-  const fromTeam2 = teamType2 === 'bench' ? benchTeamData : mainTeamData;
-
-  const index1 = fromTeam1.findIndex((p) => p.name === player1.name);
-  const index2 = fromTeam2.findIndex((p) => p.name === player2.name);
-
-  if (index1 !== -1 && index2 !== -1) {
-    // Create new arrays to avoid mutating state directly
-    const newMainTeam = [...mainTeamData];
-    const newBenchTeam = [...benchTeamData];
-
-    // If the captain is moving from main to bench, transfer captaincy to the
-    // incoming player so that selectOptimalLineup (future GWs) does not pull
-    // the substituted captain back into the starting XI on every re-render.
-    const getBase = (p) =>
-      p.basePoints != null
-        ? p.basePoints
-        : (p.predictedPoints ?? 0) / (p.multiplier || 1);
-
-    let p1 = { ...player1 };
-    let p2 = { ...player2 };
-
-    // Determine which player is the captain going to bench and which is the
-    // bench player coming into main (handles both click-order permutations).
-    const captainIsP1 = p1.is_captain && teamType1 === 'main' && teamType2 === 'bench';
-    const captainIsP2 = p2.is_captain && teamType2 === 'main' && teamType1 === 'bench';
-
-    if (captainIsP1 || captainIsP2) {
-      const [capPlayer, inPlayer] = captainIsP1 ? [p1, p2] : [p2, p1];
-      const capBase = Math.round(getBase(capPlayer));
-      const inBase = Math.round(getBase(inPlayer));
-      const updatedCap = { ...capPlayer, is_captain: false, multiplier: 1, predictedPoints: capBase };
-      const updatedIn = { ...inPlayer, is_captain: true, multiplier: 2, predictedPoints: inBase * 2 };
-      [p1, p2] = captainIsP1 ? [updatedCap, updatedIn] : [updatedIn, updatedCap];
-    }
-
-    if (teamType1 === 'bench') {
-      newBenchTeam[index1] = p2;
-    } else {
-      newMainTeam[index1] = p2;
-    }
-
-    if (teamType2 === 'bench') {
-      newBenchTeam[index2] = p1;
-    } else {
-      newMainTeam[index2] = p1;
-    }
-
-    setMainTeamData(newMainTeam);
-    setBenchTeamData(newBenchTeam);
-  }
+  const { mainTeam: newMain, benchTeam: newBench } = applySubstitution(
+    mainTeamData,
+    benchTeamData,
+    player1,
+    player2,
+    teamType1,
+    teamType2,
+  );
+  setMainTeamData(newMain);
+  setBenchTeamData(newBench);
 };
 
 const isValidSwap = (player1, player2, teamType1, teamType2) => {
-  // Don't allow swaps within the same zone
-  if (teamType1 === teamType2) {
-    return {
-      valid: false,
-      error: 'Players can only be swapped between the starting squad and the bench.',
-    };
-  }
-
-  // Only allow manager swaps if both are managers (position === 5)
-  if (player1.position === 5 || player2.position === 5) {
-    if (player1.position === 5 && player2.position === 5) {
-      return { valid: true, error: '' };
-    } else {
-      return {
-        valid: false,
-        error: 'Managers can only be swapped with other managers.',
-      };
-    }
-  }
-
-  // Goalkeeper swap rule
-  if (player1.position === 1 || player2.position === 1) {
-    if (player1.position !== player2.position) {
-      return {
-        valid: false,
-        error: 'Goalkeepers can only be swapped with other goalkeepers.',
-      };
-    }
-  }
-
-  // Simulate the swap
-  let newMain = [...mainTeamData];
-  let newBench = [...benchTeamData];
-
-  // Find indexes
-  const idx1 = teamType1 === 'bench'
-    ? newBench.findIndex(p => p.code === player1.code)
-    : newMain.findIndex(p => p.code === player1.code);
-  const idx2 = teamType2 === 'bench'
-    ? newBench.findIndex(p => p.code === player2.code)
-    : newMain.findIndex(p => p.code === player2.code);
-
-  // Perform the swap
-  if (teamType1 === 'main' && teamType2 === 'bench') {
-    [newMain[idx1], newBench[idx2]] = [newBench[idx2], newMain[idx1]];
-  } else if (teamType1 === 'bench' && teamType2 === 'main') {
-    [newBench[idx1], newMain[idx2]] = [newMain[idx2], newBench[idx1]];
-  } else if (teamType1 === 'main' && teamType2 === 'main') {
-    [newMain[idx1], newMain[idx2]] = [newMain[idx2], newMain[idx1]];
-  } else if (teamType1 === 'bench' && teamType2 === 'bench') {
-    [newBench[idx1], newBench[idx2]] = [newBench[idx2], newBench[idx1]];
-  }
-
-  // Count positions in new main team
-  const positionCounts = newMain.reduce((counts, player) => {
-    counts[player.position] = (counts[player.position] || 0) + 1;
-    return counts;
-  }, {});
-
-  if ((positionCounts[2] || 0) < 3) {
-    return {
-      valid: false,
-      error: 'The team must have at least 3 defenders.',
-    };
-  }
-  if ((positionCounts[3] || 0) < 3) {
-    return {
-      valid: false,
-      error: 'The team must have at least 3 midfielders.',
-    };
-  }
-  if ((positionCounts[4] || 0) < 1) {
-    return {
-      valid: false,
-      error: 'The team must have at least 1 forward.',
-    };
-  }
-
-  return { valid: true, error: '' };
+  return validateSubstitution(player1, player2, teamType1, teamType2, mainTeamData, benchTeamData);
 };
 
 const calculateTotalPredictedPoints = (team) => {
