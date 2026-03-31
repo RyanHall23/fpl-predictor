@@ -761,3 +761,126 @@ describe('property-based fuzz tests', () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// Regression: future-GW demoted-player captain swap
+//
+// selectOptimalLineup can demote a low-pts main player to the *effective* bench
+// while keeping them in rawMainTeam.  validateSubstitution must accept the
+// effective teams (effectiveMain / effectiveBench) so that the captain can be
+// swapped with the demoted player without hitting a "same zone" error.
+// ---------------------------------------------------------------------------
+
+describe('future-GW demoted-player captain swap (regression)', () => {
+  it('rejects the swap when callers mistakenly pass raw mainTeam for both zones', () => {
+    // Set up: MID4 has low pts and has been demoted to the effective bench by
+    // selectOptimalLineup, but it is still present in rawMain.
+    const MID4 = makePlayer({ code: 201, position: POSITION.MID, predictedPoints: 3, basePoints: 3 });
+    const captain = makePlayer({ code: 202, position: POSITION.MID, predictedPoints: 14, basePoints: 7, is_captain: true, multiplier: 2 });
+
+    // rawMain still contains MID4 (it has not been moved out yet)
+    const rawMain = [
+      makePlayer({ code: 200, position: POSITION.GK }),
+      makePlayer({ code: 210, position: POSITION.DEF }),
+      makePlayer({ code: 211, position: POSITION.DEF }),
+      makePlayer({ code: 212, position: POSITION.DEF }),
+      captain,
+      makePlayer({ code: 213, position: POSITION.MID }),
+      makePlayer({ code: 214, position: POSITION.MID }),
+      makePlayer({ code: 215, position: POSITION.FWD }),
+      makePlayer({ code: 216, position: POSITION.FWD }),
+      makePlayer({ code: 217, position: POSITION.FWD }),
+      MID4,  // low-pts player still in raw main
+    ];
+    const rawBench = [
+      makePlayer({ code: 220, position: POSITION.GK }),
+      makePlayer({ code: 221, position: POSITION.DEF }),
+      makePlayer({ code: 222, position: POSITION.MID, predictedPoints: 8, basePoints: 8 }), // promoted
+      makePlayer({ code: 223, position: POSITION.FWD }),
+    ];
+
+    // Simulating the old bug: rawTeamType resolves MID4 as 'main' (it is in rawMain)
+    // so the caller passes teamType='main' for both captain and MID4 → rejected.
+    const buggyResult = validateSubstitution(captain, MID4, 'main', 'main', rawMain, rawBench);
+    expect(buggyResult.valid).toBe(false);
+    expect(buggyResult.error).toMatch(/swapped between the starting squad and the bench/i);
+  });
+
+  it('accepts the captain swap when called with the effective (displayed) teams', () => {
+    const MID4 = makePlayer({ code: 201, position: POSITION.MID, predictedPoints: 3, basePoints: 3 });
+    const MID5 = makePlayer({ code: 222, position: POSITION.MID, predictedPoints: 8, basePoints: 8 });
+    const captain = makePlayer({ code: 202, position: POSITION.MID, predictedPoints: 14, basePoints: 7, is_captain: true, multiplier: 2 });
+
+    // effectiveMain: selectOptimalLineup promoted MID5 from bench and excluded MID4
+    const effectiveMain = [
+      makePlayer({ code: 200, position: POSITION.GK }),
+      makePlayer({ code: 210, position: POSITION.DEF }),
+      makePlayer({ code: 211, position: POSITION.DEF }),
+      makePlayer({ code: 212, position: POSITION.DEF }),
+      captain,
+      makePlayer({ code: 213, position: POSITION.MID }),
+      makePlayer({ code: 214, position: POSITION.MID }),
+      makePlayer({ code: 215, position: POSITION.FWD }),
+      makePlayer({ code: 216, position: POSITION.FWD }),
+      makePlayer({ code: 217, position: POSITION.FWD }),
+      MID5,  // promoted from bench
+    ];
+    // effectiveBench: MID4 was demoted here; MID5 is now in effectiveMain
+    const effectiveBench = [
+      makePlayer({ code: 220, position: POSITION.GK }),
+      makePlayer({ code: 221, position: POSITION.DEF }),
+      MID4,   // demoted from raw main → appears in effective bench
+      makePlayer({ code: 223, position: POSITION.FWD }),
+    ];
+
+    // Fix: zone resolved from effective teams → captain='main', MID4='bench'
+    const result = validateSubstitution(captain, MID4, 'main', 'bench', effectiveMain, effectiveBench);
+    expect(result.valid).toBe(true);
+    expect(result.error).toBe('');
+  });
+
+  it('applies the captain swap correctly when effective teams are used', () => {
+    const MID4 = makePlayer({ code: 201, position: POSITION.MID, predictedPoints: 3, basePoints: 3 });
+    const MID5 = makePlayer({ code: 222, position: POSITION.MID, predictedPoints: 8, basePoints: 8 });
+    const captain = makePlayer({ code: 202, position: POSITION.MID, predictedPoints: 14, basePoints: 7, is_captain: true, multiplier: 2 });
+
+    const captainIdx = 4;
+    const effectiveMain = [
+      makePlayer({ code: 200, position: POSITION.GK }),
+      makePlayer({ code: 210, position: POSITION.DEF }),
+      makePlayer({ code: 211, position: POSITION.DEF }),
+      makePlayer({ code: 212, position: POSITION.DEF }),
+      captain,  // index 4
+      makePlayer({ code: 213, position: POSITION.MID }),
+      makePlayer({ code: 214, position: POSITION.MID }),
+      makePlayer({ code: 215, position: POSITION.FWD }),
+      makePlayer({ code: 216, position: POSITION.FWD }),
+      makePlayer({ code: 217, position: POSITION.FWD }),
+      MID5,
+    ];
+    const mid4BenchIdx = 2;
+    const effectiveBench = [
+      makePlayer({ code: 220, position: POSITION.GK }),
+      makePlayer({ code: 221, position: POSITION.DEF }),
+      MID4,  // index 2
+      makePlayer({ code: 223, position: POSITION.FWD }),
+    ];
+
+    const { mainTeam: newMain, benchTeam: newBench } = applySubstitution(
+      effectiveMain, effectiveBench, captain, MID4, 'main', 'bench'
+    );
+
+    // MID4 should now be at the captain's slot in main, and inherit captaincy
+    expect(newMain[captainIdx].code).toBe(MID4.code);
+    expect(newMain[captainIdx].is_captain).toBe(true);
+    expect(newMain[captainIdx].multiplier).toBe(2);
+    expect(newMain[captainIdx].predictedPoints).toBe(MID4.basePoints * 2);
+
+    // Captain should now be on the bench at MID4's old slot, no longer captain
+    expect(newBench[mid4BenchIdx].code).toBe(captain.code);
+    expect(newBench[mid4BenchIdx].is_captain).toBe(false);
+
+    // Rest of main team unchanged
+    expect(newMain.filter(p => p.code !== MID4.code)).toHaveLength(10);
+  });
+});

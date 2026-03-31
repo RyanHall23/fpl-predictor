@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import NavigationBar from './components/NavigationBar/NavigationBar';
 import Container from '@mui/material/Container';
 import Box from '@mui/material/Box';
@@ -273,6 +273,17 @@ const App = () => {
     return selectOptimalLineup(main, bench);
   }, [mainTeamData, benchTeamData, plannedTransfers, selectedGameweek, currentGameweek, gameweekInfo, allPlayers, isHighestPredictedTeam, voidedTransferIds]);
 
+  // Wrap handlePlayerClick so it always receives the *effective* (displayed) team
+  // data. This ensures that players demoted to the effective bench by
+  // selectOptimalLineup (while still present in raw mainTeamData) are correctly
+  // identified as bench players when the user tries to swap them.
+  const effectivePlayerClick = useCallback(
+    handlePlayerClick
+      ? (player, teamType) => handlePlayerClick(player, teamType, effectiveMainTeam, effectiveBenchTeam)
+      : undefined,
+    [handlePlayerClick, effectiveMainTeam, effectiveBenchTeam], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+
   // Handle setting team ID (saves to localStorage)
   const handleSetTeamId = (teamId) => {
     if (teamId) {
@@ -359,7 +370,7 @@ const App = () => {
             <TeamFormation
               mainTeam={ effectiveMainTeam }
               benchTeam={ effectiveBenchTeam }
-              onPlayerClick={ handlePlayerClick || (() => {}) }
+              onPlayerClick={ effectivePlayerClick || (() => {}) }
               selectedPlayer={ selectedPlayer }
               team={ [...effectiveMainTeam, ...effectiveBenchTeam] }
               allPlayers={ allPlayers }

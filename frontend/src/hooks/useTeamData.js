@@ -149,16 +149,24 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
   }, [fetchData, isHighestPredictedTeam]);
 
   // Handle player selection and swapping (only for user's team)
+  //
+  // effectiveMain / effectiveBench are the *displayed* teams after applying
+  // planned transfers and selectOptimalLineup (passed in from App.jsx).  For
+  // future GWs these can differ from mainTeamData/benchTeamData because
+  // selectOptimalLineup may promote bench players or demote main players.
+  // Validation and swap must always operate on the displayed (effective) teams
+  // so that zone membership reflects what the user actually sees on screen.
   const handlePlayerClick = isHighestPredictedTeam
   ? undefined
-  : async (player, teamType) => {
-      // For future GWs, effectiveMainTeam may differ from mainTeamData (auto-subs
-      // can promote bench players or demote main players).  Always resolve the true
-      // zone from raw state so that backend validation and swapPlayers stay in sync.
-      const rawTeamType = mainTeamData.some(p => p.code === player.code) ? 'main' : 'bench';
+  : async (player, teamType, effectiveMain, effectiveBench) => {
+      const activeMain  = effectiveMain  ?? mainTeamData;
+      const activeBench = effectiveBench ?? benchTeamData;
+
+      // Resolve the player's zone from the effective (displayed) teams.
+      const activeTeamType = activeMain.some(p => p.code === player.code) ? 'main' : 'bench';
 
       if (selectedPlayer === null) {
-        setSelectedPlayer({ player, teamType: rawTeamType });
+        setSelectedPlayer({ player, teamType: activeTeamType });
       } else {
         // If clicking the same player, deselect them
         if (selectedPlayer.player.code === player.code) {
@@ -173,9 +181,9 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
             player1: selectedPlayer.player,
             player2: player,
             teamType1: selectedPlayer.teamType,
-            teamType2: rawTeamType,
-            mainTeam: mainTeamData,
-            benchTeam: benchTeamData
+            teamType2: activeTeamType,
+            mainTeam: activeMain,
+            benchTeam: activeBench
           });
 
           if (response.data.valid) {
@@ -183,7 +191,9 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
               selectedPlayer.player,
               player,
               selectedPlayer.teamType,
-              rawTeamType,
+              activeTeamType,
+              activeMain,
+              activeBench,
             );
             setSelectedPlayer(null);
             setSnackbar({ message: '', key: Date.now() });
@@ -198,7 +208,9 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
             selectedPlayer.player,
             player,
             selectedPlayer.teamType,
-            rawTeamType
+            activeTeamType,
+            activeMain,
+            activeBench,
           );
 
           if (swapResult.valid) {
@@ -206,7 +218,9 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
               selectedPlayer.player,
               player,
               selectedPlayer.teamType,
-              rawTeamType,
+              activeTeamType,
+              activeMain,
+              activeBench,
             );
             setSelectedPlayer(null);
             setSnackbar({ message: '', key: Date.now() });
@@ -218,10 +232,10 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
       }
     };
 
-const swapPlayers = (player1, player2, teamType1, teamType2) => {
+const swapPlayers = (player1, player2, teamType1, teamType2, activeMain, activeBench) => {
   const { mainTeam: newMain, benchTeam: newBench } = applySubstitution(
-    mainTeamData,
-    benchTeamData,
+    activeMain  ?? mainTeamData,
+    activeBench ?? benchTeamData,
     player1,
     player2,
     teamType1,
@@ -231,8 +245,12 @@ const swapPlayers = (player1, player2, teamType1, teamType2) => {
   setBenchTeamData(newBench);
 };
 
-const isValidSwap = (player1, player2, teamType1, teamType2) => {
-  return validateSubstitution(player1, player2, teamType1, teamType2, mainTeamData, benchTeamData);
+const isValidSwap = (player1, player2, teamType1, teamType2, activeMain, activeBench) => {
+  return validateSubstitution(
+    player1, player2, teamType1, teamType2,
+    activeMain  ?? mainTeamData,
+    activeBench ?? benchTeamData,
+  );
 };
 
 const calculateTotalPredictedPoints = (team) => {
