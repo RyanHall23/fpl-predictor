@@ -56,27 +56,10 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
     if (!entryId) return;
 
     try {
-      let eventId;
-      if (selectedGameweek) {
-        // Specific gameweek selected – no need to call bootstrap-static
-        eventId = selectedGameweek;
-      } else {
-        // No specific GW selected: resolve the current event from bootstrap.
-        // Mirror the backend fallback so we always have an event even between GWs
-        // (when the FPL API temporarily clears the is_current flag).
-        const bootstrap = await axios.get('/api/bootstrap-static');
-        const events = bootstrap.data.events || [];
-        const CurrentEvent =
-          events.find(e => e.is_current === true) ||
-          events.find(e => !e.finished) ||
-          events[0];
-        if (!CurrentEvent) throw new Error('No events found in bootstrap data.');
-        eventId = CurrentEvent.id;
-      }
-
-      // Fetch sorted user team from backend with optional gameweek parameter
+      // The /api/entry/:entryId/team endpoint resolves the current gameweek
+      // internally — no separate /api/bootstrap-static call needed.
       const gameweekParam = selectedGameweek ? `?gameweek=${selectedGameweek}` : '';
-      const response = await axios.get(`/api/entry/${entryId}/event/${eventId}/team${gameweekParam}`);
+      const response = await axios.get(`/api/entry/${entryId}/team${gameweekParam}`);
       const { activePlayers: active, reservePlayers: reserve, teamName: fetchedTeamName, gameweek, currentGameweek, isPastGameweek, isFutureGameweek, isActiveGameweek, gameweekData } = response.data;
 
       setGameweekInfo({
@@ -106,12 +89,11 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
 
   // Handle player selection and swapping (only for user's team)
   //
-  // effectiveActive / effectiveReserve are the *displayed* teams after applying
-  // planned transfers and selectOptimalLineup (passed in from App.jsx).  For
-  // future GWs these can differ from activePlayers/reservePlayers because
-  // selectOptimalLineup may promote reserve players or demote active players.
-  // Validation and swap must always operate on the displayed (effective) teams
-  // so that zone membership reflects what the user actually sees on screen.
+  // effectiveActive / effectiveReserve are the *displayed* teams (after any
+  // planned-transfer application).  For future GWs the backend already returns
+  // the optimally selected 11, so these match activePlayers/reservePlayers.
+  // Validation and swap operate on the displayed teams so zone membership
+  // reflects what the user actually sees on screen.
   //
   // @param {Object} player           - The player the user clicked.
   // @param {string} zone             - The effective zone ('active'|'reserve') from the UI.

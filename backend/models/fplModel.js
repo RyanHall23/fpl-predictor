@@ -590,12 +590,19 @@ const buildHighestPredictedTeam = (players, useActualPoints = false) => {
  * Build a user's team preserving their actual picks/formation and return it
  * as a Team entity containing Player entities.
  *
- * @param {Object[]} players       - Enriched FPL player array.
- * @param {Object[]} picks         - FPL API picks for this entry/gameweek.
- * @param {boolean}  useActualPoints - true for past/active GWs, false otherwise.
+ * For future gameweeks the picks come from the user's current GW squad (FPL
+ * does not expose future picks), so we re-run the greedy selection algorithm
+ * on those 15 players using their predicted points for the target GW.  This
+ * ensures the best available 11 start rather than blindly inheriting the
+ * current GW lineup order.
+ *
+ * @param {Object[]} players          - Enriched FPL player array.
+ * @param {Object[]} picks            - FPL API picks for this entry/gameweek.
+ * @param {boolean}  useActualPoints  - true for past/active GWs, false otherwise.
+ * @param {boolean}  isFutureGameweek - true when the target GW is in the future.
  * @returns {Team}
  */
-const buildUserTeam = (players, picks, useActualPoints = false) => {
+const buildUserTeam = (players, picks, useActualPoints = false, isFutureGameweek = false) => {
   if (!Array.isArray(picks) || picks.length === 0) {
     // No picks: fall back to the generic team builder and wrap the result.
     const result = buildTeam(players, picks, { isPastGameweek: useActualPoints });
@@ -622,7 +629,38 @@ const buildUserTeam = (players, picks, useActualPoints = false) => {
     multiplier:    captainPick     ? captainPick.multiplier  : 2,
   };
 
-  // Sort picks by position so slots are assigned in pick order (1=slot1 … 15=slot15).
+  // ── Future GW: re-run greedy selection on the user's 15-player squad ─────
+  //
+  // For future gameweeks the picks reflect the user's CURRENT GW lineup, which
+  // may not be the best 11 for the target GW (predicted points change week to
+  // week).  We delegate to buildTeam so it can greedy-pick the optimal starting
+  // XI from the squad using the target GW's predicted ep_next values.
+  if (isFutureGameweek && !useActualPoints) {
+    const result = buildTeam(players, picks, { filterZeroEp: false, isPastGameweek: false });
+    const activeCount = result.activePlayers.length;
+    const squad = [
+      ...result.activePlayers.map((raw, i) => new Player(raw, {
+        isActive:        true,
+        slot:            i + 1,
+        useActualPoints: false,
+        userTeam:        true,
+        is_captain:      raw.is_captain      ?? false,
+        is_vice_captain: raw.is_vice_captain ?? false,
+        multiplier:      raw.multiplier      ?? 1,
+      })),
+      ...result.reservePlayers.map((raw, i) => new Player(raw, {
+        isActive:        false,
+        slot:            activeCount + 1 + i,
+        useActualPoints: false,
+        userTeam:        true,
+        is_captain:      false,
+        is_vice_captain: raw.is_vice_captain ?? false,
+      })),
+    ];
+    return new Team(squad, { captainInfo: result.captainInfo ?? captainInfo });
+  }
+
+  // ── Current / past GW: preserve the user's actual pick positions ──────────
   const sortedPicks = [...picks].sort((a, b) => a.position - b.position);
 
   const squad = sortedPicks
