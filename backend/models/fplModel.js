@@ -1,6 +1,8 @@
 const dataProvider = require('./dataProvider');
 const predictionEngine = require('./predictionEngine');
 const { validateSubstitution } = require('../utils/substitution');
+const Player = require('../entities/Player');
+const Team   = require('../entities/Team');
 
 // Global toggles — can be overridden via env vars
 // USE_COMPUTED_EP: 'true' | 'false' (prefer computed EP and optionally overwrite ep_next)
@@ -527,63 +529,102 @@ const buildTeam = (players, picks = null, { filterZeroEp = false, includeManager
   return { activePlayers: mainTeam, reservePlayers: bench, captainInfo };
 };
 
-const buildHighestPredictedTeam = (players, isPastGameweek = false) => {
-  // For past gameweeks, use actual points to build the highest scoring team from that week
-  // For future gameweeks, use predictions
-  // filterZeroEp should be false for past gameweeks to include players who didn't score
-  return buildTeam(players, null, { 
-    filterZeroEp: !isPastGameweek, 
-    isPastGameweek 
+/**
+ * Build the optimal ("highest predicted") team for a gameweek and return it
+ * as a Team entity containing Player entities.
+ *
+ * @param {Object[]} players       - Enriched FPL player array.
+ * @param {boolean}  useActualPoints - true for past/active GWs (use event_points),
+ *                                    false for future GWs (use ep_next).
+ * @returns {Team}
+ */
+const buildHighestPredictedTeam = (players, useActualPoints = false) => {
+  // buildTeam selects the best 15 and returns raw arrays
+  const result = buildTeam(players, null, {
+    filterZeroEp: !useActualPoints,
+    isPastGameweek: useActualPoints,
   });
+
+  /**
+   * Bench slots start immediately after the last active slot.
+   * Using the active player count keeps this robust if formation rules ever change
+   * (e.g. squads with managers that sit outside the 1-11/12-15 boundary).
+   */
+  const activeCount = result.activePlayers.length;
+  const squad = [
+    ...result.activePlayers.map((raw, i) => new Player(raw, {
+      isActive:       true,
+      slot:           i + 1,
+      useActualPoints,
+      userTeam:       false,
+    })),
+    ...result.reservePlayers.map((raw, i) => new Player(raw, {
+      isActive:       false,
+      slot:           activeCount + 1 + i,
+      useActualPoints,
+      userTeam:       false,
+    })),
+  ];
+
+  return new Team(squad, { captainInfo: result.captainInfo ?? null });
 };
 
-const buildUserTeam = (players, picks, isPastGameweek = false) => {
+/**
+ * Build a user's team preserving their actual picks/formation and return it
+ * as a Team entity containing Player entities.
+ *
+ * @param {Object[]} players       - Enriched FPL player array.
+ * @param {Object[]} picks         - FPL API picks for this entry/gameweek.
+ * @param {boolean}  useActualPoints - true for past/active GWs, false otherwise.
+ * @returns {Team}
+ */
+const buildUserTeam = (players, picks, useActualPoints = false) => {
   if (!Array.isArray(picks) || picks.length === 0) {
-    // If no picks provided, fall back to regular team building
-    return buildTeam(players, picks, { isPastGameweek });
+    // No picks: fall back to the generic team builder and wrap the result.
+    const result = buildTeam(players, picks, { isPastGameweek: useActualPoints });
+    const squad = [
+      ...result.activePlayers.map((raw, i) => new Player(raw, {
+        isActive: true, slot: i + 1, useActualPoints, userTeam: true,
+      })),
+      ...result.reservePlayers.map((raw, i) => new Player(raw, {
+        isActive: false, slot: 12 + i, useActualPoints, userTeam: true,
+      })),
+    ];
+    return new Team(squad, { captainInfo: result.captainInfo ?? null });
   }
 
-  // For user teams, preserve the original formation from picks
   const playerMap = {};
   players.forEach((p) => { playerMap[p.id] = p; });
-  
-  // Find captain and vice-captain info
-  const captainPick = picks.find(p => p.is_captain);
+
+  const captainPick     = picks.find(p => p.is_captain);
   const viceCaptainPick = picks.find(p => p.is_vice_captain);
-  
+
   const captainInfo = {
-    captainId: captainPick ? captainPick.element : null,
+    captainId:     captainPick     ? captainPick.element     : null,
     viceCaptainId: viceCaptainPick ? viceCaptainPick.element : null,
-    multiplier: captainPick ? captainPick.multiplier : 2
+    multiplier:    captainPick     ? captainPick.multiplier  : 2,
   };
 
-  // Sort picks by position (1-11 main team, 12-15 bench)
-  const sortedPicks = picks.sort((a, b) => a.position - b.position);
-  
-  const mainTeam = [];
-  const bench = [];
-  
-  sortedPicks.forEach(pick => {
-    const player = playerMap[pick.element];
-    if (player) {
-      const enrichedPlayer = {
-        ...player,
-        is_captain: pick.is_captain,
-        is_vice_captain: pick.is_vice_captain,
-        multiplier: pick.multiplier,
-        pick_position: pick.position
-      };
-      
-      // Positions 1-11 are main team, 12-15 are bench
-      if (pick.position <= 11) {
-        mainTeam.push(enrichedPlayer);
-      } else {
-        bench.push(enrichedPlayer);
-      }
-    }
-  });
+  // Sort picks by position so slots are assigned in pick order (1=slot1 … 15=slot15).
+  const sortedPicks = [...picks].sort((a, b) => a.position - b.position);
 
-  return { activePlayers: mainTeam, reservePlayers: bench, captainInfo };
+  const squad = sortedPicks
+    .map(pick => {
+      const raw = playerMap[pick.element];
+      if (!raw) return null;
+      return new Player(raw, {
+        is_captain:     pick.is_captain,
+        is_vice_captain: pick.is_vice_captain,
+        multiplier:     pick.multiplier,
+        isActive:       pick.position <= 11,   // picks 1–11 = starting XI
+        slot:           pick.position,          // 1–15; never changes when isActive flips
+        useActualPoints,
+        userTeam:       true,
+      });
+    })
+    .filter(Boolean);
+
+  return new Team(squad, { captainInfo });
 };
 
 

@@ -312,10 +312,10 @@ const getPredictedTeam = async (req, res) => {
     }
     
     // Build team based on actual points (past/active) or predictions (current/future)
-    const team = fplModel.buildHighestPredictedTeam(players, isPastGameweek || isActiveGameweek, isFutureGameweek, targetEvent);
-    
+    const team = fplModel.buildHighestPredictedTeam(players, isPastGameweek || isActiveGameweek);
+
     res.json({
-      ...team,
+      ...team.toJSON(),
       gameweek: targetEvent,
       currentGameweek: currentEvent.id,
       isPastGameweek,
@@ -396,7 +396,7 @@ const getUserTeam = async (req, res) => {
       players = fplModel.applyAdvancedPredictions(players, fixtures, bootstrap.teams, targetEvent);
     }
     
-    const { activePlayers, reservePlayers, captainInfo } = fplModel.buildUserTeam(players, picksData.picks, isPastGameweek || isActiveGameweek);
+    const team = fplModel.buildUserTeam(players, picksData.picks, isPastGameweek || isActiveGameweek);
 
     // Fetch the entry info for the team name
     let teamName = '';
@@ -409,9 +409,8 @@ const getUserTeam = async (req, res) => {
       teamName = '';
     }
 
-    res.json({ 
-      activePlayers, 
-      reservePlayers, 
+    res.json({
+      ...team.toJSON(),
       teamName,
       gameweek: targetEvent,
       currentGameweek: currentEvent.id,
@@ -419,7 +418,6 @@ const getUserTeam = async (req, res) => {
       isActiveGameweek,
       isFutureGameweek,
       gameweekData: targetEventData,
-      captainInfo
     });
   } catch (error) {
     console.error('Error building user team:', error);

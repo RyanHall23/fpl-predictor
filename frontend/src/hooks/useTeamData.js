@@ -38,25 +38,8 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
         data: gameweekData
       });
       
-      const formatPlayer = (player) => ({
-        name: `${player.first_name} ${player.second_name}`,
-        team: player.team,
-        teamCode: player.team_code,
-        position: player.element_type,
-        // For past/active gameweeks, show actual points; for future, show predictions
-        predictedPoints: (isPastGameweek || isActiveGameweek) ? Math.round(player.event_points) : Math.round(player.ep_next),
-        code: player.code,
-        webName: player.web_name,
-        lastGwPoints: player.event_points,
-        inDreamteam: player.in_dreamteam,
-        totalPoints: player.total_points,
-        user_team: false,
-        opponent: player.opponent_short || '-',
-        is_home: player.is_home,
-        opponents: player.opponents || [] // DGW support
-      });
-      setActivePlayers(active.map(formatPlayer));
-      setReservePlayers(reserve.map(formatPlayer));
+      setActivePlayers(active);
+      setReservePlayers(reserve);
     } catch (error) {
       console.error('Error fetching highest predicted team data:', error);
     }
@@ -105,38 +88,8 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
         data: gameweekData
       });
 
-      const formatPlayer = (player) => {
-        const basePoints = (isPastGameweek || isActiveGameweek) ? player.event_points : player.ep_next;
-        const multiplier = player.multiplier || 1;
-        // Round the base first, then apply the multiplier so that the
-        // result is always a whole number and captain-switching stays consistent.
-        const roundedBase = Math.round(basePoints);
-        const displayPoints = roundedBase * multiplier;
-        
-        return {
-          name: `${player.first_name} ${player.second_name}`,
-          team: player.team,
-          teamCode: player.team_code,
-          position: player.element_type,
-          predictedPoints: displayPoints,
-          basePoints: roundedBase,
-          multiplier: multiplier,
-          is_captain: player.is_captain || false,
-          is_vice_captain: player.is_vice_captain || false,
-          code: player.code,
-          webName: player.web_name,
-          lastGwPoints: player.event_points,
-          inDreamteam: player.in_dreamteam,
-          totalPoints: player.total_points,
-          user_team: true,
-          opponent: player.opponent_short || '-',
-          is_home: player.is_home,
-          opponents: player.opponents || [] // DGW support
-        };
-      };
-
-      setActivePlayers(active.map(formatPlayer));
-      setReservePlayers(reserve.map(formatPlayer));
+      setActivePlayers(active);
+      setReservePlayers(reserve);
       setTeamName(fetchedTeamName || '');
     } catch (error) {
       setTeamName('');
