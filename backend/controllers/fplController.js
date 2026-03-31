@@ -312,10 +312,10 @@ const getPredictedTeam = async (req, res) => {
     }
     
     // Build team based on actual points (past/active) or predictions (current/future)
-    const team = fplModel.buildHighestPredictedTeam(players, isPastGameweek || isActiveGameweek, isFutureGameweek, targetEvent);
-    
+    const team = fplModel.buildHighestPredictedTeam(players, isPastGameweek || isActiveGameweek);
+
     res.json({
-      ...team,
+      ...team.toJSON(),
       gameweek: targetEvent,
       currentGameweek: currentEvent.id,
       isPastGameweek,
@@ -396,7 +396,7 @@ const getUserTeam = async (req, res) => {
       players = fplModel.applyAdvancedPredictions(players, fixtures, bootstrap.teams, targetEvent);
     }
     
-    const { activePlayers, reservePlayers, captainInfo } = fplModel.buildUserTeam(players, picksData.picks, isPastGameweek || isActiveGameweek);
+    const team = fplModel.buildUserTeam(players, picksData.picks, isPastGameweek || isActiveGameweek, isFutureGameweek);
 
     // Fetch the entry info for the team name
     let teamName = '';
@@ -409,9 +409,8 @@ const getUserTeam = async (req, res) => {
       teamName = '';
     }
 
-    res.json({ 
-      activePlayers, 
-      reservePlayers, 
+    res.json({
+      ...team.toJSON(),
       teamName,
       gameweek: targetEvent,
       currentGameweek: currentEvent.id,
@@ -419,7 +418,105 @@ const getUserTeam = async (req, res) => {
       isActiveGameweek,
       isFutureGameweek,
       gameweekData: targetEventData,
-      captainInfo
+    });
+  } catch (error) {
+    console.error('Error building user team:', error);
+    res.status(500).json({ error: 'Error building user team' });
+  }
+};
+
+/**
+ * GET /api/entry/:entryId/team[?gameweek=X]
+ *
+ * Variant of getUserTeam that does not require an event ID in the URL.
+ * The current gameweek is resolved internally from bootstrap-static, so the
+ * frontend never needs to call /api/bootstrap-static just to discover the
+ * current event.  An optional `gameweek` query parameter overrides the
+ * resolved event for viewing past / future GWs.
+ */
+const getUserTeamForEntry = async (req, res) => {
+  const { entryId } = req.params;
+  const { gameweek } = req.query;
+
+  if (!/^\d+$/.test(entryId)) {
+    return res.status(400).json({ error: 'Invalid entryId' });
+  }
+
+  try {
+    const bootstrap = await fplModel.fetchBootstrapStatic();
+    const currentEvent = bootstrap.events.find(e => e.is_current) || bootstrap.events.find(e => !e.finished) || bootstrap.events[0];
+    if (!currentEvent) {
+      return res.status(500).json({ error: 'Could not determine current gameweek' });
+    }
+
+    let targetEvent;
+    if (gameweek !== undefined) {
+      if (!/^\d+$/.test(gameweek)) {
+        return res.status(400).json({ error: 'Invalid gameweek' });
+      }
+      targetEvent = parseInt(gameweek, 10);
+    } else {
+      targetEvent = currentEvent.id;
+    }
+
+    if (targetEvent < 1 || targetEvent > 38) {
+      return res.status(400).json({ error: 'Gameweek must be between 1 and 38' });
+    }
+
+    const fixtures = await fplModel.fetchFixtures();
+    const targetEventData = bootstrap.events.find(e => e.id === targetEvent);
+    const isFutureGameweek = targetEvent > currentEvent.id;
+
+    // For future GWs use current picks (future picks don't exist in the FPL API)
+    const picksEventId = isFutureGameweek ? currentEvent.id : targetEvent;
+
+    let picksData;
+    try {
+      picksData = await fplModel.fetchPlayerPicks(entryId, picksEventId);
+    } catch (picksError) {
+      console.error(`Error fetching picks for gameweek ${picksEventId}:`, picksError.message);
+      return res.status(500).json({ error: 'Error fetching team picks' });
+    }
+
+    let players = bootstrap.elements.map((p) => ({
+      ...p,
+      ep_next: parseFloat(p.ep_next) || 0,
+    }));
+
+    const isPastGameweek = !!(targetEventData && targetEventData.finished);
+    const isActiveGameweek = !!(targetEventData && targetEventData.is_current && !targetEventData.finished);
+
+    if (isPastGameweek || isActiveGameweek) {
+      players = await fplModel.enrichPlayersWithGameweekStats(players, targetEvent);
+    }
+
+    players = fplModel.enrichPlayersWithOpponents(players, fixtures, bootstrap.teams, targetEvent);
+
+    if (!isPastGameweek && !isActiveGameweek) {
+      players = fplModel.applyAdvancedPredictions(players, fixtures, bootstrap.teams, targetEvent);
+    }
+
+    const team = fplModel.buildUserTeam(players, picksData.picks, isPastGameweek || isActiveGameweek, isFutureGameweek);
+
+    let teamName = '';
+    try {
+      const entryData = await dataProvider.fetchEntry(entryId);
+      if (entryData.player_first_name) {
+        teamName = `${entryData.player_first_name} ${entryData.player_last_name}`;
+      }
+    } catch {
+      teamName = '';
+    }
+
+    res.json({
+      ...team.toJSON(),
+      teamName,
+      gameweek: targetEvent,
+      currentGameweek: currentEvent.id,
+      isPastGameweek,
+      isActiveGameweek,
+      isFutureGameweek,
+      gameweekData: targetEventData,
     });
   } catch (error) {
     console.error('Error building user team:', error);
@@ -1006,6 +1103,7 @@ module.exports = {
   getLiveGameweek,
   getPredictedTeam,
   getUserTeam,
+  getUserTeamForEntry,
   getUserProfile,
   getAllPlayersEnriched,
   validateSwap,

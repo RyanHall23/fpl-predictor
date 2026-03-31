@@ -21,6 +21,7 @@ app.get('/api/entry/:entryId/event/:eventId/picks', apiLimiter, fplController.ge
 app.get('/api/element-summary/:playerId', apiLimiter, fplController.getElementSummary);
 app.get('/api/event/:eventId/live', apiLimiter, fplController.getLiveGameweek);
 app.get('/api/predicted-team', apiLimiter, fplController.getPredictedTeam);
+app.get('/api/entry/:entryId/team', apiLimiter, fplController.getUserTeamForEntry);
 app.get('/api/entry/:entryId/event/:eventId/team', apiLimiter, fplController.getUserTeam);
 app.get('/api/entry/:entryId/profile', apiLimiter, fplController.getUserProfile);
 app.get('/api/leagues-classic/:leagueId/standings', apiLimiter, fplController.getLeagueStandings);
