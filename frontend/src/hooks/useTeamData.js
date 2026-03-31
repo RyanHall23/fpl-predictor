@@ -136,8 +136,13 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
   const handlePlayerClick = isHighestPredictedTeam
   ? undefined
   : async (player, teamType) => {
+      // For future GWs, effectiveMainTeam may differ from mainTeamData (auto-subs
+      // can promote bench players or demote main players).  Always resolve the true
+      // zone from raw state so that backend validation and swapPlayers stay in sync.
+      const rawTeamType = mainTeamData.some(p => p.code === player.code) ? 'main' : 'bench';
+
       if (selectedPlayer === null) {
-        setSelectedPlayer({ player, teamType });
+        setSelectedPlayer({ player, teamType: rawTeamType });
       } else {
         // If clicking the same player, deselect them
         if (selectedPlayer.player.code === player.code) {
@@ -152,7 +157,7 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
             player1: selectedPlayer.player,
             player2: player,
             teamType1: selectedPlayer.teamType,
-            teamType2: teamType,
+            teamType2: rawTeamType,
             mainTeam: mainTeamData,
             benchTeam: benchTeamData
           });
@@ -162,7 +167,7 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
               selectedPlayer.player,
               player,
               selectedPlayer.teamType,
-              teamType,
+              rawTeamType,
             );
             setSelectedPlayer(null);
             setSnackbar({ message: '', key: Date.now() });
@@ -177,7 +182,7 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
             selectedPlayer.player,
             player,
             selectedPlayer.teamType,
-            teamType
+            rawTeamType
           );
 
           if (swapResult.valid) {
@@ -185,7 +190,7 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
               selectedPlayer.player,
               player,
               selectedPlayer.teamType,
-              teamType,
+              rawTeamType,
             );
             setSelectedPlayer(null);
             setSnackbar({ message: '', key: Date.now() });
