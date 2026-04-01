@@ -3,6 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const fplController = require('./controllers/fplController');
+const assistantController = require('./controllers/assistantController');
 const { apiLimiter } = require('./middleware/rateLimiter');
 const app = express();
 const port = process.env.PORT || 5000;
@@ -28,6 +29,11 @@ app.get('/api/leagues-classic/:leagueId/standings', apiLimiter, fplController.ge
 app.get('/api/entry/:entryId/event/:eventId/recommended-transfers', apiLimiter, fplController.getRecommendedTransfers);
 app.post('/api/validate-swap', apiLimiter, fplController.validateSwap);
 app.post('/api/available-transfers/:playerCode', apiLimiter, fplController.getAvailableTransfers);
+
+// Assistant Manager hints
+// NOTE: /general must be registered before /:entryId to avoid route shadowing
+app.get('/api/assistant/general', apiLimiter, assistantController.getAssistantHints);
+app.get('/api/assistant/:entryId', apiLimiter, assistantController.getAssistantHints);
 
 // Serve built Vite frontend from the same process
 const distPath = path.join(__dirname, '..', 'frontend', 'dist');
