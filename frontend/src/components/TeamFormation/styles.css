@@ -176,6 +176,23 @@ html[data-mui-color-scheme='light'] body .bench-paper::after {
   border: 1px dashed rgba(0, 0, 0, 0.15);
 }
 
+/* Win2k theme */
+body.win2k-theme .bench-paper {
+  background: #d4d0c8;
+  border-radius: 0;
+  border: 2px solid;
+  border-color: #ffffff #808080 #808080 #ffffff;
+  box-shadow: inset -1px -1px 0 #000000, inset 1px 1px 0 #dfdfdf;
+}
+
+body.win2k-theme .bench-paper::before {
+  background: none;
+}
+
+body.win2k-theme .bench-paper::after {
+  border: 1px dashed #808080;
+}
+
 /* Mobile responsive - small screens */
 @media (max-width: 600px) {
   body .main-paper {

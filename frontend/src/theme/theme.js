@@ -1,5 +1,190 @@
 import { createTheme } from '@mui/material/styles';
 
+// Windows 2000 retro easter-egg theme
+export const win2kTheme = createTheme({
+  palette: {
+    mode: 'light',
+    primary: {
+      main: '#0000a8',
+      light: '#1212c8',
+      dark: '#000080',
+      contrastText: '#ffffff',
+    },
+    secondary: {
+      main: '#0000a8',
+      light: '#1212c8',
+      dark: '#000080',
+      contrastText: '#ffffff',
+    },
+    background: {
+      default: '#008080',
+      paper: '#d4d0c8',
+      gradient: '#d4d0c8',
+      field: 'repeating-linear-gradient(0deg, #2d572f, #2d572f 20px, #3a6e3c 20px, #3a6e3c 40px)',
+      fieldStripes: 'repeating-linear-gradient(0deg, #2d572f, #2d572f 20px, #3a6e3c 20px, #3a6e3c 40px)',
+    },
+    text: {
+      primary: '#000000',
+      secondary: '#444444',
+    },
+    divider: '#808080',
+    success: {
+      main: '#008000',
+    },
+    error: {
+      main: '#ff0000',
+    },
+    warning: {
+      main: '#808000',
+    },
+    info: {
+      main: '#0000ff',
+    },
+  },
+  typography: {
+    fontFamily: '"Tahoma", "MS Sans Serif", "Arial", sans-serif',
+    fontSize: 12,
+    h6: {
+      fontWeight: 700,
+      fontSize: '0.9rem',
+    },
+  },
+  shape: {
+    borderRadius: 0,
+  },
+  components: {
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          backgroundImage: 'none',
+          backgroundColor: '#d4d0c8',
+          borderRadius: 0,
+          border: '2px solid',
+          borderColor: '#ffffff #808080 #808080 #ffffff',
+          boxShadow: 'inset -1px -1px 0 #000000, inset 1px 1px 0 #dfdfdf',
+        },
+      },
+    },
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          borderRadius: 0,
+          backgroundColor: '#d4d0c8',
+          border: '2px solid',
+          borderColor: '#ffffff #808080 #808080 #ffffff',
+          boxShadow: 'inset -1px -1px 0 #000000, inset 1px 1px 0 #dfdfdf',
+        },
+      },
+    },
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          textTransform: 'none',
+          borderRadius: 0,
+          backgroundColor: '#d4d0c8',
+          color: '#000000',
+          border: '2px solid',
+          borderColor: '#ffffff #808080 #808080 #ffffff',
+          boxShadow: 'inset -1px -1px 0 #000000, inset 1px 1px 0 #dfdfdf',
+          fontFamily: '"Tahoma", "MS Sans Serif", "Arial", sans-serif',
+          fontSize: '0.75rem',
+          minHeight: '23px',
+          '&:hover': {
+            backgroundColor: '#d4d0c8',
+          },
+          '&:active': {
+            borderColor: '#808080 #ffffff #ffffff #808080',
+            boxShadow: 'inset 1px 1px 0 #000000, inset -1px -1px 0 #dfdfdf',
+          },
+          '&.MuiButton-contained': {
+            backgroundColor: '#d4d0c8',
+            color: '#000000',
+          },
+          '&.MuiButton-outlined': {
+            backgroundColor: '#d4d0c8',
+            borderColor: '#ffffff #808080 #808080 #ffffff',
+          },
+        },
+      },
+    },
+    MuiAppBar: {
+      styleOverrides: {
+        root: {
+          backgroundImage: 'none',
+          backgroundColor: '#0000a8',
+          borderRadius: 0,
+          boxShadow: 'none',
+        },
+      },
+    },
+    MuiIconButton: {
+      styleOverrides: {
+        root: {
+          borderRadius: 0,
+          color: '#000000',
+        },
+      },
+    },
+    MuiSelect: {
+      styleOverrides: {
+        root: {
+          borderRadius: 0,
+          backgroundColor: '#ffffff',
+          fontFamily: '"Tahoma", "MS Sans Serif", "Arial", sans-serif',
+          fontSize: '0.75rem',
+        },
+      },
+    },
+    MuiTextField: {
+      styleOverrides: {
+        root: {
+          '& .MuiOutlinedInput-root': {
+            borderRadius: 0,
+            backgroundColor: '#ffffff',
+          },
+        },
+      },
+    },
+    MuiDialog: {
+      styleOverrides: {
+        paper: {
+          borderRadius: 0,
+          backgroundColor: '#d4d0c8',
+          border: '2px solid',
+          borderColor: '#ffffff #808080 #808080 #ffffff',
+        },
+      },
+    },
+    MuiDialogTitle: {
+      styleOverrides: {
+        root: {
+          backgroundColor: '#0000a8',
+          color: '#ffffff',
+          fontFamily: '"Tahoma", "MS Sans Serif", "Arial", sans-serif',
+          fontWeight: 700,
+          fontSize: '0.85rem',
+          padding: '4px 8px',
+        },
+      },
+    },
+    MuiChip: {
+      styleOverrides: {
+        root: {
+          borderRadius: 0,
+        },
+      },
+    },
+    MuiMenuItem: {
+      styleOverrides: {
+        root: {
+          fontFamily: '"Tahoma", "MS Sans Serif", "Arial", sans-serif',
+          fontSize: '0.75rem',
+        },
+      },
+    },
+  },
+});
+
 // Dark mode theme (default) based on UserProfilePane styling
 export const darkTheme = createTheme({
   palette: {

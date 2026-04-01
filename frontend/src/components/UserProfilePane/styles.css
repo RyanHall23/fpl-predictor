@@ -47,3 +47,19 @@ html[data-mui-color-scheme='light'] .MuiPaper-root.user-profile-pane .MuiDivider
 html[data-mui-color-scheme='light'] .MuiPaper-root.user-profile-pane .MuiButton-root:hover {
   background-color: rgba(106, 27, 154, 0.1);
 }
+
+/* Win2k theme */
+body.win2k-theme .MuiPaper-root.user-profile-pane {
+  background: #d4d0c8;
+  color: #000000;
+  border-radius: 0;
+  box-shadow: inset -1px -1px 0 #000000, inset 1px 1px 0 #dfdfdf;
+}
+
+body.win2k-theme .MuiPaper-root.user-profile-pane .MuiDivider-root {
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+body.win2k-theme .MuiPaper-root.user-profile-pane .MuiButton-root:hover {
+  background-color: rgba(0, 0, 128, 0.12);
+}
