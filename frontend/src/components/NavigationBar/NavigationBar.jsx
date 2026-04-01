@@ -66,16 +66,20 @@ const NavigationBar = ({
 
   const handleMyTeamClick = () => {
     onSwitchTeamView(TEAM_VIEW.USER);
-    const next = myTeamClickCount + 1;
-    if (next >= 5) {
-      toggleWin2k();
-      setMyTeamClickCount(0);
+    setMyTeamClickCount((prev) => {
+      const next = prev + 1;
       clearTimeout(myTeamClickTimerRef.current);
-    } else {
-      setMyTeamClickCount(next);
-      clearTimeout(myTeamClickTimerRef.current);
-      myTeamClickTimerRef.current = setTimeout(() => setMyTeamClickCount(0), MY_TEAM_CLICK_RESET_MS);
-    }
+      if (next >= 5) {
+        toggleWin2k();
+        myTeamClickTimerRef.current = null;
+        return 0;
+      }
+      myTeamClickTimerRef.current = setTimeout(
+        () => setMyTeamClickCount(0),
+        MY_TEAM_CLICK_RESET_MS
+      );
+      return next;
+    });
   };
 
   const handleSaveTeamId = () => {

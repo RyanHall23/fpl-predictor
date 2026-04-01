@@ -28,11 +28,23 @@ export const ThemeProvider = ({ children }) => {
 
   // Apply/remove body class for win2k CSS overrides
   useEffect(() => {
-    if (mode === 'win2k') {
-      document.body.classList.add('win2k-theme');
-    } else {
-      document.body.classList.remove('win2k-theme');
+    // Guard for non-browser environments (e.g., SSR, some tests)
+    if (typeof document === 'undefined' || !document.body || !document.body.classList) {
+      return () => {};
     }
+
+    const { classList } = document.body;
+
+    if (mode === 'win2k') {
+      classList.add('win2k-theme');
+    } else {
+      classList.remove('win2k-theme');
+    }
+
+    // Cleanup to ensure the class is removed on unmount or mode change
+    return () => {
+      classList.remove('win2k-theme');
+    };
   }, [mode]);
 
   const toggleTheme = () => {
