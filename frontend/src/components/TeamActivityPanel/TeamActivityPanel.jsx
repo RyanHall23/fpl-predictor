@@ -5,6 +5,7 @@ import { useTheme } from '@mui/material/styles';
 import axios from '../../api';
 import RecommendedTransfers from '../RecommendedTransfers';
 import PlannedTransfers from '../PlannedTransfers';
+import AssistantManagerPanel from '../AssistantManagerPanel';
 
 const TeamActivityPanel = ({
   entryId,
@@ -235,6 +236,23 @@ const TeamActivityPanel = ({
             currentGameweek={ currentGameweek }
             compact={ true }
             voidedTransferIds={ voidedTransferIds }
+          />
+        </Paper>
+      ) }
+
+      { /* Assistant Manager – always shown (general hints if no entryId) */ }
+      { currentGameweek && (
+        <Paper
+          sx={ {
+            backgroundColor: theme.palette.background.paper,
+            borderRadius: 1,
+            p: 2,
+            flex: '0 0 auto',
+          } }
+        >
+          <AssistantManagerPanel
+            entryId={ viewingOpponentId ? undefined : entryId }
+            currentGameweek={ currentGameweek }
           />
         </Paper>
       ) }
