@@ -13,7 +13,7 @@ vi.mock('./api', () => ({
 
 // Mock ThemeContext
 vi.mock('./theme/ThemeContext', () => ({
-  useThemeMode: () => ({ mode: 'light', toggleTheme: vi.fn() }),
+  useThemeMode: () => ({ mode: 'light', toggleTheme: vi.fn(), toggleWin2k: vi.fn() }),
 }));
 
 beforeEach(() => {

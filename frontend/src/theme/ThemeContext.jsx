@@ -21,6 +21,12 @@ export const ThemeProvider = ({ children }) => {
     return savedMode || 'dark';
   });
 
+  // Track the last non-win2k mode so we can restore it when disabling win2k
+  const [preWin2kMode, setPreWin2kMode] = useState(() => {
+    const savedMode = localStorage.getItem('themeMode');
+    return savedMode && savedMode !== 'win2k' ? savedMode : 'dark';
+  });
+
   // Save to localStorage whenever mode changes
   useEffect(() => {
     localStorage.setItem('themeMode', mode);
@@ -50,12 +56,20 @@ export const ThemeProvider = ({ children }) => {
   const toggleTheme = () => {
     setMode((prevMode) => {
       if (prevMode === 'win2k') return 'dark';
-      return prevMode === 'dark' ? 'light' : 'dark';
+      const next = prevMode === 'dark' ? 'light' : 'dark';
+      setPreWin2kMode(next);
+      return next;
     });
   };
 
   const toggleWin2k = () => {
-    setMode((prevMode) => (prevMode === 'win2k' ? 'dark' : 'win2k'));
+    setMode((prevMode) => {
+      if (prevMode === 'win2k') {
+        return preWin2kMode;
+      }
+      setPreWin2kMode(prevMode);
+      return 'win2k';
+    });
   };
 
   const theme = useMemo(() => {
