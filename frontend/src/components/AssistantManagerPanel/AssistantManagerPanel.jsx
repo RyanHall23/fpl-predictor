@@ -117,7 +117,7 @@ const AssistantManagerPanel = ({ entryId, currentGameweek }) => {
               <Typography
                 variant='body2'
                 color='text.secondary'
-                sx={ { lineHeight: 1.55 } }
+                sx={ { lineHeight: 1.55, whiteSpace: 'pre-line' } }
               >
                 { hint.message }
               </Typography>
