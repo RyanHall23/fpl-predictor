@@ -340,6 +340,129 @@ html[data-mui-color-scheme='light'] body .captain-button:hover {
   border-color: rgba(106, 27, 154, 0.5);
 }
 
+/* Win2k theme */
+body.win2k-theme .player-card {
+  background: #d4d0c8;
+  border-radius: 0;
+  border: 2px solid;
+  border-color: #ffffff #808080 #808080 #ffffff;
+  box-shadow: inset -1px -1px 0 #000000, inset 1px 1px 0 #dfdfdf;
+}
+
+body.win2k-theme .player-card:hover {
+  transform: none;
+  box-shadow: inset -1px -1px 0 #000000, inset 1px 1px 0 #dfdfdf;
+}
+
+body.win2k-theme .player-card-selected {
+  border: 3px solid #000080 !important;
+  box-shadow: inset -1px -1px 0 #000000, inset 1px 1px 0 #dfdfdf;
+}
+
+body.win2k-theme .player-card-selected:hover {
+  transform: none;
+  box-shadow: inset -1px -1px 0 #000000, inset 1px 1px 0 #dfdfdf;
+}
+
+body.win2k-theme .player-card-valid-target {
+  border: 3px solid #008000 !important;
+  box-shadow: inset -1px -1px 0 #000000, inset 1px 1px 0 #dfdfdf;
+}
+
+body.win2k-theme .player-card-valid-target:hover {
+  transform: none;
+  box-shadow: inset -1px -1px 0 #000000, inset 1px 1px 0 #dfdfdf;
+}
+
+body.win2k-theme .player-name {
+  color: #000000;
+  font-family: "Tahoma", "MS Sans Serif", "Arial", sans-serif;
+}
+
+body.win2k-theme .points-display {
+  color: #0000a8;
+  text-shadow: none;
+}
+
+body.win2k-theme .opponent-display {
+  color: #000000;
+  background: rgba(0, 0, 128, 0.08);
+}
+
+body.win2k-theme .info-label {
+  color: #0000a8;
+}
+
+body.win2k-theme .dreamteam-icon {
+  color: #0000a8;
+  filter: none;
+}
+
+body.win2k-theme .action-button-small {
+  color: #000000 !important;
+  background: #d4d0c8;
+  border-radius: 0;
+  border: 2px solid;
+  border-color: #ffffff #808080 #808080 #ffffff;
+  box-shadow: inset -1px -1px 0 #000000, inset 1px 1px 0 #dfdfdf;
+}
+
+body.win2k-theme .action-button-small:hover {
+  background-color: #e0ddd8;
+}
+
+body.win2k-theme .action-button-small:active {
+  border-color: #808080 #ffffff #ffffff #808080;
+  box-shadow: inset 1px 1px 0 #000000, inset -1px -1px 0 #dfdfdf;
+}
+
+body.win2k-theme .action-button-small.substitute-button {
+  background: #d4d0c8;
+  color: #000000 !important;
+  border: 2px solid;
+  border-color: #ffffff #808080 #808080 #ffffff;
+}
+
+body.win2k-theme .action-button-small.substitute-button:hover {
+  background: #e0ddd8;
+  border-color: #ffffff #808080 #808080 #ffffff;
+}
+
+body.win2k-theme .action-button-small.transfer-button {
+  background: #d4d0c8;
+  color: #000000 !important;
+  border: 2px solid;
+  border-color: #ffffff #808080 #808080 #ffffff;
+}
+
+body.win2k-theme .action-button-small.transfer-button:hover {
+  background: #e0ddd8;
+  border-color: #ffffff #808080 #808080 #ffffff;
+}
+
+body.win2k-theme .captain-button {
+  background: #d4d0c8;
+  color: #0000a8 !important;
+  border: 2px solid;
+  border-color: #ffffff #808080 #808080 #ffffff;
+}
+
+body.win2k-theme .captain-button:hover {
+  background: #e0ddd8;
+  border-color: #ffffff #808080 #808080 #ffffff;
+}
+
+body.win2k-theme .sync-icon {
+  color: #000000;
+}
+
+/* Mobile responsive - win2k theme */
+@media (max-width: 600px) {
+  body.win2k-theme .player-card {
+    border-radius: 0;
+  }
+}
+
 /* Mobile responsive - small screens */
 @media (max-width: 600px) {
   body .player-card {

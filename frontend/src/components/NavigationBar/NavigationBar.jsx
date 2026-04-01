@@ -50,6 +50,7 @@ const NavigationBar = ({
   const [teamIdInput, setTeamIdInput] = React.useState('');
   const [myTeamClickCount, setMyTeamClickCount] = React.useState(0);
   const myTeamClickTimerRef = React.useRef(null);
+  const MY_TEAM_CLICK_RESET_MS = 2000;
   const isValidTeamId = (val) => /^\d+$/.test(val);
 
   React.useEffect(() => {
@@ -73,7 +74,7 @@ const NavigationBar = ({
     } else {
       setMyTeamClickCount(next);
       clearTimeout(myTeamClickTimerRef.current);
-      myTeamClickTimerRef.current = setTimeout(() => setMyTeamClickCount(0), 2000);
+      myTeamClickTimerRef.current = setTimeout(() => setMyTeamClickCount(0), MY_TEAM_CLICK_RESET_MS);
     }
   };
 

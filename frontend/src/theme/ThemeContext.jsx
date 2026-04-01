@@ -26,6 +26,15 @@ export const ThemeProvider = ({ children }) => {
     localStorage.setItem('themeMode', mode);
   }, [mode]);
 
+  // Apply/remove body class for win2k CSS overrides
+  useEffect(() => {
+    if (mode === 'win2k') {
+      document.body.classList.add('win2k-theme');
+    } else {
+      document.body.classList.remove('win2k-theme');
+    }
+  }, [mode]);
+
   const toggleTheme = () => {
     setMode((prevMode) => {
       if (prevMode === 'win2k') return 'dark';
