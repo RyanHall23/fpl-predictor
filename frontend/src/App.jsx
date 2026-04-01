@@ -90,6 +90,76 @@ const App = () => {
     );
   }, [plannedTransfers, activePlayers, reservePlayers, currentGameweek, isHighestPredictedTeam]);
 
+  // When viewing a future gameweek, overlay planned transfers onto the displayed squad.
+  // Transfers are applied cumulatively in gameweek order (e.g. GW32 applied before GW33).
+  // This only affects display – the real activePlayers/reservePlayers remain unchanged.
+  const { effectiveActivePlayers, effectiveReservePlayers } = useMemo(() => {
+    if (!gameweekInfo?.isFuture || isHighestPredictedTeam || !currentGameweek) {
+      return { effectiveActivePlayers: activePlayers, effectiveReservePlayers: reservePlayers };
+    }
+
+    const targetGW = gameweekInfo.selected;
+
+    // Only apply transfers scheduled for future gameweeks up to the viewed one.
+    // voidedTransferIds only tracks past-GW transfers so the check is omitted here.
+    const applicableTransfers = plannedTransfers
+      .filter(t => t.gameweek > currentGameweek && t.gameweek <= targetGW)
+      .sort((a, b) => a.gameweek - b.gameweek);
+
+    if (applicableTransfers.length === 0) {
+      return { effectiveActivePlayers: activePlayers, effectiveReservePlayers: reservePlayers };
+    }
+
+    let newActive = [...activePlayers];
+    let newReserve = [...reservePlayers];
+
+    for (const transfer of applicableTransfers) {
+      const playerInData = allPlayers.find(p => p.code === transfer.playerIn.code);
+      if (!playerInData) continue;
+
+      // Base points come from ep_next on the enriched allPlayers element.
+      const basePoints = Math.round(parseFloat(playerInData.ep_next) || 0);
+
+      const activeIdx = newActive.findIndex(p => p.code === transfer.playerOut.code);
+      if (activeIdx !== -1) {
+        const old = newActive[activeIdx];
+        const multiplier = old.multiplier || 1;
+        newActive = [...newActive];
+        newActive[activeIdx] = {
+          ...playerInData,
+          isActive: old.isActive,
+          slot: old.slot,
+          user_team: old.user_team,
+          is_captain: old.is_captain,
+          is_vice_captain: old.is_vice_captain,
+          multiplier,
+          basePoints,
+          predictedPoints: basePoints * multiplier,
+        };
+        continue;
+      }
+
+      const reserveIdx = newReserve.findIndex(p => p.code === transfer.playerOut.code);
+      if (reserveIdx !== -1) {
+        const old = newReserve[reserveIdx];
+        newReserve = [...newReserve];
+        newReserve[reserveIdx] = {
+          ...playerInData,
+          isActive: old.isActive,
+          slot: old.slot,
+          user_team: old.user_team,
+          is_captain: old.is_captain,
+          is_vice_captain: old.is_vice_captain,
+          multiplier: 1,
+          basePoints,
+          predictedPoints: basePoints,
+        };
+      }
+    }
+
+    return { effectiveActivePlayers: newActive, effectiveReservePlayers: newReserve };
+  }, [gameweekInfo, isHighestPredictedTeam, currentGameweek, plannedTransfers, activePlayers, reservePlayers, allPlayers]);
+
   // Handle setting team ID (saves to localStorage)
   const handleSetTeamId = (teamId) => {
     if (teamId) {
@@ -151,8 +221,8 @@ const App = () => {
         selectedGameweek={ selectedGameweek }
         setSelectedGameweek={ setSelectedGameweek }
         currentGameweek={ currentGameweek }
-        mainPoints={ calculateTotalPredictedPoints(activePlayers) }
-        benchPoints={ calculateTotalPredictedPoints(reservePlayers) }
+        mainPoints={ calculateTotalPredictedPoints(effectiveActivePlayers) }
+        benchPoints={ calculateTotalPredictedPoints(effectiveReservePlayers) }
         isPast={ gameweekInfo?.isPast }
         isActive={ gameweekInfo?.isActive }
       />
@@ -174,11 +244,11 @@ const App = () => {
               </Box>
             ) }
             <TeamFormation
-              activePlayers={ activePlayers }
-              reservePlayers={ reservePlayers }
-              onPlayerClick={ handlePlayerClick || (() => {}) }
+              activePlayers={ effectiveActivePlayers }
+              reservePlayers={ effectiveReservePlayers }
+              onPlayerClick={ (player, zone) => handlePlayerClick?.(player, zone, effectiveActivePlayers, effectiveReservePlayers) }
               selectedPlayer={ selectedPlayer }
-              team={ [...activePlayers, ...reservePlayers] }
+              team={ [...effectiveActivePlayers, ...effectiveReservePlayers] }
               allPlayers={ allPlayers }
               isHighestPredictedTeam={ isHighestPredictedTeam }
               onSetCaptain={ !isHighestPredictedTeam ? setCaptain : undefined }
@@ -186,7 +256,7 @@ const App = () => {
               onAddPlannedTransfer={ !isHighestPredictedTeam ? addPlannedTransfer : undefined }
               onTransfer={ (playerOut, playerIn, gameweek) => {
                 // Prevent duplicate: do not allow transfer if playerIn is already in the team
-                const playerInExists = [...activePlayers, ...reservePlayers].some(p => p.code === playerIn.code);
+                const playerInExists = [...effectiveActivePlayers, ...effectiveReservePlayers].some(p => p.code === playerIn.code);
                 if (playerInExists) {
                   return;
                 }
