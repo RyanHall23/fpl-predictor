@@ -18,11 +18,5 @@
     "concurrently": "^9.2.1",
     "eslint": "^10.1.0",
     "eslint-plugin-react": "^7.37.5"
-  },
-  "dependencies": {
-    "@mui/icons-material": "^7.3.9",
-    "@mui/material": "^7.3.9",
-    "prop-types": "^15.8.1",
-    "react": "^19.2.4"
   }
 }

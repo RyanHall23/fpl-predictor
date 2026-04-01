@@ -3,7 +3,6 @@ import PropTypes from 'prop-types';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Divider from '@mui/material/Divider';
-import { useTheme } from '@mui/material/styles';
 import UserProfilePane from '../UserProfilePane/UserProfilePane';
 import InvitationLeagueView from '../InvitationLeagueView/InvitationLeagueView';
 import FixturesPanel from '../FixturesPanel';
@@ -17,7 +16,6 @@ const RightPanel = ({
   currentGameweek,
   selectedGameweek,
 }) => {
-  const theme = useTheme();
   const displayGameweek = selectedGameweek || currentGameweek;
 
   return (
