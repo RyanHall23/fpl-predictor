@@ -65,11 +65,38 @@ const getAssistantHints = async (req, res) => {
       gwPlayers.forEach((p) => {
         if (!playerFixtureRun[p.id]) playerFixtureRun[p.id] = [];
         const hasFixture = Array.isArray(p.opponents) ? p.opponents.length > 0 : !!p.opponent_short;
+
+        let difficulty = p.difficulty || 3;
+        let opponent = p.opponent_short || null;
+
+        if (Array.isArray(p.opponents) && p.opponents.length > 0) {
+          const validDifficulties = p.opponents
+            .map((opp) => {
+              if (typeof opp.difficulty === 'number') return opp.difficulty;
+              const parsed = parseFloat(opp.difficulty);
+              return Number.isFinite(parsed) ? parsed : null;
+            })
+            .filter((d) => d !== null);
+
+          if (validDifficulties.length > 0) {
+            const total = validDifficulties.reduce((sum, d) => sum + d, 0);
+            difficulty = total / validDifficulties.length;
+          }
+
+          const opponentLabels = p.opponents
+            .map((opp) => opp.opponent_short || opp.team_short || '')
+            .filter(Boolean);
+
+          if (opponentLabels.length > 0) {
+            opponent = opponentLabels.join(' / ');
+          }
+        }
+
         playerFixtureRun[p.id].push({
           gameweek: gw,
-          difficulty: p.difficulty || 3,
+          difficulty,
           hasFixture,
-          opponent: p.opponent_short || null,
+          opponent,
         });
       });
     }

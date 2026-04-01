@@ -251,7 +251,7 @@ const TeamActivityPanel = ({
           } }
         >
           <AssistantManagerPanel
-            entryId={ currentEntryId }
+            entryId={ viewingOpponentId ? undefined : entryId }
             currentGameweek={ currentGameweek }
           />
         </Paper>
