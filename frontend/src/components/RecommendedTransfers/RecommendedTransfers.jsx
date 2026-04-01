@@ -243,7 +243,7 @@ const RecommendedTransfers = ({ entryId, currentGameweek, compact = false }) => 
             }
 
             return (
-              <TableContainer component={ Paper } sx={ { backgroundColor: theme.palette.mode === 'dark' ? '#1e2127' : '#ffffff' } }>
+              <TableContainer component={ Paper } sx={ { backgroundColor: theme.palette.background.paper } }>
                 <Table size='small'>
                   <TableBody>
                     { displayRecs.map((rec, idx) => {

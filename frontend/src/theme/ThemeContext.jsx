@@ -32,6 +32,13 @@ export const ThemeProvider = ({ children }) => {
 
   const theme = useMemo(() => (mode === 'dark' ? darkTheme : lightTheme), [mode]);
 
+  // Apply Win2k class to document for any remaining legacy CSS selectors
+  React.useEffect(() => {
+    document.documentElement.setAttribute('data-win2k', 'true');
+    // Remove the MUI color-scheme attribute so it doesn't override our global styles
+    document.documentElement.removeAttribute('data-mui-color-scheme');
+  }, []);
+
   return (
     <ThemeContext.Provider value={ { mode, toggleTheme } }>
       <MuiThemeProvider theme={ theme }>
