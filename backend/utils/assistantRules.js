@@ -198,16 +198,17 @@ const RULES = [
 
       const descriptions = atRisk.map((p) => {
         const chance = p.chance_of_playing_next_round;
-        const chanceStr = chance !== null && chance !== undefined ? ` (${chance}% chance)` : '';
         const newsStr = p.news && p.news.trim() ? ` — ${p.news}` : '';
-        return `${p.web_name}${chanceStr}${newsStr}`;
+        const chanceStr = !newsStr && chance !== null && chance !== undefined ? ` (${chance}% chance of playing)` : '';
+        return `${p.web_name}${newsStr || chanceStr}`;
       });
 
       return {
         id: 'unavailable-players',
         type: 'warning',
         title: 'Players at Risk of Missing Next Gameweek',
-        message: `${descriptions.join('; ')}. Consider transferring ${atRisk.length === 1 ? 'this player' : 'these players'} out ahead of this fixture.`,
+        message: `${descriptions.join('\n')}\nConsider transferring ${atRisk.length === 1 ? 'this player' : 'these players'} out ahead of this fixture.`,
+
         players: atRisk.map((p) => ({
           id: p.id,
           name: p.web_name,
@@ -307,12 +308,12 @@ const RULES = [
       const parts = [];
       if (falling.length > 0) {
         parts.push(
-          `${falling.map((p) => p.web_name).join(', ')} ${falling.length === 1 ? 'is' : 'are'} trending to fall in price — consider selling sooner rather than later`,
+          `${falling.map((p) => p.web_name).join(', ')} ${falling.length === 1 ? 'is' : 'are'} trending to fall in price — consider selling sooner rather than later.`,
         );
       }
       if (rising.length > 0) {
         parts.push(
-          `${rising.map((p) => p.web_name).join(', ')} ${rising.length === 1 ? 'is' : 'are'} rising in value — your profit is building`,
+          `${rising.map((p) => p.web_name).join(', ')} ${rising.length === 1 ? 'is' : 'are'} rising in value — your profit is building.`,
         );
       }
 
@@ -320,7 +321,8 @@ const RULES = [
         id: 'price-change-urgency',
         type: 'info',
         title: 'Price Movement Alert',
-        message: parts.join('. ') + '.',
+        message: parts.join('\n'),
+
         players: [
           ...falling.map((p) => ({
             id: p.id,
