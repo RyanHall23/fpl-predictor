@@ -1,8 +1,9 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { Box, Typography, CircularProgress, Chip } from '@mui/material';
+import { Alert, Box, Button, Typography, CircularProgress, Chip } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import useAssistantManager from '../../hooks/useAssistantManager';
 
 // Maps hint.type → MUI Chip color
@@ -28,7 +29,7 @@ function playerLabel(p) {
 
 const AssistantManagerPanel = ({ entryId, currentGameweek }) => {
   const theme = useTheme();
-  const { hints, loading } = useAssistantManager(entryId, currentGameweek);
+  const { hints, loading, error, retry } = useAssistantManager(entryId, currentGameweek);
 
   return (
     <Box>
@@ -49,15 +50,35 @@ const AssistantManagerPanel = ({ entryId, currentGameweek }) => {
         </Box>
       ) }
 
+      { /* Error state */ }
+      { !loading && error && (
+        <Alert
+          severity='error'
+          sx={ { mb: 1 } }
+          action={
+            <Button
+              color='inherit'
+              size='small'
+              onClick={ retry }
+              startIcon={ <RefreshIcon /> }
+            >
+              Retry
+            </Button>
+          }
+        >
+          Failed to load suggestions. Please try again.
+        </Alert>
+      ) }
+
       { /* Empty state */ }
-      { !loading && hints.length === 0 && (
+      { !loading && !error && hints.length === 0 && (
         <Typography variant='body2' color='text.secondary'>
           No suggestions for this gameweek.
         </Typography>
       ) }
 
       { /* Hints list */ }
-      { !loading && hints.length > 0 && (
+      { !loading && !error && hints.length > 0 && (
         <Box sx={ { display: 'flex', flexDirection: 'column', gap: 2 } }>
           { hints.map((hint) => (
             <Box

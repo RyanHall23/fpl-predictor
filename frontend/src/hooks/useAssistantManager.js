@@ -11,6 +11,7 @@ const useAssistantManager = (entryId, currentGameweek) => {
   const [hints, setHints] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     if (!currentGameweek) return;
@@ -34,9 +35,11 @@ const useAssistantManager = (entryId, currentGameweek) => {
         setHints([]);
       })
       .finally(() => setLoading(false));
-  }, [entryId, currentGameweek]);
+  }, [entryId, currentGameweek, retryCount]);
 
-  return { hints, loading, error };
+  const retry = () => setRetryCount((c) => c + 1);
+
+  return { hints, loading, error, retry };
 };
 
 export default useAssistantManager;
