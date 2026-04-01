@@ -45,10 +45,16 @@ const NavigationBar = ({
   isPast,
   isActive,
 }) => {
-  const { mode, toggleTheme } = useThemeMode();
+  const { mode, toggleTheme, toggleWin2k } = useThemeMode();
   const [teamIdDialogOpen, setTeamIdDialogOpen] = React.useState(false);
   const [teamIdInput, setTeamIdInput] = React.useState('');
+  const [myTeamClickCount, setMyTeamClickCount] = React.useState(0);
+  const myTeamClickTimerRef = React.useRef(null);
   const isValidTeamId = (val) => /^\d+$/.test(val);
+
+  React.useEffect(() => {
+    return () => clearTimeout(myTeamClickTimerRef.current);
+  }, []);
 
   const handleOpenTeamIdDialog = () => {
     setTeamIdInput(userTeamId || '');
@@ -56,6 +62,20 @@ const NavigationBar = ({
   };
 
   const handleCloseTeamIdDialog = () => setTeamIdDialogOpen(false);
+
+  const handleMyTeamClick = () => {
+    onSwitchTeamView(TEAM_VIEW.USER);
+    const next = myTeamClickCount + 1;
+    if (next >= 5) {
+      toggleWin2k();
+      setMyTeamClickCount(0);
+      clearTimeout(myTeamClickTimerRef.current);
+    } else {
+      setMyTeamClickCount(next);
+      clearTimeout(myTeamClickTimerRef.current);
+      myTeamClickTimerRef.current = setTimeout(() => setMyTeamClickCount(0), 2000);
+    }
+  };
 
   const handleSaveTeamId = () => {
     if (teamIdInput && isValidTeamId(teamIdInput)) {
@@ -142,7 +162,7 @@ const NavigationBar = ({
                 <Button
                   variant={ teamView === TEAM_VIEW.USER ? 'contained' : 'outlined' }
                   color='secondary'
-                  onClick={ () => onSwitchTeamView(TEAM_VIEW.USER) }
+                  onClick={ handleMyTeamClick }
                   size='small'
                   sx={ { whiteSpace: 'nowrap', px: { xs: 1, sm: 2 }, fontSize: { xs: '0.7rem', sm: '0.875rem' } } }
                 >

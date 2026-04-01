@@ -1,7 +1,7 @@
 import React, { createContext, useState, useMemo, useContext, useEffect } from 'react';
 import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { darkTheme, lightTheme } from './theme';
+import { darkTheme, lightTheme, win2kTheme } from './theme';
 import PropTypes from 'prop-types';
 
 const ThemeContext = createContext();
@@ -27,13 +27,23 @@ export const ThemeProvider = ({ children }) => {
   }, [mode]);
 
   const toggleTheme = () => {
-    setMode((prevMode) => (prevMode === 'dark' ? 'light' : 'dark'));
+    setMode((prevMode) => {
+      if (prevMode === 'win2k') return 'dark';
+      return prevMode === 'dark' ? 'light' : 'dark';
+    });
   };
 
-  const theme = useMemo(() => (mode === 'dark' ? darkTheme : lightTheme), [mode]);
+  const toggleWin2k = () => {
+    setMode((prevMode) => (prevMode === 'win2k' ? 'dark' : 'win2k'));
+  };
+
+  const theme = useMemo(() => {
+    if (mode === 'win2k') return win2kTheme;
+    return mode === 'dark' ? darkTheme : lightTheme;
+  }, [mode]);
 
   return (
-    <ThemeContext.Provider value={ { mode, toggleTheme } }>
+    <ThemeContext.Provider value={ { mode, toggleTheme, toggleWin2k } }>
       <MuiThemeProvider theme={ theme }>
         <CssBaseline />
         { children }
