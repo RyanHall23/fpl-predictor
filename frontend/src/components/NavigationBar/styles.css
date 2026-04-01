@@ -1,16 +1,13 @@
 :root {
-  --primary-color:    #000080;
-  --secondary-color:  #008080;
-  --hover-color:      #0000aa;
-  --white-color:      #ffffff;
+  --primary-color: #6a1b9a;
+  --secondary-color: #ab47bc;
+  --hover-color: #8e24aa;
+  --white-color: #ffffff;
 }
 
-/* Windows 2000 title-bar style AppBar */
 .app-bar {
   width: 100%;
-  background: linear-gradient(180deg, #000080 0%, #1084d0 100%) !important;
-  box-shadow: none !important;
-  border-bottom: 2px solid #000040;
+  background-color: var(--primary-color);
 }
 
 .toolbar-box {
@@ -19,54 +16,105 @@
   align-items: center;
 }
 
-/* Win2k inset text-field (white sunken box) */
+/* Dark mode - default */
 .text-field {
-  margin-right: 8px;
-  background-color: #ffffff;
-  border-radius: 0;
+  margin-right: 16px;
+  background-color: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  transition: all 0.3s ease;
 }
 
 .text-field .MuiInputBase-input {
-  padding: 4px 8px;
-  color: #000000;
-  font-family: "Tahoma", "MS Sans Serif", "Arial", sans-serif;
-  font-size: 12px;
+  padding: 10px 12px;
+  color: #ffffff;
 }
 
 .text-field .MuiOutlinedInput-notchedOutline {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.text-field:hover .MuiOutlinedInput-notchedOutline {
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.text-field.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: #ab47bc;
+}
+
+/* Light mode */
+html[data-mui-color-scheme='light'] .text-field {
+  background-color: rgba(255, 255, 255, 0.95);
+}
+
+html[data-mui-color-scheme='light'] .text-field .MuiInputBase-input {
+  color: #212121;
+}
+
+html[data-mui-color-scheme='light'] .text-field .MuiOutlinedInput-notchedOutline {
+  border-color: rgba(0, 0, 0, 0.23);
+}
+
+.submit-button {
+  background-color: var(--secondary-color);
+  color: var(--white-color);
+  transition: all 0.3s ease;
+}
+
+.submit-button:hover {
+  background-color: var(--hover-color);
+}
+
+/* ── Win2k easter egg overrides (only when data-theme="win2k") ───────────────── */
+html[data-theme='win2k'] .app-bar {
+  background: linear-gradient(180deg, #000080 0%, #1084d0 100%) !important;
+  box-shadow: none !important;
+  border-bottom: 2px solid #000040;
+  border-radius: 0;
+}
+
+html[data-theme='win2k'] .text-field {
+  margin-right: 8px;
+  background-color: #ffffff;
+  border-radius: 0;
+  transition: none;
+}
+
+html[data-theme='win2k'] .text-field .MuiInputBase-input {
+  padding: 4px 8px;
+  color: #000000;
+  font-family: 'Tahoma', 'MS Sans Serif', 'Arial', sans-serif;
+  font-size: 12px;
+}
+
+html[data-theme='win2k'] .text-field .MuiOutlinedInput-notchedOutline {
   border-color: #808080;
   border-radius: 0;
 }
 
-.text-field:hover .MuiOutlinedInput-notchedOutline {
+html[data-theme='win2k'] .text-field:hover .MuiOutlinedInput-notchedOutline {
   border-color: #000080;
 }
 
-.text-field.Mui-focused .MuiOutlinedInput-notchedOutline {
-  border-color: #000080;
-  border-width: 1px;
-}
-
-/* Classic raised Win2k button */
-.submit-button {
+html[data-theme='win2k'] .submit-button {
   background-color: #d4d0c8 !important;
   color: #000000 !important;
   border-radius: 0 !important;
   box-shadow: inset -1px -1px 0 #808080, inset 1px 1px 0 #ffffff,
               inset -2px -2px 0 #404040, inset 2px 2px 0 #dfdfdf !important;
-  font-family: "Tahoma", "MS Sans Serif", "Arial", sans-serif;
+  font-family: 'Tahoma', 'MS Sans Serif', 'Arial', sans-serif;
   font-size: 12px;
   min-height: 23px;
   padding: 2px 10px !important;
   text-transform: none !important;
+  transition: none;
 }
 
-.submit-button:hover {
+html[data-theme='win2k'] .submit-button:hover {
   background-color: #d4d0c8 !important;
   filter: brightness(1.04);
 }
 
-.submit-button:active {
+html[data-theme='win2k'] .submit-button:active {
   box-shadow: inset 1px 1px 0 #808080, inset -1px -1px 0 #ffffff,
               inset 2px 2px 0 #404040, inset -2px -2px 0 #dfdfdf !important;
 }

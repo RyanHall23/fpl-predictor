@@ -25,15 +25,11 @@ const RightPanel = ({
       sx={ {
         width: '100%',
         height: '100%',
-        backgroundColor: '#d4d0c8',
-        borderRadius: 0,
-        border: '2px solid #808080',
-        boxShadow: 'inset -1px -1px 0 #808080, inset 1px 1px 0 #ffffff, inset -2px -2px 0 #404040, inset 2px 2px 0 #dfdfdf',
+        backgroundColor: 'background.paper',
+        borderRadius: 1,
         overflow: 'auto',
         display: 'flex',
         flexDirection: 'column',
-        fontFamily: '"Tahoma", "MS Sans Serif", "Arial", sans-serif',
-        fontSize: '12px',
       } }
     >
       { entryId ? (

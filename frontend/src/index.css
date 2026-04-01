@@ -1,63 +1,53 @@
 :root {
-  --font-family: "Tahoma", "MS Sans Serif", "Arial", sans-serif;
-  --code-font-family: "Courier New", Courier, monospace;
-
-  /* Windows 2000 colour palette */
-  --win-silver:  #d4d0c8;
-  --win-silver-dark: #c0bcb4;
-  --win-silver-light: #ece9d8;
-  --win-navy:    #000080;
-  --win-teal:    #008080;
-  --win-white:   #ffffff;
-  --win-black:   #000000;
-  --win-grey:    #808080;
-  --win-dark:    #404040;
-  --win-tooltip: #ffffe1;
-
-  /* 3D raised border mixin values */
-  --raised-shadow: inset -1px -1px 0 #808080, inset 1px 1px 0 #ffffff,
-                   inset -2px -2px 0 #404040, inset 2px 2px 0 #dfdfdf;
-  --sunken-shadow: inset 1px 1px 0 #808080, inset -1px -1px 0 #ffffff,
-                   inset 2px 2px 0 #404040, inset -2px -2px 0 #dfdfdf;
-}
-
-* {
-  box-sizing: border-box;
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  --code-font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
 
 body {
   margin: 0;
   font-family: var(--font-family);
-  font-size: 12px;
-  background-color: var(--win-teal);
-  color: var(--win-black);
-  -webkit-font-smoothing: none;
-  -moz-osx-font-smoothing: unset;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 code {
   font-family: var(--code-font-family);
 }
 
-/* Global scrollbar — Win2000 style */
-::-webkit-scrollbar {
+/* ── Win2k easter egg overrides (only when data-theme="win2k") ───────────────── */
+html[data-theme='win2k'] body {
+  font-family: 'Tahoma', 'MS Sans Serif', 'Arial', sans-serif;
+  font-size: 12px;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: unset;
+}
+
+html[data-theme='win2k'] ::-webkit-scrollbar {
   width: 16px;
   height: 16px;
 }
-::-webkit-scrollbar-track {
-  background: var(--win-silver);
-  border: 1px solid var(--win-grey);
+
+html[data-theme='win2k'] ::-webkit-scrollbar-track {
+  background: #d4d0c8;
 }
-::-webkit-scrollbar-thumb {
-  background: var(--win-silver);
-  box-shadow: var(--raised-shadow);
+
+html[data-theme='win2k'] ::-webkit-scrollbar-thumb {
+  background: #d4d0c8;
+  box-shadow:
+    inset -1px -1px 0 #808080,
+    inset 1px 1px 0 #ffffff,
+    inset -2px -2px 0 #404040,
+    inset 2px 2px 0 #dfdfdf;
 }
-::-webkit-scrollbar-button {
-  background: var(--win-silver);
-  box-shadow: var(--raised-shadow);
-  width: 16px;
+
+html[data-theme='win2k'] ::-webkit-scrollbar-button {
+  background: #d4d0c8;
+  box-shadow:
+    inset -1px -1px 0 #808080,
+    inset 1px 1px 0 #ffffff,
+    inset -2px -2px 0 #404040,
+    inset 2px 2px 0 #dfdfdf;
+  display: block;
   height: 16px;
-}
-::-webkit-scrollbar-corner {
-  background: var(--win-silver);
+  width: 16px;
 }

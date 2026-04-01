@@ -80,9 +80,11 @@ const AddTransferDialog = ({ open, onClose, onAdd, team, allPlayers, currentGame
       onClose={ handleClose }
       PaperProps={ {
         sx: {
-          backgroundColor: '#d4d0c8',
-          borderRadius: 0,
-          boxShadow: 'inset -1px -1px 0 #808080, inset 1px 1px 0 #ffffff, inset -2px -2px 0 #404040, inset 2px 2px 0 #dfdfdf',
+          background:
+            theme.palette.mode === 'dark'
+              ? 'linear-gradient(135deg, #23272f 0%, #281455 100%)'
+              : 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
+          borderRadius: '12px',
           minWidth: 320,
         },
       } }

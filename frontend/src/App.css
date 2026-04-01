@@ -1,36 +1,58 @@
 .App {
+  text-align: center;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: #008080; /* Win2k teal desktop */
-  font-family: "Tahoma", "MS Sans Serif", "Arial", sans-serif;
-  font-size: 12px;
+}
+
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-link {
+  color: #61dafb;
+}
+
+@keyframes App-logo-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
 
 /* Layout styling */
 .pitch-container {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 16px;
 }
 
 .stats-bar {
   display: flex;
   align-items: center;
-  padding: 4px 8px;
-  gap: 8px;
-  background-color: #d4d0c8;
-  box-shadow: inset -1px -1px 0 #808080, inset 1px 1px 0 #ffffff,
-              inset -2px -2px 0 #404040, inset 2px 2px 0 #dfdfdf;
-  border-bottom: 1px solid #808080;
-  font-family: "Tahoma", "MS Sans Serif", "Arial", sans-serif;
-  font-size: 12px;
-  color: #000000;
+  padding: 8px 16px;
+  gap: 16px;
 }
 
 .two-column-layout {
   display: flex;
-  gap: 4px;
+  gap: 16px;
   flex: 1;
   min-height: 0;
 }
@@ -61,8 +83,35 @@
 
 @media (max-width: 600px) {
   .stats-bar {
-    padding: 2px 4px;
-    gap: 4px;
+    padding: 4px 8px;
+    gap: 8px;
     flex-wrap: wrap;
   }
+}
+
+/* ── Win2k easter egg overrides (only when data-theme="win2k") ───────────────── */
+html[data-theme='win2k'] .App {
+  background-color: #008080;
+  font-family: 'Tahoma', 'MS Sans Serif', 'Arial', sans-serif;
+  font-size: 12px;
+}
+
+html[data-theme='win2k'] .pitch-container {
+  gap: 4px;
+}
+
+html[data-theme='win2k'] .two-column-layout {
+  gap: 4px;
+}
+
+html[data-theme='win2k'] .stats-bar {
+  padding: 4px 8px;
+  gap: 8px;
+  background-color: #d4d0c8;
+  box-shadow: inset -1px -1px 0 #808080, inset 1px 1px 0 #ffffff,
+              inset -2px -2px 0 #404040, inset 2px 2px 0 #dfdfdf;
+  border-bottom: 1px solid #808080;
+  font-family: 'Tahoma', 'MS Sans Serif', 'Arial', sans-serif;
+  font-size: 12px;
+  color: #000000;
 }
