@@ -59,6 +59,41 @@ body .team-list-name {
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
+  max-width: 200px;
+}
+
+body .team-list-price {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  flex: 1 1 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+body .team-list-status {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+body .team-list-status.status-doubt {
+  background: #ff9800;
+}
+
+body .team-list-status.status-injured {
+  background: #f44336;
+}
+
+body .team-list-status.status-suspended {
+  background: #9c27b0;
+}
+
+body .team-list-status.status-unavailable {
+  background: #757575;
 }
 
 body .team-list-points {
@@ -144,6 +179,10 @@ html[data-mui-color-scheme='light'] body .team-list-points {
 
 html[data-mui-color-scheme='light'] body .team-list-opponent {
   color: rgba(0, 0, 0, 0.45);
+}
+
+html[data-mui-color-scheme='light'] body .team-list-price {
+  color: rgba(0, 0, 0, 0.4);
 }
 
 html[data-mui-color-scheme='light'] body .team-list-bench-divider {

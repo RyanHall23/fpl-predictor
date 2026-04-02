@@ -41,6 +41,17 @@ const ListRow = ({
   const opponent = player.opponentDisplay || player.opponent || '-';
   const isCaptainEligible = !!onSetCaptain && player.position !== POSITION_MANAGER;
 
+  const price = player.nowCost != null ? `£${(player.nowCost / 10).toFixed(1)}m` : null;
+
+  const chance = player.chanceOfPlayingNextRound;
+  let statusClass = '';
+  let statusTitle = '';
+  if (player.status === 'd') { statusClass = 'status-doubt'; statusTitle = player.news || 'Doubtful'; }
+  else if (player.status === 'i') { statusClass = 'status-injured'; statusTitle = player.news || 'Injured'; }
+  else if (player.status === 's') { statusClass = 'status-suspended'; statusTitle = player.news || 'Suspended'; }
+  else if (player.status === 'u') { statusClass = 'status-unavailable'; statusTitle = player.news || 'Unavailable'; }
+  else if (chance != null && chance < 100) { statusClass = 'status-doubt'; statusTitle = `${chance}% chance of playing`; }
+
   const isSelected = selectedPlayer && selectedPlayer.player.code === player.code;
 
   let isValidTarget = false;
@@ -89,6 +100,18 @@ const ListRow = ({
         <Typography className='team-list-name' variant='body2'>
           { player.webName }
         </Typography>
+
+        { /* Price */ }
+        { price && (
+          <Typography className='team-list-price' variant='caption'>
+            { price }
+          </Typography>
+        ) }
+
+        { /* Availability status dot */ }
+        { statusClass && (
+          <span className={ `team-list-status ${statusClass}` } title={ statusTitle } />
+        ) }
 
         { /* Points */ }
         <Typography className='team-list-points' variant='body2'>
@@ -266,6 +289,10 @@ ListRow.propTypes = {
     opponent: PropTypes.string,
     opponentDisplay: PropTypes.string,
     is_captain: PropTypes.bool,
+    nowCost: PropTypes.number,
+    status: PropTypes.string,
+    chanceOfPlayingNextRound: PropTypes.number,
+    news: PropTypes.string,
   }).isRequired,
   isCaptain: PropTypes.bool,
   teamType: PropTypes.string,
