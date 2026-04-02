@@ -38,12 +38,12 @@ const AddTransferDialog = ({ open, onClose, onAdd, team, allPlayers, currentGame
   const theme = useTheme();
   const [playerOut, setPlayerOut] = useState(null);
   const [playerIn, setPlayerIn] = useState(null);
-  const [gameweek, setGameweek] = useState(currentGameweek || 1);
+  const [gameweek, setGameweek] = useState((currentGameweek ?? 0) + 1);
 
   const handleClose = () => {
     setPlayerOut(null);
     setPlayerIn(null);
-    setGameweek(currentGameweek || 1);
+    setGameweek((currentGameweek ?? 0) + 1);
     onClose();
   };
 
@@ -96,8 +96,16 @@ const AddTransferDialog = ({ open, onClose, onAdd, team, allPlayers, currentGame
     return result;
   }, [team, allPlayers, currentGameweek, plannedTransfers, gameweek]);
 
-  // Outfield + GK options from effective team (no managers)
-  const teamOptions = (effectiveTeam || []).filter((p) => p.position !== 5);
+  // Compute the set of player codes who are already planned IN for the selected GW.
+  // These must not be selectable as Transfer Out in the same gameweek.
+  const plannedInCodesForGW = new Set(
+    (plannedTransfers || [])
+      .filter(t => t.gameweek === gameweek)
+      .map(t => t.playerIn.code)
+  );
+
+  // Outfield + GK options from effective team, excluding players planned IN this GW
+  const teamOptions = (effectiveTeam || []).filter((p) => p.position !== 5 && !plannedInCodesForGW.has(p.code));
 
   // Available players in from all players matching position of playerOut
   const teamCodes = new Set((effectiveTeam || []).map((p) => p.code));
@@ -112,8 +120,9 @@ const AddTransferDialog = ({ open, onClose, onAdd, team, allPlayers, currentGame
         .sort((a, b) => (parseFloat(b.ep_next) || 0) - (parseFloat(a.ep_next) || 0))
     : [];
 
+  // Only future GWs are valid for planned transfers; the active GW cannot be planned
   const gwOptions = currentGameweek
-    ? Array.from({ length: 38 - currentGameweek + 1 }, (_, i) => currentGameweek + i)
+    ? Array.from({ length: 38 - currentGameweek }, (_, i) => currentGameweek + 1 + i)
     : Array.from({ length: 38 }, (_, i) => i + 1);
 
   return (
@@ -235,7 +244,7 @@ const PlannedTransfers = ({
   const [addDialogOpen, setAddDialogOpen] = useState(false);
 
   const gwOptions = currentGameweek
-    ? Array.from({ length: 38 - currentGameweek + 1 }, (_, i) => currentGameweek + i)
+    ? Array.from({ length: 38 - currentGameweek }, (_, i) => currentGameweek + 1 + i)
     : Array.from({ length: 38 }, (_, i) => i + 1);
 
   const sorted = [...(plannedTransfers || [])].sort((a, b) => a.gameweek - b.gameweek);
