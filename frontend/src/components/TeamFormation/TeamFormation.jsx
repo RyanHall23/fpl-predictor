@@ -40,7 +40,7 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
   return (
     <Grid container spacing={ 1 } justifyContent='center'>
       <Grid size={ 12 }>
-        <Paper className='main-paper' sx={ { position: 'relative', p: 2 } }>
+        <Paper className='main-paper' sx={ { position: 'relative', p: 1 } }>
           { /* Pitch markings */ }
           <div className='pitch-top-line' />
           <div className='pitch-bottom-line' />
@@ -189,7 +189,7 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
         </Paper>
       </Grid>
       <Grid size={ 12 }>
-        <Paper className='bench-paper' sx={ { p: 2, position: 'relative' } }>
+        <Paper className='bench-paper' sx={ { p: 1, position: 'relative' } }>
           <Box sx={ { position: 'relative', zIndex: 1 } }>
             <Grid container spacing={ 1 } justifyContent='center'>
               { /* Bench manager first */ }

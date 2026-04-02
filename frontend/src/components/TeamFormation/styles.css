@@ -13,7 +13,7 @@ body .main-paper {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
   transition: all 0.3s ease;
   overflow: hidden;
-  min-height: 480px;
+  min-height: 420px;
 }
 
 /* Halfway line */
@@ -196,63 +196,63 @@ body.win2k-theme .bench-paper::after {
 /* Mobile responsive - small screens */
 @media (max-width: 600px) {
   body .main-paper {
-    min-height: 340px;
+    min-height: 300px;
   }
 
   body .main-paper::after {
-    width: 90px;
-    height: 90px;
+    width: 80px;
+    height: 80px;
   }
 
   body .main-paper .penalty-box-top {
-    height: 50px;
+    height: 45px;
   }
 
   body .main-paper .goal-box-top {
-    height: 18px;
+    height: 16px;
   }
 
   body .main-paper .penalty-arc-top {
-    top: 50px;
-    width: 50px;
-    height: 25px;
-    border-top-left-radius: 50px;
-    border-top-right-radius: 50px;
+    top: 45px;
+    width: 45px;
+    height: 22px;
+    border-top-left-radius: 45px;
+    border-top-right-radius: 45px;
   }
 }
 
 /* Responsive - 1440p */
 @media (min-width: 1440px) {
   body .main-paper {
-    min-height: 520px;
+    min-height: 460px;
   }
 
   body .main-paper::after {
-    width: 155px;
-    height: 155px;
+    width: 148px;
+    height: 148px;
   }
 }
 
 /* Responsive - 1920p / 2K */
 @media (min-width: 1920px) {
   body .main-paper {
-    min-height: 560px;
+    min-height: 500px;
   }
 
   body .main-paper::after {
-    width: 165px;
-    height: 165px;
+    width: 158px;
+    height: 158px;
   }
 }
 
 /* Responsive - 4K */
 @media (min-width: 2560px) {
   body .main-paper {
-    min-height: 620px;
+    min-height: 560px;
   }
 
   body .main-paper::after {
-    width: 180px;
-    height: 180px;
+    width: 170px;
+    height: 170px;
   }
 }

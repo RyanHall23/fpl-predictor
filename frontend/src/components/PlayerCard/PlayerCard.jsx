@@ -160,7 +160,7 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
             { /* Row 1: Substitute | [Captain] | Transfer/Restore */ }
             { isCaptainEligible ? (
               <>
-                <Grid size={ 4 }>
+                <Grid size={ isFutureGameweek ? 4 : 6 }>
                   <IconButton
                     size='small'
                     className='action-button-small substitute-button'
@@ -171,7 +171,7 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
                     <SyncIcon sx={ { fontSize: 20 } } className='sync-icon' />
                   </IconButton>
                 </Grid>
-                <Grid size={ 4 }>
+                <Grid size={ isFutureGameweek ? 4 : 6 }>
                   <Tooltip title={ isCaptain ? 'Captain' : 'Set as Captain' }>
                     <IconButton
                       size='small'

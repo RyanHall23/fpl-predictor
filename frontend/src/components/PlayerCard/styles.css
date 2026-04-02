@@ -269,8 +269,8 @@ body .transfer-arrows-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 20px;
+  height: 20px;
 }
 
 html[data-mui-color-scheme='light'] body .action-button-small {
