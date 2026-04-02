@@ -222,7 +222,7 @@ const TeamListView = ({
   };
 
   return (
-    <Paper className='team-list-view' sx={ { overflow: 'hidden' } }>
+    <Paper className='team-list-view' sx={ { overflow: 'hidden', width: '100%' } }>
       { activeList.map((player) => (
         <ListRow
           key={ player.code ?? player.webName }
