@@ -13,7 +13,7 @@ const positionLabels = {
   5: 'MAN'
 };
 
-const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, allPlayers, onTransfer, isHighestPredictedTeam, onPlayerClick, onSetCaptain, currentGameweek, onAddPlannedTransfer }) => {
+const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, allPlayers, onTransfer, isHighestPredictedTeam, onPlayerClick, onSetCaptain, currentGameweek, onAddPlannedTransfer, isFutureGameweek, viewedGameweek, plannedTransfers, onRemovePlannedTransfer }) => {
   // Captain is always provided by the backend (is_captain flag on player).
   // For user teams it comes from picks; for highest-predicted teams the backend
   // marks the best outfield starter as captain.
@@ -68,6 +68,10 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
                     onSetCaptain={ !isHighestPredictedTeam ? onSetCaptain : undefined }
                     currentGameweek={ currentGameweek }
                     onAddPlannedTransfer={ !isHighestPredictedTeam ? onAddPlannedTransfer : undefined }
+                    isFutureGameweek={ isFutureGameweek }
+                    viewedGameweek={ viewedGameweek }
+                    plannedTransfers={ plannedTransfers }
+                    onRemovePlannedTransfer={ onRemovePlannedTransfer }
                   />
                 </Grid>
               )) }
@@ -91,6 +95,10 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
                       onSetCaptain={ !isHighestPredictedTeam ? onSetCaptain : undefined }
                       currentGameweek={ currentGameweek }
                       onAddPlannedTransfer={ !isHighestPredictedTeam ? onAddPlannedTransfer : undefined }
+                      isFutureGameweek={ isFutureGameweek }
+                      viewedGameweek={ viewedGameweek }
+                      plannedTransfers={ plannedTransfers }
+                      onRemovePlannedTransfer={ onRemovePlannedTransfer }
                     />
                   </Box>
                 </Grid>
@@ -115,6 +123,10 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
                     onSetCaptain={ !isHighestPredictedTeam ? onSetCaptain : undefined }
                     currentGameweek={ currentGameweek }
                     onAddPlannedTransfer={ !isHighestPredictedTeam ? onAddPlannedTransfer : undefined }
+                    isFutureGameweek={ isFutureGameweek }
+                    viewedGameweek={ viewedGameweek }
+                    plannedTransfers={ plannedTransfers }
+                    onRemovePlannedTransfer={ onRemovePlannedTransfer }
                   />
                 </Grid>
               )) }
@@ -138,6 +150,10 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
                     onSetCaptain={ !isHighestPredictedTeam ? onSetCaptain : undefined }
                     currentGameweek={ currentGameweek }
                     onAddPlannedTransfer={ !isHighestPredictedTeam ? onAddPlannedTransfer : undefined }
+                    isFutureGameweek={ isFutureGameweek }
+                    viewedGameweek={ viewedGameweek }
+                    plannedTransfers={ plannedTransfers }
+                    onRemovePlannedTransfer={ onRemovePlannedTransfer }
                   />
                 </Grid>
               )) }
@@ -161,6 +177,10 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
                     onSetCaptain={ !isHighestPredictedTeam ? onSetCaptain : undefined }
                     currentGameweek={ currentGameweek }
                     onAddPlannedTransfer={ !isHighestPredictedTeam ? onAddPlannedTransfer : undefined }
+                    isFutureGameweek={ isFutureGameweek }
+                    viewedGameweek={ viewedGameweek }
+                    plannedTransfers={ plannedTransfers }
+                    onRemovePlannedTransfer={ onRemovePlannedTransfer }
                   />
                 </Grid>
               )) }
@@ -193,6 +213,10 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
                       reservePlayers={ reservePlayers }
                       currentGameweek={ currentGameweek }
                       onAddPlannedTransfer={ !isHighestPredictedTeam ? onAddPlannedTransfer : undefined }
+                      isFutureGameweek={ isFutureGameweek }
+                      viewedGameweek={ viewedGameweek }
+                      plannedTransfers={ plannedTransfers }
+                      onRemovePlannedTransfer={ onRemovePlannedTransfer }
                     />
                   </Box>
                 </Grid>
@@ -218,6 +242,10 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
                       reservePlayers={ reservePlayers }
                       currentGameweek={ currentGameweek }
                       onAddPlannedTransfer={ !isHighestPredictedTeam ? onAddPlannedTransfer : undefined }
+                      isFutureGameweek={ isFutureGameweek }
+                      viewedGameweek={ viewedGameweek }
+                      plannedTransfers={ plannedTransfers }
+                      onRemovePlannedTransfer={ onRemovePlannedTransfer }
                     />
                   </Box>
                 </Grid>
@@ -243,6 +271,10 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
                       reservePlayers={ reservePlayers }
                       currentGameweek={ currentGameweek }
                       onAddPlannedTransfer={ !isHighestPredictedTeam ? onAddPlannedTransfer : undefined }
+                      isFutureGameweek={ isFutureGameweek }
+                      viewedGameweek={ viewedGameweek }
+                      plannedTransfers={ plannedTransfers }
+                      onRemovePlannedTransfer={ onRemovePlannedTransfer }
                     />
                   </Box>
                 </Grid>
@@ -270,6 +302,10 @@ TeamFormation.propTypes = {
   onSetCaptain: PropTypes.func,
   currentGameweek: PropTypes.number,
   onAddPlannedTransfer: PropTypes.func,
+  isFutureGameweek: PropTypes.bool,
+  viewedGameweek: PropTypes.number,
+  plannedTransfers: PropTypes.array,
+  onRemovePlannedTransfer: PropTypes.func,
 };
 
 export default TeamFormation;
