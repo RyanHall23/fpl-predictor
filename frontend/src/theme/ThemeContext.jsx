@@ -53,6 +53,14 @@ export const ThemeProvider = ({ children }) => {
     };
   }, [mode]);
 
+  // Set data-mui-color-scheme on <html> so CSS selectors and MUI CSS variables
+  // reflect the current theme mode (light or dark).
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const colorScheme = mode === 'light' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-mui-color-scheme', colorScheme);
+  }, [mode]);
+
   const toggleTheme = () => {
     setMode((prevMode) => {
       if (prevMode === 'win2k') return 'dark';
