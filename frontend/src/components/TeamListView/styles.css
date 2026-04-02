@@ -2,6 +2,7 @@
 body .team-list-view {
   border-radius: 8px;
   overflow: hidden;
+  width: 100%;
 }
 
 body .team-list-row {
@@ -11,6 +12,9 @@ body .team-list-row {
   padding: 4px 8px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   transition: background 0.15s ease;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 body .team-list-row:hover {
@@ -94,6 +98,8 @@ body .team-list-bench-divider {
   background: rgba(255, 255, 255, 0.04);
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 body .team-list-captain-badge {
