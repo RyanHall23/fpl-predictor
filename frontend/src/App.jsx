@@ -5,8 +5,13 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import Snackbar from '@mui/material/Snackbar';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import { useTheme } from '@mui/material/styles';
+import TableRowsIcon from '@mui/icons-material/TableRows';
+import GridViewIcon from '@mui/icons-material/GridView';
 import TeamFormation from './components/TeamFormation/TeamFormation';
+import TeamListView from './components/TeamListView/TeamListView';
 import useTeamData from './hooks/useTeamData';
 import useAllPlayers from './hooks/useAllPlayers';
 import usePlannedTransfers from './hooks/usePlannedTransfers';
@@ -28,6 +33,7 @@ const App = () => {
   const [currentGameweek, setCurrentGameweek] = useState(null);
   const [selectedLeague, setSelectedLeague] = useState(null); // invitation league drill-down
   const [viewingOpponentId, setViewingOpponentId] = useState(null); // opponent team being viewed
+  const [pitchView, setPitchView] = useState('formation'); // 'formation' | 'list'
 
   const {
     activePlayers,
@@ -211,6 +217,12 @@ const App = () => {
     setCurrentEntryId(userEntryId);
   };
 
+  const handleTransfer = (playerOut, playerIn, gameweek) => {
+    const playerInExists = [...effectiveActivePlayers, ...effectiveReservePlayers].some(p => p.code === playerIn.code);
+    if (playerInExists) return;
+    if (gameweek && currentGameweek) addPlannedTransfer(playerOut, playerIn, gameweek);
+  };
+
   return (
     <Box sx={ { minHeight: '100vh', backgroundColor: theme.palette.background.default, display: 'flex', flexDirection: 'column' } }>
       <NavigationBar
@@ -243,32 +255,58 @@ const App = () => {
                 ) }
               </Box>
             ) }
-            <TeamFormation
-              activePlayers={ effectiveActivePlayers }
-              reservePlayers={ effectiveReservePlayers }
-              onPlayerClick={ (player, zone) => handlePlayerClick?.(player, zone, effectiveActivePlayers, effectiveReservePlayers) }
-              selectedPlayer={ selectedPlayer }
-              team={ [...effectiveActivePlayers, ...effectiveReservePlayers] }
-              allPlayers={ allPlayers }
-              isHighestPredictedTeam={ isHighestPredictedTeam }
-              onSetCaptain={ !isHighestPredictedTeam ? setCaptain : undefined }
-              currentGameweek={ currentGameweek }
-              isFutureGameweek={ !!gameweekInfo?.isFuture }
-              viewedGameweek={ gameweekInfo?.selected ?? currentGameweek }
-              plannedTransfers={ !isHighestPredictedTeam ? plannedTransfers : undefined }
-              onRemovePlannedTransfer={ !isHighestPredictedTeam ? removePlannedTransfer : undefined }
-              onAddPlannedTransfer={ !isHighestPredictedTeam ? addPlannedTransfer : undefined }
-              onTransfer={ (playerOut, playerIn, gameweek) => {
-                // Prevent duplicate: do not allow transfer if playerIn is already in the team
-                const playerInExists = [...effectiveActivePlayers, ...effectiveReservePlayers].some(p => p.code === playerIn.code);
-                if (playerInExists) {
-                  return;
-                }
-                if (gameweek && currentGameweek) {
-                  addPlannedTransfer(playerOut, playerIn, gameweek);
-                }
-              } }
-            />
+            { /* View mode toggle */ }
+            <Box sx={ { display: 'flex', justifyContent: 'flex-end', mb: 0.5 } }>
+              <ToggleButtonGroup
+                value={ pitchView }
+                exclusive
+                onChange={ (_, val) => { if (val) setPitchView(val); } }
+                size='small'
+                sx={ { '& .MuiToggleButton-root': { padding: '4px 10px' } } }
+              >
+                <ToggleButton value='formation' title='Formation view'>
+                  <GridViewIcon sx={ { fontSize: 18 } } />
+                </ToggleButton>
+                <ToggleButton value='list' title='List view'>
+                  <TableRowsIcon sx={ { fontSize: 18 } } />
+                </ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
+            { pitchView === 'formation' ? (
+              <TeamFormation
+                activePlayers={ effectiveActivePlayers }
+                reservePlayers={ effectiveReservePlayers }
+                onPlayerClick={ (player, zone) => handlePlayerClick?.(player, zone, effectiveActivePlayers, effectiveReservePlayers) }
+                selectedPlayer={ selectedPlayer }
+                team={ [...effectiveActivePlayers, ...effectiveReservePlayers] }
+                allPlayers={ allPlayers }
+                isHighestPredictedTeam={ isHighestPredictedTeam }
+                onSetCaptain={ !isHighestPredictedTeam ? setCaptain : undefined }
+                currentGameweek={ currentGameweek }
+                isFutureGameweek={ !!gameweekInfo?.isFuture }
+                viewedGameweek={ gameweekInfo?.selected ?? currentGameweek }
+                plannedTransfers={ !isHighestPredictedTeam ? plannedTransfers : undefined }
+                onRemovePlannedTransfer={ !isHighestPredictedTeam ? removePlannedTransfer : undefined }
+                onTransfer={ handleTransfer }
+              />
+            ) : (
+              <TeamListView
+                activePlayers={ effectiveActivePlayers }
+                reservePlayers={ effectiveReservePlayers }
+                onPlayerClick={ (player, zone) => handlePlayerClick?.(player, zone, effectiveActivePlayers, effectiveReservePlayers) }
+                selectedPlayer={ selectedPlayer }
+                team={ [...effectiveActivePlayers, ...effectiveReservePlayers] }
+                allPlayers={ allPlayers }
+                isHighestPredictedTeam={ isHighestPredictedTeam }
+                onSetCaptain={ !isHighestPredictedTeam ? setCaptain : undefined }
+                currentGameweek={ currentGameweek }
+                isFutureGameweek={ !!gameweekInfo?.isFuture }
+                viewedGameweek={ gameweekInfo?.selected ?? currentGameweek }
+                plannedTransfers={ !isHighestPredictedTeam ? plannedTransfers : undefined }
+                onRemovePlannedTransfer={ !isHighestPredictedTeam ? removePlannedTransfer : undefined }
+                onTransfer={ handleTransfer }
+              />
+            ) }
           </Box>
           
           { /* Middle - Panel */ }

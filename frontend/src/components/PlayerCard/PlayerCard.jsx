@@ -10,7 +10,6 @@ import {
 } from '@mui/material';
 import StarIcon from '@mui/icons-material/Star';
 import SyncIcon from '@mui/icons-material/Sync';
-import AddIcon from '@mui/icons-material/Add';
 import RestoreIcon from '@mui/icons-material/Restore';
 import PropTypes from 'prop-types';
 import './styles.css';
@@ -19,7 +18,7 @@ import TransferPlayer from '../TransferPlayer/TransferPlayer';
 const POSITION_GK = 1;
 const POSITION_MANAGER = 5;
 
-const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTransferButtons = true, teamType, onPlayerClick, selectedPlayer, activePlayers, reservePlayers, onSetCaptain, currentGameweek, onAddPlannedTransfer, isFutureGameweek, viewedGameweek, plannedTransfers, onRemovePlannedTransfer }) => {
+const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTransferButtons = true, teamType, onPlayerClick, selectedPlayer, activePlayers, reservePlayers, onSetCaptain, currentGameweek, isFutureGameweek, viewedGameweek, plannedTransfers, onRemovePlannedTransfer }) => {
   const [transferDialogOpen, setTransferDialogOpen] = React.useState(false);
 
   // predictedPoints is fully resolved by the backend (basePoints × multiplier).
@@ -268,21 +267,6 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
                 ) }
               </>
             ) }
-            { /* Row 2: Add planned transfer (future GWs only) */ }
-            { onAddPlannedTransfer && isFutureGameweek && (
-              <Grid size={ 12 }>
-                <Tooltip title='Add planned transfer'>
-                  <IconButton
-                    size='small'
-                    className='action-button-small'
-                    onClick={ () => setTransferDialogOpen(true) }
-                    sx={ { padding: '4px !important' } }
-                  >
-                    <AddIcon sx={ { fontSize: 20 } } />
-                  </IconButton>
-                </Tooltip>
-              </Grid>
-            ) }
           </Grid>
         ) }
       </CardContent>
@@ -337,7 +321,6 @@ PlayerCard.propTypes = {
   reservePlayers: PropTypes.array,
   onSetCaptain: PropTypes.func,
   currentGameweek: PropTypes.number,
-  onAddPlannedTransfer: PropTypes.func,
   isFutureGameweek: PropTypes.bool,
   viewedGameweek: PropTypes.number,
   plannedTransfers: PropTypes.array,
