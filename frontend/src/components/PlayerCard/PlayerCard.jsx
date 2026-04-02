@@ -168,7 +168,7 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
                     onClick={ () => { if (onPlayerClick) onPlayerClick(player, teamType); } }
                     sx={ { padding: '4px !important' } }
                   >
-                    <SyncIcon sx={ { fontSize: 24 } } className='sync-icon' />
+                    <SyncIcon sx={ { fontSize: 20 } } className='sync-icon' />
                   </IconButton>
                 </Grid>
                 <Grid size={ 4 }>
@@ -200,7 +200,7 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
                           onClick={ () => onRemovePlannedTransfer && onRemovePlannedTransfer(plannedInTransfer.id) }
                           sx={ { padding: '4px !important' } }
                         >
-                          <RestoreIcon sx={ { fontSize: 24, color: '#ff9800' } } />
+                          <RestoreIcon sx={ { fontSize: 20, color: '#ff9800' } } />
                         </IconButton>
                       </Tooltip>
                     ) : (
@@ -212,7 +212,7 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
                         sx={ { padding: '4px !important' } }
                       >
                         <Box className='transfer-arrows-icon'>
-                          <svg width='24' height='24' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                          <svg width='20' height='20' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
                             <path d='M3 8 L12 8 L12 6 L18 10 L12 14 L12 12 L3 12 Z' fill='#4caf50' />
                             <path d='M21 16 L12 16 L12 18 L6 14 L12 10 L12 12 L21 12 Z' fill='#f44336' />
                           </svg>
@@ -232,7 +232,7 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
                     onClick={ () => { if (onPlayerClick) onPlayerClick(player, teamType); } }
                     sx={ { padding: '4px !important' } }
                   >
-                    <SyncIcon sx={ { fontSize: 28 } } className='sync-icon' />
+                    <SyncIcon sx={ { fontSize: 20 } } className='sync-icon' />
                   </IconButton>
                 </Grid>
                 { isFutureGameweek && (
@@ -245,7 +245,7 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
                           onClick={ () => onRemovePlannedTransfer && onRemovePlannedTransfer(plannedInTransfer.id) }
                           sx={ { padding: '4px !important' } }
                         >
-                          <RestoreIcon sx={ { fontSize: 28, color: '#ff9800' } } />
+                          <RestoreIcon sx={ { fontSize: 20, color: '#ff9800' } } />
                         </IconButton>
                       </Tooltip>
                     ) : (
@@ -257,7 +257,7 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
                         sx={ { padding: '4px !important' } }
                       >
                         <Box className='transfer-arrows-icon'>
-                          <svg width='28' height='28' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                          <svg width='20' height='20' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
                             <path d='M3 8 L12 8 L12 6 L18 10 L12 14 L12 12 L3 12 Z' fill='#4caf50' />
                             <path d='M21 16 L12 16 L12 18 L6 14 L12 10 L12 12 L21 12 Z' fill='#f44336' />
                           </svg>
@@ -278,7 +278,7 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
                     onClick={ () => setTransferDialogOpen(true) }
                     sx={ { padding: '4px !important' } }
                   >
-                    <AddIcon sx={ { fontSize: 22 } } />
+                    <AddIcon sx={ { fontSize: 20 } } />
                   </IconButton>
                 </Tooltip>
               </Grid>
