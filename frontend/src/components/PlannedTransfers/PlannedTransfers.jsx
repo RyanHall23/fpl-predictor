@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import {
   Box,
@@ -34,16 +34,16 @@ import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 
 const POSITION_LABELS = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD', 5: 'MAN' };
 
-const AddTransferDialog = ({ open, onClose, onAdd, team, allPlayers, currentGameweek }) => {
+const AddTransferDialog = ({ open, onClose, onAdd, team, allPlayers, currentGameweek, plannedTransfers }) => {
   const theme = useTheme();
   const [playerOut, setPlayerOut] = useState(null);
   const [playerIn, setPlayerIn] = useState(null);
-  const [gameweek, setGameweek] = useState(currentGameweek || 1);
+  const [gameweek, setGameweek] = useState((currentGameweek ?? 0) + 1);
 
   const handleClose = () => {
     setPlayerOut(null);
     setPlayerIn(null);
-    setGameweek(currentGameweek || 1);
+    setGameweek((currentGameweek ?? 0) + 1);
     onClose();
   };
 
@@ -54,11 +54,61 @@ const AddTransferDialog = ({ open, onClose, onAdd, team, allPlayers, currentGame
     }
   };
 
-  // Outfield + GK options from current team (no managers)
-  const teamOptions = (team || []).filter((p) => p.position !== 5);
+  // Reset player selections when the selected gameweek changes,
+  // because the available squad changes.
+  useEffect(() => {
+    setPlayerOut(null);
+    setPlayerIn(null);
+  }, [gameweek]);
+
+  // Compute the squad state at the selected gameweek by applying all existing
+  // planned transfers (for future GWs up to and including the selected GW) on
+  // top of the raw base squad.  This ensures "Transfer Out" always reflects the
+  // correct squad for the chosen gameweek even if earlier planned transfers have
+  // already brought in replacement players.
+  const effectiveTeam = useMemo(() => {
+    if (!currentGameweek || !plannedTransfers || !allPlayers) return team || [];
+
+    const applicableTransfers = (plannedTransfers || [])
+      .filter(t => t.gameweek > currentGameweek && t.gameweek <= gameweek)
+      .sort((a, b) => a.gameweek - b.gameweek);
+
+    if (applicableTransfers.length === 0) return team || [];
+
+    const result = [...(team || [])];
+
+    for (const transfer of applicableTransfers) {
+      const playerInData = allPlayers.find(p => p.code === transfer.playerIn.code);
+      if (!playerInData) continue;
+
+      const idx = result.findIndex(p => p.code === transfer.playerOut.code);
+      if (idx !== -1) {
+        const old = result[idx];
+        result[idx] = {
+          ...playerInData,
+          isActive: old.isActive,
+          slot: old.slot,
+          multiplier: old.multiplier || 1,
+        };
+      }
+    }
+
+    return result;
+  }, [team, allPlayers, currentGameweek, plannedTransfers, gameweek]);
+
+  // Compute the set of player codes who are already planned IN for the selected GW.
+  // These must not be selectable as Transfer Out in the same gameweek.
+  const plannedInCodesForGW = new Set(
+    (plannedTransfers || [])
+      .filter(t => t.gameweek === gameweek)
+      .map(t => t.playerIn.code)
+  );
+
+  // Outfield + GK options from effective team, excluding players planned IN this GW
+  const teamOptions = (effectiveTeam || []).filter((p) => p.position !== 5 && !plannedInCodesForGW.has(p.code));
 
   // Available players in from all players matching position of playerOut
-  const teamCodes = new Set((team || []).map((p) => p.code));
+  const teamCodes = new Set((effectiveTeam || []).map((p) => p.code));
   const availableIn = playerOut
     ? (allPlayers || [])
         .filter(
@@ -70,8 +120,9 @@ const AddTransferDialog = ({ open, onClose, onAdd, team, allPlayers, currentGame
         .sort((a, b) => (parseFloat(b.ep_next) || 0) - (parseFloat(a.ep_next) || 0))
     : [];
 
+  // Only future GWs are valid for planned transfers; the active GW cannot be planned
   const gwOptions = currentGameweek
-    ? Array.from({ length: 38 - currentGameweek + 1 }, (_, i) => currentGameweek + i)
+    ? Array.from({ length: 38 - currentGameweek }, (_, i) => currentGameweek + 1 + i)
     : Array.from({ length: 38 }, (_, i) => i + 1);
 
   return (
@@ -173,6 +224,7 @@ AddTransferDialog.propTypes = {
   team: PropTypes.array,
   allPlayers: PropTypes.array,
   currentGameweek: PropTypes.number,
+  plannedTransfers: PropTypes.array,
 };
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -192,7 +244,7 @@ const PlannedTransfers = ({
   const [addDialogOpen, setAddDialogOpen] = useState(false);
 
   const gwOptions = currentGameweek
-    ? Array.from({ length: 38 - currentGameweek + 1 }, (_, i) => currentGameweek + i)
+    ? Array.from({ length: 38 - currentGameweek }, (_, i) => currentGameweek + 1 + i)
     : Array.from({ length: 38 }, (_, i) => i + 1);
 
   const sorted = [...(plannedTransfers || [])].sort((a, b) => a.gameweek - b.gameweek);
@@ -289,6 +341,7 @@ const PlannedTransfers = ({
           team={ team }
           allPlayers={ allPlayers }
           currentGameweek={ currentGameweek }
+          plannedTransfers={ plannedTransfers }
         />
       </Box>
     );
@@ -396,6 +449,7 @@ const PlannedTransfers = ({
         team={ team }
         allPlayers={ allPlayers }
         currentGameweek={ currentGameweek }
+        plannedTransfers={ plannedTransfers }
       />
     </Box>
   );

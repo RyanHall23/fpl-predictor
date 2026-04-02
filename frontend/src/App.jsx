@@ -253,6 +253,10 @@ const App = () => {
               isHighestPredictedTeam={ isHighestPredictedTeam }
               onSetCaptain={ !isHighestPredictedTeam ? setCaptain : undefined }
               currentGameweek={ currentGameweek }
+              isFutureGameweek={ !!gameweekInfo?.isFuture }
+              viewedGameweek={ gameweekInfo?.selected ?? currentGameweek }
+              plannedTransfers={ !isHighestPredictedTeam ? plannedTransfers : undefined }
+              onRemovePlannedTransfer={ !isHighestPredictedTeam ? removePlannedTransfer : undefined }
               onAddPlannedTransfer={ !isHighestPredictedTeam ? addPlannedTransfer : undefined }
               onTransfer={ (playerOut, playerIn, gameweek) => {
                 // Prevent duplicate: do not allow transfer if playerIn is already in the team
