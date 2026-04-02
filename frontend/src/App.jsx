@@ -297,7 +297,7 @@ const App = () => {
               onRemovePlannedTransfer={ removePlannedTransfer }
               onUpdatePlannedTransferGameweek={ updateTransferGameweek }
               onAddPlannedTransfer={ addPlannedTransfer }
-              team={ [...effectiveActivePlayers, ...effectiveReservePlayers] }
+              team={ [...activePlayers, ...reservePlayers] }
               allPlayers={ allPlayers }
               voidedTransferIds={ voidedTransferIds }
             />
