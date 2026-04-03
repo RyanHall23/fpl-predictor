@@ -52,24 +52,31 @@ body .team-list-shirt {
 }
 
 body .team-list-name {
-  flex: 1 1 0;
+  flex: 0 1 auto;
   font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
-  max-width: 200px;
+  max-width: 180px;
+}
+
+body .team-list-meta {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  padding-right: 4px;
 }
 
 body .team-list-price {
   font-size: 11px;
   color: rgba(255, 255, 255, 0.5);
-  flex: 1 1 0;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
 }
 
 body .team-list-status {
@@ -149,6 +156,14 @@ body .team-list-captain-badge {
   font-size: 10px;
   font-weight: bold;
   flex-shrink: 0;
+}
+
+body .team-list-captain-placeholder {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  visibility: hidden;
 }
 
 /* Light mode overrides */

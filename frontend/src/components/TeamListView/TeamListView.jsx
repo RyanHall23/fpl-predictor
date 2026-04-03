@@ -85,8 +85,11 @@ const ListRow = ({
         { /* Position badge */ }
         <span className='team-list-pos-badge'>{ positionLabels[player.position] ?? '?' }</span>
 
-        { /* Captain badge */ }
-        { isCaptain && <span className='team-list-captain-badge'>C</span> }
+        { /* Captain badge – always rendered to keep rows aligned */ }
+        { isCaptain
+          ? <span className='team-list-captain-badge'>C</span>
+          : <span className='team-list-captain-placeholder' />
+        }
 
         { /* Shirt */ }
         <img
@@ -101,17 +104,17 @@ const ListRow = ({
           { player.webName }
         </Typography>
 
-        { /* Price */ }
-        { price && (
-          <Typography className='team-list-price' variant='caption'>
-            { price }
-          </Typography>
-        ) }
-
-        { /* Availability status dot */ }
-        { statusClass && (
-          <span className={ `team-list-status ${statusClass}` } title={ statusTitle } />
-        ) }
+        { /* Meta – always rendered, flex:1 fills the gap; content is right-aligned */ }
+        <Box className='team-list-meta'>
+          { statusClass && (
+            <span className={ `team-list-status ${statusClass}` } title={ statusTitle } />
+          ) }
+          { price && (
+            <Typography className='team-list-price' variant='caption'>
+              { price }
+            </Typography>
+          ) }
+        </Box>
 
         { /* Points */ }
         <Typography className='team-list-points' variant='body2'>
