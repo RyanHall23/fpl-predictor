@@ -59,17 +59,14 @@ body .team-list-name {
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
-  max-width: 200px;
 }
 
 body .team-list-price {
   font-size: 11px;
   color: rgba(255, 255, 255, 0.5);
-  flex: 1 1 0;
+  flex-shrink: 0;
+  width: 45px;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
 }
 
 body .team-list-status {
