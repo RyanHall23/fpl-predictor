@@ -33,7 +33,7 @@ const App = () => {
   const [currentGameweek, setCurrentGameweek] = useState(null);
   const [selectedLeague, setSelectedLeague] = useState(null); // invitation league drill-down
   const [viewingOpponentId, setViewingOpponentId] = useState(null); // opponent team being viewed
-  const [pitchView, setPitchView] = useState('formation'); // 'formation' | 'list'
+  const [pitchView, setPitchView] = useState(() => localStorage.getItem('pitchView') || 'formation'); // 'formation' | 'list'
 
   const {
     activePlayers,
@@ -260,7 +260,7 @@ const App = () => {
               <ToggleButtonGroup
                 value={ pitchView }
                 exclusive
-                onChange={ (_, val) => { if (val) setPitchView(val); } }
+                onChange={ (_, val) => { if (val) { setPitchView(val); localStorage.setItem('pitchView', val); } } }
                 size='small'
                 sx={ { '& .MuiToggleButton-root': { padding: '4px 10px' } } }
               >
