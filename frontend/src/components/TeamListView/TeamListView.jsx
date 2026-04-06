@@ -4,6 +4,7 @@ import SyncIcon from '@mui/icons-material/Sync';
 import RestoreIcon from '@mui/icons-material/Restore';
 import PropTypes from 'prop-types';
 import TransferPlayer from '../TransferPlayer/TransferPlayer';
+import { validateSubstitution } from '../../utils/substitution';
 
 const POSITION_MANAGER = 5;
 
@@ -40,6 +41,8 @@ const ListRow = ({
   isCaptain,
   teamType,
   selectedPlayer,
+  activePlayers,
+  reservePlayers,
   team,
   allPlayers,
   onTransfer,
@@ -72,13 +75,13 @@ const ListRow = ({
 
   const isSelected = selectedPlayer?.player.code === player.code;
   let isValidTarget = false;
-  if (selectedPlayer && !isSelected && teamType) {
-    const sp = selectedPlayer.player.position;
-    const tp = player.position;
-    if (selectedPlayer.teamType !== teamType) {
-      if (sp === 1 || tp === 1) isValidTarget = sp === tp;
-      else if (sp === POSITION_MANAGER || tp === POSITION_MANAGER) isValidTarget = sp === tp;
-      else isValidTarget = true;
+  if (selectedPlayer && !isSelected && teamType && activePlayers && reservePlayers) {
+    const sp = selectedPlayer.player;
+    const spTeamType = selectedPlayer.teamType;
+    // Cross-zone only; managers can never be substituted
+    if (spTeamType !== teamType && sp.position !== POSITION_MANAGER && player.position !== POSITION_MANAGER) {
+      const { valid } = validateSubstitution(sp, player, spTeamType, teamType, activePlayers, reservePlayers);
+      isValidTarget = valid;
     }
   }
 
@@ -113,7 +116,10 @@ const ListRow = ({
 
   return (
     <>
-      <TableRow sx={ rowSx }>
+      <TableRow
+        sx={ rowSx }
+        onClick={ isValidTarget ? () => onPlayerClick(player, teamType) : undefined }
+      >
 
         { /* POS */ }
         <TableCell sx={ cellSx }>
