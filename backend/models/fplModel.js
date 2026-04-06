@@ -226,7 +226,8 @@ const enrichPlayersWithOpponents = (players, fixtures, teams, targetEventId) => 
       event: fixture.event,
       opponent: fixture.team_a,
       is_home: true,
-      difficulty: fixture.team_h_difficulty || 3 // Difficulty for home team (1=easy, 5=hard)
+      difficulty: fixture.team_h_difficulty || 3, // Difficulty for home team (1=easy, 5=hard)
+      kickoff_time: fixture.kickoff_time ?? null,
     });
     
     // Away team
@@ -237,7 +238,8 @@ const enrichPlayersWithOpponents = (players, fixtures, teams, targetEventId) => 
       event: fixture.event,
       opponent: fixture.team_h,
       is_home: false,
-      difficulty: fixture.team_a_difficulty || 3 // Difficulty for away team (1=easy, 5=hard)
+      difficulty: fixture.team_a_difficulty || 3, // Difficulty for away team (1=easy, 5=hard)
+      kickoff_time: fixture.kickoff_time ?? null,
     });
   });
   
@@ -258,7 +260,8 @@ const enrichPlayersWithOpponents = (players, fixtures, teams, targetEventId) => 
         opponent_id: fixture.opponent,
         opponent_short: teamMap[fixture.opponent]?.short_name || 'TBD',
         is_home: fixture.is_home,
-        difficulty: fixture.difficulty // Include FPL difficulty rating (1-5)
+        difficulty: fixture.difficulty, // Include FPL difficulty rating (1-5)
+        kickoff_time: fixture.kickoff_time ?? null,
       }));
       
       // For backwards compatibility, set first fixture as primary opponent
@@ -276,6 +279,7 @@ const enrichPlayersWithOpponents = (players, fixtures, teams, targetEventId) => 
         difficulty: firstFixture.difficulty,
         fixture_event: firstFixture.event,
         fixture_count: fixtureCount,
+        fixtureKickoff: firstFixture.kickoff_time ?? null,
         // ep_next is intentionally NOT overwritten here — it is set by the
         // prediction engine (applyAdvancedPredictions / recalculatePointsForGameweek)
         // which should be called after this function.

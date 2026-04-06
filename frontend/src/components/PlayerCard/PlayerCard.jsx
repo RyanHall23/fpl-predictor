@@ -156,117 +156,84 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
         { /* Action Buttons */ }
         { showTransferButtons && team && allPlayers && onTransfer && (
           <Grid container spacing={ 1 } sx={ { mt: 0.5 } }>
-            { /* Row 1: Substitute | [Captain] | Transfer/Restore */ }
-            { isCaptainEligible ? (
-              <>
-                <Grid size={ isFutureGameweek ? 4 : 6 }>
+
+            { /* 1. Captain */ }
+            <Grid size={ 4 }>
+              { isCaptainEligible ? (
+                <Tooltip title={ isCaptain ? 'Captain' : 'Set as Captain' }>
                   <IconButton
                     size='small'
-                    className='action-button-small substitute-button'
-                    title='Substitute'
-                    onClick={ () => { if (onPlayerClick) onPlayerClick(player, teamType); } }
-                    sx={ { padding: '4px !important' } }
+                    className='action-button-small captain-button'
+                    onClick={ () => { if (!isCaptain && onSetCaptain) onSetCaptain(player.code); } }
+                    sx={ {
+                      padding: '4px !important',
+                      fontWeight: 'bold',
+                      fontSize: '14px',
+                      color: isCaptain ? '#000 !important' : undefined,
+                      backgroundColor: isCaptain ? '#ffeb3b !important' : undefined,
+                      '&:hover': isCaptain ? { backgroundColor: '#fdd835 !important' } : {},
+                    } }
                   >
-                    <SyncIcon sx={ { fontSize: 20 } } className='sync-icon' />
+                    C
                   </IconButton>
-                </Grid>
-                <Grid size={ isFutureGameweek ? 4 : 6 }>
-                  <Tooltip title={ isCaptain ? 'Captain' : 'Set as Captain' }>
+                </Tooltip>
+              ) : (
+                <IconButton size='small' disabled sx={ { visibility: 'hidden', padding: '4px !important' } }>
+                  <SyncIcon sx={ { fontSize: 20 } } />
+                </IconButton>
+              ) }
+            </Grid>
+
+            { /* 2. Substitute */ }
+            <Grid size={ 4 }>
+              <IconButton
+                size='small'
+                className='action-button-small substitute-button'
+                title='Substitute'
+                onClick={ () => { if (onPlayerClick) onPlayerClick(player, teamType); } }
+                sx={ { padding: '4px !important' } }
+              >
+                <SyncIcon sx={ { fontSize: 20 } } className='sync-icon' />
+              </IconButton>
+            </Grid>
+
+            { /* 3. Transfer / restore / hidden placeholder */ }
+            <Grid size={ 4 }>
+              { isFutureGameweek ? (
+                plannedInTransfer ? (
+                  <Tooltip title='Restore (remove planned transfer)'>
                     <IconButton
                       size='small'
-                      className='action-button-small captain-button'
-                      onClick={ () => { if (!isCaptain && onSetCaptain) onSetCaptain(player.code); } }
-                      sx={ {
-                        padding: '4px !important',
-                        fontWeight: 'bold',
-                        fontSize: '14px',
-                        color: isCaptain ? '#000 !important' : undefined,
-                        backgroundColor: isCaptain ? '#ffeb3b !important' : undefined,
-                        '&:hover': isCaptain ? { backgroundColor: '#fdd835 !important' } : {},
-                      } }
+                      className='action-button-small restore-button'
+                      onClick={ () => onRemovePlannedTransfer && onRemovePlannedTransfer(plannedInTransfer.id) }
+                      sx={ { padding: '4px !important' } }
                     >
-                      C
+                      <RestoreIcon sx={ { fontSize: 20, color: '#ff9800' } } />
                     </IconButton>
                   </Tooltip>
-                </Grid>
-                { isFutureGameweek && (
-                  <Grid size={ 4 }>
-                    { plannedInTransfer ? (
-                      <Tooltip title='Restore (remove planned transfer)'>
-                        <IconButton
-                          size='small'
-                          className='action-button-small restore-button'
-                          onClick={ () => onRemovePlannedTransfer && onRemovePlannedTransfer(plannedInTransfer.id) }
-                          sx={ { padding: '4px !important' } }
-                        >
-                          <RestoreIcon sx={ { fontSize: 20, color: '#ff9800' } } />
-                        </IconButton>
-                      </Tooltip>
-                    ) : (
-                      <IconButton
-                        size='small'
-                        className='action-button-small transfer-button'
-                        title='Transfer'
-                        onClick={ () => setTransferDialogOpen(true) }
-                        sx={ { padding: '4px !important' } }
-                      >
-                        <Box className='transfer-arrows-icon'>
-                          <svg width='20' height='20' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
-                            <path d='M3 8 L12 8 L12 6 L18 10 L12 14 L12 12 L3 12 Z' fill='#4caf50' />
-                            <path d='M21 16 L12 16 L12 18 L6 14 L12 10 L12 12 L21 12 Z' fill='#f44336' />
-                          </svg>
-                        </Box>
-                      </IconButton>
-                    ) }
-                  </Grid>
-                ) }
-              </>
-            ) : (
-              <>
-                <Grid size={ isFutureGameweek ? 6 : 12 }>
+                ) : (
                   <IconButton
                     size='small'
-                    className='action-button-small substitute-button'
-                    title='Substitute'
-                    onClick={ () => { if (onPlayerClick) onPlayerClick(player, teamType); } }
+                    className='action-button-small transfer-button'
+                    title='Transfer'
+                    onClick={ () => setTransferDialogOpen(true) }
                     sx={ { padding: '4px !important' } }
                   >
-                    <SyncIcon sx={ { fontSize: 20 } } className='sync-icon' />
+                    <Box className='transfer-arrows-icon'>
+                      <svg width='20' height='20' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                        <path d='M3 8 L12 8 L12 6 L18 10 L12 14 L12 12 L3 12 Z' fill='#4caf50' />
+                        <path d='M21 16 L12 16 L12 18 L6 14 L12 10 L12 12 L21 12 Z' fill='#f44336' />
+                      </svg>
+                    </Box>
                   </IconButton>
-                </Grid>
-                { isFutureGameweek && (
-                  <Grid size={ 6 }>
-                    { plannedInTransfer ? (
-                      <Tooltip title='Restore (remove planned transfer)'>
-                        <IconButton
-                          size='small'
-                          className='action-button-small restore-button'
-                          onClick={ () => onRemovePlannedTransfer && onRemovePlannedTransfer(plannedInTransfer.id) }
-                          sx={ { padding: '4px !important' } }
-                        >
-                          <RestoreIcon sx={ { fontSize: 20, color: '#ff9800' } } />
-                        </IconButton>
-                      </Tooltip>
-                    ) : (
-                      <IconButton
-                        size='small'
-                        className='action-button-small transfer-button'
-                        title='Transfer'
-                        onClick={ () => setTransferDialogOpen(true) }
-                        sx={ { padding: '4px !important' } }
-                      >
-                        <Box className='transfer-arrows-icon'>
-                          <svg width='20' height='20' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
-                            <path d='M3 8 L12 8 L12 6 L18 10 L12 14 L12 12 L3 12 Z' fill='#4caf50' />
-                            <path d='M21 16 L12 16 L12 18 L6 14 L12 10 L12 12 L21 12 Z' fill='#f44336' />
-                          </svg>
-                        </Box>
-                      </IconButton>
-                    ) }
-                  </Grid>
-                ) }
-              </>
-            ) }
+                )
+              ) : (
+                <IconButton size='small' disabled sx={ { visibility: 'hidden', padding: '4px !important' } }>
+                  <SyncIcon sx={ { fontSize: 20 } } />
+                </IconButton>
+              ) }
+            </Grid>
+
           </Grid>
         ) }
       </CardContent>

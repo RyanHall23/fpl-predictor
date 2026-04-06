@@ -77,6 +77,8 @@ class Player {
     this.opponent  = raw.opponent_short ?? '-';
     this.is_home   = raw.is_home        ?? null;
     this.opponents = raw.opponents      ?? [];
+    this.fixtureKickoff = raw.fixtureKickoff ?? null;
+    this.difficulty = raw.difficulty ?? null;
 
     // Pre-formatted opponent display string so the frontend never needs to
     // derive it inline. Supports Double Gameweeks (multiple opponents).
@@ -141,6 +143,8 @@ class Player {
       is_home:                    this.is_home,
       opponents:                  this.opponents,
       opponentDisplay:            this.opponentDisplay,
+      fixtureKickoff:             this.fixtureKickoff,
+      difficulty:                 this.difficulty,
       isActive:                   this.isActive,
       slot:                       this.slot,
       user_team:                  this.user_team,
