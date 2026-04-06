@@ -255,8 +255,16 @@ const enrichPlayersWithOpponents = (players, fixtures, teams, targetEventId) => 
     const fixtures = fixturesByTeam[playerTeam];
     
     if (fixtures && fixtures.length > 0) {
+      // Sort fixtures chronologically (nulls last) so the first fixture is always the earliest
+      const sortedFixtures = [...fixtures].sort((a, b) => {
+        if (!a.kickoff_time && !b.kickoff_time) return 0;
+        if (!a.kickoff_time) return 1;
+        if (!b.kickoff_time) return -1;
+        return new Date(a.kickoff_time) - new Date(b.kickoff_time);
+      });
+
       // Build opponents array with team names
-      const opponents = fixtures.map(fixture => ({
+      const opponents = sortedFixtures.map(fixture => ({
         opponent_id: fixture.opponent,
         opponent_short: teamMap[fixture.opponent]?.short_name || 'TBD',
         is_home: fixture.is_home,
@@ -265,7 +273,7 @@ const enrichPlayersWithOpponents = (players, fixtures, teams, targetEventId) => 
       }));
       
       // For backwards compatibility, set first fixture as primary opponent
-      const firstFixture = fixtures[0];
+      const firstFixture = sortedFixtures[0];
       const firstOpponent = teamMap[firstFixture.opponent];
       
       const fixtureCount = fixtures.length;

@@ -209,6 +209,8 @@ const ListRow = ({
                 <Tooltip title={ isCaptain ? 'Captain' : 'Set as Captain' }>
                   <IconButton
                     size='small'
+                    aria-label={ isCaptain ? 'Captain (current)' : 'Set as Captain' }
+                    aria-pressed={ isCaptain }
                     onClick={ () => { if (!isCaptain) onSetCaptain(player.code); } }
                     sx={ isCaptain ? {
                       fontWeight: 'bold', typography: 'caption',
@@ -221,13 +223,13 @@ const ListRow = ({
                   </IconButton>
                 </Tooltip>
               ) : (
-                <IconButton size='small' disabled sx={ { visibility: 'hidden' } }>
+                <IconButton size='small' disabled sx={ { visibility: 'hidden' } } aria-hidden='true'>
                   <SyncIcon fontSize='small' />
                 </IconButton>
               ) }
 
               { /* 2. Substitute */ }
-              <IconButton size='small' title='Substitute' onClick={ () => onPlayerClick(player, teamType) }>
+              <IconButton size='small' aria-label='Substitute' onClick={ () => onPlayerClick(player, teamType) }>
                 <SyncIcon fontSize='small' />
               </IconButton>
 
@@ -235,20 +237,24 @@ const ListRow = ({
               { isFutureGameweek ? (
                 plannedInTransfer ? (
                   <Tooltip title='Restore (remove planned transfer)'>
-                    <IconButton size='small' onClick={ () => onRemovePlannedTransfer?.(plannedInTransfer.id) }>
+                    <IconButton
+                      size='small'
+                      aria-label='Restore — remove planned transfer'
+                      onClick={ () => onRemovePlannedTransfer?.(plannedInTransfer.id) }
+                    >
                       <RestoreIcon fontSize='small' color='warning' />
                     </IconButton>
                   </Tooltip>
                 ) : (
-                  <IconButton size='small' title='Transfer' onClick={ () => setTransferDialogOpen(true) }>
-                    <svg width='17' height='17' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                  <IconButton size='small' aria-label='Plan a transfer' onClick={ () => setTransferDialogOpen(true) }>
+                    <svg width='17' height='17' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg' aria-hidden='true'>
                       <path d='M3 8 L12 8 L12 6 L18 10 L12 14 L12 12 L3 12 Z' fill='#4caf50' />
                       <path d='M21 16 L12 16 L12 18 L6 14 L12 10 L12 12 L21 12 Z' fill='#f44336' />
                     </svg>
                   </IconButton>
                 )
               ) : (
-                <IconButton size='small' disabled sx={ { visibility: 'hidden' } }>
+                <IconButton size='small' disabled sx={ { visibility: 'hidden' } } aria-hidden='true'>
                   <SyncIcon fontSize='small' />
                 </IconButton>
               ) }
