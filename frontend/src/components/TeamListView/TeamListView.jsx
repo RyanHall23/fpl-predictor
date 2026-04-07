@@ -287,6 +287,7 @@ const ListRow = ({
           open={ transferDialogOpen }
           onClose={ () => setTransferDialogOpen(false) }
           currentGameweek={ currentGameweek }
+          viewedGameweek={ viewedGameweek }
         />
       ) }
     </>

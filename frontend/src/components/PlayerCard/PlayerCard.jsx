@@ -249,6 +249,7 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
           open={ transferDialogOpen }
           onClose={ () => setTransferDialogOpen(false) }
           currentGameweek={ currentGameweek }
+          viewedGameweek={ viewedGameweek }
         />
       ) }
     </Card>
