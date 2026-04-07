@@ -111,7 +111,7 @@ const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut, open, onClose
                             );
                         } }
                     />
-                    { /* Gameweek selector – only shown for present/future gameweeks */ }
+                    { /* Gameweek selector – only shown for future gameweeks */ }
                     { minGameweek && (
                         <Box sx={ { mt: 2 } }>
                             <FormControl fullWidth size='small'>

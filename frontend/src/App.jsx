@@ -299,7 +299,6 @@ const App = () => {
                 isHighestPredictedTeam={ isHighestPredictedTeam }
                 onSetCaptain={ !isHighestPredictedTeam ? setCaptain : undefined }
                 currentGameweek={ currentGameweek }
-                isActiveGameweek={ !!gameweekInfo?.isActive }
                 isFutureGameweek={ !!gameweekInfo?.isFuture }
                 viewedGameweek={ gameweekInfo?.selected ?? currentGameweek }
                 plannedTransfers={ !isHighestPredictedTeam ? plannedTransfers : undefined }
@@ -317,7 +316,6 @@ const App = () => {
                 isHighestPredictedTeam={ isHighestPredictedTeam }
                 onSetCaptain={ !isHighestPredictedTeam ? setCaptain : undefined }
                 currentGameweek={ currentGameweek }
-                isActiveGameweek={ !!gameweekInfo?.isActive }
                 isFutureGameweek={ !!gameweekInfo?.isFuture }
                 viewedGameweek={ gameweekInfo?.selected ?? currentGameweek }
                 plannedTransfers={ !isHighestPredictedTeam ? plannedTransfers : undefined }
