@@ -226,10 +226,6 @@ export const applySubstitution = (activePlayers, reservePlayers, player1, player
 export const selectOptimalLineup = (allPlayers) => {
   const pos = (p) => p.position || p.element_type || 0;
   const getPointsVal = (p) => parseFloat(p.predictedPoints) || 0;
-  const getBasePoints = (p) =>
-    p.basePoints != null
-      ? p.basePoints
-      : Math.round((p.predictedPoints ?? 0) / (p.multiplier || 1));
   const sortDesc = (arr) => [...arr].sort((a, b) => getPointsVal(b) - getPointsVal(a));
 
   const gks  = sortDesc(allPlayers.filter(p => pos(p) === POSITION.GK));
@@ -256,25 +252,29 @@ export const selectOptimalLineup = (allPlayers) => {
   const flexStarters  = flexPool.slice(0, 3);
   const benchOutfield = flexPool.slice(3);
 
-  const startingXI = [startingGk, ...mandatoryStarters, ...flexStarters];
+  const startingXI = [startingGk, ...mandatoryStarters, ...flexStarters].filter(Boolean);
   const bench = [gks[1], ...benchOutfield].filter(Boolean);
 
   // Captain: highest base-points outfield starter
   const outfieldStarters = startingXI.filter(p => pos(p) !== POSITION.GK);
+  if (outfieldStarters.length === 0) {
+    return { activePlayers: startingXI, reservePlayers: bench };
+  }
+
   const captainPlayer = outfieldStarters.reduce((best, p) =>
-    getBasePoints(p) > getBasePoints(best) ? p : best
+    getBase(p) > getBase(best) ? p : best
   );
 
   // Vice-captain: second-highest base-points outfield starter
   const nonCaptain = outfieldStarters.filter(p => p.code !== captainPlayer.code);
   const vcPlayer = nonCaptain.length > 0
-    ? nonCaptain.reduce((best, p) => getBasePoints(p) > getBasePoints(best) ? p : best)
+    ? nonCaptain.reduce((best, p) => getBase(p) > getBase(best) ? p : best)
     : null;
 
   // Apply captain / vice-captain roles and reset multipliers
   const applyRoles = (players) =>
     players.map((p) => {
-      const base = Math.round(getBasePoints(p));
+      const base = Math.round(getBase(p));
       if (p.code === captainPlayer.code) {
         return { ...p, is_captain: true, is_vice_captain: false, multiplier: 2, predictedPoints: base * 2 };
       }
