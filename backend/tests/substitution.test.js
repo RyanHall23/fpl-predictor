@@ -231,17 +231,55 @@ describe('getFormationError', () => {
 // ---------------------------------------------------------------------------
 
 describe('validateSubstitution — zone rules', () => {
-  test('rejects main-main swap (same zone)', () => {
+  test('rejects active-active swap (same zone)', () => {
     const { mainTeam, benchTeam } = makeSquad433();
-    const r = validateSubstitution(mainTeam[1], mainTeam[2], 'main', 'main', mainTeam, benchTeam);
+    const r = validateSubstitution(mainTeam[1], mainTeam[2], 'active', 'active', mainTeam, benchTeam);
     assert.equal(r.valid, false);
-    assert.match(r.error, /bench/i);
+    assert.match(r.error, /starting XI/i);
   });
 
-  test('rejects bench-bench swap (same zone)', () => {
+  test('rejects bench GK ↔ bench outfield swap (same zone, GK rule applies)', () => {
     const { mainTeam, benchTeam } = makeSquad433();
-    const r = validateSubstitution(benchTeam[0], benchTeam[1], 'bench', 'bench', mainTeam, benchTeam);
+    // benchTeam[0] = GK, benchTeam[1] = DEF — disallowed by GK rule
+    const r = validateSubstitution(benchTeam[0], benchTeam[1], 'reserve', 'reserve', mainTeam, benchTeam);
     assert.equal(r.valid, false);
+    assert.match(r.error, /goalkeeper/i);
+  });
+
+  test('allows bench outfield ↔ bench outfield swap (bench re-ordering)', () => {
+    const { mainTeam, benchTeam } = makeSquad433();
+    // benchTeam[1] = DEF (code 112), benchTeam[2] = MID (code 113)
+    const benchDEF = benchTeam.find(p => p.element_type === POSITION.DEF);
+    const benchMID = benchTeam.find(p => p.element_type === POSITION.MID);
+    const r = validateSubstitution(benchDEF, benchMID, 'reserve', 'reserve', mainTeam, benchTeam);
+    assert.equal(r.valid, true);
+  });
+
+  test('allows bench outfield ↔ bench outfield swap (same position)', () => {
+    _nextCode = 1500;
+    const mainTeam = [
+      makePlayer({ element_type: POSITION.GK  }),
+      makePlayer({ element_type: POSITION.DEF }),
+      makePlayer({ element_type: POSITION.DEF }),
+      makePlayer({ element_type: POSITION.DEF }),
+      makePlayer({ element_type: POSITION.MID }),
+      makePlayer({ element_type: POSITION.MID }),
+      makePlayer({ element_type: POSITION.MID }),
+      makePlayer({ element_type: POSITION.FWD }),
+      makePlayer({ element_type: POSITION.FWD }),
+      makePlayer({ element_type: POSITION.FWD }),
+      makePlayer({ element_type: POSITION.FWD }),
+    ];
+    const benchTeam = [
+      makePlayer({ element_type: POSITION.GK  }),
+      makePlayer({ element_type: POSITION.DEF }),
+      makePlayer({ element_type: POSITION.FWD }),
+      makePlayer({ element_type: POSITION.FWD }),
+    ];
+    // Swap the two FWDs on the bench — same position, bench re-ordering
+    const [b1, b2] = benchTeam.filter(p => p.element_type === POSITION.FWD);
+    const r = validateSubstitution(b1, b2, 'reserve', 'reserve', mainTeam, benchTeam);
+    assert.equal(r.valid, true);
   });
 });
 
@@ -250,7 +288,7 @@ describe('validateSubstitution — GK rule', () => {
     const { mainTeam, benchTeam } = makeSquad433();
     const mainGK  = mainTeam.find(p => p.element_type === POSITION.GK);
     const benchGK = benchTeam.find(p => p.element_type === POSITION.GK);
-    const r = validateSubstitution(mainGK, benchGK, 'main', 'bench', mainTeam, benchTeam);
+    const r = validateSubstitution(mainGK, benchGK, 'active', 'reserve', mainTeam, benchTeam);
     assert.equal(r.valid, true);
   });
 
@@ -258,7 +296,7 @@ describe('validateSubstitution — GK rule', () => {
     const { mainTeam, benchTeam } = makeSquad433();
     const mainGK   = mainTeam.find(p => p.element_type === POSITION.GK);
     const benchDEF = benchTeam.find(p => p.element_type === POSITION.DEF);
-    const r = validateSubstitution(mainGK, benchDEF, 'main', 'bench', mainTeam, benchTeam);
+    const r = validateSubstitution(mainGK, benchDEF, 'active', 'reserve', mainTeam, benchTeam);
     assert.equal(r.valid, false);
     assert.match(r.error, /goalkeeper/i);
   });
@@ -267,7 +305,7 @@ describe('validateSubstitution — GK rule', () => {
     const { mainTeam, benchTeam } = makeSquad433();
     const mainDEF  = mainTeam.find(p => p.element_type === POSITION.DEF);
     const benchGK  = benchTeam.find(p => p.element_type === POSITION.GK);
-    const r = validateSubstitution(mainDEF, benchGK, 'main', 'bench', mainTeam, benchTeam);
+    const r = validateSubstitution(mainDEF, benchGK, 'active', 'reserve', mainTeam, benchTeam);
     assert.equal(r.valid, false);
     assert.match(r.error, /goalkeeper/i);
   });
@@ -278,7 +316,7 @@ describe('validateSubstitution — same-position swaps', () => {
     const { mainTeam, benchTeam } = makeSquad433();
     const mainDEF  = mainTeam.find(p => p.element_type === POSITION.DEF);
     const benchDEF = benchTeam.find(p => p.element_type === POSITION.DEF);
-    const r = validateSubstitution(mainDEF, benchDEF, 'main', 'bench', mainTeam, benchTeam);
+    const r = validateSubstitution(mainDEF, benchDEF, 'active', 'reserve', mainTeam, benchTeam);
     assert.equal(r.valid, true);
   });
 
@@ -286,7 +324,7 @@ describe('validateSubstitution — same-position swaps', () => {
     const { mainTeam, benchTeam } = makeSquad433();
     const mainMID  = mainTeam.find(p => p.element_type === POSITION.MID);
     const benchMID = benchTeam.find(p => p.element_type === POSITION.MID);
-    const r = validateSubstitution(mainMID, benchMID, 'main', 'bench', mainTeam, benchTeam);
+    const r = validateSubstitution(mainMID, benchMID, 'active', 'reserve', mainTeam, benchTeam);
     assert.equal(r.valid, true);
   });
 
@@ -294,7 +332,7 @@ describe('validateSubstitution — same-position swaps', () => {
     const { mainTeam, benchTeam } = makeSquad433();
     const mainFWD  = mainTeam.find(p => p.element_type === POSITION.FWD);
     const benchFWD = benchTeam.find(p => p.element_type === POSITION.FWD);
-    const r = validateSubstitution(mainFWD, benchFWD, 'main', 'bench', mainTeam, benchTeam);
+    const r = validateSubstitution(mainFWD, benchFWD, 'active', 'reserve', mainTeam, benchTeam);
     assert.equal(r.valid, true);
   });
 });
@@ -306,7 +344,7 @@ describe('validateSubstitution — cross-position swaps', () => {
     const { mainTeam, benchTeam } = makeSquad433();
     const mainMID  = mainTeam.find(p => p.element_type === POSITION.MID);
     const benchFWD = benchTeam.find(p => p.element_type === POSITION.FWD);
-    const r = validateSubstitution(mainMID, benchFWD, 'main', 'bench', mainTeam, benchTeam);
+    const r = validateSubstitution(mainMID, benchFWD, 'active', 'reserve', mainTeam, benchTeam);
     assert.equal(r.valid, false);
     assert.match(r.error, /midfielder/i);
   });
@@ -316,7 +354,7 @@ describe('validateSubstitution — cross-position swaps', () => {
     const { mainTeam, benchTeam } = makeSquad433();
     const mainDEF  = mainTeam.find(p => p.element_type === POSITION.DEF);
     const benchMID = benchTeam.find(p => p.element_type === POSITION.MID);
-    const r = validateSubstitution(mainDEF, benchMID, 'main', 'bench', mainTeam, benchTeam);
+    const r = validateSubstitution(mainDEF, benchMID, 'active', 'reserve', mainTeam, benchTeam);
     assert.equal(r.valid, true);
   });
 
@@ -344,7 +382,7 @@ describe('validateSubstitution — cross-position swaps', () => {
     ];
     const mainDEF  = mainTeam.find(p => p.element_type === POSITION.DEF);
     const benchMID = benchTeam.find(p => p.element_type === POSITION.MID);
-    const r = validateSubstitution(mainDEF, benchMID, 'main', 'bench', mainTeam, benchTeam);
+    const r = validateSubstitution(mainDEF, benchMID, 'active', 'reserve', mainTeam, benchTeam);
     assert.equal(r.valid, false);
     assert.match(r.error, /defender/i);
   });
@@ -355,9 +393,8 @@ describe('validateSubstitution — player not found', () => {
     const { mainTeam, benchTeam } = makeSquad433();
     const mainMID  = mainTeam.find(p => p.element_type === POSITION.MID);
     const benchFWD = benchTeam.find(p => p.element_type === POSITION.FWD);
-    // Claim both are on bench — idx1 will be -1 since mainMID isn't on bench
-    const r = validateSubstitution(mainMID, benchFWD, 'bench', 'bench', mainTeam, benchTeam);
-    // Same zone → rejected before player lookup
+    // Claim both are on bench — mainMID isn't on bench so idx1 = -1
+    const r = validateSubstitution(mainMID, benchFWD, 'reserve', 'reserve', mainTeam, benchTeam);
     assert.equal(r.valid, false);
   });
 
@@ -365,21 +402,38 @@ describe('validateSubstitution — player not found', () => {
     const { mainTeam, benchTeam } = makeSquad433();
     const stranger = makePlayer({ element_type: POSITION.MID });
     const benchMID = benchTeam.find(p => p.element_type === POSITION.MID);
-    const r = validateSubstitution(stranger, benchMID, 'main', 'bench', mainTeam, benchTeam);
+    const r = validateSubstitution(stranger, benchMID, 'active', 'reserve', mainTeam, benchTeam);
     assert.equal(r.valid, false);
     assert.match(r.error, /not found/i);
   });
 });
 
+describe('validateSubstitution — invalid zone strings', () => {
+  test('rejects invalid zone1 value', () => {
+    const { mainTeam, benchTeam } = makeSquad433();
+    const r = validateSubstitution(mainTeam[1], benchTeam[1], 'main', 'reserve', mainTeam, benchTeam);
+    assert.equal(r.valid, false);
+    assert.match(r.error, /invalid zone/i);
+  });
+
+  test('rejects invalid zone2 value', () => {
+    const { mainTeam, benchTeam } = makeSquad433();
+    const r = validateSubstitution(mainTeam[1], benchTeam[1], 'active', 'bench', mainTeam, benchTeam);
+    assert.equal(r.valid, false);
+    assert.match(r.error, /invalid zone/i);
+  });
+});
+
 describe('validateSubstitution — manager rule', () => {
-  test('allows manager ↔ manager swap', () => {
+  test('rejects manager ↔ manager swap (managers cannot be substituted)', () => {
     _nextCode = 1100;
     const mgr1 = makePlayer({ element_type: POSITION.MANAGER });
     const mgr2 = makePlayer({ element_type: POSITION.MANAGER });
     const mainTeam = [mgr1];
     const benchTeam = [mgr2];
-    const r = validateSubstitution(mgr1, mgr2, 'main', 'bench', mainTeam, benchTeam);
-    assert.equal(r.valid, true);
+    const r = validateSubstitution(mgr1, mgr2, 'active', 'reserve', mainTeam, benchTeam);
+    assert.equal(r.valid, false);
+    assert.match(r.error, /manager/i);
   });
 
   test('rejects manager ↔ outfield swap', () => {
@@ -387,7 +441,7 @@ describe('validateSubstitution — manager rule', () => {
     const mgr = makePlayer({ element_type: POSITION.MANAGER });
     const { mainTeam, benchTeam } = makeSquad433();
     mainTeam.push(mgr);
-    const r = validateSubstitution(mgr, benchTeam[1], 'main', 'bench', mainTeam, benchTeam);
+    const r = validateSubstitution(mgr, benchTeam[1], 'active', 'reserve', mainTeam, benchTeam);
     assert.equal(r.valid, false);
     assert.match(r.error, /manager/i);
   });
@@ -404,7 +458,7 @@ describe('sequential substitutions do not corrupt team', () => {
     // Swap 1: main DEF ↔ bench DEF
     const mainDEF  = mainTeam.find(p => p.element_type === POSITION.DEF);
     const benchDEF = benchTeam.find(p => p.element_type === POSITION.DEF);
-    const r1 = validateSubstitution(mainDEF, benchDEF, 'main', 'bench', mainTeam, benchTeam);
+    const r1 = validateSubstitution(mainDEF, benchDEF, 'active', 'reserve', mainTeam, benchTeam);
     assert.equal(r1.valid, true);
 
     // Apply by mutating copies (mirrors what applySubstitution does)
@@ -422,7 +476,7 @@ describe('sequential substitutions do not corrupt team', () => {
     // Swap 2: main GK ↔ bench GK
     const mainGK  = mainTeam.find(p => p.element_type === POSITION.GK);
     const benchGK = benchTeam.find(p => p.element_type === POSITION.GK);
-    const r2 = validateSubstitution(mainGK, benchGK, 'main', 'bench', mainTeam, benchTeam);
+    const r2 = validateSubstitution(mainGK, benchGK, 'active', 'reserve', mainTeam, benchTeam);
     assert.equal(r2.valid, true);
 
     const newMain2 = [...mainTeam];
@@ -490,7 +544,7 @@ describe('property-based fuzz tests', () => {
       const { mainTeam, benchTeam } = buildRandomSquad();
       const mainGK  = mainTeam.find(p => p.element_type === POSITION.GK);
       const benchGK = benchTeam.find(p => p.element_type === POSITION.GK);
-      const result = validateSubstitution(mainGK, benchGK, 'main', 'bench', mainTeam, benchTeam);
+      const result = validateSubstitution(mainGK, benchGK, 'active', 'reserve', mainTeam, benchTeam);
       assert.equal(result.valid, true, 'GK swap should always be valid');
 
       // Apply the swap and verify.

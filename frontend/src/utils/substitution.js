@@ -63,13 +63,16 @@ const getFormationError = (activePlayers) => {
 };
 
 /**
- * Validate whether swapping player1 ↔ player2 across their zones is legal.
+ * Validate whether swapping player1 ↔ player2 is legal.
  *
  * Rules enforced:
- *   - Must be a cross-zone swap (active ↔ reserve)
+ *   - Active-active swaps are not permitted (no meaningful formation change).
+ *   - Bench-bench (reserve↔reserve) swaps are allowed to enable bench re-ordering /
+ *     sideways substitutions, subject to the GK and Manager constraints below.
  *   - Managers cannot be substituted (they can only be transferred)
  *   - GK can only swap with GK
- *   - Resulting formation must satisfy ≥1 GK, ≥3 DEF, ≥3 MID, ≥1 FWD
+ *   - Cross-zone (active↔reserve) swaps must produce a valid formation
+ *     (≥1 GK, ≥3 DEF, ≥3 MID, ≥1 FWD)
  *   - Both players must be found in their stated zones (matched by `code`)
  *
  * @param {Object} player1
@@ -81,11 +84,12 @@ const getFormationError = (activePlayers) => {
  * @returns {{ valid: boolean, error: string }}
  */
 export const validateSubstitution = (player1, player2, zone1, zone2, activePlayers, reservePlayers) => {
-  if (zone1 === zone2) {
-    return {
-      valid: false,
-      error: 'Players can only be swapped between the active squad and the reserve.',
-    };
+  // Reject any zone string that isn't one of the two valid values.
+  if (zone1 !== 'active' && zone1 !== 'reserve') {
+    return { valid: false, error: `Invalid zone '${zone1}'. Must be 'active' or 'reserve'.` };
+  }
+  if (zone2 !== 'active' && zone2 !== 'reserve') {
+    return { valid: false, error: `Invalid zone '${zone2}'. Must be 'active' or 'reserve'.` };
   }
 
   const pos1 = getPosition(player1);
@@ -94,6 +98,30 @@ export const validateSubstitution = (player1, player2, zone1, zone2, activePlaye
   // Managers can only be transferred, not substituted.
   if (pos1 === POSITION.MANAGER || pos2 === POSITION.MANAGER) {
     return { valid: false, error: 'Managers cannot be substituted — use a transfer instead.' };
+  }
+
+  if (zone1 === zone2) {
+    if (zone1 === 'active') {
+      return {
+        valid: false,
+        error: 'Players in the starting XI cannot be swapped with each other.',
+      };
+    }
+
+    // zone1 === zone2 === 'reserve': bench re-ordering path.
+    // GK can only swap with another GK on the bench.
+    if ((pos1 === POSITION.GK || pos2 === POSITION.GK) && pos1 !== pos2) {
+      return { valid: false, error: 'Goalkeepers can only be swapped with other goalkeepers.' };
+    }
+
+    const idx1 = reservePlayers.findIndex((p) => p.code === player1.code);
+    const idx2 = reservePlayers.findIndex((p) => p.code === player2.code);
+
+    if (idx1 === -1 || idx2 === -1) {
+      return { valid: false, error: 'Player not found in their designated team zone.' };
+    }
+
+    return { valid: true, error: '' };
   }
 
   if (pos1 === POSITION.GK || pos2 === POSITION.GK) {
