@@ -193,6 +193,35 @@ body.win2k-theme .bench-paper::after {
   border: 1px dashed #808080;
 }
 
+/* Teletext theme */
+body.teletext-theme .main-paper {
+  background: repeating-linear-gradient(
+    0deg,
+    #003300,
+    #003300 40px,
+    #004400 40px,
+    #004400 80px
+  );
+  border-radius: 0;
+  border: 3px solid #00ff00;
+  box-shadow: none;
+}
+
+body.teletext-theme .bench-paper {
+  background: #000000;
+  border-radius: 0;
+  border: 2px solid #ffff00;
+  box-shadow: none;
+}
+
+body.teletext-theme .bench-paper::before {
+  background: none;
+}
+
+body.teletext-theme .bench-paper::after {
+  border: 1px dashed #ffff00;
+}
+
 /* Mobile responsive - small screens */
 @media (max-width: 600px) {
   body .main-paper {

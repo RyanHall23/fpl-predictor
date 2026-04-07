@@ -456,9 +456,130 @@ body.win2k-theme .sync-icon {
   color: #000000;
 }
 
-/* Mobile responsive - win2k theme */
+/* Teletext theme */
+body.teletext-theme .player-card {
+  background: #000000;
+  border-radius: 0;
+  border: 2px solid #ffff00;
+  box-shadow: none;
+}
+
+body.teletext-theme .player-card:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: #00ffff;
+}
+
+body.teletext-theme .player-card-selected {
+  border: 3px solid #ff0000 !important;
+  box-shadow: none;
+}
+
+body.teletext-theme .player-card-selected:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+body.teletext-theme .player-card-valid-target {
+  border: 3px solid #00ff00 !important;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+body.teletext-theme .player-card-valid-target:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+body.teletext-theme .player-name {
+  color: #ffffff;
+  font-family: "Courier New", "Courier", monospace;
+}
+
+body.teletext-theme .points-display {
+  color: #ffff00;
+  text-shadow: none;
+  font-family: "Courier New", "Courier", monospace;
+}
+
+body.teletext-theme .opponent-display {
+  color: #00ffff;
+  background: rgba(0, 0, 128, 0.5);
+  border-radius: 0;
+}
+
+body.teletext-theme .info-label {
+  color: #00ffff;
+  font-family: "Courier New", "Courier", monospace;
+}
+
+body.teletext-theme .dreamteam-icon {
+  color: #ffff00;
+  filter: none;
+}
+
+body.teletext-theme .action-button-small {
+  color: #ffffff !important;
+  background: #000080;
+  border-radius: 0;
+  border: 2px solid #00ffff;
+  box-shadow: none;
+  font-family: "Courier New", "Courier", monospace;
+}
+
+body.teletext-theme .action-button-small:hover {
+  background-color: #0000aa;
+  border-color: #ffff00;
+}
+
+body.teletext-theme .action-button-small.substitute-button {
+  background: #000080;
+  color: #ffffff !important;
+  border: 2px solid #00ffff;
+}
+
+body.teletext-theme .action-button-small.substitute-button:hover {
+  background: #0000aa;
+  border-color: #ffff00;
+}
+
+body.teletext-theme .action-button-small.transfer-button {
+  background: #000080;
+  color: #00ffff !important;
+  border: 2px solid #00ffff;
+}
+
+body.teletext-theme .action-button-small.transfer-button:hover {
+  background: #0000aa;
+  border-color: #ffff00;
+}
+
+body.teletext-theme .captain-button {
+  background: #000080;
+  color: #ffff00 !important;
+  border: 2px solid #ffff00;
+  font-family: "Courier New", "Courier", monospace;
+}
+
+body.teletext-theme .captain-button:hover {
+  background: #0000aa;
+  border-color: #ffffff;
+}
+
+body.teletext-theme .sync-icon {
+  color: #00ffff;
+}
+
+body.teletext-theme .captain-badge {
+  background-color: #ffff00;
+  color: #000000;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* Mobile responsive - teletext theme (keep square corners on small screens) */
 @media (max-width: 600px) {
-  body.win2k-theme .player-card {
+  body.teletext-theme .player-card {
     border-radius: 0;
   }
 }
