@@ -1,7 +1,7 @@
 import React, { createContext, useState, useMemo, useContext, useEffect } from 'react';
 import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { darkTheme, lightTheme, win2kTheme } from './theme';
+import { darkTheme, lightTheme, win2kTheme, teletextTheme } from './theme';
 import PropTypes from 'prop-types';
 
 const ThemeContext = createContext();
@@ -21,10 +21,16 @@ export const ThemeProvider = ({ children }) => {
     return savedMode || 'dark';
   });
 
-  // Track the last non-win2k mode so we can restore it when disabling win2k
+  // Track the last non-win2k/teletext mode so we can restore it when disabling win2k
   const [preWin2kMode, setPreWin2kMode] = useState(() => {
     const savedMode = localStorage.getItem('themeMode');
-    return savedMode && savedMode !== 'win2k' ? savedMode : 'dark';
+    return savedMode && savedMode !== 'win2k' && savedMode !== 'teletext' ? savedMode : 'dark';
+  });
+
+  // Track the last non-teletext mode so we can restore it when disabling teletext
+  const [preTeletextMode, setPreTeletextMode] = useState(() => {
+    const savedMode = localStorage.getItem('themeMode');
+    return savedMode && savedMode !== 'teletext' && savedMode !== 'win2k' ? savedMode : 'dark';
   });
 
   // Save to localStorage whenever mode changes
@@ -32,7 +38,7 @@ export const ThemeProvider = ({ children }) => {
     localStorage.setItem('themeMode', mode);
   }, [mode]);
 
-  // Apply/remove body class for win2k CSS overrides
+  // Apply/remove body class for win2k and teletext CSS overrides
   useEffect(() => {
     // Guard for non-browser environments (e.g., SSR, some tests)
     if (typeof document === 'undefined' || !document.body || !document.body.classList) {
@@ -43,13 +49,19 @@ export const ThemeProvider = ({ children }) => {
 
     if (mode === 'win2k') {
       classList.add('win2k-theme');
+      classList.remove('teletext-theme');
+    } else if (mode === 'teletext') {
+      classList.add('teletext-theme');
+      classList.remove('win2k-theme');
     } else {
       classList.remove('win2k-theme');
+      classList.remove('teletext-theme');
     }
 
     // Cleanup to ensure the class is removed on unmount or mode change
     return () => {
       classList.remove('win2k-theme');
+      classList.remove('teletext-theme');
     };
   }, [mode]);
 
@@ -63,9 +75,10 @@ export const ThemeProvider = ({ children }) => {
 
   const toggleTheme = () => {
     setMode((prevMode) => {
-      if (prevMode === 'win2k') return 'dark';
+      if (prevMode === 'win2k' || prevMode === 'teletext') return 'dark';
       const next = prevMode === 'dark' ? 'light' : 'dark';
       setPreWin2kMode(next);
+      setPreTeletextMode(next);
       return next;
     });
   };
@@ -75,18 +88,29 @@ export const ThemeProvider = ({ children }) => {
       if (prevMode === 'win2k') {
         return preWin2kMode;
       }
-      setPreWin2kMode(prevMode);
+      setPreWin2kMode(prevMode === 'teletext' ? preTeletextMode : prevMode);
       return 'win2k';
+    });
+  };
+
+  const toggleTeletext = () => {
+    setMode((prevMode) => {
+      if (prevMode === 'teletext') {
+        return preTeletextMode;
+      }
+      setPreTeletextMode(prevMode === 'win2k' ? preWin2kMode : prevMode);
+      return 'teletext';
     });
   };
 
   const theme = useMemo(() => {
     if (mode === 'win2k') return win2kTheme;
+    if (mode === 'teletext') return teletextTheme;
     return mode === 'dark' ? darkTheme : lightTheme;
   }, [mode]);
 
   return (
-    <ThemeContext.Provider value={ { mode, toggleTheme, toggleWin2k } }>
+    <ThemeContext.Provider value={ { mode, toggleTheme, toggleWin2k, toggleTeletext } }>
       <MuiThemeProvider theme={ theme }>
         <CssBaseline />
         { children }

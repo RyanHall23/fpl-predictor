@@ -185,6 +185,191 @@ export const win2kTheme = createTheme({
   },
 });
 
+// Teletext retro easter-egg theme (triggered by clicking "Highest Team" 5 times)
+export const teletextTheme = createTheme({
+  palette: {
+    mode: 'dark',
+    primary: {
+      main: '#ffff00',
+      light: '#ffffff',
+      dark: '#cccc00',
+      contrastText: '#000000',
+    },
+    secondary: {
+      main: '#00ffff',
+      light: '#ffffff',
+      dark: '#00cccc',
+      contrastText: '#000000',
+    },
+    background: {
+      default: '#000000',
+      paper: '#000000',
+      gradient: '#000000',
+      field: 'repeating-linear-gradient(0deg, #003300, #003300 20px, #004400 20px, #004400 40px)',
+      fieldStripes: 'repeating-linear-gradient(0deg, #003300, #003300 20px, #004400 20px, #004400 40px)',
+    },
+    text: {
+      primary: '#ffffff',
+      secondary: '#ffff00',
+    },
+    divider: '#ffff00',
+    success: {
+      main: '#00ff00',
+    },
+    error: {
+      main: '#ff0000',
+    },
+    warning: {
+      main: '#ffff00',
+    },
+    info: {
+      main: '#00ffff',
+    },
+  },
+  typography: {
+    fontFamily: '"Courier New", "Courier", monospace',
+    fontSize: 13,
+    h6: {
+      fontWeight: 700,
+      fontSize: '1rem',
+    },
+  },
+  shape: {
+    borderRadius: 0,
+  },
+  components: {
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          backgroundImage: 'none',
+          backgroundColor: '#000000',
+          borderRadius: 0,
+          border: '2px solid #ffff00',
+          boxShadow: 'none',
+        },
+      },
+    },
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          borderRadius: 0,
+          backgroundColor: '#000000',
+          border: '2px solid #ffff00',
+          boxShadow: 'none',
+        },
+      },
+    },
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          textTransform: 'none',
+          borderRadius: 0,
+          backgroundColor: '#000080',
+          color: '#ffffff',
+          border: '2px solid #00ffff',
+          boxShadow: 'none',
+          fontFamily: '"Courier New", "Courier", monospace',
+          fontSize: '0.8rem',
+          '&:hover': {
+            backgroundColor: '#0000aa',
+            borderColor: '#ffff00',
+          },
+          '&.MuiButton-contained': {
+            backgroundColor: '#000080',
+            color: '#ffffff',
+          },
+          '&.MuiButton-outlined': {
+            backgroundColor: '#000000',
+            borderColor: '#00ffff',
+          },
+        },
+      },
+    },
+    MuiAppBar: {
+      styleOverrides: {
+        root: {
+          backgroundImage: 'none',
+          backgroundColor: '#0000aa',
+          borderRadius: 0,
+          boxShadow: 'none',
+        },
+      },
+    },
+    MuiIconButton: {
+      styleOverrides: {
+        root: {
+          borderRadius: 0,
+          color: '#ffffff',
+        },
+      },
+    },
+    MuiSelect: {
+      styleOverrides: {
+        root: {
+          borderRadius: 0,
+          backgroundColor: '#000080',
+          color: '#ffffff',
+          fontFamily: '"Courier New", "Courier", monospace',
+          fontSize: '0.8rem',
+        },
+      },
+    },
+    MuiTextField: {
+      styleOverrides: {
+        root: {
+          '& .MuiOutlinedInput-root': {
+            borderRadius: 0,
+            backgroundColor: '#000080',
+            color: '#ffffff',
+          },
+        },
+      },
+    },
+    MuiDialog: {
+      styleOverrides: {
+        paper: {
+          borderRadius: 0,
+          backgroundColor: '#000000',
+          border: '2px solid #ffff00',
+        },
+      },
+    },
+    MuiDialogTitle: {
+      styleOverrides: {
+        root: {
+          backgroundColor: '#ffff00',
+          color: '#000000',
+          fontFamily: '"Courier New", "Courier", monospace',
+          fontWeight: 700,
+          fontSize: '1rem',
+          padding: '4px 8px',
+        },
+      },
+    },
+    MuiChip: {
+      styleOverrides: {
+        root: {
+          borderRadius: 0,
+          backgroundColor: '#000080',
+          color: '#ffffff',
+        },
+      },
+    },
+    MuiMenuItem: {
+      styleOverrides: {
+        root: {
+          fontFamily: '"Courier New", "Courier", monospace',
+          backgroundColor: '#000000',
+          color: '#ffffff',
+          '&:hover': {
+            backgroundColor: '#000080',
+          },
+        },
+      },
+    },
+  },
+});
+
 // Dark mode theme (default) based on UserProfilePane styling
 export const darkTheme = createTheme({
   palette: {

@@ -45,16 +45,21 @@ const NavigationBar = ({
   isPast,
   isActive,
 }) => {
-  const { mode, toggleTheme, toggleWin2k } = useThemeMode();
+  const { mode, toggleTheme, toggleWin2k, toggleTeletext } = useThemeMode();
   const [teamIdDialogOpen, setTeamIdDialogOpen] = React.useState(false);
   const [teamIdInput, setTeamIdInput] = React.useState('');
   const [myTeamClickCount, setMyTeamClickCount] = React.useState(0);
   const myTeamClickTimerRef = React.useRef(null);
-  const MY_TEAM_CLICK_RESET_MS = 2000;
+  const [highestTeamClickCount, setHighestTeamClickCount] = React.useState(0);
+  const highestTeamClickTimerRef = React.useRef(null);
+  const EASTER_EGG_CLICK_RESET_MS = 2000;
   const isValidTeamId = (val) => /^\d+$/.test(val);
 
   React.useEffect(() => {
-    return () => clearTimeout(myTeamClickTimerRef.current);
+    return () => {
+      clearTimeout(myTeamClickTimerRef.current);
+      clearTimeout(highestTeamClickTimerRef.current);
+    };
   }, []);
 
   const handleOpenTeamIdDialog = () => {
@@ -76,7 +81,25 @@ const NavigationBar = ({
       }
       myTeamClickTimerRef.current = setTimeout(
         () => setMyTeamClickCount(0),
-        MY_TEAM_CLICK_RESET_MS
+        EASTER_EGG_CLICK_RESET_MS
+      );
+      return next;
+    });
+  };
+
+  const handleHighestTeamClick = () => {
+    onSwitchTeamView(TEAM_VIEW.HIGHEST);
+    setHighestTeamClickCount((prev) => {
+      const next = prev + 1;
+      clearTimeout(highestTeamClickTimerRef.current);
+      if (next >= 5) {
+        toggleTeletext();
+        highestTeamClickTimerRef.current = null;
+        return 0;
+      }
+      highestTeamClickTimerRef.current = setTimeout(
+        () => setHighestTeamClickCount(0),
+        EASTER_EGG_CLICK_RESET_MS
       );
       return next;
     });
@@ -177,7 +200,7 @@ const NavigationBar = ({
               <Button
                 variant={ teamView === TEAM_VIEW.HIGHEST ? 'contained' : 'outlined' }
                 color='secondary'
-                onClick={ () => onSwitchTeamView(TEAM_VIEW.HIGHEST) }
+                onClick={ handleHighestTeamClick }
                 size='small'
                 sx={ { whiteSpace: 'nowrap', px: { xs: 1, sm: 2 }, fontSize: { xs: '0.7rem', sm: '0.875rem' } } }
               >
