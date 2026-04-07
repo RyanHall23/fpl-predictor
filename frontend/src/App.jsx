@@ -10,6 +10,8 @@ import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import { useTheme } from '@mui/material/styles';
 import TableRowsIcon from '@mui/icons-material/TableRows';
 import GridViewIcon from '@mui/icons-material/GridView';
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
+import Tooltip from '@mui/material/Tooltip';
 import TeamFormation from './components/TeamFormation/TeamFormation';
 import TeamListView from './components/TeamListView/TeamListView';
 import useTeamData from './hooks/useTeamData';
@@ -46,6 +48,7 @@ const App = () => {
     selectedPlayer,
     gameweekInfo,
     setCaptain,
+    autoPickLineup,
   } = useTeamData(
     currentEntryId,
     teamView === TEAM_VIEW.HIGHEST,
@@ -255,8 +258,21 @@ const App = () => {
                 ) }
               </Box>
             ) }
-            { /* View mode toggle */ }
-            <Box sx={ { display: 'flex', justifyContent: 'flex-end', mb: 0.5 } }>
+            { /* View mode toggle + Auto Pick */ }
+            <Box sx={ { display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 1, mb: 0.5 } }>
+              { !isHighestPredictedTeam && !viewingOpponentId && activePlayers.length > 0 && (
+                <Tooltip title='Auto pick best XI from your squad'>
+                  <Button
+                    size='small'
+                    variant='outlined'
+                    startIcon={ <AutoFixHighIcon sx={ { fontSize: 16 } } /> }
+                    onClick={ autoPickLineup }
+                    sx={ { py: '3px', px: 1.25, minWidth: 0, fontSize: '0.75rem' } }
+                  >
+                    Auto Pick
+                  </Button>
+                </Tooltip>
+              ) }
               <ToggleButtonGroup
                 value={ pitchView }
                 exclusive

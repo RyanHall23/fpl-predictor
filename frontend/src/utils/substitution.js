@@ -211,6 +211,86 @@ export const applySubstitution = (activePlayers, reservePlayers, player1, player
 };
 
 /**
+ * Select the optimal starting XI from a full squad of 15 players.
+ *
+ * Algorithm:
+ *   1. Best GK (by predictedPoints) starts; the other GK goes to bench.
+ *   2. Mandatory outfield starters: top 3 DEF + top 3 MID + top 1 FWD = 7 players.
+ *   3. 3 flex slots filled from the remaining outfield pool (sorted by predictedPoints).
+ *   4. Captain: highest-base-points outfield starter.
+ *   5. Vice-captain: second-highest-base-points outfield starter.
+ *
+ * @param {Array} allPlayers - All 15 squad members (starting XI + bench combined).
+ * @returns {{ activePlayers: Array, reservePlayers: Array }}
+ */
+export const selectOptimalLineup = (allPlayers) => {
+  const pos = (p) => p.position || p.element_type || 0;
+  const getPointsVal = (p) => parseFloat(p.predictedPoints) || 0;
+  const getBasePoints = (p) =>
+    p.basePoints != null
+      ? p.basePoints
+      : Math.round((p.predictedPoints ?? 0) / (p.multiplier || 1));
+  const sortDesc = (arr) => [...arr].sort((a, b) => getPointsVal(b) - getPointsVal(a));
+
+  const gks  = sortDesc(allPlayers.filter(p => pos(p) === POSITION.GK));
+  const defs = sortDesc(allPlayers.filter(p => pos(p) === POSITION.DEF));
+  const mids = sortDesc(allPlayers.filter(p => pos(p) === POSITION.MID));
+  const fwds = sortDesc(allPlayers.filter(p => pos(p) === POSITION.FWD));
+
+  // Mandatory starters: 1 GK + 3 DEF + 3 MID + 1 FWD
+  const startingGk = gks[0];
+  const mandatoryStarters = [
+    ...defs.slice(0, 3),
+    ...mids.slice(0, 3),
+    ...fwds.slice(0, 1),
+  ];
+
+  // Flex pool: remaining outfield players sorted by predicted points descending
+  const flexPool = sortDesc([
+    ...defs.slice(3),
+    ...mids.slice(3),
+    ...fwds.slice(1),
+  ]);
+
+  // 3 flex starters to reach a total of 11 (1 GK + 7 mandatory + 3 flex)
+  const flexStarters  = flexPool.slice(0, 3);
+  const benchOutfield = flexPool.slice(3);
+
+  const startingXI = [startingGk, ...mandatoryStarters, ...flexStarters];
+  const bench = [gks[1], ...benchOutfield].filter(Boolean);
+
+  // Captain: highest base-points outfield starter
+  const outfieldStarters = startingXI.filter(p => pos(p) !== POSITION.GK);
+  const captainPlayer = outfieldStarters.reduce((best, p) =>
+    getBasePoints(p) > getBasePoints(best) ? p : best
+  );
+
+  // Vice-captain: second-highest base-points outfield starter
+  const nonCaptain = outfieldStarters.filter(p => p.code !== captainPlayer.code);
+  const vcPlayer = nonCaptain.length > 0
+    ? nonCaptain.reduce((best, p) => getBasePoints(p) > getBasePoints(best) ? p : best)
+    : null;
+
+  // Apply captain / vice-captain roles and reset multipliers
+  const applyRoles = (players) =>
+    players.map((p) => {
+      const base = Math.round(getBasePoints(p));
+      if (p.code === captainPlayer.code) {
+        return { ...p, is_captain: true, is_vice_captain: false, multiplier: 2, predictedPoints: base * 2 };
+      }
+      if (vcPlayer && p.code === vcPlayer.code) {
+        return { ...p, is_captain: false, is_vice_captain: true, multiplier: 1, predictedPoints: base };
+      }
+      return { ...p, is_captain: false, is_vice_captain: false, multiplier: 1, predictedPoints: base };
+    });
+
+  return {
+    activePlayers: applyRoles(startingXI),
+    reservePlayers: applyRoles(bench),
+  };
+};
+
+/**
  * Calculate the score breakdown for a squad.
  * The captain's predictedPoints are already doubled (multiplier applied during
  * formatting), so total is simply the sum of all active XI predictedPoints.
