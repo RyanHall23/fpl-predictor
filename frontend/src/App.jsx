@@ -33,6 +33,7 @@ const App = () => {
   const [teamView, setTeamView] = useState(() => localStorage.getItem('teamId') ? TEAM_VIEW.USER : TEAM_VIEW.HIGHEST);
   const [selectedGameweek, setSelectedGameweek] = useState(null); // null means current gameweek
   const [currentGameweek, setCurrentGameweek] = useState(null);
+  const [isCurrentGwActive, setIsCurrentGwActive] = useState(false);
   const [selectedLeague, setSelectedLeague] = useState(null); // invitation league drill-down
   const [viewingOpponentId, setViewingOpponentId] = useState(null); // opponent team being viewed
   const [pitchView, setPitchView] = useState(() => localStorage.getItem('pitchView') || 'formation'); // 'formation' | 'list'
@@ -74,6 +75,10 @@ const App = () => {
   useEffect(() => {
     if (gameweekInfo && gameweekInfo.current) {
       setCurrentGameweek(gameweekInfo.current);
+      // Capture whether the current GW is active whenever we have data for it
+      if (gameweekInfo.selected === gameweekInfo.current) {
+        setIsCurrentGwActive(!!gameweekInfo.isActive);
+      }
     }
   }, [gameweekInfo]);
 
@@ -299,7 +304,7 @@ const App = () => {
                 isHighestPredictedTeam={ isHighestPredictedTeam }
                 onSetCaptain={ !isHighestPredictedTeam ? setCaptain : undefined }
                 currentGameweek={ currentGameweek }
-                isActiveGameweek={ !!gameweekInfo?.isActive }
+                isActiveGameweek={ isCurrentGwActive }
                 isFutureGameweek={ !!gameweekInfo?.isFuture }
                 viewedGameweek={ gameweekInfo?.selected ?? currentGameweek }
                 plannedTransfers={ !isHighestPredictedTeam ? plannedTransfers : undefined }
@@ -317,7 +322,7 @@ const App = () => {
                 isHighestPredictedTeam={ isHighestPredictedTeam }
                 onSetCaptain={ !isHighestPredictedTeam ? setCaptain : undefined }
                 currentGameweek={ currentGameweek }
-                isActiveGameweek={ !!gameweekInfo?.isActive }
+                isActiveGameweek={ isCurrentGwActive }
                 isFutureGameweek={ !!gameweekInfo?.isFuture }
                 viewedGameweek={ gameweekInfo?.selected ?? currentGameweek }
                 plannedTransfers={ !isHighestPredictedTeam ? plannedTransfers : undefined }
