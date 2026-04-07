@@ -13,7 +13,7 @@ const positionLabels = {
   5: 'MAN'
 };
 
-const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, allPlayers, onTransfer, isHighestPredictedTeam, onPlayerClick, onSetCaptain, currentGameweek, onAddPlannedTransfer, isFutureGameweek, viewedGameweek, plannedTransfers, onRemovePlannedTransfer }) => {
+const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, allPlayers, onTransfer, isHighestPredictedTeam, onPlayerClick, onSetCaptain, currentGameweek, isFutureGameweek, viewedGameweek, plannedTransfers, onRemovePlannedTransfer }) => {
   // Captain is always provided by the backend (is_captain flag on player).
   // For user teams it comes from picks; for highest-predicted teams the backend
   // marks the best outfield starter as captain.
@@ -38,9 +38,9 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
     : [];
 
   return (
-    <Grid container spacing={ 2 } justifyContent='center'>
+    <Grid container spacing={ 1 } justifyContent='center'>
       <Grid size={ 12 }>
-        <Paper className='main-paper' sx={ { position: 'relative', p: 2 } }>
+        <Paper className='main-paper' sx={ { position: 'relative', p: 1 } }>
           { /* Pitch markings */ }
           <div className='pitch-top-line' />
           <div className='pitch-bottom-line' />
@@ -50,7 +50,7 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
           
           <Box sx={ { position: 'relative', zIndex: 1 } }>
             { /* GK and Manager row, centered together */ }
-            <Grid container justifyContent='center' alignItems='center' spacing={ 2 }>
+            <Grid container justifyContent='center' alignItems='center' spacing={ 1 }>
               { gks.map((player) => (
                 <Grid key={ player.code || player.name }>
                   <PlayerCard
@@ -67,7 +67,6 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
                     reservePlayers={ reservePlayers }
                     onSetCaptain={ !isHighestPredictedTeam ? onSetCaptain : undefined }
                     currentGameweek={ currentGameweek }
-                    onAddPlannedTransfer={ !isHighestPredictedTeam ? onAddPlannedTransfer : undefined }
                     isFutureGameweek={ isFutureGameweek }
                     viewedGameweek={ viewedGameweek }
                     plannedTransfers={ plannedTransfers }
@@ -94,7 +93,6 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
                       reservePlayers={ reservePlayers }
                       onSetCaptain={ !isHighestPredictedTeam ? onSetCaptain : undefined }
                       currentGameweek={ currentGameweek }
-                      onAddPlannedTransfer={ !isHighestPredictedTeam ? onAddPlannedTransfer : undefined }
                       isFutureGameweek={ isFutureGameweek }
                       viewedGameweek={ viewedGameweek }
                       plannedTransfers={ plannedTransfers }
@@ -105,7 +103,7 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
               ) }
             </Grid>
             { /* DEF row */ }
-            <Grid container spacing={ 2 } justifyContent='center'>
+            <Grid container spacing={ 1 } justifyContent='center'>
               { defs.map((player) => (
                 <Grid key={ player.code || player.name }>
                   <PlayerCard
@@ -122,7 +120,6 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
                     reservePlayers={ reservePlayers }
                     onSetCaptain={ !isHighestPredictedTeam ? onSetCaptain : undefined }
                     currentGameweek={ currentGameweek }
-                    onAddPlannedTransfer={ !isHighestPredictedTeam ? onAddPlannedTransfer : undefined }
                     isFutureGameweek={ isFutureGameweek }
                     viewedGameweek={ viewedGameweek }
                     plannedTransfers={ plannedTransfers }
@@ -132,7 +129,7 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
               )) }
             </Grid>
             { /* MID row */ }
-            <Grid container spacing={ 2 } justifyContent='center'>
+            <Grid container spacing={ 1 } justifyContent='center'>
               { mids.map((player) => (
                 <Grid key={ player.code || player.name }>
                   <PlayerCard
@@ -149,7 +146,6 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
                     reservePlayers={ reservePlayers }
                     onSetCaptain={ !isHighestPredictedTeam ? onSetCaptain : undefined }
                     currentGameweek={ currentGameweek }
-                    onAddPlannedTransfer={ !isHighestPredictedTeam ? onAddPlannedTransfer : undefined }
                     isFutureGameweek={ isFutureGameweek }
                     viewedGameweek={ viewedGameweek }
                     plannedTransfers={ plannedTransfers }
@@ -159,7 +155,7 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
               )) }
             </Grid>
             { /* ATT row */ }
-            <Grid container spacing={ 2 } justifyContent='center'>
+            <Grid container spacing={ 1 } justifyContent='center'>
               { atts.map((player) => (
                 <Grid key={ player.code || player.name }>
                   <PlayerCard
@@ -176,7 +172,6 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
                     reservePlayers={ reservePlayers }
                     onSetCaptain={ !isHighestPredictedTeam ? onSetCaptain : undefined }
                     currentGameweek={ currentGameweek }
-                    onAddPlannedTransfer={ !isHighestPredictedTeam ? onAddPlannedTransfer : undefined }
                     isFutureGameweek={ isFutureGameweek }
                     viewedGameweek={ viewedGameweek }
                     plannedTransfers={ plannedTransfers }
@@ -189,9 +184,9 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
         </Paper>
       </Grid>
       <Grid size={ 12 }>
-        <Paper className='bench-paper' sx={ { p: 2, position: 'relative' } }>
+        <Paper className='bench-paper' sx={ { p: 1, position: 'relative' } }>
           <Box sx={ { position: 'relative', zIndex: 1 } }>
-            <Grid container spacing={ 2 } justifyContent='center'>
+            <Grid container spacing={ 1 } justifyContent='center'>
               { /* Bench manager first */ }
               { benchManager && (
                 <Grid key={ benchManager.code || benchManager.name }>
@@ -212,7 +207,6 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
                       activePlayers={ activePlayers }
                       reservePlayers={ reservePlayers }
                       currentGameweek={ currentGameweek }
-                      onAddPlannedTransfer={ !isHighestPredictedTeam ? onAddPlannedTransfer : undefined }
                       isFutureGameweek={ isFutureGameweek }
                       viewedGameweek={ viewedGameweek }
                       plannedTransfers={ plannedTransfers }
@@ -241,7 +235,6 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
                       activePlayers={ activePlayers }
                       reservePlayers={ reservePlayers }
                       currentGameweek={ currentGameweek }
-                      onAddPlannedTransfer={ !isHighestPredictedTeam ? onAddPlannedTransfer : undefined }
                       isFutureGameweek={ isFutureGameweek }
                       viewedGameweek={ viewedGameweek }
                       plannedTransfers={ plannedTransfers }
@@ -270,7 +263,6 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
                       activePlayers={ activePlayers }
                       reservePlayers={ reservePlayers }
                       currentGameweek={ currentGameweek }
-                      onAddPlannedTransfer={ !isHighestPredictedTeam ? onAddPlannedTransfer : undefined }
                       isFutureGameweek={ isFutureGameweek }
                       viewedGameweek={ viewedGameweek }
                       plannedTransfers={ plannedTransfers }
@@ -301,7 +293,6 @@ TeamFormation.propTypes = {
   onPlayerClick: PropTypes.func,
   onSetCaptain: PropTypes.func,
   currentGameweek: PropTypes.number,
-  onAddPlannedTransfer: PropTypes.func,
   isFutureGameweek: PropTypes.bool,
   viewedGameweek: PropTypes.number,
   plannedTransfers: PropTypes.array,

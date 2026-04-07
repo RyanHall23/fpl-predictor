@@ -226,7 +226,8 @@ const enrichPlayersWithOpponents = (players, fixtures, teams, targetEventId) => 
       event: fixture.event,
       opponent: fixture.team_a,
       is_home: true,
-      difficulty: fixture.team_h_difficulty || 3 // Difficulty for home team (1=easy, 5=hard)
+      difficulty: fixture.team_h_difficulty || 3, // Difficulty for home team (1=easy, 5=hard)
+      kickoff_time: fixture.kickoff_time ?? null,
     });
     
     // Away team
@@ -237,7 +238,8 @@ const enrichPlayersWithOpponents = (players, fixtures, teams, targetEventId) => 
       event: fixture.event,
       opponent: fixture.team_h,
       is_home: false,
-      difficulty: fixture.team_a_difficulty || 3 // Difficulty for away team (1=easy, 5=hard)
+      difficulty: fixture.team_a_difficulty || 3, // Difficulty for away team (1=easy, 5=hard)
+      kickoff_time: fixture.kickoff_time ?? null,
     });
   });
   
@@ -253,16 +255,25 @@ const enrichPlayersWithOpponents = (players, fixtures, teams, targetEventId) => 
     const fixtures = fixturesByTeam[playerTeam];
     
     if (fixtures && fixtures.length > 0) {
+      // Sort fixtures chronologically (nulls last) so the first fixture is always the earliest
+      const sortedFixtures = [...fixtures].sort((a, b) => {
+        if (!a.kickoff_time && !b.kickoff_time) return 0;
+        if (!a.kickoff_time) return 1;
+        if (!b.kickoff_time) return -1;
+        return new Date(a.kickoff_time) - new Date(b.kickoff_time);
+      });
+
       // Build opponents array with team names
-      const opponents = fixtures.map(fixture => ({
+      const opponents = sortedFixtures.map(fixture => ({
         opponent_id: fixture.opponent,
         opponent_short: teamMap[fixture.opponent]?.short_name || 'TBD',
         is_home: fixture.is_home,
-        difficulty: fixture.difficulty // Include FPL difficulty rating (1-5)
+        difficulty: fixture.difficulty, // Include FPL difficulty rating (1-5)
+        kickoff_time: fixture.kickoff_time ?? null,
       }));
       
       // For backwards compatibility, set first fixture as primary opponent
-      const firstFixture = fixtures[0];
+      const firstFixture = sortedFixtures[0];
       const firstOpponent = teamMap[firstFixture.opponent];
       
       const fixtureCount = fixtures.length;
@@ -276,6 +287,7 @@ const enrichPlayersWithOpponents = (players, fixtures, teams, targetEventId) => 
         difficulty: firstFixture.difficulty,
         fixture_event: firstFixture.event,
         fixture_count: fixtureCount,
+        fixtureKickoff: firstFixture.kickoff_time ?? null,
         // ep_next is intentionally NOT overwritten here — it is set by the
         // prediction engine (applyAdvancedPredictions / recalculatePointsForGameweek)
         // which should be called after this function.
