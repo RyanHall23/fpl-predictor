@@ -53,6 +53,7 @@ const ListRow = ({
   plannedTransfers,
   onRemovePlannedTransfer,
   currentGameweek,
+  isActiveGameweek,
   showTransferButtons,
 }) => {
   const [transferDialogOpen, setTransferDialogOpen] = React.useState(false);
@@ -287,6 +288,7 @@ const ListRow = ({
           open={ transferDialogOpen }
           onClose={ () => setTransferDialogOpen(false) }
           currentGameweek={ currentGameweek }
+          isActiveGameweek={ isActiveGameweek }
         />
       ) }
     </>
@@ -304,6 +306,7 @@ const TeamListView = ({
   onPlayerClick,
   onSetCaptain,
   currentGameweek,
+  isActiveGameweek,
   isFutureGameweek,
   viewedGameweek,
   plannedTransfers,
@@ -316,7 +319,7 @@ const TeamListView = ({
   const sharedRowProps = {
     selectedPlayer, team, allPlayers, onTransfer, onPlayerClick,
     isFutureGameweek, viewedGameweek, plannedTransfers, onRemovePlannedTransfer,
-    currentGameweek, showTransferButtons: !isHighestPredictedTeam,
+    currentGameweek, isActiveGameweek, showTransferButtons: !isHighestPredictedTeam,
   };
 
   return (
@@ -402,6 +405,7 @@ ListRow.propTypes = {
   plannedTransfers: PropTypes.array,
   onRemovePlannedTransfer: PropTypes.func,
   currentGameweek: PropTypes.number,
+  isActiveGameweek: PropTypes.bool,
   showTransferButtons: PropTypes.bool,
 };
 
@@ -416,6 +420,7 @@ TeamListView.propTypes = {
   onPlayerClick: PropTypes.func,
   onSetCaptain: PropTypes.func,
   currentGameweek: PropTypes.number,
+  isActiveGameweek: PropTypes.bool,
   isFutureGameweek: PropTypes.bool,
   viewedGameweek: PropTypes.number,
   plannedTransfers: PropTypes.array,

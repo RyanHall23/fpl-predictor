@@ -16,11 +16,12 @@ import MenuItem from '@mui/material/MenuItem';
 import Box from '@mui/material/Box';
 import { useTheme } from '@mui/material/styles';
 
-// props: team, allPlayers, onTransfer, playerOut, open, onClose, currentGameweek
-const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut, open, onClose, currentGameweek }) => {
+// props: team, allPlayers, onTransfer, playerOut, open, onClose, currentGameweek, isActiveGameweek
+const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut, open, onClose, currentGameweek, isActiveGameweek }) => {
     const theme = useTheme();
+    const minGameweek = currentGameweek ? (isActiveGameweek ? currentGameweek + 1 : currentGameweek) : null;
     const [selectedIn, setSelectedIn] = useState(null);
-    const [selectedGameweek, setSelectedGameweek] = useState(currentGameweek || null);
+    const [selectedGameweek, setSelectedGameweek] = useState(minGameweek);
 
     // Defensive: handle missing playerOut
     if (!playerOut) return null;
@@ -48,7 +49,7 @@ const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut, open, onClose
 
     const handleCloseDialog = () => {
         setSelectedIn(null);
-        setSelectedGameweek(currentGameweek || null);
+        setSelectedGameweek(minGameweek);
         if (onClose) onClose();
     };
 
@@ -109,16 +110,16 @@ const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut, open, onClose
                         } }
                     />
                     { /* Gameweek selector – only shown for present/future gameweeks */ }
-                    { currentGameweek && (
+                    { minGameweek && (
                         <Box sx={ { mt: 2 } }>
                             <FormControl fullWidth size='small'>
                                 <InputLabel>Transfer in Gameweek</InputLabel>
                                 <Select
-                                    value={ selectedGameweek || currentGameweek }
+                                    value={ selectedGameweek || minGameweek }
                                     onChange={ (e) => setSelectedGameweek(e.target.value) }
                                     label='Transfer in Gameweek'
                                 >
-                                    { Array.from({ length: 38 - currentGameweek + 1 }, (_, i) => currentGameweek + i).map((gw) => (
+                                    { Array.from({ length: 38 - minGameweek + 1 }, (_, i) => minGameweek + i).map((gw) => (
                                         <MenuItem key={ gw } value={ gw }>GW { gw }</MenuItem>
                                     )) }
                                 </Select>
@@ -150,6 +151,7 @@ TransferPlayer.propTypes = {
     open: PropTypes.bool,
     onClose: PropTypes.func,
     currentGameweek: PropTypes.number,
+    isActiveGameweek: PropTypes.bool,
 };
 
 export default TransferPlayer;
