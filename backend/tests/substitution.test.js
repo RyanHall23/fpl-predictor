@@ -276,8 +276,8 @@ describe('validateSubstitution — zone rules', () => {
       makePlayer({ element_type: POSITION.FWD }),
       makePlayer({ element_type: POSITION.FWD }),
     ];
-    const b1 = benchTeam.find(p => p.element_type === POSITION.DEF);
-    const b2 = benchTeam.find(p => p.element_type === POSITION.FWD);
+    // Swap the two FWDs on the bench — same position, bench re-ordering
+    const [b1, b2] = benchTeam.filter(p => p.element_type === POSITION.FWD);
     const r = validateSubstitution(b1, b2, 'reserve', 'reserve', mainTeam, benchTeam);
     assert.equal(r.valid, true);
   });
@@ -405,6 +405,22 @@ describe('validateSubstitution — player not found', () => {
     const r = validateSubstitution(stranger, benchMID, 'active', 'reserve', mainTeam, benchTeam);
     assert.equal(r.valid, false);
     assert.match(r.error, /not found/i);
+  });
+});
+
+describe('validateSubstitution — invalid zone strings', () => {
+  test('rejects invalid zone1 value', () => {
+    const { mainTeam, benchTeam } = makeSquad433();
+    const r = validateSubstitution(mainTeam[1], benchTeam[1], 'main', 'reserve', mainTeam, benchTeam);
+    assert.equal(r.valid, false);
+    assert.match(r.error, /invalid zone/i);
+  });
+
+  test('rejects invalid zone2 value', () => {
+    const { mainTeam, benchTeam } = makeSquad433();
+    const r = validateSubstitution(mainTeam[1], benchTeam[1], 'active', 'bench', mainTeam, benchTeam);
+    assert.equal(r.valid, false);
+    assert.match(r.error, /invalid zone/i);
   });
 });
 

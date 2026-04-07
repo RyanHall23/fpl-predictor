@@ -372,6 +372,26 @@ describe('validateSubstitution — player not found', () => {
 });
 
 // ---------------------------------------------------------------------------
+// validateSubstitution — invalid zone strings
+// ---------------------------------------------------------------------------
+
+describe('validateSubstitution — invalid zone strings', () => {
+  it('rejects invalid zone1 value', () => {
+    const { activePlayers, reservePlayers } = makeSquad433();
+    const r = validateSubstitution(activePlayers[1], reservePlayers[1], 'main', 'reserve', activePlayers, reservePlayers);
+    expect(r.valid).toBe(false);
+    expect(r.error).toMatch(/invalid zone/i);
+  });
+
+  it('rejects invalid zone2 value', () => {
+    const { activePlayers, reservePlayers } = makeSquad433();
+    const r = validateSubstitution(activePlayers[1], reservePlayers[1], 'active', 'bench', activePlayers, reservePlayers);
+    expect(r.valid).toBe(false);
+    expect(r.error).toMatch(/invalid zone/i);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // applySubstitution — position slot preservation
 // ---------------------------------------------------------------------------
 

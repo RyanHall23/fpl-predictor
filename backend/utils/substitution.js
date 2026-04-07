@@ -86,6 +86,14 @@ const getFormationError = (activePlayers) => {
  * @returns {{ valid: boolean, error: string }}
  */
 const validateSubstitution = (player1, player2, zone1, zone2, activePlayers, reservePlayers) => {
+  // Reject any zone string that isn't one of the two valid values.
+  if (zone1 !== 'active' && zone1 !== 'reserve') {
+    return { valid: false, error: `Invalid zone '${zone1}'. Must be 'active' or 'reserve'.` };
+  }
+  if (zone2 !== 'active' && zone2 !== 'reserve') {
+    return { valid: false, error: `Invalid zone '${zone2}'. Must be 'active' or 'reserve'.` };
+  }
+
   const pos1 = getPosition(player1);
   const pos2 = getPosition(player2);
 
@@ -102,7 +110,8 @@ const validateSubstitution = (player1, player2, zone1, zone2, activePlayers, res
       };
     }
 
-    // Bench re-ordering: GK can only swap with another GK on the bench.
+    // zone1 === zone2 === 'reserve': bench re-ordering path.
+    // GK can only swap with another GK on the bench.
     if ((pos1 === POSITION.GK || pos2 === POSITION.GK) && pos1 !== pos2) {
       return { valid: false, error: 'Goalkeepers can only be swapped with other goalkeepers.' };
     }
