@@ -266,7 +266,7 @@ const App = () => {
                     size='small'
                     variant='outlined'
                     startIcon={ <AutoFixHighIcon sx={ { fontSize: 16 } } /> }
-                    onClick={ autoPickLineup }
+                    onClick={ () => autoPickLineup(effectiveActivePlayers, effectiveReservePlayers) }
                     sx={ { py: '3px', px: 1.25, minWidth: 0, fontSize: '0.75rem' } }
                   >
                     Auto Pick

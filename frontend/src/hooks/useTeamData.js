@@ -240,8 +240,8 @@ const calculateTotalPredictedPoints = (team) => {
     setReservePlayers(applyToTeam);
   }, []);
 
-  const autoPickLineup = useCallback(() => {
-    const all = [...activePlayers, ...reservePlayers];
+  const autoPickLineup = useCallback((effectiveActive, effectiveReserve) => {
+    const all = [...(effectiveActive ?? activePlayers), ...(effectiveReserve ?? reservePlayers)];
     if (all.length < 11) return;
     const { activePlayers: newActive, reservePlayers: newReserve } = selectOptimalLineup(all);
     setActivePlayers(newActive);
