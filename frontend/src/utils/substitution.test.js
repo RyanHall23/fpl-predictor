@@ -12,6 +12,7 @@ import {
   applySubstitution,
   calculateScore,
   normalizeCaptaincy,
+  selectOptimalLineup,
 } from './substitution';
 
 // ---------------------------------------------------------------------------
@@ -882,5 +883,137 @@ describe('future-GW demoted-player captain swap (regression)', () => {
 
     // Rest of main team unchanged
     expect(newMain.filter(p => p.code !== MID4.code)).toHaveLength(10);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// selectOptimalLineup
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a standard 15-player squad for selectOptimalLineup tests.
+ * GK1 (pts 6) starts; GK2 (pts 3) benched.
+ * Outfield pts: D1-D5 = 7,6,5,4,3  M1-M5 = 8,7,6,5,4  F1-F3 = 9,5,5
+ */
+const makeFullSquad = () => {
+  _code = 500;
+  const mkp = (position, basePoints, extra = {}) => makePlayer({ position, basePoints, predictedPoints: basePoints, ...extra });
+  const activePlayers = [
+    mkp(POSITION.GK,  6, { code: 500 }),
+    mkp(POSITION.DEF, 7, { code: 501 }),
+    mkp(POSITION.DEF, 6, { code: 502 }),
+    mkp(POSITION.DEF, 5, { code: 503 }),
+    mkp(POSITION.MID, 8, { code: 504 }),
+    mkp(POSITION.MID, 7, { code: 505 }),
+    mkp(POSITION.MID, 6, { code: 506 }),
+    mkp(POSITION.FWD, 9, { code: 507 }),
+    mkp(POSITION.DEF, 4, { code: 508 }),
+    mkp(POSITION.MID, 5, { code: 509 }),
+    mkp(POSITION.FWD, 5, { code: 510 }),
+  ];
+  const reservePlayers = [
+    mkp(POSITION.GK,  3, { code: 511 }),
+    mkp(POSITION.DEF, 3, { code: 512 }),
+    mkp(POSITION.MID, 4, { code: 513 }),
+    mkp(POSITION.FWD, 5, { code: 514 }),
+  ];
+  return [...activePlayers, ...reservePlayers];
+};
+
+describe('selectOptimalLineup', () => {
+  it('preserves total squad size (11 active + 4 bench)', () => {
+    const all = makeFullSquad();
+    const { activePlayers, reservePlayers } = selectOptimalLineup(all);
+    expect(activePlayers).toHaveLength(11);
+    expect(reservePlayers).toHaveLength(4);
+    expect(activePlayers.length + reservePlayers.length).toBe(all.length);
+  });
+
+  it('produces a valid formation (1 GK, ≥3 DEF, ≥2 MID, ≥1 FWD)', () => {
+    const { activePlayers } = selectOptimalLineup(makeFullSquad());
+    const counts = countPositions(activePlayers);
+    expect(counts[POSITION.GK]).toBe(1);
+    expect(counts[POSITION.DEF]).toBeGreaterThanOrEqual(3);
+    expect(counts[POSITION.MID]).toBeGreaterThanOrEqual(2);
+    expect(counts[POSITION.FWD]).toBeGreaterThanOrEqual(1);
+  });
+
+  it('starts the highest-predicted-points GK', () => {
+    const all = makeFullSquad();
+    const { activePlayers, reservePlayers } = selectOptimalLineup(all);
+    const startingGk = activePlayers.find(p => p.position === POSITION.GK);
+    expect(startingGk.code).toBe(500); // GK1 has 6pts vs GK2 3pts
+    expect(reservePlayers.some(p => p.code === 511)).toBe(true);
+  });
+
+  it('assigns captain to the outfield starter with the highest base points', () => {
+    const { activePlayers } = selectOptimalLineup(makeFullSquad());
+    const captain = activePlayers.find(p => p.is_captain);
+    expect(captain).toBeDefined();
+    expect(captain.code).toBe(507); // FWD with 9 basePoints
+    expect(captain.multiplier).toBe(2);
+    expect(captain.predictedPoints).toBe(18); // 9 * 2
+  });
+
+  it('assigns vice-captain to the outfield starter with the second-highest base points', () => {
+    const { activePlayers } = selectOptimalLineup(makeFullSquad());
+    const vc = activePlayers.find(p => p.is_vice_captain);
+    expect(vc).toBeDefined();
+    expect(vc.code).toBe(504); // MID with 8 basePoints
+    expect(vc.multiplier).toBe(1);
+  });
+
+  it('assigns exactly one captain and one vice-captain', () => {
+    const { activePlayers, reservePlayers } = selectOptimalLineup(makeFullSquad());
+    const all = [...activePlayers, ...reservePlayers];
+    expect(all.filter(p => p.is_captain)).toHaveLength(1);
+    expect(all.filter(p => p.is_vice_captain)).toHaveLength(1);
+  });
+
+  it('is stable when the current captain has a 2× multiplier (uses basePoints for selection)', () => {
+    // Make the GK the current captain (multiplier 2), so predictedPoints is inflated.
+    // selectOptimalLineup should still pick the best outfield player as captain.
+    const all = makeFullSquad().map(p =>
+      p.code === 500
+        ? { ...p, is_captain: true, multiplier: 2, predictedPoints: p.basePoints * 2 }
+        : { ...p, is_captain: false, multiplier: 1 }
+    );
+    const { activePlayers } = selectOptimalLineup(all);
+    const captain = activePlayers.find(p => p.is_captain);
+    // Should still be FWD (code 507, basePoints 9), not the GK
+    expect(captain.code).toBe(507);
+    expect(captain.position).not.toBe(POSITION.GK);
+  });
+
+  it('preserves manager placeholders in the squad and places active manager at index 0', () => {
+    const allWithManager = [
+      makePlayer({ code: 600, position: POSITION.MANAGER, basePoints: 0, predictedPoints: 0 }),
+      ...makeFullSquad(),
+    ];
+    const { activePlayers, reservePlayers } = selectOptimalLineup(allWithManager);
+    // Total count should include the manager
+    expect(activePlayers.length + reservePlayers.length).toBe(allWithManager.length);
+    // Manager must be at activePlayers[0]
+    expect(activePlayers[0].position).toBe(POSITION.MANAGER);
+    // Manager must not be assigned captaincy
+    expect(activePlayers[0].is_captain).toBeFalsy();
+    expect(activePlayers[0].is_vice_captain).toBeFalsy();
+    // Must still be exactly one captain (an outfield player)
+    const allResult = [...activePlayers, ...reservePlayers];
+    const captains = allResult.filter(p => p.is_captain);
+    expect(captains).toHaveLength(1);
+    expect(captains[0].position).not.toBe(POSITION.MANAGER);
+    expect(captains[0].position).not.toBe(POSITION.GK);
+  });
+
+  it('does not assign captaincy to bench players', () => {
+    const { reservePlayers } = selectOptimalLineup(makeFullSquad());
+    expect(reservePlayers.every(p => !p.is_captain && !p.is_vice_captain)).toBe(true);
+  });
+
+  it('no two active players share the same code', () => {
+    const { activePlayers } = selectOptimalLineup(makeFullSquad());
+    const codes = activePlayers.map(p => p.code);
+    expect(new Set(codes).size).toBe(codes.length);
   });
 });

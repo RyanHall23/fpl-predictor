@@ -246,6 +246,8 @@ const calculateTotalPredictedPoints = (team) => {
     const { activePlayers: newActive, reservePlayers: newReserve } = selectOptimalLineup(all);
     setActivePlayers(newActive);
     setReservePlayers(newReserve);
+    setSelectedPlayer(null);
+    setSnackbar({ message: '', key: 0 });
   }, [activePlayers, reservePlayers]);
 
   const toggleTeamView = () => {

@@ -214,24 +214,32 @@ export const applySubstitution = (activePlayers, reservePlayers, player1, player
  * Select the optimal starting XI from a full squad of 15 players.
  *
  * Algorithm:
- *   1. Best GK (by predictedPoints) starts; the other GK goes to bench.
+ *   1. Best GK (by base points) starts; the other GK goes to bench.
  *   2. Mandatory outfield starters: top 3 DEF + top 3 MID + top 1 FWD = 7 players.
- *   3. 3 flex slots filled from the remaining outfield pool (sorted by predictedPoints).
- *   4. Captain: highest-base-points outfield starter.
+ *   3. 3 flex slots filled from the remaining outfield pool (sorted by base points).
+ *   4. Captain: highest-base-points outfield (non-GK, non-manager) starter.
  *   5. Vice-captain: second-highest-base-points outfield starter.
+ *   6. Manager placeholders are preserved unchanged and placed at activePlayers[0].
  *
  * @param {Array} allPlayers - All 15 squad members (starting XI + bench combined).
  * @returns {{ activePlayers: Array, reservePlayers: Array }}
  */
 export const selectOptimalLineup = (allPlayers) => {
   const pos = (p) => p.position || p.element_type || 0;
-  const getPointsVal = (p) => parseFloat(p.predictedPoints) || 0;
-  const sortDesc = (arr) => [...arr].sort((a, b) => getPointsVal(b) - getPointsVal(a));
+  // Use base points for sorting so that the current captain's 2× multiplier
+  // does not unfairly influence who starts.
+  const sortDesc = (arr) => [...arr].sort((a, b) => getBase(b) - getBase(a));
 
-  const gks  = sortDesc(allPlayers.filter(p => pos(p) === POSITION.GK));
-  const defs = sortDesc(allPlayers.filter(p => pos(p) === POSITION.DEF));
-  const mids = sortDesc(allPlayers.filter(p => pos(p) === POSITION.MID));
-  const fwds = sortDesc(allPlayers.filter(p => pos(p) === POSITION.FWD));
+  // Extract manager placeholders first so they are never dropped from the squad.
+  // The first manager (if any) is placed at the front of activePlayers to match
+  // TeamFormation's expectation; any further managers go onto the bench.
+  const managers = allPlayers.filter(p => pos(p) === POSITION.MANAGER);
+  const nonManagers = allPlayers.filter(p => pos(p) !== POSITION.MANAGER);
+
+  const gks  = sortDesc(nonManagers.filter(p => pos(p) === POSITION.GK));
+  const defs = sortDesc(nonManagers.filter(p => pos(p) === POSITION.DEF));
+  const mids = sortDesc(nonManagers.filter(p => pos(p) === POSITION.MID));
+  const fwds = sortDesc(nonManagers.filter(p => pos(p) === POSITION.FWD));
 
   // Mandatory starters: 1 GK + 3 DEF + 3 MID + 1 FWD
   const startingGk = gks[0];
@@ -241,7 +249,7 @@ export const selectOptimalLineup = (allPlayers) => {
     ...fwds.slice(0, 1),
   ];
 
-  // Flex pool: remaining outfield players sorted by predicted points descending
+  // Flex pool: remaining outfield players sorted by base points descending
   const flexPool = sortDesc([
     ...defs.slice(3),
     ...mids.slice(3),
@@ -255,10 +263,16 @@ export const selectOptimalLineup = (allPlayers) => {
   const startingXI = [startingGk, ...mandatoryStarters, ...flexStarters].filter(Boolean);
   const bench = [gks[1], ...benchOutfield].filter(Boolean);
 
-  // Captain: highest base-points outfield starter
-  const outfieldStarters = startingXI.filter(p => pos(p) !== POSITION.GK);
+  // Captain: highest base-points outfield (non-GK, non-manager) starter
+  const outfieldStarters = startingXI.filter(
+    p => pos(p) !== POSITION.GK && pos(p) !== POSITION.MANAGER,
+  );
   if (outfieldStarters.length === 0) {
-    return { activePlayers: startingXI, reservePlayers: bench };
+    // Re-attach managers and return without assigning captaincy
+    return {
+      activePlayers: [...managers.slice(0, 1), ...startingXI].filter(Boolean),
+      reservePlayers: [...bench, ...managers.slice(1)].filter(Boolean),
+    };
   }
 
   const captainPlayer = outfieldStarters.reduce((best, p) =>
@@ -274,6 +288,8 @@ export const selectOptimalLineup = (allPlayers) => {
   // Apply captain / vice-captain roles and reset multipliers
   const applyRoles = (players) =>
     players.map((p) => {
+      // Leave manager placeholders untouched
+      if (pos(p) === POSITION.MANAGER) return p;
       const base = Math.round(getBase(p));
       if (p.code === captainPlayer.code) {
         return { ...p, is_captain: true, is_vice_captain: false, multiplier: 2, predictedPoints: base * 2 };
@@ -284,9 +300,14 @@ export const selectOptimalLineup = (allPlayers) => {
       return { ...p, is_captain: false, is_vice_captain: false, multiplier: 1, predictedPoints: base };
     });
 
+  // Re-attach managers: first manager at the front of activePlayers (TeamFormation
+  // expects manager at index 0 when present); any extra managers go on the bench.
+  const activeManagers  = managers.slice(0, 1);
+  const reserveManagers = managers.slice(1);
+
   return {
-    activePlayers: applyRoles(startingXI),
-    reservePlayers: applyRoles(bench),
+    activePlayers: applyRoles([...activeManagers, ...startingXI]),
+    reservePlayers: applyRoles([...bench, ...reserveManagers]),
   };
 };
 
