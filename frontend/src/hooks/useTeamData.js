@@ -3,6 +3,7 @@ import axios from '../api';
 import {
   validateSubstitution,
   applySubstitution,
+  selectOptimalLineup,
 } from '../utils/substitution';
 
 const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGameweek = null) => {
@@ -239,6 +240,16 @@ const calculateTotalPredictedPoints = (team) => {
     setReservePlayers(applyToTeam);
   }, []);
 
+  const autoPickLineup = useCallback((effectiveActive, effectiveReserve) => {
+    const all = [...(effectiveActive ?? activePlayers), ...(effectiveReserve ?? reservePlayers)];
+    if (all.length < 11) return;
+    const { activePlayers: newActive, reservePlayers: newReserve } = selectOptimalLineup(all);
+    setActivePlayers(newActive);
+    setReservePlayers(newReserve);
+    setSelectedPlayer(null);
+    setSnackbar({ message: '', key: 0 });
+  }, [activePlayers, reservePlayers]);
+
   const toggleTeamView = () => {
     setIsHighestPredictedTeam((prev) => !prev);
     if (!isHighestPredictedTeam) {
@@ -263,6 +274,7 @@ const calculateTotalPredictedPoints = (team) => {
     gameweekInfo,
     setCaptain,
     swapVersion,
+    autoPickLineup,
   };
 };
 

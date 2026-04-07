@@ -43,6 +43,7 @@ export default function useAllPlayers(gameweek) {
           opponents: player.opponents || [],
           opponentDisplay: buildOpponentDisplay(player),
           teamCode: player.team_code,
+          nowCost: player.now_cost,
           photo: player.code ? `//resources.premierleague.com/premierleague25/photos/players/110x140/${player.code}.png` : undefined
         })));
         setLoading(false);
