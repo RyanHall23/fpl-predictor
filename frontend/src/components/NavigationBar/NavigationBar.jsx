@@ -52,7 +52,7 @@ const NavigationBar = ({
   const myTeamClickTimerRef = React.useRef(null);
   const [highestTeamClickCount, setHighestTeamClickCount] = React.useState(0);
   const highestTeamClickTimerRef = React.useRef(null);
-  const MY_TEAM_CLICK_RESET_MS = 2000;
+  const EASTER_EGG_CLICK_RESET_MS = 2000;
   const isValidTeamId = (val) => /^\d+$/.test(val);
 
   React.useEffect(() => {
@@ -81,7 +81,7 @@ const NavigationBar = ({
       }
       myTeamClickTimerRef.current = setTimeout(
         () => setMyTeamClickCount(0),
-        MY_TEAM_CLICK_RESET_MS
+        EASTER_EGG_CLICK_RESET_MS
       );
       return next;
     });
@@ -99,7 +99,7 @@ const NavigationBar = ({
       }
       highestTeamClickTimerRef.current = setTimeout(
         () => setHighestTeamClickCount(0),
-        MY_TEAM_CLICK_RESET_MS
+        EASTER_EGG_CLICK_RESET_MS
       );
       return next;
     });

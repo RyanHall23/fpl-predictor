@@ -38,7 +38,7 @@ export const ThemeProvider = ({ children }) => {
     localStorage.setItem('themeMode', mode);
   }, [mode]);
 
-  // Apply/remove body class for win2k CSS overrides
+  // Apply/remove body class for win2k and teletext CSS overrides
   useEffect(() => {
     // Guard for non-browser environments (e.g., SSR, some tests)
     if (typeof document === 'undefined' || !document.body || !document.body.classList) {
