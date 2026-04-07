@@ -16,12 +16,14 @@ import MenuItem from '@mui/material/MenuItem';
 import Box from '@mui/material/Box';
 import { useTheme } from '@mui/material/styles';
 
-// props: team, allPlayers, onTransfer, playerOut, open, onClose, currentGameweek, isActiveGameweek
-const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut, open, onClose, currentGameweek, isActiveGameweek }) => {
+// props: team, allPlayers, onTransfer, playerOut, open, onClose, currentGameweek, viewedGameweek
+const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut, open, onClose, currentGameweek, viewedGameweek }) => {
     const theme = useTheme();
-    const minGameweek = currentGameweek ? (isActiveGameweek ? currentGameweek + 1 : currentGameweek) : null;
+    // This dialog is only reachable from a future-GW view, so the earliest
+    // plannable gameweek is always the one after the current GW.
+    const minGameweek = currentGameweek ? currentGameweek + 1 : null;
     const [selectedIn, setSelectedIn] = useState(null);
-    const [selectedGameweek, setSelectedGameweek] = useState(minGameweek);
+    const [selectedGameweek, setSelectedGameweek] = useState(viewedGameweek || minGameweek);
 
     // Defensive: handle missing playerOut
     if (!playerOut) return null;
@@ -151,7 +153,7 @@ TransferPlayer.propTypes = {
     open: PropTypes.bool,
     onClose: PropTypes.func,
     currentGameweek: PropTypes.number,
-    isActiveGameweek: PropTypes.bool,
+    viewedGameweek: PropTypes.number,
 };
 
 export default TransferPlayer;
