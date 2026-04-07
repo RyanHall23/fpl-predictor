@@ -169,17 +169,36 @@ describe('isValidFormation', () => {
 // ---------------------------------------------------------------------------
 
 describe('validateSubstitution — zone rules', () => {
-  it('rejects main-main swap', () => {
+  it('rejects active-active swap', () => {
     const { activePlayers, reservePlayers } = makeSquad433();
     const r = validateSubstitution(activePlayers[1], activePlayers[2], 'active', 'active', activePlayers, reservePlayers);
     expect(r.valid).toBe(false);
-    expect(r.error).toMatch(/reserve/i);
+    expect(r.error).toMatch(/starting XI/i);
   });
 
-  it('rejects bench-bench swap', () => {
+  it('rejects bench GK ↔ bench outfield swap (GK rule applies on bench too)', () => {
     const { activePlayers, reservePlayers } = makeSquad433();
+    // reservePlayers[0] = GK, reservePlayers[1] = DEF
     const r = validateSubstitution(reservePlayers[0], reservePlayers[1], 'reserve', 'reserve', activePlayers, reservePlayers);
     expect(r.valid).toBe(false);
+    expect(r.error).toMatch(/goalkeeper/i);
+  });
+
+  it('allows bench outfield ↔ bench outfield swap (bench re-ordering)', () => {
+    const { activePlayers, reservePlayers } = makeSquad433();
+    // reservePlayers[1] = DEF (code 112), reservePlayers[2] = MID (code 113)
+    const benchDEF = reservePlayers.find(p => p.position === POSITION.DEF);
+    const benchMID = reservePlayers.find(p => p.position === POSITION.MID);
+    const r = validateSubstitution(benchDEF, benchMID, 'reserve', 'reserve', activePlayers, reservePlayers);
+    expect(r.valid).toBe(true);
+  });
+
+  it('allows bench FWD ↔ bench MID swap (bench re-ordering)', () => {
+    const { activePlayers, reservePlayers } = makeSquad433();
+    const benchMID = reservePlayers.find(p => p.position === POSITION.MID);
+    const benchFWD = reservePlayers.find(p => p.position === POSITION.FWD);
+    const r = validateSubstitution(benchMID, benchFWD, 'reserve', 'reserve', activePlayers, reservePlayers);
+    expect(r.valid).toBe(true);
   });
 });
 
@@ -804,7 +823,7 @@ describe('future-GW demoted-player captain swap (regression)', () => {
     // so the caller passes teamType='active' for both captain and MID4 → rejected.
     const buggyResult = validateSubstitution(captain, MID4, 'active', 'active', rawMain, rawBench);
     expect(buggyResult.valid).toBe(false);
-    expect(buggyResult.error).toMatch(/swapped between the active squad and the reserve/i);
+    expect(buggyResult.error).toMatch(/starting XI/i);
   });
 
   it('accepts the captain swap when called with the effective (displayed) teams', () => {
