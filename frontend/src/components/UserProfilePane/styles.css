@@ -63,3 +63,42 @@ body.win2k-theme .MuiPaper-root.user-profile-pane .MuiDivider-root {
 body.win2k-theme .MuiPaper-root.user-profile-pane .MuiButton-root:hover {
   background-color: rgba(0, 0, 128, 0.12);
 }
+
+/* Teletext theme */
+body.teletext-theme .MuiPaper-root.user-profile-pane {
+  background: #000000;
+  color: #ffffff;
+  border-radius: 0;
+  border: 2px solid #ffff00;
+  box-shadow: none;
+  font-family: "Courier New", "Courier", monospace;
+}
+
+body.teletext-theme .MuiPaper-root.user-profile-pane .MuiDivider-root {
+  background-color: #ffff00;
+}
+
+body.teletext-theme .MuiPaper-root.user-profile-pane .MuiTypography-root {
+  font-family: "Courier New", "Courier", monospace;
+}
+
+body.teletext-theme .MuiPaper-root.user-profile-pane .MuiListItemText-secondary {
+  color: #00ffff;
+  font-family: "Courier New", "Courier", monospace;
+}
+
+body.teletext-theme .MuiPaper-root.user-profile-pane .MuiButton-root {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  color: #ffff00;
+  font-family: "Courier New", "Courier", monospace;
+  padding: 0;
+}
+
+body.teletext-theme .MuiPaper-root.user-profile-pane .MuiButton-root:hover {
+  background-color: transparent;
+  border: none;
+  text-decoration: underline;
+  color: #ffffff;
+}
