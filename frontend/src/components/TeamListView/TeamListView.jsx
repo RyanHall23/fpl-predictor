@@ -61,8 +61,6 @@ const ListRow = ({
   const opponent = player.opponentDisplay || player.opponent || '-';
   const kickoff = formatKickoff(player.fixtureKickoff);
   const isCaptainEligible = !!onSetCaptain && player.position !== POSITION_MANAGER;
-  const price = player.nowCost != null ? `£${(player.nowCost / 10).toFixed(1)}m` : '-';
-
   const chance = player.chanceOfPlayingNextRound;
   let statusMeta = null;
   if (STATUS_META[player.status]) {
@@ -128,17 +126,6 @@ const ListRow = ({
           </Typography>
         </TableCell>
 
-        { /* CAPTAIN? */ }
-        <TableCell sx={ cellSx } align='center'>
-          { isCaptain && (
-            <Box sx={ {
-              width: 16, height: 16, borderRadius: '50%', bgcolor: 'warning.main',
-              color: 'warning.contrastText', typography: 'caption', fontWeight: 'bold',
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            } }>C</Box>
-          ) }
-        </TableCell>
-
         { /* KIT */ }
         <TableCell sx={ cellSx }>
           <img
@@ -147,13 +134,6 @@ const ListRow = ({
             style={ { width: 22, height: 22, objectFit: 'contain', display: 'block' } }
             onError={ (e) => { e.target.style.display = 'none'; } }
           />
-        </TableCell>
-
-        { /* PRICE */ }
-        <TableCell sx={ cellSx } align='right'>
-          <Typography variant='caption' color='text.secondary' noWrap>
-            { price }
-          </Typography>
         </TableCell>
 
         { /* NAME */ }
@@ -339,7 +319,7 @@ const TeamListView = ({
 
           <TableRow>
             <TableCell
-              colSpan={ 9 }
+              colSpan={ 7 }
               sx={ {
                 py: 0.75, px: 1,
                 borderTop: '1px solid', borderTopColor: 'divider',
@@ -381,7 +361,6 @@ ListRow.propTypes = {
     opponent: PropTypes.string,
     opponentDisplay: PropTypes.string,
     is_captain: PropTypes.bool,
-    nowCost: PropTypes.number,
     status: PropTypes.string,
     chanceOfPlayingNextRound: PropTypes.number,
     news: PropTypes.string,
