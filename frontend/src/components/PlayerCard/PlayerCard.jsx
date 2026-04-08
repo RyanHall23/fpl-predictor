@@ -208,6 +208,7 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
                       padding: '3px !important',
                       fontWeight: 'bold',
                       fontSize: '14px',
+                      borderRadius: '4px',
                       ...(isCaptain && {
                         color: '#000 !important',
                         backgroundColor: '#ffeb3b !important',

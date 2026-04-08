@@ -188,6 +188,7 @@ const ListRow = ({
                     sx={ {
                       fontWeight: 'bold',
                       typography: 'caption',
+                      borderRadius: '4px',
                       ...(isCaptain && {
                         color: '#000 !important',
                         backgroundColor: '#ffeb3b !important',
