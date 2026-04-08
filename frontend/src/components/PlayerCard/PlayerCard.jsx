@@ -27,6 +27,7 @@ const FDR_COLORS = {
 };
 
 const STATUS_META = {
+  a: { label: 'Available',    color: '#4caf50' },
   d: { label: 'Doubtful',     color: '#ff9800' },
   i: { label: 'Injured',      color: '#f44336' },
   s: { label: 'Suspended',    color: '#ab47bc' },
@@ -39,13 +40,14 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
   // predictedPoints is fully resolved by the backend (basePoints × multiplier).
   const predictedPoints = parseFloat(player.predictedPoints) || 0;
 
-  // Player status badge (injury, suspension, doubt, reduced chance of playing)
+  // Player status badge (always shown — green for available, coloured for others)
   const chance = player.chanceOfPlayingNextRound;
   let statusMeta = null;
   if (STATUS_META[player.status]) {
     const base = STATUS_META[player.status];
     const percentSuffix = (chance != null && chance < 100) ? ` ${chance}%` : '';
-    statusMeta = { color: base.color, title: `${base.label}${percentSuffix}${player.news ? ` — ${player.news}` : ''}` };
+    const newsNote = player.news ? ` — ${player.news}` : '';
+    statusMeta = { color: base.color, title: `${base.label}${percentSuffix}${newsNote}` };
   } else if (chance != null && chance < 100) {
     statusMeta = { color: '#ff9800', title: `${chance}% chance of playing` };
   }
@@ -148,7 +150,7 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
 
   return (
     <Card className={ cardClassName }>
-      { /* Status badge replaces captain badge — shown when player has injury/doubt/suspension */ }
+      { /* Status dot — always visible: green for available, coloured for injured/doubtful/suspended */ }
       { statusMeta && (
         <Tooltip title={ statusMeta.title } placement='top'>
           <Box className='status-badge' style={ { backgroundColor: statusMeta.color } } />
@@ -207,12 +209,12 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
                       padding: '4px !important',
                       fontWeight: 'bold',
                       fontSize: '14px',
-                      color: isCaptain ? '#000 !important' : '#7a5c00 !important',
-                      backgroundColor: isCaptain ? '#ffeb3b !important' : 'rgba(255, 235, 59, 0.25) !important',
-                      border: isCaptain ? '1px solid #c8a200 !important' : '1px solid rgba(255, 235, 59, 0.5) !important',
-                      '&:hover': {
-                        backgroundColor: isCaptain ? '#fdd835 !important' : 'rgba(255, 235, 59, 0.4) !important',
-                      },
+                      ...(isCaptain && {
+                        color: '#000 !important',
+                        backgroundColor: '#ffeb3b !important',
+                        border: '1px solid #c8a200 !important',
+                        '&:hover': { backgroundColor: '#fdd835 !important' },
+                      }),
                     } }
                   >
                     C
