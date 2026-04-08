@@ -1,7 +1,8 @@
 /* Dark mode - default */
 body .player-card {
   width: 75px;
-  height: 125px;
+  min-height: 125px;
+  height: auto;
   display: flex;
   flex-direction: column;
   background: linear-gradient(135deg, #2a2d3a 0%, #1f2229 100%);
@@ -640,7 +641,8 @@ body.teletext-theme .captain-badge {
 @media (min-width: 1440px) {
   body .player-card {
     width: 78px;
-    height: 130px;
+    min-height: 130px;
+    height: auto;
   }
 
   body .avatar-box {
@@ -665,7 +667,8 @@ body.teletext-theme .captain-badge {
 @media (min-width: 1920px) {
   body .player-card {
     width: 84px;
-    height: 140px;
+    min-height: 140px;
+    height: auto;
   }
 
   body .avatar-box {
@@ -696,7 +699,8 @@ body.teletext-theme .captain-badge {
 @media (min-width: 2560px) {
   body .player-card {
     width: 90px;
-    height: 150px;
+    min-height: 150px;
+    height: auto;
   }
 
   body .card-content {
