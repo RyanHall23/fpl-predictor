@@ -27,7 +27,6 @@ const FDR_COLORS = {
 };
 
 const STATUS_META = {
-  a: { label: 'Available',    color: '#4caf50' },
   d: { label: 'Doubtful',     color: '#ff9800' },
   i: { label: 'Injured',      color: '#f44336' },
   s: { label: 'Suspended',    color: '#ab47bc' },
@@ -40,7 +39,7 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
   // predictedPoints is fully resolved by the backend (basePoints × multiplier).
   const predictedPoints = parseFloat(player.predictedPoints) || 0;
 
-  // Player status badge (always shown — green for available, coloured for others)
+  // Player status badge — only shown when NOT available (injured/doubtful/suspended/unavailable)
   const chance = player.chanceOfPlayingNextRound;
   let statusMeta = null;
   if (STATUS_META[player.status]) {
@@ -51,6 +50,16 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
   } else if (chance != null && chance < 100) {
     statusMeta = { color: '#ff9800', title: `${chance}% chance of playing` };
   }
+
+  // Per-fixture data for the opponent pill (supports DGW with per-row FDR colour)
+  const fixtures = player.opponents && player.opponents.length > 0
+    ? player.opponents.map(opp => ({
+        text: opp.is_home !== undefined
+          ? `${opp.opponent_short || '-'} (${opp.is_home ? 'H' : 'A'})`
+          : (opp.opponent_short || '-'),
+        difficulty: opp.difficulty,
+      }))
+    : [{ text: player.opponentDisplay || player.opponent || '-', difficulty: player.difficulty }];
 
   // Captain eligibility: any starting (non-bench) player except the manager.
   // Bench players never receive onSetCaptain from TeamFormation, so they are
@@ -134,12 +143,6 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
     cardClassName += ' player-card-valid-target';
   }
 
-  // Opponent display string is pre-formatted by the backend (supports DGW).
-  const opponent = player.opponentDisplay || player.opponent || '-';
-
-  // FDR colour for the opponent pill (undefined when difficulty is not set)
-  const opponentFdr = player.difficulty ? FDR_COLORS[player.difficulty] : null;
-
   // Find the planned transfer that brought this player in, if any (for future GWs).
   // Used to show a Restore button instead of the Transfer button.
   const plannedInTransfer = isFutureGameweek && plannedTransfers
@@ -150,7 +153,7 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
 
   return (
     <Card className={ cardClassName }>
-      { /* Status dot — always visible: green for available, coloured for injured/doubtful/suspended */ }
+      { /* Status dot — shown only when NOT available (injured/doubtful/suspended/unavailable) */ }
       { statusMeta && (
         <Tooltip title={ statusMeta.title } placement='top'>
           <Box className='status-badge' style={ { backgroundColor: statusMeta.color } } />
@@ -183,13 +186,20 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
             </Typography>
           </Grid>
           <Grid size={ 6 } sx={ { display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
-            <Typography
-              variant='body2'
-              className='opponent-display'
-              style={ opponentFdr ? { backgroundColor: opponentFdr.bg, color: opponentFdr.text } : undefined }
-            >
-              { opponent }
-            </Typography>
+            <Box className='opponent-pill'>
+              { fixtures.map((fix, i) => {
+                const fdr = FDR_COLORS[fix.difficulty];
+                return (
+                  <Box
+                    key={ i }
+                    className='opponent-fixture-row'
+                    style={ fdr ? { backgroundColor: fdr.bg, color: fdr.text } : undefined }
+                  >
+                    { fix.text }
+                  </Box>
+                );
+              }) }
+            </Box>
           </Grid>
         </Grid>
 
@@ -212,7 +222,6 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
                       ...(isCaptain && {
                         color: '#000 !important',
                         backgroundColor: '#ffeb3b !important',
-                        border: '1px solid #c8a200 !important',
                         '&:hover': { backgroundColor: '#fdd835 !important' },
                       }),
                     } }
