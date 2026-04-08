@@ -185,12 +185,15 @@ const ListRow = ({
                     aria-label={ isCaptain ? 'Captain (current)' : 'Set as Captain' }
                     aria-pressed={ isCaptain }
                     onClick={ () => { if (!isCaptain) onSetCaptain(player.code); } }
-                    sx={ isCaptain ? {
-                      fontWeight: 'bold', typography: 'caption',
-                      color: 'warning.contrastText',
-                      bgcolor: 'warning.main',
-                      '&:hover': { bgcolor: 'warning.dark' },
-                    } : { fontWeight: 'bold', typography: 'caption' } }
+                    sx={ {
+                      fontWeight: 'bold',
+                      typography: 'caption',
+                      ...(isCaptain && {
+                        color: '#000 !important',
+                        backgroundColor: '#ffeb3b !important',
+                        '&:hover': { backgroundColor: '#fdd835 !important' },
+                      }),
+                    } }
                   >
                     C
                   </IconButton>
