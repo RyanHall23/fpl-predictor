@@ -188,18 +188,17 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
           <Grid size={ 8 } sx={ { display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
             <Box className='opponent-pill'>
               { fixtures.length >= 2 ? (
-                <Box sx={ { width: '100%', borderRadius: '3px', overflow: 'hidden' } }>
+                <Box sx={ { width: '100%' } }>
                   { fixtures.slice(0, 2).map((fix, i) => {
                     const fdr = FDR_COLORS[fix.difficulty];
                     return (
                       <React.Fragment key={ i }>
                         { i > 0 && (
-                          <Box sx={ { height: '1px', bgcolor: 'rgba(0,0,0,0.25)' } } />
+                          <Box sx={ { height: '2px' } } />
                         ) }
                         <Box
                           className='opponent-fixture-row'
                           style={ fdr ? { backgroundColor: fdr.bg, color: fdr.text } : undefined }
-                          sx={ { borderRadius: 0 } }
                         >
                           { fix.text }
                         </Box>
