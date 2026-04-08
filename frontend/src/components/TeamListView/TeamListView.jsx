@@ -4,6 +4,7 @@ import SyncIcon from '@mui/icons-material/Sync';
 import RestoreIcon from '@mui/icons-material/Restore';
 import PropTypes from 'prop-types';
 import TransferPlayer from '../TransferPlayer/TransferPlayer';
+import FixturePill from '../FixturePill/FixturePill';
 import { validateSubstitution } from '../../utils/substitution';
 
 const POSITION_MANAGER = 5;
@@ -18,15 +19,6 @@ const STATUS_META = {
 };
 
 const cellSx = { py: 0.5, px: 0.75, border: 'none' };
-
-// FPL FDR 1–5: green → green-light → yellow → orange → red
-const FDR_COLORS = {
-  1: { bg: '#00c853', text: '#000' },
-  2: { bg: '#69f0ae', text: '#000' },
-  3: { bg: '#ffee58', text: '#000' },
-  4: { bg: '#ff7043', text: '#fff' },
-  5: { bg: '#b71c1c', text: '#fff' },
-};
 
 const formatKickoff = (kickoffTime) => {
   if (!kickoffTime) return null;
@@ -155,43 +147,16 @@ const ListRow = ({
             { (() => {
               const isDgw = player.opponents?.length >= 2;
               if (isDgw) {
-                const fix1 = player.opponents[0];
-                const fix2 = player.opponents[1];
-                const fdr1 = FDR_COLORS[fix1.difficulty] ?? { bg: '#888', text: '#fff' };
-                const fdr2 = FDR_COLORS[fix2.difficulty] ?? { bg: '#888', text: '#fff' };
-                const label1 = `${fix1.opponent_short} (${fix1.is_home ? 'H' : 'A'})`;
-                const label2 = `${fix2.opponent_short} (${fix2.is_home ? 'H' : 'A'})`;
-                return (
-                  <Box sx={ { display: 'inline-flex', borderRadius: '6px', overflow: 'hidden', flexShrink: 0 } }>
-                    <Box sx={ { bgcolor: fdr1.bg, color: fdr1.text, px: 0.75, py: 0.25, display: 'flex', alignItems: 'center' } }>
-                      <Typography variant='caption' fontWeight='bold' component='span' color='inherit' noWrap sx={ { fontSize: '11px' } }>
-                        { label1 }
-                      </Typography>
-                    </Box>
-                    <Box sx={ {
-                      width: 8, flexShrink: 0, alignSelf: 'stretch',
-                      background: `linear-gradient(to bottom right, ${fdr1.bg} 50%, ${fdr2.bg} 50%)`,
-                    } } />
-                    <Box sx={ { bgcolor: fdr2.bg, color: fdr2.text, px: 0.75, py: 0.25, display: 'flex', alignItems: 'center' } }>
-                      <Typography variant='caption' fontWeight='bold' component='span' color='inherit' noWrap sx={ { fontSize: '11px' } }>
-                        { label2 }
-                      </Typography>
-                    </Box>
-                  </Box>
-                );
+                const fixtures = player.opponents.slice(0, 2).map(fix => ({
+                  label:      `${fix.opponent_short} (${fix.is_home ? 'H' : 'A'})`,
+                  difficulty: fix.difficulty,
+                }));
+                return <FixturePill fixtures={ fixtures } direction='horizontal' size='md' />;
               }
               const singleOpponent = player.opponentDisplay || player.opponent || '-';
               if (singleOpponent !== '-') {
-                const fdr = FDR_COLORS[player.difficulty] ?? { bg: 'action.selected', text: 'text.primary' };
-                return (
-                  <Box sx={ { display: 'inline-flex', borderRadius: '6px', overflow: 'hidden', flexShrink: 0 } }>
-                    <Box sx={ { bgcolor: fdr.bg, color: fdr.text, px: 0.75, py: 0.25, display: 'flex', alignItems: 'center' } }>
-                      <Typography variant='caption' fontWeight='bold' component='span' color='inherit' noWrap sx={ { fontSize: '11px' } }>
-                        { singleOpponent }
-                      </Typography>
-                    </Box>
-                  </Box>
-                );
+                const fixtures = [ { label: singleOpponent, difficulty: player.difficulty } ];
+                return <FixturePill fixtures={ fixtures } direction='horizontal' size='md' />;
               }
               return (
                 <Box sx={ { flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 32 } }>

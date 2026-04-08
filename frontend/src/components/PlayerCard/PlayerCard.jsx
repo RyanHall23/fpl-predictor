@@ -14,17 +14,10 @@ import RestoreIcon from '@mui/icons-material/Restore';
 import PropTypes from 'prop-types';
 import './styles.css';
 import TransferPlayer from '../TransferPlayer/TransferPlayer';
+import FixturePill from '../FixturePill/FixturePill';
 
 const POSITION_GK = 1;
 const POSITION_MANAGER = 5;
-
-const FDR_COLORS = {
-  1: { bg: '#00c853', text: '#000' },
-  2: { bg: '#69f0ae', text: '#000' },
-  3: { bg: '#ffee58', text: '#000' },
-  4: { bg: '#ff7043', text: '#fff' },
-  5: { bg: '#b71c1c', text: '#fff' },
-};
 
 const STATUS_META = {
   d: { label: 'Doubtful',     color: '#ff9800' },
@@ -180,34 +173,21 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
 
         { /* Points and Opponent Row */ }
         <Grid container spacing={ 0 }>
-          <Grid size={ 4 } sx={ { display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
+          <Grid size={ 3 } sx={ { display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
             <Typography variant='h6' className='points-display'>
               { predictedPoints }
             </Typography>
           </Grid>
-          <Grid size={ 8 } sx={ { display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
+          <Grid size={ 9 } sx={ { display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
             <Box className='opponent-pill'>
-              <Box sx={ { display: 'inline-flex', borderRadius: '6px', overflow: 'hidden', flexDirection: 'column', width: '100%' } }>
-                { fixtures.slice(0, fixtures.length >= 2 ? 2 : 1).map((fix, i) => {
-                  const fdr = FDR_COLORS[fix.difficulty];
-                  return (
-                    <Box
-                      key={ i }
-                      sx={ {
-                        bgcolor: fdr ? fdr.bg : 'action.selected',
-                        color: fdr ? fdr.text : 'text.primary',
-                        px: 0.75, py: 0.25,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        borderTop: i > 0 ? '1px solid rgba(0,0,0,0.15)' : 'none',
-                      } }
-                    >
-                      <Typography variant='caption' fontWeight='bold' component='span' color='inherit' noWrap sx={ { fontSize: '9px' } }>
-                        { fix.text }
-                      </Typography>
-                    </Box>
-                  );
-                }) }
-              </Box>
+              <FixturePill
+                fixtures={ fixtures.slice(0, fixtures.length >= 2 ? 2 : 1).map(fix => ({
+                  label:      fix.text,
+                  difficulty: fix.difficulty,
+                })) }
+                direction='vertical'
+                size='sm'
+              />
             </Box>
           </Grid>
         </Grid>
