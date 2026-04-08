@@ -334,16 +334,6 @@ body .captain-button {
   font-size: 14px !important;
 }
 
-body .captain-button:hover {
-}
-
-html[data-mui-color-scheme='light'] body .captain-button {
-  font-weight: bold;
-}
-
-html[data-mui-color-scheme='light'] body .captain-button:hover {
-}
-
 /* Win2k theme */
 body.win2k-theme .player-card {
   background: #d4d0c8;
