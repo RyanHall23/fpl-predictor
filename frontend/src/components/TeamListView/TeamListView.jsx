@@ -58,7 +58,6 @@ const ListRow = ({
   const [transferDialogOpen, setTransferDialogOpen] = React.useState(false);
 
   const predictedPoints = parseFloat(player.predictedPoints) || 0;
-  const opponent = player.opponentDisplay || player.opponent || '-';
   const kickoff = formatKickoff(player.fixtureKickoff);
   const isCaptainEligible = !!onSetCaptain && player.position !== POSITION_MANAGER;
   const chance = player.chanceOfPlayingNextRound;
@@ -153,24 +152,55 @@ const ListRow = ({
         { /* FIXTURE */ }
         <TableCell sx={ cellSx } align='right'>
           <Box sx={ { display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.75 } }>
-            { opponent !== '-' ? (() => {
-              const fdr = FDR_COLORS[player.difficulty] ?? { bg: 'action.selected', text: 'text.primary' };
+            { (() => {
+              const isDgw = player.opponents?.length >= 2;
+              if (isDgw) {
+                const fix1 = player.opponents[0];
+                const fix2 = player.opponents[1];
+                const fdr1 = FDR_COLORS[fix1.difficulty] ?? { bg: '#888', text: '#fff' };
+                const fdr2 = FDR_COLORS[fix2.difficulty] ?? { bg: '#888', text: '#fff' };
+                const label1 = `${fix1.opponent_short} (${fix1.is_home ? 'H' : 'A'})`;
+                const label2 = `${fix2.opponent_short} (${fix2.is_home ? 'H' : 'A'})`;
+                return (
+                  <Box sx={ { display: 'inline-flex', borderRadius: '6px', overflow: 'hidden', flexShrink: 0 } }>
+                    <Box sx={ { bgcolor: fdr1.bg, color: fdr1.text, px: 0.75, py: 0.25, display: 'flex', alignItems: 'center' } }>
+                      <Typography variant='caption' fontWeight='bold' component='span' color='inherit' noWrap>
+                        { label1 }
+                      </Typography>
+                    </Box>
+                    <Box sx={ {
+                      width: 8, flexShrink: 0, alignSelf: 'stretch',
+                      background: `linear-gradient(to bottom right, ${fdr1.bg} 50%, ${fdr2.bg} 50%)`,
+                    } } />
+                    <Box sx={ { bgcolor: fdr2.bg, color: fdr2.text, px: 0.75, py: 0.25, display: 'flex', alignItems: 'center' } }>
+                      <Typography variant='caption' fontWeight='bold' component='span' color='inherit' noWrap>
+                        { label2 }
+                      </Typography>
+                    </Box>
+                  </Box>
+                );
+              }
+              const singleOpponent = player.opponentDisplay || player.opponent || '-';
+              if (singleOpponent !== '-') {
+                const fdr = FDR_COLORS[player.difficulty] ?? { bg: 'action.selected', text: 'text.primary' };
+                return (
+                  <Box sx={ {
+                    flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    bgcolor: fdr.bg, color: fdr.text,
+                    borderRadius: '10px', px: 0.75, py: 0.25,
+                  } }>
+                    <Typography variant='caption' fontWeight='bold' component='span' color='inherit' noWrap>
+                      { singleOpponent }
+                    </Typography>
+                  </Box>
+                );
+              }
               return (
-                <Box sx={ {
-                  width: 64, flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  bgcolor: fdr.bg, color: fdr.text,
-                  borderRadius: 1, px: 0.75, py: 0.25,
-                } }>
-                  <Typography variant='caption' fontWeight='bold' component='span' color='inherit' noWrap>
-                    { opponent }
-                  </Typography>
+                <Box sx={ { flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 32 } }>
+                  <Typography variant='caption' color='text.disabled'>-</Typography>
                 </Box>
               );
-            })() : (
-              <Box sx={ { width: 64, flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' } }>
-                <Typography variant='caption' color='text.disabled'>-</Typography>
-              </Box>
-            ) }
+            })() }
             <Box sx={ { width: 52, flexShrink: 0, textAlign: 'left' } }>
               { kickoff && (
                 <Typography variant='caption' color='text.disabled' noWrap>{ kickoff }</Typography>
@@ -360,6 +390,11 @@ ListRow.propTypes = {
     teamCode: PropTypes.number,
     opponent: PropTypes.string,
     opponentDisplay: PropTypes.string,
+    opponents: PropTypes.arrayOf(PropTypes.shape({
+      opponent_short: PropTypes.string,
+      is_home: PropTypes.bool,
+      difficulty: PropTypes.number,
+    })),
     is_captain: PropTypes.bool,
     status: PropTypes.string,
     chanceOfPlayingNextRound: PropTypes.number,
