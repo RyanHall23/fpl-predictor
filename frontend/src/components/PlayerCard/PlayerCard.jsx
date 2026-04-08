@@ -187,34 +187,21 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
           </Grid>
           <Grid size={ 8 } sx={ { display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
             <Box className='opponent-pill'>
-              { fixtures.length >= 2 ? (
-                <Box sx={ { width: '100%' } }>
-                  { fixtures.slice(0, 2).map((fix, i) => {
-                    const fdr = FDR_COLORS[fix.difficulty];
-                    return (
-                      <React.Fragment key={ i }>
-                        { i > 0 && (
-                          <Box sx={ { height: '2px' } } />
-                        ) }
-                        <Box
-                          className='opponent-fixture-row'
-                          style={ fdr ? { backgroundColor: fdr.bg, color: fdr.text } : undefined }
-                        >
-                          { fix.text }
-                        </Box>
-                      </React.Fragment>
-                    );
-                  }) }
-                </Box>
-              ) : fixtures.map((fix, i) => {
+              { fixtures.slice(0, fixtures.length >= 2 ? 2 : 1).map((fix, i) => {
                 const fdr = FDR_COLORS[fix.difficulty];
                 return (
                   <Box
                     key={ i }
-                    className='opponent-fixture-row'
-                    style={ fdr ? { backgroundColor: fdr.bg, color: fdr.text } : undefined }
+                    sx={ {
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      bgcolor: fdr ? fdr.bg : 'action.selected',
+                      color: fdr ? fdr.text : 'text.primary',
+                      borderRadius: '10px', px: 0.75, py: 0.25, width: '100%',
+                    } }
                   >
-                    { fix.text }
+                    <Typography variant='caption' fontWeight='bold' component='span' color='inherit' noWrap sx={ { fontSize: '9px' } }>
+                      { fix.text }
+                    </Typography>
                   </Box>
                 );
               }) }

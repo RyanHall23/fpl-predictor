@@ -221,26 +221,6 @@ body .opponent-pill {
   min-height: 30px;
 }
 
-body .opponent-fixture-row {
-  font-size: 7px;
-  font-weight: 600;
-  color: #ffffff;
-  text-align: center;
-  width: 100%;
-  background: rgba(171, 71, 188, 0.15);
-  padding: 2px 6px;
-  border-radius: 10px;
-  letter-spacing: 0.1px;
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-html[data-mui-color-scheme='light'] body .opponent-fixture-row {
-  color: #424242;
-  background: rgba(106, 27, 154, 0.08);
-}
 
 html[data-mui-color-scheme='light'] body .info-label {
   color: #6a1b9a;
@@ -378,11 +358,6 @@ body.win2k-theme .points-display {
   text-shadow: none;
 }
 
-body.win2k-theme .opponent-fixture-row {
-  color: #000000;
-  background: rgba(0, 0, 128, 0.08);
-  border-radius: 0;
-}
 
 body.win2k-theme .info-label {
   color: #0000a8;
@@ -497,11 +472,6 @@ body.teletext-theme .points-display {
   font-family: "Courier New", "Courier", monospace;
 }
 
-body.teletext-theme .opponent-fixture-row {
-  color: #00ffff;
-  background: rgba(0, 0, 128, 0.5);
-  border-radius: 0;
-}
 
 body.teletext-theme .info-label {
   color: #00ffff;
@@ -609,11 +579,6 @@ body.teletext-theme .captain-badge {
     padding: 1px 0;
   }
 
-  body .opponent-fixture-row {
-    font-size: 6px;
-    padding: 1px 4px;
-    border-radius: 8px;
-  }
 
   body .card-content {
     padding: 3px !important;
