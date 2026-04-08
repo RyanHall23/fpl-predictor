@@ -184,14 +184,12 @@ const ListRow = ({
               if (singleOpponent !== '-') {
                 const fdr = FDR_COLORS[player.difficulty] ?? { bg: 'action.selected', text: 'text.primary' };
                 return (
-                  <Box sx={ {
-                    flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                    bgcolor: fdr.bg, color: fdr.text,
-                    borderRadius: '10px', px: 0.75, py: 0.25,
-                  } }>
-                    <Typography variant='caption' fontWeight='bold' component='span' color='inherit' noWrap sx={ { fontSize: '11px' } }>
-                      { singleOpponent }
-                    </Typography>
+                  <Box sx={ { display: 'inline-flex', borderRadius: '6px', overflow: 'hidden', flexShrink: 0 } }>
+                    <Box sx={ { bgcolor: fdr.bg, color: fdr.text, px: 0.75, py: 0.25, display: 'flex', alignItems: 'center' } }>
+                      <Typography variant='caption' fontWeight='bold' component='span' color='inherit' noWrap sx={ { fontSize: '11px' } }>
+                        { singleOpponent }
+                      </Typography>
+                    </Box>
                   </Box>
                 );
               }

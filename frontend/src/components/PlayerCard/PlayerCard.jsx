@@ -187,24 +187,27 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
           </Grid>
           <Grid size={ 8 } sx={ { display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
             <Box className='opponent-pill'>
-              { fixtures.slice(0, fixtures.length >= 2 ? 2 : 1).map((fix, i) => {
-                const fdr = FDR_COLORS[fix.difficulty];
-                return (
-                  <Box
-                    key={ i }
-                    sx={ {
-                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                      bgcolor: fdr ? fdr.bg : 'action.selected',
-                      color: fdr ? fdr.text : 'text.primary',
-                      borderRadius: '10px', px: 0.75, py: 0.25, width: '100%',
-                    } }
-                  >
-                    <Typography variant='caption' fontWeight='bold' component='span' color='inherit' noWrap sx={ { fontSize: '9px' } }>
-                      { fix.text }
-                    </Typography>
-                  </Box>
-                );
-              }) }
+              <Box sx={ { display: 'inline-flex', borderRadius: '6px', overflow: 'hidden', flexDirection: 'column', width: '100%' } }>
+                { fixtures.slice(0, fixtures.length >= 2 ? 2 : 1).map((fix, i) => {
+                  const fdr = FDR_COLORS[fix.difficulty];
+                  return (
+                    <Box
+                      key={ i }
+                      sx={ {
+                        bgcolor: fdr ? fdr.bg : 'action.selected',
+                        color: fdr ? fdr.text : 'text.primary',
+                        px: 0.75, py: 0.25,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        borderTop: i > 0 ? '1px solid rgba(0,0,0,0.15)' : 'none',
+                      } }
+                    >
+                      <Typography variant='caption' fontWeight='bold' component='span' color='inherit' noWrap sx={ { fontSize: '9px' } }>
+                        { fix.text }
+                      </Typography>
+                    </Box>
+                  );
+                }) }
+              </Box>
             </Box>
           </Grid>
         </Grid>
