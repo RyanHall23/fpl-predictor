@@ -1,6 +1,6 @@
 /* Dark mode - default */
 body .player-card {
-  width: 75px;
+  width: 82px;
   min-height: 125px;
   height: auto;
   display: flex;
@@ -222,7 +222,7 @@ body .opponent-pill {
 }
 
 body .opponent-fixture-row {
-  font-size: 8px;
+  font-size: 7px;
   font-weight: 600;
   color: #ffffff;
   text-align: center;
@@ -582,7 +582,7 @@ body.teletext-theme .captain-badge {
 /* Mobile responsive - small screens */
 @media (max-width: 600px) {
   body .player-card {
-    width: 53px;
+    width: 58px;
     height: auto;
     min-height: 95px;
     padding: 3px;
@@ -610,7 +610,7 @@ body.teletext-theme .captain-badge {
   }
 
   body .opponent-fixture-row {
-    font-size: 7px;
+    font-size: 6px;
     padding: 1px 4px;
     border-radius: 8px;
   }
@@ -634,7 +634,7 @@ body.teletext-theme .captain-badge {
 /* Responsive - medium-large screens (1440p) */
 @media (min-width: 1440px) {
   body .player-card {
-    width: 78px;
+    width: 85px;
     min-height: 130px;
     height: auto;
   }
@@ -660,7 +660,7 @@ body.teletext-theme .captain-badge {
 /* Responsive - 1920p / 2K screens */
 @media (min-width: 1920px) {
   body .player-card {
-    width: 84px;
+    width: 91px;
     min-height: 140px;
     height: auto;
   }
@@ -692,7 +692,7 @@ body.teletext-theme .captain-badge {
 /* Responsive - 4K screens */
 @media (min-width: 2560px) {
   body .player-card {
-    width: 90px;
+    width: 97px;
     min-height: 150px;
     height: auto;
   }

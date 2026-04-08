@@ -164,7 +164,7 @@ const ListRow = ({
                 return (
                   <Box sx={ { display: 'inline-flex', borderRadius: '6px', overflow: 'hidden', flexShrink: 0 } }>
                     <Box sx={ { bgcolor: fdr1.bg, color: fdr1.text, px: 0.75, py: 0.25, display: 'flex', alignItems: 'center' } }>
-                      <Typography variant='caption' fontWeight='bold' component='span' color='inherit' noWrap>
+                      <Typography variant='caption' fontWeight='bold' component='span' color='inherit' noWrap sx={ { fontSize: '11px' } }>
                         { label1 }
                       </Typography>
                     </Box>
@@ -173,7 +173,7 @@ const ListRow = ({
                       background: `linear-gradient(to bottom right, ${fdr1.bg} 50%, ${fdr2.bg} 50%)`,
                     } } />
                     <Box sx={ { bgcolor: fdr2.bg, color: fdr2.text, px: 0.75, py: 0.25, display: 'flex', alignItems: 'center' } }>
-                      <Typography variant='caption' fontWeight='bold' component='span' color='inherit' noWrap>
+                      <Typography variant='caption' fontWeight='bold' component='span' color='inherit' noWrap sx={ { fontSize: '11px' } }>
                         { label2 }
                       </Typography>
                     </Box>
@@ -189,7 +189,7 @@ const ListRow = ({
                     bgcolor: fdr.bg, color: fdr.text,
                     borderRadius: '10px', px: 0.75, py: 0.25,
                   } }>
-                    <Typography variant='caption' fontWeight='bold' component='span' color='inherit' noWrap>
+                    <Typography variant='caption' fontWeight='bold' component='span' color='inherit' noWrap sx={ { fontSize: '11px' } }>
                       { singleOpponent }
                     </Typography>
                   </Box>
