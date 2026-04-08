@@ -60,41 +60,48 @@ function FixturePill({ fixtures, direction, size }) {
     >
       { items.map((fix, i) => {
         const fdr = FDR_COLORS[fix.difficulty] ?? { bg: '#888', text: '#fff' };
-        const dividerStyle = i > 0
-          ? isHorizontal
-            ? { borderLeft: '1px solid rgba(0,0,0,0.15)' }
-            : { borderTop: '1px solid rgba(0,0,0,0.15)' }
-          : {};
+        const prevFdr = i > 0 ? (FDR_COLORS[items[i - 1].difficulty] ?? { bg: '#888', text: '#fff' }) : null;
 
         return (
-          <Box
-            key={ i }
-            sx={ {
-              bgcolor: fdr.bg,
-              color: fdr.text,
-              px: 0.5,
-              py: 0.25,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              /* Fixed minimum width keeps all pills consistent regardless of
-                 the proportional width of the letters in the team abbreviation */
-              minWidth: slotMinWidth,
-              /* In vertical mode each row stretches to full container width */
-              ...(isHorizontal ? {} : { width: '100%' }),
-              ...dividerStyle,
-            } }
-          >
-            <Typography
-              variant='caption'
-              fontWeight='bold'
-              component='span'
-              color='inherit'
-              sx={ { fontSize, lineHeight: 1.2, whiteSpace: 'nowrap' } }
+          <React.Fragment key={ i }>
+            { /* Angled diagonal separator between DGW fixtures in horizontal mode */ }
+            { i > 0 && isHorizontal && (
+              <Box sx={ {
+                width: 8,
+                flexShrink: 0,
+                alignSelf: 'stretch',
+                background: `linear-gradient(to bottom right, ${prevFdr.bg} 50%, ${fdr.bg} 50%)`,
+              } } />
+            ) }
+            <Box
+              sx={ {
+                bgcolor: fdr.bg,
+                color: fdr.text,
+                px: 0.5,
+                py: 0.25,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                /* Fixed minimum width keeps all pills consistent regardless of
+                   the proportional width of the letters in the team abbreviation */
+                minWidth: slotMinWidth,
+                /* In vertical mode each row stretches to full container width */
+                ...(isHorizontal ? {} : { width: '100%' }),
+                /* Straight border separator for vertical DGW stacking */
+                ...(i > 0 && !isHorizontal ? { borderTop: '1px solid rgba(0,0,0,0.15)' } : {}),
+              } }
             >
-              { fix.label }
-            </Typography>
-          </Box>
+              <Typography
+                variant='caption'
+                fontWeight='bold'
+                component='span'
+                color='inherit'
+                sx={ { fontSize, lineHeight: 1.2, whiteSpace: 'nowrap' } }
+              >
+                { fix.label }
+              </Typography>
+            </Box>
+          </React.Fragment>
         );
       }) }
     </Box>
