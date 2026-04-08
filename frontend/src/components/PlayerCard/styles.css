@@ -251,7 +251,7 @@ body .action-button-small {
   padding: 2px !important;
   color: #ab47bc !important;
   border-radius: 4px;
-  border: none !important;
+  border: none;
   transition: all 0.3s ease;
   min-height: 14px;
 }
@@ -388,7 +388,7 @@ body.win2k-theme .points-display {
   text-shadow: none;
 }
 
-body.win2k-theme .opponent-display {
+body.win2k-theme .opponent-fixture-row {
   color: #000000;
   background: rgba(0, 0, 128, 0.08);
 }
@@ -506,7 +506,7 @@ body.teletext-theme .points-display {
   font-family: "Courier New", "Courier", monospace;
 }
 
-body.teletext-theme .opponent-display {
+body.teletext-theme .opponent-fixture-row {
   color: #00ffff;
   background: rgba(0, 0, 128, 0.5);
   border-radius: 0;
@@ -695,6 +695,9 @@ body.teletext-theme .captain-badge {
   body .action-button-small {
     min-height: 14px;
   }
+}
+
+/* Responsive - 4K screens */
 @media (min-width: 2560px) {
   body .player-card {
     width: 90px;
@@ -729,5 +732,3 @@ body.teletext-theme .captain-badge {
     min-height: 15px;
   }
 }
-
-/* Responsive - 4K screens */
