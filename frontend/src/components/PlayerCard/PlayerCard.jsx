@@ -18,11 +18,37 @@ import TransferPlayer from '../TransferPlayer/TransferPlayer';
 const POSITION_GK = 1;
 const POSITION_MANAGER = 5;
 
+const FDR_COLORS = {
+  1: { bg: '#00c853', text: '#000' },
+  2: { bg: '#69f0ae', text: '#000' },
+  3: { bg: '#ffee58', text: '#000' },
+  4: { bg: '#ff7043', text: '#fff' },
+  5: { bg: '#b71c1c', text: '#fff' },
+};
+
+const STATUS_META = {
+  d: { label: 'Doubtful',     color: '#ff9800' },
+  i: { label: 'Injured',      color: '#f44336' },
+  s: { label: 'Suspended',    color: '#ab47bc' },
+  u: { label: 'Unavailable',  color: '#9e9e9e' },
+};
+
 const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTransferButtons = true, teamType, onPlayerClick, selectedPlayer, activePlayers, reservePlayers, onSetCaptain, currentGameweek, isFutureGameweek, viewedGameweek, plannedTransfers, onRemovePlannedTransfer }) => {
   const [transferDialogOpen, setTransferDialogOpen] = React.useState(false);
 
   // predictedPoints is fully resolved by the backend (basePoints × multiplier).
   const predictedPoints = parseFloat(player.predictedPoints) || 0;
+
+  // Player status badge (injury, suspension, doubt, reduced chance of playing)
+  const chance = player.chanceOfPlayingNextRound;
+  let statusMeta = null;
+  if (STATUS_META[player.status]) {
+    const base = STATUS_META[player.status];
+    const percentSuffix = (chance != null && chance < 100) ? ` ${chance}%` : '';
+    statusMeta = { color: base.color, title: `${base.label}${percentSuffix}${player.news ? ` — ${player.news}` : ''}` };
+  } else if (chance != null && chance < 100) {
+    statusMeta = { color: '#ff9800', title: `${chance}% chance of playing` };
+  }
 
   // Captain eligibility: any starting (non-bench) player except the manager.
   // Bench players never receive onSetCaptain from TeamFormation, so they are
@@ -109,6 +135,9 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
   // Opponent display string is pre-formatted by the backend (supports DGW).
   const opponent = player.opponentDisplay || player.opponent || '-';
 
+  // FDR colour for the opponent pill (undefined when difficulty is not set)
+  const opponentFdr = player.difficulty ? FDR_COLORS[player.difficulty] : null;
+
   // Find the planned transfer that brought this player in, if any (for future GWs).
   // Used to show a Restore button instead of the Transfer button.
   const plannedInTransfer = isFutureGameweek && plannedTransfers
@@ -119,7 +148,12 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
 
   return (
     <Card className={ cardClassName }>
-      { isCaptain && <Box className='captain-badge'>C</Box> }
+      { /* Status badge replaces captain badge — shown when player has injury/doubt/suspension */ }
+      { statusMeta && (
+        <Tooltip title={ statusMeta.title } placement='top'>
+          <Box className='status-badge' style={ { backgroundColor: statusMeta.color } } />
+        </Tooltip>
+      ) }
       { player.inDreamteam && <StarIcon className='dreamteam-icon' /> }
       <CardContent className='card-content'>
         { /* Team Shirt */ }
@@ -147,7 +181,11 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
             </Typography>
           </Grid>
           <Grid size={ 6 } sx={ { display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
-            <Typography variant='body2' className='opponent-display'>
+            <Typography
+              variant='body2'
+              className='opponent-display'
+              style={ opponentFdr ? { backgroundColor: opponentFdr.bg, color: opponentFdr.text } : undefined }
+            >
               { opponent }
             </Typography>
           </Grid>
@@ -169,9 +207,12 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
                       padding: '4px !important',
                       fontWeight: 'bold',
                       fontSize: '14px',
-                      color: isCaptain ? '#000 !important' : undefined,
-                      backgroundColor: isCaptain ? '#ffeb3b !important' : undefined,
-                      '&:hover': isCaptain ? { backgroundColor: '#fdd835 !important' } : {},
+                      color: isCaptain ? '#000 !important' : '#7a5c00 !important',
+                      backgroundColor: isCaptain ? '#ffeb3b !important' : 'rgba(255, 235, 59, 0.25) !important',
+                      border: isCaptain ? '1px solid #c8a200 !important' : '1px solid rgba(255, 235, 59, 0.5) !important',
+                      '&:hover': {
+                        backgroundColor: isCaptain ? '#fdd835 !important' : 'rgba(255, 235, 59, 0.4) !important',
+                      },
                     } }
                   >
                     C
@@ -273,6 +314,10 @@ PlayerCard.propTypes = {
       is_home: PropTypes.bool
     })),
     team: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+    difficulty: PropTypes.number,
+    status: PropTypes.string,
+    chanceOfPlayingNextRound: PropTypes.number,
+    news: PropTypes.string,
   }).isRequired,
   isCaptain: PropTypes.bool,
   team: PropTypes.array,

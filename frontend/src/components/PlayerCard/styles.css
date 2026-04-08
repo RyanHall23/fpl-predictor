@@ -87,6 +87,18 @@ body .captain-badge {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
+body .status-badge {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+  cursor: help;
+  z-index: 2;
+}
+
 body .dreamteam-icon {
   position: absolute;
   top: 5px;
@@ -121,8 +133,8 @@ body .avatar-box {
 }
 
 body .player-image {
-  width: 30px;
-  height: 50px;
+  width: 21px;
+  height: 35px;
   object-fit: cover;
   object-position: center top;
   display: block;
@@ -317,27 +329,18 @@ body .action-button.not-clicked {
 }
 
 body .captain-button {
-  background: linear-gradient(135deg, rgba(42, 45, 58, 0.6) 0%, rgba(31, 34, 41, 0.6) 100%);
-  color: #ab47bc !important;
-  border: 1px solid rgba(171, 71, 188, 0.3);
   font-weight: bold;
   font-size: 14px !important;
 }
 
 body .captain-button:hover {
-  background: linear-gradient(135deg, rgba(42, 45, 58, 0.8) 0%, rgba(31, 34, 41, 0.8) 100%);
-  border-color: rgba(171, 71, 188, 0.5);
 }
 
 html[data-mui-color-scheme='light'] body .captain-button {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.6) 0%, rgba(245, 245, 245, 0.6) 100%);
-  color: #6a1b9a !important;
-  border: 1px solid rgba(106, 27, 154, 0.3);
+  font-weight: bold;
 }
 
 html[data-mui-color-scheme='light'] body .captain-button:hover {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(245, 245, 245, 0.9) 100%);
-  border-color: rgba(106, 27, 154, 0.5);
 }
 
 /* Win2k theme */
@@ -600,8 +603,8 @@ body.teletext-theme .captain-badge {
   }
 
   body .player-image {
-    width: 24px;
-    height: 38px;
+    width: 17px;
+    height: 27px;
   }
 
   body .player-name {
@@ -648,8 +651,8 @@ body.teletext-theme .captain-badge {
   }
 
   body .player-image {
-    width: 32px;
-    height: 54px;
+    width: 22px;
+    height: 38px;
   }
 
   body .player-name {
@@ -677,8 +680,8 @@ body.teletext-theme .captain-badge {
   }
 
   body .player-image {
-    width: 36px;
-    height: 58px;
+    width: 25px;
+    height: 41px;
   }
 
   body .player-name {
@@ -716,8 +719,8 @@ body.teletext-theme .captain-badge {
   }
 
   body .player-image {
-    width: 40px;
-    height: 62px;
+    width: 28px;
+    height: 43px;
   }
 
   body .player-name {
