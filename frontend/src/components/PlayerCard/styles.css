@@ -1,6 +1,6 @@
 /* Dark mode - default */
 body .player-card {
-  width: 85px;
+  width: 75px;
   min-height: 125px;
   height: auto;
   display: flex;
@@ -640,7 +640,7 @@ body.teletext-theme .captain-badge {
 /* Responsive - medium-large screens (1440p) */
 @media (min-width: 1440px) {
   body .player-card {
-    width: 88px;
+    width: 78px;
     min-height: 130px;
     height: auto;
   }
@@ -666,7 +666,7 @@ body.teletext-theme .captain-badge {
 /* Responsive - 1920p / 2K screens */
 @media (min-width: 1920px) {
   body .player-card {
-    width: 94px;
+    width: 84px;
     min-height: 140px;
     height: auto;
   }
@@ -698,7 +698,7 @@ body.teletext-theme .captain-badge {
 /* Responsive - 4K screens */
 @media (min-width: 2560px) {
   body .player-card {
-    width: 100px;
+    width: 90px;
     min-height: 150px;
     height: auto;
   }

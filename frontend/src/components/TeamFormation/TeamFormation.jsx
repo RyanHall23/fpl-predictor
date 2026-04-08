@@ -103,7 +103,7 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
               ) }
             </Grid>
             { /* DEF row */ }
-            <Grid container spacing={ 1 } justifyContent='center' sx={ { mt: 1 } }>
+            <Grid container spacing={ 1 } justifyContent='center' sx={ { mt: 1, flexWrap: 'nowrap' } }>
               { defs.map((player) => (
                 <Grid key={ player.code || player.name }>
                   <PlayerCard
@@ -129,7 +129,7 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
               )) }
             </Grid>
             { /* MID row */ }
-            <Grid container spacing={ 1 } justifyContent='center' sx={ { mt: 1 } }>
+            <Grid container spacing={ 1 } justifyContent='center' sx={ { mt: 1, flexWrap: 'nowrap' } }>
               { mids.map((player) => (
                 <Grid key={ player.code || player.name }>
                   <PlayerCard
@@ -155,7 +155,7 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
               )) }
             </Grid>
             { /* ATT row */ }
-            <Grid container spacing={ 1 } justifyContent='center' sx={ { mt: 1 } }>
+            <Grid container spacing={ 1 } justifyContent='center' sx={ { mt: 1, flexWrap: 'nowrap' } }>
               { atts.map((player) => (
                 <Grid key={ player.code || player.name }>
                   <PlayerCard

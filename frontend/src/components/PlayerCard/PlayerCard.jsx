@@ -180,12 +180,12 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
 
         { /* Points and Opponent Row */ }
         <Grid container spacing={ 0 }>
-          <Grid size={ 6 } sx={ { display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
+          <Grid size={ 4 } sx={ { display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
             <Typography variant='h6' className='points-display'>
               { predictedPoints }
             </Typography>
           </Grid>
-          <Grid size={ 6 } sx={ { display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
+          <Grid size={ 8 } sx={ { display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
             <Box className='opponent-pill'>
               { fixtures.map((fix, i) => {
                 const fdr = FDR_COLORS[fix.difficulty];
