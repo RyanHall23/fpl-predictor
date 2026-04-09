@@ -343,7 +343,8 @@ PlayerCard.propTypes = {
     opponents: PropTypes.arrayOf(PropTypes.shape({
       opponent_id: PropTypes.number,
       opponent_short: PropTypes.string,
-      is_home: PropTypes.bool
+      is_home: PropTypes.bool,
+      difficulty: PropTypes.number,
     })),
     team: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
     difficulty: PropTypes.number,

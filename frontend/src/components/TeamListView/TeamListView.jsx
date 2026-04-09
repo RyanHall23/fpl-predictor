@@ -174,7 +174,7 @@ const ListRow = ({
 
         { /* BUTTONS */ }
         <TableCell sx={ cellSx } align='right'>
-          { showActions && (
+          { showActions ? (
             <Box sx={ { display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '1px' } }>
 
               { /* 1. Captain */ }
@@ -184,7 +184,7 @@ const ListRow = ({
                     size='small'
                     aria-label={ isCaptain ? 'Captain (current)' : 'Set as Captain' }
                     aria-pressed={ isCaptain }
-                    onClick={ () => { if (!isCaptain) onSetCaptain(player.code); } }
+                    onClick={ (e) => { e.stopPropagation(); if (!isCaptain) onSetCaptain(player.code); } }
                     sx={ {
                       fontWeight: 'bold',
                       typography: 'caption',
@@ -206,7 +206,7 @@ const ListRow = ({
               ) }
 
               { /* 2. Substitute */ }
-              <IconButton size='small' aria-label='Substitute' onClick={ () => onPlayerClick(player, teamType) }>
+              <IconButton size='small' aria-label='Substitute' onClick={ (e) => { e.stopPropagation(); onPlayerClick(player, teamType); } }>
                 <SyncIcon fontSize='small' />
               </IconButton>
 
@@ -217,13 +217,13 @@ const ListRow = ({
                     <IconButton
                       size='small'
                       aria-label='Restore — remove planned transfer'
-                      onClick={ () => onRemovePlannedTransfer?.(plannedInTransfer.id) }
+                      onClick={ (e) => { e.stopPropagation(); onRemovePlannedTransfer?.(plannedInTransfer.id); } }
                     >
                       <RestoreIcon fontSize='small' color='warning' />
                     </IconButton>
                   </Tooltip>
                 ) : (
-                  <IconButton size='small' aria-label='Plan a transfer' onClick={ () => setTransferDialogOpen(true) }>
+                  <IconButton size='small' aria-label='Plan a transfer' onClick={ (e) => { e.stopPropagation(); setTransferDialogOpen(true); } }>
                     <svg width='17' height='17' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg' aria-hidden='true'>
                       <path d='M3 8 L12 8 L12 6 L18 10 L12 14 L12 12 L3 12 Z' fill='#4caf50' />
                       <path d='M21 16 L12 16 L12 18 L6 14 L12 10 L12 12 L21 12 Z' fill='#f44336' />
@@ -236,6 +236,23 @@ const ListRow = ({
                 </IconButton>
               ) }
             </Box>
+          ) : (
+            isCaptain && (
+              <Tooltip title='Captain'>
+                <Box
+                  tabIndex={ 0 }
+                  aria-label='Captain'
+                  sx={ {
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    width: 22, height: 22, borderRadius: '50%',
+                    backgroundColor: '#1976d2', color: '#fff',
+                    fontWeight: 700, fontSize: '0.75rem',
+                  } }
+                >
+                  C
+                </Box>
+              </Tooltip>
+            )
           ) }
         </TableCell>
 
@@ -288,8 +305,10 @@ const TeamListView = ({
   onRemovePlannedTransfer,
 }) => {
   const captain = activePlayers?.length ? activePlayers.find(p => p.is_captain) ?? null : null;
-  const activeList = activePlayers ?? [];
-  const reserveList = reservePlayers ?? [];
+  const POSITION_ORDER = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4 };
+  const sortByPosition = (arr) => [...arr].sort((a, b) => (POSITION_ORDER[a.position] ?? 9) - (POSITION_ORDER[b.position] ?? 9));
+  const activeList = sortByPosition(activePlayers ?? []);
+  const reserveList = sortByPosition(reservePlayers ?? []);
 
   const sharedRowProps = {
     selectedPlayer, team, allPlayers, onTransfer, onPlayerClick,
