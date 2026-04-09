@@ -267,7 +267,7 @@ const App = () => {
                     variant='outlined'
                     startIcon={ <AutoFixHighIcon sx={ { fontSize: 16 } } /> }
                     onClick={ () => autoPickLineup(effectiveActivePlayers, effectiveReservePlayers) }
-                    sx={ { py: '3px', px: 1.25, minWidth: 0, fontSize: '0.75rem' } }
+                    sx={ { py: '3px', px: 1.25, minWidth: 0, fontSize: '0.75rem', '[data-mui-color-scheme="dark"] &': { color: '#fff', borderColor: 'rgba(255,255,255,0.5)' } } }
                   >
                     Auto Pick
                   </Button>

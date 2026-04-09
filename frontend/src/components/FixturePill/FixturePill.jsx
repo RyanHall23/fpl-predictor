@@ -1,11 +1,10 @@
-import React from 'react';
 import { Box, Typography } from '@mui/material';
 import PropTypes from 'prop-types';
 
 const FDR_COLORS = {
   1: { bg: '#00c853', text: '#000' },
   2: { bg: '#69f0ae', text: '#000' },
-  3: { bg: '#ffee58', text: '#000' },
+  3: { bg: '#c8960c', text: '#fff' },
   4: { bg: '#ff7043', text: '#fff' },
   5: { bg: '#b71c1c', text: '#fff' },
 };
@@ -21,41 +20,35 @@ const FDR_COLORS = {
  * fonts even though they have the same character count).
  */
 const SIZE_CONFIG = {
-  sm: { fontSize: '9px',  slotMinWidth: 44 },
-  md: { fontSize: '11px', slotMinWidth: 60 },
+  sm: { fontSize: '9px',  slotMinWidth: 44, borderRadius: '10px' },
+  md: { fontSize: '11px', slotMinWidth: 60, borderRadius: '10px' },
 };
 
 /**
  * FixturePill
  *
- * Renders 1–2 fixture badges using the DGW container style
- * (borderRadius 6 px + overflow hidden) for both single and double gameweeks.
+ * Renders 1–2 fixture badges side-by-side with a diagonal separator for DGWs.
  *
  * Props:
- *   fixtures   – Array of { label: string, difficulty: number }.
- *                Pass at most two items; only the first two are rendered.
- *   direction  – 'horizontal' | 'vertical'  (default: 'horizontal')
- *                Controls how two fixtures are laid out side-by-side or stacked.
- *   size       – 'sm' | 'md'  (default: 'md')
- *                'sm' for formation cards, 'md' for list-view rows.
+ *   fixtures – Array of { label: string, difficulty: number }.
+ *              Pass at most two items; only the first two are rendered.
+ *   size     – 'sm' | 'md'  (default: 'md')
+ *              'sm' for formation cards, 'md' for list-view rows.
  */
-function FixturePill({ fixtures, direction, size }) {
+function FixturePill({ fixtures, size }) {
   if (!fixtures || fixtures.length === 0) return null;
 
-  const { fontSize, slotMinWidth } = SIZE_CONFIG[size] ?? SIZE_CONFIG.md;
-  const isHorizontal = direction !== 'vertical';
+  const { fontSize, slotMinWidth, borderRadius } = SIZE_CONFIG[size] ?? SIZE_CONFIG.md;
   const items = fixtures.slice(0, 2);
 
   return (
     <Box
       sx={ {
         display: 'inline-flex',
-        flexDirection: isHorizontal ? 'row' : 'column',
-        borderRadius: '6px',
+        flexDirection: 'row',
+        borderRadius,
         overflow: 'hidden',
         flexShrink: 0,
-        /* In vertical mode the pill fills the parent container width */
-        width: isHorizontal ? undefined : '100%',
       } }
     >
       { items.map((fix, i) => {
@@ -63,9 +56,8 @@ function FixturePill({ fixtures, direction, size }) {
         const prevFdr = i > 0 ? (FDR_COLORS[items[i - 1].difficulty] ?? { bg: '#888', text: '#fff' }) : null;
 
         return (
-          <React.Fragment key={ i }>
-            { /* Angled diagonal separator between DGW fixtures in horizontal mode */ }
-            { i > 0 && isHorizontal && (
+          <Box key={ i } sx={ { display: 'contents' } }>
+            { i > 0 && (
               <Box sx={ {
                 width: 8,
                 flexShrink: 0,
@@ -82,13 +74,7 @@ function FixturePill({ fixtures, direction, size }) {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                /* Fixed minimum width keeps all pills consistent regardless of
-                   the proportional width of the letters in the team abbreviation */
                 minWidth: slotMinWidth,
-                /* In vertical mode each row stretches to full container width */
-                ...(isHorizontal ? {} : { width: '100%' }),
-                /* Straight border separator for vertical DGW stacking */
-                ...(i > 0 && !isHorizontal ? { borderTop: '1px solid rgba(0,0,0,0.15)' } : {}),
               } }
             >
               <Typography
@@ -101,7 +87,7 @@ function FixturePill({ fixtures, direction, size }) {
                 { fix.label }
               </Typography>
             </Box>
-          </React.Fragment>
+          </Box>
         );
       }) }
     </Box>
@@ -109,19 +95,17 @@ function FixturePill({ fixtures, direction, size }) {
 }
 
 FixturePill.propTypes = {
-  fixtures:  PropTypes.arrayOf(
+  fixtures: PropTypes.arrayOf(
     PropTypes.shape({
       label:      PropTypes.string.isRequired,
       difficulty: PropTypes.number,
     })
   ).isRequired,
-  direction: PropTypes.oneOf([ 'horizontal', 'vertical' ]),
-  size:      PropTypes.oneOf([ 'sm', 'md' ]),
+  size: PropTypes.oneOf([ 'sm', 'md' ]),
 };
 
 FixturePill.defaultProps = {
-  direction: 'horizontal',
-  size:      'md',
+  size: 'md',
 };
 
 export default FixturePill;
