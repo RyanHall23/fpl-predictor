@@ -203,25 +203,20 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
         </Typography>
 
         { /* Points and Opponent Row */ }
-        <Grid container spacing={ 0 }>
-          <Grid size={ 3 } sx={ { display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
-            <Typography variant='h6' className='points-display'>
-              { predictedPoints }
-            </Typography>
-          </Grid>
-          <Grid size={ 9 } sx={ { display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
-            <Box className='opponent-pill'>
-              <FixturePill
-                fixtures={ fixtures.slice(0, fixtures.length >= 2 ? 2 : 1).map(fix => ({
-                  label:      fix.text,
-                  difficulty: fix.difficulty,
-                })) }
-                direction='vertical'
-                size='sm'
-              />
-            </Box>
-          </Grid>
-        </Grid>
+        <Box sx={ { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 } }>
+          <Box className='opponent-pill'>
+            <FixturePill
+              fixtures={ fixtures.slice(0, fixtures.length >= 2 ? 2 : 1).map(fix => ({
+                label:      fix.text,
+                difficulty: fix.difficulty,
+              })) }
+              size='sm'
+            />
+          </Box>
+          <Typography variant='h6' className='points-display'>
+            { predictedPoints }
+          </Typography>
+        </Box>
 
         { /* Action Buttons */ }
         { showTransferButtons && team && allPlayers && onTransfer && (
@@ -241,9 +236,9 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
                       fontSize: '14px',
                       borderRadius: '4px',
                       ...(isCaptain && {
-                        color: '#000 !important',
-                        backgroundColor: '#ffeb3b !important',
-                        '&:hover': { backgroundColor: '#fdd835 !important' },
+                        color: '#fff !important',
+                        backgroundColor: '#c8960c !important',
+                        '&:hover': { backgroundColor: '#b5850b !important' },
                       }),
                     } }
                   >

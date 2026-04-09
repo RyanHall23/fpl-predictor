@@ -157,12 +157,12 @@ const ListRow = ({
                   label:      `${fix.opponent_short} (${fix.is_home ? 'H' : 'A'})`,
                   difficulty: fix.difficulty,
                 }));
-                return <FixturePill fixtures={ fixtures } direction='horizontal' size='md' />;
+                return <FixturePill fixtures={ fixtures } size='md' />;
               }
               const singleOpponent = player.opponentDisplay || player.opponent || '-';
               if (singleOpponent !== '-') {
                 const fixtures = [ { label: singleOpponent, difficulty: player.difficulty } ];
-                return <FixturePill fixtures={ fixtures } direction='horizontal' size='md' />;
+                return <FixturePill fixtures={ fixtures } size='md' />;
               }
               return (
                 <Box sx={ { flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 32 } }>
@@ -196,9 +196,9 @@ const ListRow = ({
                       typography: 'caption',
                       borderRadius: '4px',
                       ...(isCaptain && {
-                        color: '#000 !important',
-                        backgroundColor: '#ffeb3b !important',
-                        '&:hover': { backgroundColor: '#fdd835 !important' },
+                        color: '#fff !important',
+                        backgroundColor: '#c8960c !important',
+                        '&:hover': { backgroundColor: '#b5850b !important' },
                       }),
                     } }
                   >

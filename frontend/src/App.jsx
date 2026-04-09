@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import NavigationBar from './components/NavigationBar/NavigationBar';
 import Container from '@mui/material/Container';
 import Box from '@mui/material/Box';
+import Paper from '@mui/material/Paper';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import Snackbar from '@mui/material/Snackbar';
@@ -258,71 +259,95 @@ const App = () => {
                 ) }
               </Box>
             ) }
-            { /* View mode toggle + Auto Pick */ }
-            <Box sx={ { display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 1, mb: 0.5 } }>
-              { !isHighestPredictedTeam && !viewingOpponentId && activePlayers.length > 0 && (
-                <Tooltip title='Auto pick best XI from your squad'>
-                  <Button
+            { /* Stats + controls pod wrapping pitch/bench */ }
+            <Paper variant='outlined' sx={ { px: 2, py: 1 } }>
+              <Box sx={ { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', textAlign: 'center', rowGap: 0.75 } }>
+                { /* Row 1 — labels / auto pick button */ }
+                <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>
+                  Total Points
+                </Typography>
+                <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>
+                  Bench Points
+                </Typography>
+                <Box sx={ { display: 'flex', justifyContent: 'center' } }>
+                  { !isHighestPredictedTeam && !viewingOpponentId && activePlayers.length > 0 ? (
+                    <Tooltip title='Auto pick best XI from your squad'>
+                      <Button
+                        size='small'
+                        variant='outlined'
+                        startIcon={ <AutoFixHighIcon sx={ { fontSize: 16 } } /> }
+                        onClick={ () => autoPickLineup(effectiveActivePlayers, effectiveReservePlayers) }
+                        sx={ { py: '3px', px: 1.25, minWidth: 0, fontSize: '0.75rem', '[data-mui-color-scheme="dark"] &': { color: '#fff', borderColor: 'rgba(255,255,255,0.5)' } } }
+                      >
+                        Auto Pick
+                      </Button>
+                    </Tooltip>
+                  ) : (
+                    <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>View</Typography>
+                  ) }
+                </Box>
+                { /* Row 2 — values / toggle */ }
+                <Typography variant='h6' sx={ { fontWeight: 700, lineHeight: 1.2 } }>
+                  { calculateTotalPredictedPoints(effectiveActivePlayers) }
+                </Typography>
+                <Typography variant='h6' sx={ { fontWeight: 700, lineHeight: 1.2 } }>
+                  { calculateTotalPredictedPoints(effectiveReservePlayers) }
+                </Typography>
+                <Box sx={ { display: 'flex', justifyContent: 'center', alignItems: 'center' } }>
+                  <ToggleButtonGroup
+                    value={ pitchView }
+                    exclusive
+                    onChange={ (_, val) => { if (val) { setPitchView(val); localStorage.setItem('pitchView', val); } } }
                     size='small'
-                    variant='outlined'
-                    startIcon={ <AutoFixHighIcon sx={ { fontSize: 16 } } /> }
-                    onClick={ () => autoPickLineup(effectiveActivePlayers, effectiveReservePlayers) }
-                    sx={ { py: '3px', px: 1.25, minWidth: 0, fontSize: '0.75rem' } }
+                    sx={ { '& .MuiToggleButton-root': { padding: '4px 10px' } } }
                   >
-                    Auto Pick
-                  </Button>
-                </Tooltip>
-              ) }
-              <ToggleButtonGroup
-                value={ pitchView }
-                exclusive
-                onChange={ (_, val) => { if (val) { setPitchView(val); localStorage.setItem('pitchView', val); } } }
-                size='small'
-                sx={ { '& .MuiToggleButton-root': { padding: '4px 10px' } } }
-              >
-                <ToggleButton value='formation' title='Formation view'>
-                  <GridViewIcon sx={ { fontSize: 18 } } />
-                </ToggleButton>
-                <ToggleButton value='list' title='List view'>
-                  <TableRowsIcon sx={ { fontSize: 18 } } />
-                </ToggleButton>
-              </ToggleButtonGroup>
-            </Box>
-            { pitchView === 'formation' ? (
-              <TeamFormation
-                activePlayers={ effectiveActivePlayers }
-                reservePlayers={ effectiveReservePlayers }
-                onPlayerClick={ (player, zone) => handlePlayerClick?.(player, zone, effectiveActivePlayers, effectiveReservePlayers) }
-                selectedPlayer={ selectedPlayer }
-                team={ [...effectiveActivePlayers, ...effectiveReservePlayers] }
-                allPlayers={ allPlayers }
-                isHighestPredictedTeam={ isHighestPredictedTeam }
-                onSetCaptain={ !isHighestPredictedTeam ? setCaptain : undefined }
-                currentGameweek={ currentGameweek }
-                isFutureGameweek={ !!gameweekInfo?.isFuture }
-                viewedGameweek={ gameweekInfo?.selected ?? currentGameweek }
-                plannedTransfers={ !isHighestPredictedTeam ? plannedTransfers : undefined }
-                onRemovePlannedTransfer={ !isHighestPredictedTeam ? removePlannedTransfer : undefined }
-                onTransfer={ handleTransfer }
-              />
-            ) : (
-              <TeamListView
-                activePlayers={ effectiveActivePlayers }
-                reservePlayers={ effectiveReservePlayers }
-                onPlayerClick={ (player, zone) => handlePlayerClick?.(player, zone, effectiveActivePlayers, effectiveReservePlayers) }
-                selectedPlayer={ selectedPlayer }
-                team={ [...effectiveActivePlayers, ...effectiveReservePlayers] }
-                allPlayers={ allPlayers }
-                isHighestPredictedTeam={ isHighestPredictedTeam }
-                onSetCaptain={ !isHighestPredictedTeam ? setCaptain : undefined }
-                currentGameweek={ currentGameweek }
-                isFutureGameweek={ !!gameweekInfo?.isFuture }
-                viewedGameweek={ gameweekInfo?.selected ?? currentGameweek }
-                plannedTransfers={ !isHighestPredictedTeam ? plannedTransfers : undefined }
-                onRemovePlannedTransfer={ !isHighestPredictedTeam ? removePlannedTransfer : undefined }
-                onTransfer={ handleTransfer }
-              />
-            ) }
+                    <ToggleButton value='formation' title='Formation view'>
+                      <GridViewIcon sx={ { fontSize: 18 } } />
+                    </ToggleButton>
+                    <ToggleButton value='list' title='List view'>
+                      <TableRowsIcon sx={ { fontSize: 18 } } />
+                    </ToggleButton>
+                  </ToggleButtonGroup>
+                </Box>
+              </Box>
+              <Box sx={ { mt: 1 } }>
+                { pitchView === 'formation' ? (
+                  <TeamFormation
+                    activePlayers={ effectiveActivePlayers }
+                    reservePlayers={ effectiveReservePlayers }
+                    onPlayerClick={ (player, zone) => handlePlayerClick?.(player, zone, effectiveActivePlayers, effectiveReservePlayers) }
+                    selectedPlayer={ selectedPlayer }
+                    team={ [...effectiveActivePlayers, ...effectiveReservePlayers] }
+                    allPlayers={ allPlayers }
+                    isHighestPredictedTeam={ isHighestPredictedTeam }
+                    onSetCaptain={ !isHighestPredictedTeam ? setCaptain : undefined }
+                    currentGameweek={ currentGameweek }
+                    isFutureGameweek={ !!gameweekInfo?.isFuture }
+                    viewedGameweek={ gameweekInfo?.selected ?? currentGameweek }
+                    plannedTransfers={ !isHighestPredictedTeam ? plannedTransfers : undefined }
+                    onRemovePlannedTransfer={ !isHighestPredictedTeam ? removePlannedTransfer : undefined }
+                    onTransfer={ handleTransfer }
+                  />
+                ) : (
+                  <TeamListView
+                    activePlayers={ effectiveActivePlayers }
+                    reservePlayers={ effectiveReservePlayers }
+                    onPlayerClick={ (player, zone) => handlePlayerClick?.(player, zone, effectiveActivePlayers, effectiveReservePlayers) }
+                    selectedPlayer={ selectedPlayer }
+                    team={ [...effectiveActivePlayers, ...effectiveReservePlayers] }
+                    allPlayers={ allPlayers }
+                    isHighestPredictedTeam={ isHighestPredictedTeam }
+                    onSetCaptain={ !isHighestPredictedTeam ? setCaptain : undefined }
+                    currentGameweek={ currentGameweek }
+                    isFutureGameweek={ !!gameweekInfo?.isFuture }
+                    viewedGameweek={ gameweekInfo?.selected ?? currentGameweek }
+                    plannedTransfers={ !isHighestPredictedTeam ? plannedTransfers : undefined }
+                    onRemovePlannedTransfer={ !isHighestPredictedTeam ? removePlannedTransfer : undefined }
+                    onTransfer={ handleTransfer }
+                  />
+                ) }
+              </Box>
+            </Paper>
           </Box>
           
           { /* Middle - Panel */ }
