@@ -1,11 +1,5 @@
-import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
-import { vi, expect, test, beforeEach } from 'vitest';
-import App from './App';
-import api from './api';
-import { ThemeProvider } from './theme/ThemeContext';
-
-// Mock axios to prevent real API calls
+// vi.mock calls are hoisted by Vitest above all imports — declare them first
+// so the mock is in place before api/ThemeProvider are resolved.
 vi.mock('./api', () => ({
   default: {
     get: vi.fn(),
@@ -23,6 +17,13 @@ vi.mock('./theme/ThemeContext', () => ({
   }),
   ThemeProvider: ({ children }) => children,
 }));
+
+import React from 'react';
+import { render, screen, waitFor } from '@testing-library/react';
+import { vi, expect, test, beforeEach } from 'vitest';
+import App from './App';
+import api from './api';
+import { ThemeProvider } from './theme/ThemeContext';
 
 // Default API response that satisfies both useTeamData and useAllPlayers shapes
 const defaultApiResponse = (url) => {
@@ -73,7 +74,8 @@ test('App renders without throwing', () => {
   expect(() => render(<App />)).not.toThrow();
 });
 
-test('App renders with ThemeProvider wrapper without context errors', () => {
+test('App renders when nested inside an additional provider without crashing', () => {
+  // ThemeProvider is mocked as a pass-through; this verifies the nesting doesn't crash.
   expect(() =>
     render(
       <ThemeProvider>

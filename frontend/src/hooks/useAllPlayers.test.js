@@ -24,6 +24,7 @@ const playerFixture = {
 };
 
 beforeEach(() => {
+  vi.clearAllMocks();
   api.get.mockResolvedValue({ data: { elements: [playerFixture] } });
 });
 
