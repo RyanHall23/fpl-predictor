@@ -482,7 +482,7 @@ const RULES = [
       // Only fire if a significant number of teams are blank (at least 6)
       if (blankCount < 6) return null;
 
-      // Check if a chip is currently active (to warn against stacking chips)
+      // Check if a chip is currently active
       let freeHitNote = '';
       if (squadPicks && squadPicks.active_chip) {
         freeHitNote = ' Note: you currently have a chip active.';
