@@ -27,6 +27,7 @@ const getDeadlinePill = (deadline, theme) => {
   if (!deadline) return null;
   const now = new Date();
   const dl = new Date(deadline);
+  if (!Number.isFinite(dl.getTime())) return null;
   if (dl <= now) return null; // deadline passed — don't show
   const hoursAway = (dl - now) / (1000 * 60 * 60);
 

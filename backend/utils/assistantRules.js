@@ -28,6 +28,24 @@ function toFloat(v) {
   return Number.isFinite(n) ? n : 0;
 }
 
+/**
+ * Returns the set of team IDs that have two or more fixtures in the given gameweek.
+ */
+function getDoubleGameweekTeamIds(fixtures, gw) {
+  const fixtureCount = {};
+  fixtures
+    .filter((f) => f.event === gw)
+    .forEach((f) => {
+      fixtureCount[f.team_h] = (fixtureCount[f.team_h] || 0) + 1;
+      fixtureCount[f.team_a] = (fixtureCount[f.team_a] || 0) + 1;
+    });
+  return new Set(
+    Object.entries(fixtureCount)
+      .filter(([, count]) => count >= 2)
+      .map(([id]) => parseInt(id, 10)),
+  );
+}
+
 // ─── Rules ───────────────────────────────────────────────────────────────────
 
 const RULES = [
@@ -40,29 +58,18 @@ const RULES = [
     generate(ctx) {
       const { fixtures, targetGW, bootstrap, squadPlayers } = ctx;
 
-      const teamFixtureCount = {};
-      fixtures
-        .filter((f) => f.event === targetGW)
-        .forEach((f) => {
-          teamFixtureCount[f.team_h] = (teamFixtureCount[f.team_h] || 0) + 1;
-          teamFixtureCount[f.team_a] = (teamFixtureCount[f.team_a] || 0) + 1;
-        });
-
-      const dgwTeams = Object.entries(teamFixtureCount)
-        .filter(([, count]) => count >= 2)
-        .map(([id]) => bootstrap.teams.find((t) => t.id === parseInt(id, 10)))
-        .filter(Boolean);
+      const dgwTeamIds = getDoubleGameweekTeamIds(fixtures, targetGW);
+      const dgwTeams = bootstrap.teams.filter((t) => dgwTeamIds.has(t.id));
 
       if (dgwTeams.length === 0) return null;
-
-      const dgwTeamIds = new Set(dgwTeams.map((t) => t.id));
 
       // If squad loaded, note which squad players benefit
       let squadNote = '';
       if (squadPlayers && squadPlayers.length > 0) {
         const dgwSquadPlayers = squadPlayers.filter((p) => dgwTeamIds.has(p.team));
         if (dgwSquadPlayers.length > 0) {
-          squadNote = ` You already have ${dgwSquadPlayers.map((p) => p.web_name).join(', ')} from ${dgwSquadPlayers.length === 1 ? 'this team' : 'these teams'}.`;
+          const ownedDgwTeamIds = new Set(dgwSquadPlayers.map((p) => p.team));
+          squadNote = ` You already have ${dgwSquadPlayers.map((p) => p.web_name).join(', ')} from ${ownedDgwTeamIds.size === 1 ? 'this team' : 'these teams'}.`;
         }
       }
 
@@ -379,18 +386,7 @@ const RULES = [
         if (blankTeamIds.size >= 6) {
           // Free Hit blank GW scenario — suggest holding transfers and targeting DGW players instead
           const dgwGW = targetGW + 1;
-          const dgwTeamFixtureCount = {};
-          fixtures
-            .filter((f) => f.event === dgwGW)
-            .forEach((f) => {
-              dgwTeamFixtureCount[f.team_h] = (dgwTeamFixtureCount[f.team_h] || 0) + 1;
-              dgwTeamFixtureCount[f.team_a] = (dgwTeamFixtureCount[f.team_a] || 0) + 1;
-            });
-          const dgwTeamIds = new Set(
-            Object.entries(dgwTeamFixtureCount)
-              .filter(([, count]) => count >= 2)
-              .map(([id]) => parseInt(id, 10)),
-          );
+          const dgwTeamIds = getDoubleGameweekTeamIds(fixtures, dgwGW);
 
           if (dgwTeamIds.size > 0) {
             // Find best DGW players not yet in squad
@@ -428,34 +424,24 @@ const RULES = [
     enabled: true,
     requiresSquad: false,
     generate(ctx) {
-      const { fixtures, targetGW, bootstrap, squadPlayers } = ctx;
+      const { fixtures, currentGW, bootstrap, squadPlayers } = ctx;
 
-      const planGW = targetGW + 1;
+      const planGW = currentGW + 1;
       if (planGW > 38) return null;
 
-      const teamFixtureCount = {};
-      fixtures
-        .filter((f) => f.event === planGW)
-        .forEach((f) => {
-          teamFixtureCount[f.team_h] = (teamFixtureCount[f.team_h] || 0) + 1;
-          teamFixtureCount[f.team_a] = (teamFixtureCount[f.team_a] || 0) + 1;
-        });
-
-      const dgwTeams = Object.entries(teamFixtureCount)
-        .filter(([, count]) => count >= 2)
-        .map(([id]) => bootstrap.teams.find((t) => t.id === parseInt(id, 10)))
-        .filter(Boolean);
+      const dgwTeamIds = getDoubleGameweekTeamIds(fixtures, planGW);
+      const dgwTeams = bootstrap.teams.filter((t) => dgwTeamIds.has(t.id));
 
       if (dgwTeams.length === 0) return null;
 
-      const dgwTeamIds = new Set(dgwTeams.map((t) => t.id));
       const teamNames = dgwTeams.map((t) => t.name);
 
       let squadNote = '';
       if (squadPlayers && squadPlayers.length > 0) {
         const dgwSquadPlayers = squadPlayers.filter((p) => dgwTeamIds.has(p.team));
         if (dgwSquadPlayers.length > 0) {
-          squadNote = ` You already have ${dgwSquadPlayers.map((p) => p.web_name).join(', ')} from ${dgwSquadPlayers.length === 1 ? 'this team' : 'these teams'} — good position.`;
+          const ownedDgwTeamIds = new Set(dgwSquadPlayers.map((p) => p.team));
+          squadNote = ` You already have ${dgwSquadPlayers.map((p) => p.web_name).join(', ')} from ${ownedDgwTeamIds.size === 1 ? 'this team' : 'these teams'} — good position.`;
         }
       }
 
@@ -477,9 +463,9 @@ const RULES = [
     enabled: true,
     requiresSquad: false,
     generate(ctx) {
-      const { fixtures, targetGW, bootstrap, squadPicks, squadPlayers } = ctx;
+      const { fixtures, currentGW, bootstrap, squadPicks, squadPlayers } = ctx;
 
-      const blankGW = targetGW + 2;
+      const blankGW = currentGW + 2;
       if (blankGW > 38) return null;
 
       const teamsWithFixture = new Set(
@@ -496,7 +482,7 @@ const RULES = [
       // Only fire if a significant number of teams are blank (at least 6)
       if (blankCount < 6) return null;
 
-      // Check if Free Hit chip is still available
+      // Check if a chip is currently active (to warn against stacking chips)
       let freeHitNote = '';
       if (squadPicks && squadPicks.active_chip) {
         freeHitNote = ' Note: you currently have a chip active.';
@@ -539,18 +525,7 @@ const RULES = [
       const dgwGW = targetGW + 1;
       if (dgwGW > 38) return null;
 
-      const dgwTeamFixtureCount = {};
-      fixtures
-        .filter((f) => f.event === dgwGW)
-        .forEach((f) => {
-          dgwTeamFixtureCount[f.team_h] = (dgwTeamFixtureCount[f.team_h] || 0) + 1;
-          dgwTeamFixtureCount[f.team_a] = (dgwTeamFixtureCount[f.team_a] || 0) + 1;
-        });
-      const dgwTeamIds = new Set(
-        Object.entries(dgwTeamFixtureCount)
-          .filter(([, count]) => count >= 2)
-          .map(([id]) => parseInt(id, 10)),
-      );
+      const dgwTeamIds = getDoubleGameweekTeamIds(fixtures, dgwGW);
       if (dgwTeamIds.size === 0) return null;
 
       const squadIds = new Set(squadPlayers.map((p) => p.id));
@@ -643,18 +618,7 @@ const RULES = [
       const dgwGW = targetGW + 1;
       if (dgwGW > 38) return null;
 
-      const dgwTeamFixtureCount = {};
-      fixtures
-        .filter((f) => f.event === dgwGW)
-        .forEach((f) => {
-          dgwTeamFixtureCount[f.team_h] = (dgwTeamFixtureCount[f.team_h] || 0) + 1;
-          dgwTeamFixtureCount[f.team_a] = (dgwTeamFixtureCount[f.team_a] || 0) + 1;
-        });
-      const dgwTeamIds = new Set(
-        Object.entries(dgwTeamFixtureCount)
-          .filter(([, count]) => count >= 2)
-          .map(([id]) => parseInt(id, 10)),
-      );
+      const dgwTeamIds = getDoubleGameweekTeamIds(fixtures, dgwGW);
       if (dgwTeamIds.size === 0) return null;
 
       // Best DGW player in the squad (all 15) by predicted points
@@ -701,18 +665,7 @@ const RULES = [
       const dgwGW = targetGW + 1;
       if (dgwGW > 38) return null;
 
-      const dgwTeamFixtureCount = {};
-      fixtures
-        .filter((f) => f.event === dgwGW)
-        .forEach((f) => {
-          dgwTeamFixtureCount[f.team_h] = (dgwTeamFixtureCount[f.team_h] || 0) + 1;
-          dgwTeamFixtureCount[f.team_a] = (dgwTeamFixtureCount[f.team_a] || 0) + 1;
-        });
-      const dgwTeamIds = new Set(
-        Object.entries(dgwTeamFixtureCount)
-          .filter(([, count]) => count >= 2)
-          .map(([id]) => parseInt(id, 10)),
-      );
+      const dgwTeamIds = getDoubleGameweekTeamIds(fixtures, dgwGW);
       if (dgwTeamIds.size === 0) return null;
 
       // Bench = positions 12–15

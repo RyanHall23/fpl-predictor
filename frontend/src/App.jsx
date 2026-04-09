@@ -366,7 +366,7 @@ const App = () => {
               viewingOpponentId={ viewingOpponentId }
               currentEntryId={ currentEntryId }
               userEntryId={ userEntryId }
-              gameweekDeadline={ gameweekInfo?.data?.deadline_time || null }
+              gameweekDeadline={ gameweekInfo?.data?.deadline_time }
             />
           </Box>
 
