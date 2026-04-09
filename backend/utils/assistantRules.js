@@ -628,6 +628,265 @@ const RULES = [
       };
     },
   },
+
+  // ── 12. Triple Captain Suggestion ────────────────────────────────────────
+  {
+    id: 'triple-captain',
+    priority: 1,
+    enabled: true,
+    requiresSquad: true,
+    generate(ctx) {
+      const { squadPicks, squadPlayers, fixtures, targetGW } = ctx;
+      if (!squadPicks || !squadPlayers) return null;
+
+      // Only fire when the next GW is a DGW
+      const dgwGW = targetGW + 1;
+      if (dgwGW > 38) return null;
+
+      const dgwTeamFixtureCount = {};
+      fixtures
+        .filter((f) => f.event === dgwGW)
+        .forEach((f) => {
+          dgwTeamFixtureCount[f.team_h] = (dgwTeamFixtureCount[f.team_h] || 0) + 1;
+          dgwTeamFixtureCount[f.team_a] = (dgwTeamFixtureCount[f.team_a] || 0) + 1;
+        });
+      const dgwTeamIds = new Set(
+        Object.entries(dgwTeamFixtureCount)
+          .filter(([, count]) => count >= 2)
+          .map(([id]) => parseInt(id, 10)),
+      );
+      if (dgwTeamIds.size === 0) return null;
+
+      // Best DGW player in the squad (all 15) by predicted points
+      const dgwSquadPlayers = squadPlayers.filter((p) => dgwTeamIds.has(p.team));
+      if (dgwSquadPlayers.length === 0) return null;
+
+      const bestTc = dgwSquadPlayers
+        .sort((a, b) => toFloat(b.predicted_points || b.ep_next) - toFloat(a.predicted_points || a.ep_next))[0];
+
+      const captainPick = squadPicks.picks.find((p) => p.is_captain);
+      const captain = captainPick ? squadPlayers.find((p) => p.id === captainPick.element) : null;
+      const captainPts = captain ? toFloat(captain.predicted_points || captain.ep_next) : 0;
+      const tcPts = toFloat(bestTc.predicted_points || bestTc.ep_next);
+
+      // TC earns pts × 3 vs captain's pts × 2 — only worth flagging if gain is meaningful
+      const tcGain = tcPts * 3 - captainPts * 2;
+      if (tcGain < 4) return null;
+
+      const captainNote = captain && captain.id !== bestTc.id
+        ? ` vs your current captain ${captain.web_name} (${captainPts.toFixed(1)} pts × 2 = ${(captainPts * 2).toFixed(1)})`
+        : '';
+
+      return {
+        id: 'triple-captain',
+        type: 'opportunity',
+        title: 'Triple Captain Opportunity',
+        message: `GW${dgwGW} is a double gameweek. ${bestTc.web_name} is your highest-scoring DGW player — predicted ${tcPts.toFixed(1)} pts × 3 = ${(tcPts * 3).toFixed(1)} pts with TC${captainNote}. Consider using your Triple Captain chip if unused.`,
+        players: [{ id: bestTc.id, name: bestTc.web_name, predictedPoints: tcPts }],
+      };
+    },
+  },
+
+  // ── 13. Bench Boost Suggestion ────────────────────────────────────────────
+  {
+    id: 'bench-boost',
+    priority: 1,
+    enabled: true,
+    requiresSquad: true,
+    generate(ctx) {
+      const { squadPicks, squadPlayers, fixtures, targetGW } = ctx;
+      if (!squadPicks || !squadPlayers) return null;
+
+      // Only fire when the next GW is a DGW
+      const dgwGW = targetGW + 1;
+      if (dgwGW > 38) return null;
+
+      const dgwTeamFixtureCount = {};
+      fixtures
+        .filter((f) => f.event === dgwGW)
+        .forEach((f) => {
+          dgwTeamFixtureCount[f.team_h] = (dgwTeamFixtureCount[f.team_h] || 0) + 1;
+          dgwTeamFixtureCount[f.team_a] = (dgwTeamFixtureCount[f.team_a] || 0) + 1;
+        });
+      const dgwTeamIds = new Set(
+        Object.entries(dgwTeamFixtureCount)
+          .filter(([, count]) => count >= 2)
+          .map(([id]) => parseInt(id, 10)),
+      );
+      if (dgwTeamIds.size === 0) return null;
+
+      // Bench = positions 12–15
+      const benchIds = new Set(
+        squadPicks.picks.filter((p) => p.position >= 12).map((p) => p.element),
+      );
+      const benchPlayers = squadPlayers.filter((p) => benchIds.has(p.id));
+      if (benchPlayers.length === 0) return null;
+
+      const benchWithFixtures = benchPlayers.filter((p) => dgwTeamIds.has(p.team));
+      const benchPts = benchPlayers.reduce(
+        (sum, p) => sum + toFloat(p.predicted_points || p.ep_next),
+        0,
+      );
+
+      // Only suggest BB if bench predicted total is meaningful (>= 12 pts)
+      if (benchPts < 12) return null;
+
+      const dgwNote = benchWithFixtures.length > 0
+        ? ` ${benchWithFixtures.map((p) => p.web_name).join(', ')} ${benchWithFixtures.length === 1 ? 'has' : 'have'} a double gameweek.`
+        : '';
+
+      return {
+        id: 'bench-boost',
+        type: 'opportunity',
+        title: 'Bench Boost Opportunity',
+        message: `Your bench is predicted to score ${benchPts.toFixed(1)} pts in GW${dgwGW}.${dgwNote} If unused, your Bench Boost chip could be well-timed here.`,
+        players: benchPlayers
+          .sort((a, b) => toFloat(b.predicted_points || b.ep_next) - toFloat(a.predicted_points || a.ep_next))
+          .map((p) => ({
+            id: p.id,
+            name: p.web_name,
+            predictedPoints: toFloat(p.predicted_points || p.ep_next),
+          })),
+      };
+    },
+  },
+
+  // ── 14. Wildcard Timing ───────────────────────────────────────────────────
+  {
+    id: 'wildcard-timing',
+    priority: 2,
+    enabled: true,
+    requiresSquad: true,
+    generate(ctx) {
+      const { squadPlayers, playerFixtureRun } = ctx;
+      if (!squadPlayers || !playerFixtureRun) return null;
+
+      const LOOKAHEAD = 3;
+      const DIFFICULTY_THRESHOLD = 3.8;
+      const MIN_INJURED = 2;
+
+      // Count injured/doubtful starters
+      const atRisk = squadPlayers.filter((p) => {
+        const chance = p.chance_of_playing_next_round;
+        return (chance !== null && chance !== undefined && chance < 75) ||
+          (p.status && p.status !== 'a');
+      });
+
+      if (atRisk.length < MIN_INJURED) return null;
+
+      // Count players with a rough fixture run
+      const toughRun = squadPlayers.filter((p) => {
+        const run = (playerFixtureRun[p.id] || []).slice(0, LOOKAHEAD);
+        const withFixtures = run.filter((gw) => gw.hasFixture);
+        if (withFixtures.length === 0) return false;
+        const avg = withFixtures.reduce((s, gw) => s + gw.difficulty, 0) / withFixtures.length;
+        return avg >= DIFFICULTY_THRESHOLD;
+      });
+
+      if (toughRun.length < 2) return null;
+
+      return {
+        id: 'wildcard-timing',
+        type: 'warning',
+        title: 'Wildcard Timing?',
+        message: `You have ${atRisk.length} player${atRisk.length > 1 ? 's' : ''} injured or doubtful (${atRisk.map((p) => p.web_name).join(', ')}) and ${toughRun.length} player${toughRun.length > 1 ? 's' : ''} with a tough ${LOOKAHEAD}-GW run. It may be worth considering your Wildcard to reshape the squad.`,
+        players: atRisk.map((p) => ({
+          id: p.id,
+          name: p.web_name,
+          chance: p.chance_of_playing_next_round,
+          news: p.news,
+        })),
+      };
+    },
+  },
+
+  // ── 15. Owned Premium Being Sold — Ownership Erosion Alert ───────────────
+  {
+    id: 'ownership-erosion',
+    priority: 2,
+    enabled: true,
+    requiresSquad: true,
+    generate(ctx) {
+      const { squadPlayers } = ctx;
+      if (!squadPlayers) return null;
+
+      const atRisk = squadPlayers.filter((p) => {
+        const ownership = toFloat(p.selected_by_percent);
+        const netTransfers = (p.transfers_in_event || 0) - (p.transfers_out_event || 0);
+        const totalVolume = (p.transfers_in_event || 0) + (p.transfers_out_event || 0);
+        return ownership >= 30 && netTransfers < -80000 && totalVolume >= 50000;
+      });
+
+      if (atRisk.length === 0) return null;
+
+      const descriptions = atRisk.map((p) => {
+        const netOut = Math.abs((p.transfers_in_event || 0) - (p.transfers_out_event || 0));
+        return `${p.web_name} (${toFloat(p.selected_by_percent).toFixed(1)}% owned, ~${(netOut / 1000).toFixed(0)}k net sells this GW)`;
+      });
+
+      return {
+        id: 'ownership-erosion',
+        type: 'warning',
+        title: 'Popular Players Being Sold',
+        message: `${descriptions.join('\n')}\nManagers are moving away from ${atRisk.length === 1 ? 'this player' : 'these players'} — holding could cost you rank if the trend continues.`,
+        players: atRisk.map((p) => ({
+          id: p.id,
+          name: p.web_name,
+          ownership: toFloat(p.selected_by_percent),
+          trend: 'falling',
+        })),
+      };
+    },
+  },
+
+  // ── 16. In-Form Players Outside Your Squad ────────────────────────────────
+  {
+    id: 'form-alert',
+    priority: 2,
+    enabled: true,
+    requiresSquad: true,
+    generate(ctx) {
+      const { allPlayers, squadPlayers, playerFixtureRun, targetGW } = ctx;
+      if (!squadPlayers || !playerFixtureRun) return null;
+
+      const FORM_THRESHOLD = 6.0;
+      const squadIds = new Set(squadPlayers.map((p) => p.id));
+
+      const candidates = allPlayers
+        .filter((p) => !squadIds.has(p.id))
+        .filter((p) => {
+          const form = toFloat(p.form);
+          if (form < FORM_THRESHOLD) return false;
+
+          // Must have a fixture in targetGW with decent difficulty
+          const run = (playerFixtureRun[p.id] || []).find((gw) => gw.gameweek === targetGW);
+          return run && run.hasFixture && run.difficulty <= 3;
+        })
+        .sort((a, b) => toFloat(b.form) - toFloat(a.form))
+        .slice(0, 3);
+
+      if (candidates.length === 0) return null;
+
+      const best = candidates[0];
+      const form = toFloat(best.form).toFixed(1);
+      const price = (best.now_cost / 10).toFixed(1);
+      const ownership = toFloat(best.selected_by_percent).toFixed(1);
+
+      return {
+        id: 'form-alert',
+        type: 'opportunity',
+        title: 'In-Form Players to Consider',
+        message: `${best.web_name} (£${price}m, ${ownership}% owned) is in excellent form averaging ${form} pts/game with a good GW${targetGW} fixture. Not in your squad.`,
+        players: candidates.map((p) => ({
+          id: p.id,
+          name: p.web_name,
+          price: p.now_cost / 10,
+          ownership: toFloat(p.selected_by_percent),
+          form: toFloat(p.form),
+        })),
+      };
+    },
+  },
 ];
 
 module.exports = { RULES };

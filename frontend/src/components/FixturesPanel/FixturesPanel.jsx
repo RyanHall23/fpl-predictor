@@ -23,11 +23,38 @@ const formatDateHeader = (date) =>
 const formatTime = (date) =>
   date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 
-const FixturesPanel = ({ gameweek }) => {
+const getDeadlinePill = (deadline, theme) => {
+  if (!deadline) return null;
+  const now = new Date();
+  const dl = new Date(deadline);
+  if (dl <= now) return null; // deadline passed — don't show
+  const hoursAway = (dl - now) / (1000 * 60 * 60);
+
+  let bg, color;
+  if (hoursAway < 24) {
+    bg = theme.palette.error.main;
+    color = theme.palette.error.contrastText;
+  } else if (hoursAway < 48) {
+    bg = theme.palette.warning.main;
+    color = theme.palette.warning.contrastText;
+  } else {
+    bg = theme.palette.success.main;
+    color = theme.palette.success.contrastText;
+  }
+
+  const formatted = dl.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })
+    + ' ' + dl.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+
+  return { bg, color, label: `Deadline: ${formatted}` };
+};
+
+const FixturesPanel = ({ gameweek, deadline }) => {
   const theme = useTheme();
   const [fixtures, setFixtures] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  const deadlinePill = getDeadlinePill(deadline, theme);
 
   const teamNameSx = { flex: 1, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
 
@@ -55,9 +82,28 @@ const FixturesPanel = ({ gameweek }) => {
 
   return (
     <Box>
-      <Typography variant='h6' sx={ { mb: 1, fontWeight: 600 } }>
-        GW{ gameweek } Fixtures
-      </Typography>
+      <Box sx={ { display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, mb: 1 } }>
+        <Typography variant='h6' sx={ { fontWeight: 600 } }>
+          GW{ gameweek } Fixtures
+        </Typography>
+        { deadlinePill && (
+          <Box
+            sx={ {
+              bgcolor: deadlinePill.bg,
+              color: deadlinePill.color,
+              borderRadius: '10px',
+              px: 1,
+              py: 0.25,
+              fontSize: '0.65rem',
+              fontWeight: 700,
+              whiteSpace: 'nowrap',
+              lineHeight: 1.4,
+            } }
+          >
+            { deadlinePill.label }
+          </Box>
+        ) }
+      </Box>
 
       { loading && (
         <Box sx={ { display: 'flex', justifyContent: 'center', py: 2 } }>
@@ -151,6 +197,7 @@ const FixturesPanel = ({ gameweek }) => {
 
 FixturesPanel.propTypes = {
   gameweek: PropTypes.number,
+  deadline: PropTypes.string,
 };
 
 export default FixturesPanel;
