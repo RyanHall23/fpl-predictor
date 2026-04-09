@@ -153,6 +153,37 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
         </Tooltip>
       ) }
       { player.inDreamteam && <StarIcon className='dreamteam-icon' /> }
+      { isCaptain && (
+        <Tooltip title='Captain' placement='top'>
+          <Box
+            className='captain-badge'
+            tabIndex={ 0 }
+            aria-label='Captain'
+            sx={ {
+              position: 'absolute',
+              top: 8,
+              right: player.inDreamteam ? 36 : 8,
+              width: 22,
+              height: 22,
+              borderRadius: '50%',
+              backgroundColor: '#1976d2',
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 700,
+              fontSize: '0.75rem',
+              zIndex: 1,
+              boxShadow: 1,
+              cursor: 'default',
+            } }
+          >
+            <Typography component='span' sx={ { fontSize: 'inherit', fontWeight: 'inherit', lineHeight: 1 } }>
+              C
+            </Typography>
+          </Box>
+        </Tooltip>
+      ) }
       <CardContent className='card-content'>
         { /* Team Shirt */ }
         <Box className='avatar-box'>
