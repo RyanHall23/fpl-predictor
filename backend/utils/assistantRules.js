@@ -427,7 +427,7 @@ const RULES = [
     enabled: true,
     requiresSquad: false,
     generate(ctx) {
-      const { fixtures, targetGW, bootstrap, squadPicks } = ctx;
+      const { fixtures, targetGW, bootstrap, squadPicks, squadPlayers } = ctx;
 
       const blankGW = targetGW + 2;
       if (blankGW > 38) return null;
@@ -439,7 +439,8 @@ const RULES = [
       );
 
       const totalTeams = bootstrap.teams.length;
-      const blankTeams = bootstrap.teams.filter((t) => !teamsWithFixture.has(t.id));
+      const blankTeamSet = new Set(bootstrap.teams.filter((t) => !teamsWithFixture.has(t.id)).map((t) => t.id));
+      const blankTeams = bootstrap.teams.filter((t) => blankTeamSet.has(t.id));
       const blankCount = blankTeams.length;
 
       // Only fire if a significant number of teams are blank (at least 6)
@@ -448,8 +449,18 @@ const RULES = [
       // Check if Free Hit chip is still available
       let freeHitNote = '';
       if (squadPicks && squadPicks.active_chip) {
-        // A chip is currently active — note it but still warn
         freeHitNote = ' Note: you currently have a chip active.';
+      }
+
+      // Count how many of the user's squad players are blanking
+      let squadBlankNote = '';
+      if (squadPlayers && squadPlayers.length > 0) {
+        const blankSquadPlayers = squadPlayers.filter((p) => blankTeamSet.has(p.team));
+        if (blankSquadPlayers.length > 0) {
+          squadBlankNote = ` ${blankSquadPlayers.length} of your players will blank: ${blankSquadPlayers.map((p) => p.web_name).join(', ')}.`;
+        } else {
+          squadBlankNote = ' None of your current players will blank.';
+        }
       }
 
       const teamNames = blankTeams.map((t) => t.name);
@@ -458,7 +469,7 @@ const RULES = [
         id: 'freehit-blank-gameweek',
         type: 'opportunity',
         title: `Consider Free Hit for GW${blankGW} Blanks`,
-        message: `GW${blankGW} has ${blankCount} of ${totalTeams} teams without a fixture (${teamNames.join(', ')}). This is prime territory for your Free Hit chip.${freeHitNote}`,
+        message: `GW${blankGW} has ${blankCount} of ${totalTeams} teams without a fixture (${teamNames.join(', ')}).${squadBlankNote} This is prime territory for your Free Hit chip.${freeHitNote}`,
         teams: blankTeams.map((t) => ({ id: t.id, name: t.name, shortName: t.short_name })),
         planGameweek: blankGW,
       };

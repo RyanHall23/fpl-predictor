@@ -138,6 +138,23 @@ const AssistantManagerPanel = ({ entryId, currentGameweek }) => {
                   )) }
                 </Box>
               ) }
+
+              { /* Team chips */ }
+              { hint.teams && hint.teams.length > 0 && (
+                <Box
+                  sx={ { display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.75 } }
+                >
+                  { hint.teams.map((t) => (
+                    <Chip
+                      key={ t.id }
+                      label={ t.shortName ?? t.name }
+                      size='small'
+                      variant='outlined'
+                      sx={ { height: 20, fontSize: '0.7rem' } }
+                    />
+                  )) }
+                </Box>
+              ) }
             </Box>
           )) }
         </Box>
