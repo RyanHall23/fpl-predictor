@@ -18,7 +18,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Chip,
 } from '@mui/material';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
@@ -40,10 +39,6 @@ const NavigationBar = ({
   selectedGameweek,
   setSelectedGameweek,
   currentGameweek,
-  mainPoints,
-  benchPoints,
-  isPast,
-  isActive,
 }) => {
   const { mode, toggleTheme, toggleWin2k, toggleTeletext } = useThemeMode();
   const [teamIdDialogOpen, setTeamIdDialogOpen] = React.useState(false);
@@ -280,10 +275,6 @@ NavigationBar.propTypes = {
   selectedGameweek: PropTypes.number,
   setSelectedGameweek: PropTypes.func,
   currentGameweek: PropTypes.number,
-  mainPoints: PropTypes.number,
-  benchPoints: PropTypes.number,
-  isPast: PropTypes.bool,
-  isActive: PropTypes.bool,
 };
 
 export default NavigationBar;

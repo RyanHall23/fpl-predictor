@@ -204,13 +204,15 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
 
         { /* Points and Opponent Row */ }
         <Box sx={ { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 } }>
-          <FixturePill
-            fixtures={ fixtures.slice(0, fixtures.length >= 2 ? 2 : 1).map(fix => ({
-              label:      fix.text,
-              difficulty: fix.difficulty,
-            })) }
-            size='sm'
-          />
+          <Box className='opponent-pill'>
+            <FixturePill
+              fixtures={ fixtures.slice(0, fixtures.length >= 2 ? 2 : 1).map(fix => ({
+                label:      fix.text,
+                difficulty: fix.difficulty,
+              })) }
+              size='sm'
+            />
+          </Box>
           <Typography variant='h6' className='points-display'>
             { predictedPoints }
           </Typography>
