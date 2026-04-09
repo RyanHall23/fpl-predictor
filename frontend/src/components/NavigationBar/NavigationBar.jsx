@@ -140,50 +140,8 @@ const NavigationBar = ({
             FPL Predictor
           </Typography>
 
-          { /* Points display — abbreviated on mobile, full text on larger screens */ }
-          { mainPoints != null && (
-            <Box sx={ { display: 'flex', alignItems: 'center', gap: 1, flex: { xs: '1 1 auto', md: 1 } } }>
-              { isActive && (
-                <Chip
-                  label='LIVE'
-                  size='small'
-                  sx={ {
-                    backgroundColor: '#f44336',
-                    color: '#fff',
-                    fontWeight: 'bold',
-                    fontSize: '0.65rem',
-                    height: '20px',
-                    flexShrink: 0,
-                    animation: 'fpl-live-pulse 1.5s ease-in-out infinite',
-                    '@keyframes fpl-live-pulse': {
-                      '0%, 100%': { opacity: 1 },
-                      '50%': { opacity: 0.6 },
-                    },
-                  } }
-                />
-              ) }
-              <Typography
-                variant='body2'
-                noWrap
-                sx={ { fontWeight: 500, color: 'inherit', opacity: 0.9 } }
-              >
-                <Box component='span' sx={ { display: { xs: 'none', sm: 'inline' } } }>
-                  { isPast ? 'Total Points' : 'Points' }:{ ' ' }
-                </Box>
-                <Box component='span' sx={ { display: { xs: 'inline', sm: 'none' } } }>Pts: </Box>
-                <Box component='span' sx={ { fontWeight: 'bold' } }>{ mainPoints }</Box>
-                { ' | ' }
-                <Box component='span' sx={ { display: { xs: 'none', sm: 'inline' } } }>
-                  { isPast ? 'Bench Points' : 'Bench' }:{ ' ' }
-                </Box>
-                <Box component='span' sx={ { display: { xs: 'inline', sm: 'none' } } }>Bench: </Box>
-                <Box component='span' sx={ { fontWeight: 'bold' } }>{ benchPoints }</Box>
-              </Typography>
-            </Box>
-          ) }
-
           { /* Right controls */ }
-          <Box sx={ { display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 }, flexShrink: 0 } }>
+          <Box sx={ { display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 }, flexShrink: 0, ml: 'auto' } }>
             { /* Team view toggle buttons */ }
             <Box sx={ { display: 'flex', gap: 0.5 } }>
               { userTeamId && (
