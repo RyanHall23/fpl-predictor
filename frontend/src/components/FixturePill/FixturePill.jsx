@@ -70,7 +70,7 @@ function FixturePill({ fixtures, size }) {
                 bgcolor: fdr.bg,
                 color: fdr.text,
                 px: 0.5,
-                py: 0.25,
+                py: 0.15,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
