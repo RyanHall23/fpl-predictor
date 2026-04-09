@@ -526,47 +526,75 @@ const RULES = [
     },
   },
 
-  // ── 10. Differential / DGW Pick Opportunity ─────────────────────────────
+  // ── 10. DGW Differential Transfer Targets ────────────────────────────────
   {
-    id: 'differential-pick',
+    id: 'differential-pick-dgw',
     priority: 3,
     enabled: true,
     requiresSquad: true,
     generate(ctx) {
-      const { allPlayers, squadPlayers, targetGW, fixtures } = ctx;
+      const { allPlayers, squadPlayers, fixtures, targetGW } = ctx;
       if (!squadPlayers) return null;
 
-      const squadIds = new Set(squadPlayers.map((p) => p.id));
-
-      // Check if the next GW (targetGW + 1) is a DGW
       const dgwGW = targetGW + 1;
+      if (dgwGW > 38) return null;
+
       const dgwTeamFixtureCount = {};
-      if (dgwGW <= 38) {
-        fixtures
-          .filter((f) => f.event === dgwGW)
-          .forEach((f) => {
-            dgwTeamFixtureCount[f.team_h] = (dgwTeamFixtureCount[f.team_h] || 0) + 1;
-            dgwTeamFixtureCount[f.team_a] = (dgwTeamFixtureCount[f.team_a] || 0) + 1;
-          });
-      }
+      fixtures
+        .filter((f) => f.event === dgwGW)
+        .forEach((f) => {
+          dgwTeamFixtureCount[f.team_h] = (dgwTeamFixtureCount[f.team_h] || 0) + 1;
+          dgwTeamFixtureCount[f.team_a] = (dgwTeamFixtureCount[f.team_a] || 0) + 1;
+        });
       const dgwTeamIds = new Set(
         Object.entries(dgwTeamFixtureCount)
           .filter(([, count]) => count >= 2)
           .map(([id]) => parseInt(id, 10)),
       );
-      const hasDGW = dgwTeamIds.size > 0;
+      if (dgwTeamIds.size === 0) return null;
 
-      // DGW differentials: not in squad, from DGW teams, ownership < 25%, best predicted pts
-      const dgwCandidates = hasDGW
-        ? allPlayers
-            .filter((p) => !squadIds.has(p.id) && dgwTeamIds.has(p.team))
-            .filter((p) => toFloat(p.selected_by_percent) < 25)
-            .sort((a, b) => toFloat(b.predicted_points || b.ep_next) - toFloat(a.predicted_points || a.ep_next))
-            .slice(0, 3)
-        : [];
+      const squadIds = new Set(squadPlayers.map((p) => p.id));
+      const candidates = allPlayers
+        .filter((p) => !squadIds.has(p.id) && dgwTeamIds.has(p.team))
+        .filter((p) => toFloat(p.selected_by_percent) < 25)
+        .sort((a, b) => toFloat(b.predicted_points || b.ep_next) - toFloat(a.predicted_points || a.ep_next))
+        .slice(0, 3);
 
-      // General differentials: not in squad, low ownership, high ICT, good predicted pts
-      const generalCandidates = allPlayers
+      if (candidates.length === 0) return null;
+
+      const best = candidates[0];
+      const ownership = toFloat(best.selected_by_percent).toFixed(1);
+      const pts = toFloat(best.predicted_points || best.ep_next).toFixed(1);
+      const price = (best.now_cost / 10).toFixed(1);
+
+      return {
+        id: 'differential-pick-dgw',
+        type: 'opportunity',
+        title: `Differential Transfer Targets`,
+        message: `${best.web_name} (£${price}m, ${ownership}% owned) is a standout differential for GW${dgwGW}'s double gameweek — predicted ${pts} pts with two fixtures.`,
+        players: candidates.map((p) => ({
+          id: p.id,
+          name: p.web_name,
+          price: p.now_cost / 10,
+          ownership: toFloat(p.selected_by_percent),
+          predictedPoints: toFloat(p.predicted_points || p.ep_next),
+        })),
+      };
+    },
+  },
+
+  // ── 11. General Transfer Targets ─────────────────────────────────────────
+  {
+    id: 'differential-pick-general',
+    priority: 3,
+    enabled: true,
+    requiresSquad: true,
+    generate(ctx) {
+      const { allPlayers, squadPlayers, targetGW } = ctx;
+      if (!squadPlayers) return null;
+
+      const squadIds = new Set(squadPlayers.map((p) => p.id));
+      const candidates = allPlayers
         .filter((p) => !squadIds.has(p.id))
         .filter((p) => {
           const ownership = toFloat(p.selected_by_percent);
@@ -577,49 +605,26 @@ const RULES = [
         .sort((a, b) => toFloat(b.ict_index) - toFloat(a.ict_index))
         .slice(0, 3);
 
-      if (dgwCandidates.length === 0 && generalCandidates.length === 0) return null;
+      if (candidates.length === 0) return null;
 
-      const messageParts = [];
-
-      if (dgwCandidates.length > 0) {
-        const best = dgwCandidates[0];
-        const ownership = toFloat(best.selected_by_percent).toFixed(1);
-        const pts = toFloat(best.predicted_points || best.ep_next).toFixed(1);
-        const price = (best.now_cost / 10).toFixed(1);
-        messageParts.push(`DGW${dgwGW} differential: ${best.web_name} (£${price}m, ${ownership}% owned) — predicted ${pts} pts with two fixtures.`);
-      }
-
-      if (generalCandidates.length > 0) {
-        const best = generalCandidates[0];
-        const ownership = toFloat(best.selected_by_percent).toFixed(1);
-        const pts = toFloat(best.predicted_points || best.ep_next).toFixed(1);
-        const price = (best.now_cost / 10).toFixed(1);
-        messageParts.push(`General differential: ${best.web_name} (£${price}m, ${ownership}% owned) — predicted ${pts} pts with a strong ICT index.`);
-      }
+      const best = candidates[0];
+      const ownership = toFloat(best.selected_by_percent).toFixed(1);
+      const pts = toFloat(best.predicted_points || best.ep_next).toFixed(1);
+      const price = (best.now_cost / 10).toFixed(1);
 
       return {
-        id: 'differential-pick',
+        id: 'differential-pick-general',
         type: 'opportunity',
-        title: hasDGW ? `Differential Targets (incl. DGW${dgwGW})` : 'Differential Opportunity',
-        message: messageParts.join('\n'),
-        players: [
-          ...dgwCandidates.map((p) => ({
-            id: p.id,
-            name: p.web_name,
-            price: p.now_cost / 10,
-            ownership: toFloat(p.selected_by_percent),
-            predictedPoints: toFloat(p.predicted_points || p.ep_next),
-            tag: `DGW${dgwGW}`,
-          })),
-          ...generalCandidates.map((p) => ({
-            id: p.id,
-            name: p.web_name,
-            price: p.now_cost / 10,
-            ownership: toFloat(p.selected_by_percent),
-            predictedPoints: toFloat(p.predicted_points || p.ep_next),
-            ictIndex: toFloat(p.ict_index),
-          })),
-        ],
+        title: 'Transfer Targets',
+        message: `${best.web_name} (£${price}m, ${ownership}% owned) — predicted ${pts} pts in GW${targetGW} with a strong ICT index.`,
+        players: candidates.map((p) => ({
+          id: p.id,
+          name: p.web_name,
+          price: p.now_cost / 10,
+          ownership: toFloat(p.selected_by_percent),
+          predictedPoints: toFloat(p.predicted_points || p.ep_next),
+          ictIndex: toFloat(p.ict_index),
+        })),
       };
     },
   },
