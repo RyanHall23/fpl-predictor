@@ -16,6 +16,7 @@ const RightPanel = ({
   onViewTeam,
   currentGameweek,
   selectedGameweek,
+  gameweekDeadline,
 }) => {
   const theme = useTheme();
   const displayGameweek = selectedGameweek || currentGameweek;
@@ -56,7 +57,7 @@ const RightPanel = ({
         <>
           { entryId && <Divider sx={ { my: 1 } } /> }
           <Box sx={ { p: 2 } }>
-            <FixturesPanel gameweek={ displayGameweek } />
+            <FixturesPanel gameweek={ displayGameweek } deadline={ gameweekDeadline } />
           </Box>
         </>
       ) }
@@ -74,6 +75,7 @@ RightPanel.propTypes = {
   onViewTeam: PropTypes.func,
   currentGameweek: PropTypes.number,
   selectedGameweek: PropTypes.number,
+  gameweekDeadline: PropTypes.string,
 };
 
 export default RightPanel;

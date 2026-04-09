@@ -46,8 +46,7 @@ const TeamActivityPanel = ({
       });
   }, [entryId]);
 
-  if (!entryId) return null;
-  if (loading) return <Paper sx={ { p: 2 } }><Typography>Loading...</Typography></Paper>;
+  if (entryId && loading) return <Paper sx={ { p: 2 } }><Typography>Loading...</Typography></Paper>;
 
   const formatNumber = n => (n == null ? 'N/A' : n.toLocaleString());
   const formatCurrency = n => (n == null ? 'N/A' : `£${(n / 10).toFixed(1)}m`);
@@ -78,7 +77,7 @@ const TeamActivityPanel = ({
       } }
     >
       { /* Team Stats - Top Section */ }
-      { profile && (
+      { entryId && profile && (
         <Paper
           sx={ {
             backgroundColor: theme.palette.background.paper,
@@ -139,6 +138,7 @@ const TeamActivityPanel = ({
       ) }
 
       { /* Recent Performance - Middle Section */ }
+      { entryId && (
       <Paper
         sx={ {
           backgroundColor: theme.palette.background.paper,
@@ -197,6 +197,7 @@ const TeamActivityPanel = ({
           </Box>
         ) }
       </Paper>
+      ) }
 
       { /* Recommended Transfers - Bottom Section */ }
       { currentEntryId && !viewingOpponentId && currentGameweek && (
