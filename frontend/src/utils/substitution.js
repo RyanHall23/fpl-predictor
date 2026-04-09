@@ -289,16 +289,18 @@ export const selectOptimalLineup = (allPlayers) => {
   const benchOutfield = flexPool.slice(3);
 
   const startingXI = [startingGk, ...mandatoryStarters, ...flexStarters].filter(Boolean);
+  // Sort starting XI by position (GK > DEF > MID > FWD) for consistent display ordering
+  const sortedStartingXI = [...startingXI].sort((a, b) => pos(a) - pos(b));
   const bench = [gks[1], ...benchOutfield].filter(Boolean);
 
   // Captain: highest base-points outfield (non-GK, non-manager) starter
-  const outfieldStarters = startingXI.filter(
+  const outfieldStarters = sortedStartingXI.filter(
     p => pos(p) !== POSITION.GK && pos(p) !== POSITION.MANAGER,
   );
   if (outfieldStarters.length === 0) {
     // Re-attach managers and return without assigning captaincy
     return {
-      activePlayers: [...managers.slice(0, 1), ...startingXI].filter(Boolean),
+      activePlayers: [...managers.slice(0, 1), ...sortedStartingXI].filter(Boolean),
       reservePlayers: [...bench, ...managers.slice(1)].filter(Boolean),
     };
   }
@@ -334,7 +336,7 @@ export const selectOptimalLineup = (allPlayers) => {
   const reserveManagers = managers.slice(1);
 
   return {
-    activePlayers: applyRoles([...activeManagers, ...startingXI]),
+    activePlayers: applyRoles([...activeManagers, ...sortedStartingXI]),
     reservePlayers: applyRoles([...bench, ...reserveManagers]),
   };
 };

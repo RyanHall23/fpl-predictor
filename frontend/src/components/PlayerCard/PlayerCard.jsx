@@ -14,15 +14,45 @@ import RestoreIcon from '@mui/icons-material/Restore';
 import PropTypes from 'prop-types';
 import './styles.css';
 import TransferPlayer from '../TransferPlayer/TransferPlayer';
+import FixturePill from '../FixturePill/FixturePill';
 
 const POSITION_GK = 1;
 const POSITION_MANAGER = 5;
+
+const STATUS_META = {
+  d: { label: 'Doubtful',     color: '#ff9800' },
+  i: { label: 'Injured',      color: '#f44336' },
+  s: { label: 'Suspended',    color: '#ab47bc' },
+  u: { label: 'Unavailable',  color: '#9e9e9e' },
+};
 
 const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTransferButtons = true, teamType, onPlayerClick, selectedPlayer, activePlayers, reservePlayers, onSetCaptain, currentGameweek, isFutureGameweek, viewedGameweek, plannedTransfers, onRemovePlannedTransfer }) => {
   const [transferDialogOpen, setTransferDialogOpen] = React.useState(false);
 
   // predictedPoints is fully resolved by the backend (basePoints × multiplier).
   const predictedPoints = parseFloat(player.predictedPoints) || 0;
+
+  // Player status badge — only shown when NOT available (injured/doubtful/suspended/unavailable)
+  const chance = player.chanceOfPlayingNextRound;
+  let statusMeta = null;
+  if (STATUS_META[player.status]) {
+    const base = STATUS_META[player.status];
+    const percentSuffix = (chance != null && chance < 100) ? ` ${chance}%` : '';
+    const newsNote = player.news ? ` — ${player.news}` : '';
+    statusMeta = { color: base.color, title: `${base.label}${percentSuffix}${newsNote}` };
+  } else if (chance != null && chance < 100) {
+    statusMeta = { color: '#ff9800', title: `${chance}% chance of playing` };
+  }
+
+  // Per-fixture data for the opponent pill (supports DGW with per-row FDR colour)
+  const fixtures = player.opponents && player.opponents.length > 0
+    ? player.opponents.map(opp => ({
+        text: opp.is_home !== undefined
+          ? `${opp.opponent_short || '-'} (${opp.is_home ? 'H' : 'A'})`
+          : (opp.opponent_short || '-'),
+        difficulty: opp.difficulty,
+      }))
+    : [{ text: player.opponentDisplay || player.opponent || '-', difficulty: player.difficulty }];
 
   // Captain eligibility: any starting (non-bench) player except the manager.
   // Bench players never receive onSetCaptain from TeamFormation, so they are
@@ -106,9 +136,6 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
     cardClassName += ' player-card-valid-target';
   }
 
-  // Opponent display string is pre-formatted by the backend (supports DGW).
-  const opponent = player.opponentDisplay || player.opponent || '-';
-
   // Find the planned transfer that brought this player in, if any (for future GWs).
   // Used to show a Restore button instead of the Transfer button.
   const plannedInTransfer = isFutureGameweek && plannedTransfers
@@ -119,8 +146,44 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
 
   return (
     <Card className={ cardClassName }>
-      { isCaptain && <Box className='captain-badge'>C</Box> }
+      { /* Status dot — shown only when NOT available (injured/doubtful/suspended/unavailable) */ }
+      { statusMeta && (
+        <Tooltip title={ statusMeta.title } placement='top'>
+          <Box className='status-badge' style={ { backgroundColor: statusMeta.color } } />
+        </Tooltip>
+      ) }
       { player.inDreamteam && <StarIcon className='dreamteam-icon' /> }
+      { isCaptain && (
+        <Tooltip title='Captain' placement='top'>
+          <Box
+            className='captain-badge'
+            tabIndex={ 0 }
+            aria-label='Captain'
+            sx={ {
+              position: 'absolute',
+              top: 8,
+              right: player.inDreamteam ? 36 : 8,
+              width: 22,
+              height: 22,
+              borderRadius: '50%',
+              backgroundColor: '#1976d2',
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 700,
+              fontSize: '0.75rem',
+              zIndex: 1,
+              boxShadow: 1,
+              cursor: 'default',
+            } }
+          >
+            <Typography component='span' sx={ { fontSize: 'inherit', fontWeight: 'inherit', lineHeight: 1 } }>
+              C
+            </Typography>
+          </Box>
+        </Tooltip>
+      ) }
       <CardContent className='card-content'>
         { /* Team Shirt */ }
         <Box className='avatar-box'>
@@ -141,15 +204,22 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
 
         { /* Points and Opponent Row */ }
         <Grid container spacing={ 0 }>
-          <Grid size={ 6 } sx={ { display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
+          <Grid size={ 3 } sx={ { display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
             <Typography variant='h6' className='points-display'>
               { predictedPoints }
             </Typography>
           </Grid>
-          <Grid size={ 6 } sx={ { display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
-            <Typography variant='body2' className='opponent-display'>
-              { opponent }
-            </Typography>
+          <Grid size={ 9 } sx={ { display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
+            <Box className='opponent-pill'>
+              <FixturePill
+                fixtures={ fixtures.slice(0, fixtures.length >= 2 ? 2 : 1).map(fix => ({
+                  label:      fix.text,
+                  difficulty: fix.difficulty,
+                })) }
+                direction='vertical'
+                size='sm'
+              />
+            </Box>
           </Grid>
         </Grid>
 
@@ -166,12 +236,15 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
                     className='action-button-small captain-button'
                     onClick={ () => { if (!isCaptain && onSetCaptain) onSetCaptain(player.code); } }
                     sx={ {
-                      padding: '4px !important',
+                      padding: '3px !important',
                       fontWeight: 'bold',
                       fontSize: '14px',
-                      color: isCaptain ? '#000 !important' : undefined,
-                      backgroundColor: isCaptain ? '#ffeb3b !important' : undefined,
-                      '&:hover': isCaptain ? { backgroundColor: '#fdd835 !important' } : {},
+                      borderRadius: '4px',
+                      ...(isCaptain && {
+                        color: '#000 !important',
+                        backgroundColor: '#ffeb3b !important',
+                        '&:hover': { backgroundColor: '#fdd835 !important' },
+                      }),
                     } }
                   >
                     C
@@ -191,7 +264,7 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
                 className='action-button-small substitute-button'
                 title='Substitute'
                 onClick={ () => { if (onPlayerClick) onPlayerClick(player, teamType); } }
-                sx={ { padding: '4px !important' } }
+                sx={ { padding: '3px !important' } }
               >
                 <SyncIcon sx={ { fontSize: 20 } } className='sync-icon' />
               </IconButton>
@@ -206,7 +279,7 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
                       size='small'
                       className='action-button-small restore-button'
                       onClick={ () => onRemovePlannedTransfer && onRemovePlannedTransfer(plannedInTransfer.id) }
-                      sx={ { padding: '4px !important' } }
+                      sx={ { padding: '3px !important' } }
                     >
                       <RestoreIcon sx={ { fontSize: 20, color: '#ff9800' } } />
                     </IconButton>
@@ -217,7 +290,7 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
                     className='action-button-small transfer-button'
                     title='Transfer'
                     onClick={ () => setTransferDialogOpen(true) }
-                    sx={ { padding: '4px !important' } }
+                    sx={ { padding: '3px !important' } }
                   >
                     <Box className='transfer-arrows-icon'>
                       <svg width='20' height='20' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
@@ -270,9 +343,14 @@ PlayerCard.propTypes = {
     opponents: PropTypes.arrayOf(PropTypes.shape({
       opponent_id: PropTypes.number,
       opponent_short: PropTypes.string,
-      is_home: PropTypes.bool
+      is_home: PropTypes.bool,
+      difficulty: PropTypes.number,
     })),
     team: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+    difficulty: PropTypes.number,
+    status: PropTypes.string,
+    chanceOfPlayingNextRound: PropTypes.number,
+    news: PropTypes.string,
   }).isRequired,
   isCaptain: PropTypes.bool,
   team: PropTypes.array,

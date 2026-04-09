@@ -4,11 +4,18 @@ import SyncIcon from '@mui/icons-material/Sync';
 import RestoreIcon from '@mui/icons-material/Restore';
 import PropTypes from 'prop-types';
 import TransferPlayer from '../TransferPlayer/TransferPlayer';
+import FixturePill from '../FixturePill/FixturePill';
 import { validateSubstitution } from '../../utils/substitution';
 
 const POSITION_MANAGER = 5;
+const POSITION_GK  = 1;
+const POSITION_DEF = 2;
+const POSITION_MID = 3;
+const POSITION_FWD = 4;
 
 const positionLabels = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD', 5: 'MAN' };
+// Sort order: GK(1) → DEF(2) → MID(3) → FWD(4) → MANAGER(5)
+const POSITION_SORT_ORDER = { [POSITION_GK]: 0, [POSITION_DEF]: 1, [POSITION_MID]: 2, [POSITION_FWD]: 3, [POSITION_MANAGER]: 4 };
 
 const STATUS_META = {
   d: { label: 'Doubtful', color: 'warning' },
@@ -18,15 +25,6 @@ const STATUS_META = {
 };
 
 const cellSx = { py: 0.5, px: 0.75, border: 'none' };
-
-// FPL FDR 1–5: green → green-light → yellow → orange → red
-const FDR_COLORS = {
-  1: { bg: '#00c853', text: '#000' },
-  2: { bg: '#69f0ae', text: '#000' },
-  3: { bg: '#ffee58', text: '#000' },
-  4: { bg: '#ff7043', text: '#fff' },
-  5: { bg: '#b71c1c', text: '#fff' },
-};
 
 const formatKickoff = (kickoffTime) => {
   if (!kickoffTime) return null;
@@ -58,11 +56,8 @@ const ListRow = ({
   const [transferDialogOpen, setTransferDialogOpen] = React.useState(false);
 
   const predictedPoints = parseFloat(player.predictedPoints) || 0;
-  const opponent = player.opponentDisplay || player.opponent || '-';
   const kickoff = formatKickoff(player.fixtureKickoff);
   const isCaptainEligible = !!onSetCaptain && player.position !== POSITION_MANAGER;
-  const price = player.nowCost != null ? `£${(player.nowCost / 10).toFixed(1)}m` : '-';
-
   const chance = player.chanceOfPlayingNextRound;
   let statusMeta = null;
   if (STATUS_META[player.status]) {
@@ -128,17 +123,6 @@ const ListRow = ({
           </Typography>
         </TableCell>
 
-        { /* CAPTAIN? */ }
-        <TableCell sx={ cellSx } align='center'>
-          { isCaptain && (
-            <Box sx={ {
-              width: 16, height: 16, borderRadius: '50%', bgcolor: 'warning.main',
-              color: 'warning.contrastText', typography: 'caption', fontWeight: 'bold',
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            } }>C</Box>
-          ) }
-        </TableCell>
-
         { /* KIT */ }
         <TableCell sx={ cellSx }>
           <img
@@ -147,13 +131,6 @@ const ListRow = ({
             style={ { width: 22, height: 22, objectFit: 'contain', display: 'block' } }
             onError={ (e) => { e.target.style.display = 'none'; } }
           />
-        </TableCell>
-
-        { /* PRICE */ }
-        <TableCell sx={ cellSx } align='right'>
-          <Typography variant='caption' color='text.secondary' noWrap>
-            { price }
-          </Typography>
         </TableCell>
 
         { /* NAME */ }
@@ -173,24 +150,26 @@ const ListRow = ({
         { /* FIXTURE */ }
         <TableCell sx={ cellSx } align='right'>
           <Box sx={ { display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.75 } }>
-            { opponent !== '-' ? (() => {
-              const fdr = FDR_COLORS[player.difficulty] ?? { bg: 'action.selected', text: 'text.primary' };
+            { (() => {
+              const isDgw = player.opponents?.length >= 2;
+              if (isDgw) {
+                const fixtures = player.opponents.slice(0, 2).map(fix => ({
+                  label:      `${fix.opponent_short} (${fix.is_home ? 'H' : 'A'})`,
+                  difficulty: fix.difficulty,
+                }));
+                return <FixturePill fixtures={ fixtures } direction='horizontal' size='md' />;
+              }
+              const singleOpponent = player.opponentDisplay || player.opponent || '-';
+              if (singleOpponent !== '-') {
+                const fixtures = [ { label: singleOpponent, difficulty: player.difficulty } ];
+                return <FixturePill fixtures={ fixtures } direction='horizontal' size='md' />;
+              }
               return (
-                <Box sx={ {
-                  width: 64, flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  bgcolor: fdr.bg, color: fdr.text,
-                  borderRadius: 1, px: 0.75, py: 0.25,
-                } }>
-                  <Typography variant='caption' fontWeight='bold' component='span' color='inherit' noWrap>
-                    { opponent }
-                  </Typography>
+                <Box sx={ { flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 32 } }>
+                  <Typography variant='caption' color='text.disabled'>-</Typography>
                 </Box>
               );
-            })() : (
-              <Box sx={ { width: 64, flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' } }>
-                <Typography variant='caption' color='text.disabled'>-</Typography>
-              </Box>
-            ) }
+            })() }
             <Box sx={ { width: 52, flexShrink: 0, textAlign: 'left' } }>
               { kickoff && (
                 <Typography variant='caption' color='text.disabled' noWrap>{ kickoff }</Typography>
@@ -201,7 +180,7 @@ const ListRow = ({
 
         { /* BUTTONS */ }
         <TableCell sx={ cellSx } align='right'>
-          { showActions && (
+          { showActions ? (
             <Box sx={ { display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '1px' } }>
 
               { /* 1. Captain */ }
@@ -211,13 +190,17 @@ const ListRow = ({
                     size='small'
                     aria-label={ isCaptain ? 'Captain (current)' : 'Set as Captain' }
                     aria-pressed={ isCaptain }
-                    onClick={ () => { if (!isCaptain) onSetCaptain(player.code); } }
-                    sx={ isCaptain ? {
-                      fontWeight: 'bold', typography: 'caption',
-                      color: 'warning.contrastText',
-                      bgcolor: 'warning.main',
-                      '&:hover': { bgcolor: 'warning.dark' },
-                    } : { fontWeight: 'bold', typography: 'caption' } }
+                    onClick={ (e) => { e.stopPropagation(); if (!isCaptain) onSetCaptain(player.code); } }
+                    sx={ {
+                      fontWeight: 'bold',
+                      typography: 'caption',
+                      borderRadius: '4px',
+                      ...(isCaptain && {
+                        color: '#000 !important',
+                        backgroundColor: '#ffeb3b !important',
+                        '&:hover': { backgroundColor: '#fdd835 !important' },
+                      }),
+                    } }
                   >
                     C
                   </IconButton>
@@ -229,7 +212,7 @@ const ListRow = ({
               ) }
 
               { /* 2. Substitute */ }
-              <IconButton size='small' aria-label='Substitute' onClick={ () => onPlayerClick(player, teamType) }>
+              <IconButton size='small' aria-label='Substitute' onClick={ (e) => { e.stopPropagation(); onPlayerClick(player, teamType); } }>
                 <SyncIcon fontSize='small' />
               </IconButton>
 
@@ -240,13 +223,13 @@ const ListRow = ({
                     <IconButton
                       size='small'
                       aria-label='Restore — remove planned transfer'
-                      onClick={ () => onRemovePlannedTransfer?.(plannedInTransfer.id) }
+                      onClick={ (e) => { e.stopPropagation(); onRemovePlannedTransfer?.(plannedInTransfer.id); } }
                     >
                       <RestoreIcon fontSize='small' color='warning' />
                     </IconButton>
                   </Tooltip>
                 ) : (
-                  <IconButton size='small' aria-label='Plan a transfer' onClick={ () => setTransferDialogOpen(true) }>
+                  <IconButton size='small' aria-label='Plan a transfer' onClick={ (e) => { e.stopPropagation(); setTransferDialogOpen(true); } }>
                     <svg width='17' height='17' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg' aria-hidden='true'>
                       <path d='M3 8 L12 8 L12 6 L18 10 L12 14 L12 12 L3 12 Z' fill='#4caf50' />
                       <path d='M21 16 L12 16 L12 18 L6 14 L12 10 L12 12 L21 12 Z' fill='#f44336' />
@@ -259,6 +242,23 @@ const ListRow = ({
                 </IconButton>
               ) }
             </Box>
+          ) : (
+            isCaptain && (
+              <Tooltip title='Captain'>
+                <Box
+                  tabIndex={ 0 }
+                  aria-label='Captain'
+                  sx={ {
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    width: 22, height: 22, borderRadius: '50%',
+                    backgroundColor: '#1976d2', color: '#fff',
+                    fontWeight: 700, fontSize: '0.75rem',
+                  } }
+                >
+                  C
+                </Box>
+              </Tooltip>
+            )
           ) }
         </TableCell>
 
@@ -311,8 +311,9 @@ const TeamListView = ({
   onRemovePlannedTransfer,
 }) => {
   const captain = activePlayers?.length ? activePlayers.find(p => p.is_captain) ?? null : null;
-  const activeList = activePlayers ?? [];
-  const reserveList = reservePlayers ?? [];
+  const sortByPosition = (arr) => [...arr].sort((a, b) => (POSITION_SORT_ORDER[a.position] ?? 9) - (POSITION_SORT_ORDER[b.position] ?? 9));
+  const activeList = sortByPosition(activePlayers ?? []);
+  const reserveList = sortByPosition(reservePlayers ?? []);
 
   const sharedRowProps = {
     selectedPlayer, team, allPlayers, onTransfer, onPlayerClick,
@@ -339,7 +340,7 @@ const TeamListView = ({
 
           <TableRow>
             <TableCell
-              colSpan={ 9 }
+              colSpan={ 7 }
               sx={ {
                 py: 0.75, px: 1,
                 borderTop: '1px solid', borderTopColor: 'divider',
@@ -380,8 +381,12 @@ ListRow.propTypes = {
     teamCode: PropTypes.number,
     opponent: PropTypes.string,
     opponentDisplay: PropTypes.string,
+    opponents: PropTypes.arrayOf(PropTypes.shape({
+      opponent_short: PropTypes.string,
+      is_home: PropTypes.bool,
+      difficulty: PropTypes.number,
+    })),
     is_captain: PropTypes.bool,
-    nowCost: PropTypes.number,
     status: PropTypes.string,
     chanceOfPlayingNextRound: PropTypes.number,
     news: PropTypes.string,
