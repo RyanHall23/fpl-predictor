@@ -203,7 +203,7 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
         </Typography>
 
         { /* Points and Opponent Row */ }
-        <Box sx={ { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 } }>
+        <Box sx={ { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25 } }>
           <Box className='opponent-pill'>
             <FixturePill
               fixtures={ fixtures.slice(0, fixtures.length >= 2 ? 2 : 1).map(fix => ({

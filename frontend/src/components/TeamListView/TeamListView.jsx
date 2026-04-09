@@ -322,7 +322,7 @@ const TeamListView = ({
   };
 
   return (
-    <Paper sx={ { borderRadius: 2, overflow: 'hidden', width: '100%' } }>
+    <Paper sx={ { borderRadius: 2, overflow: 'hidden', width: '100%', pb: '1px' } }>
       <Table size='small' sx={ { tableLayout: 'auto' } }>
         <TableBody>
           { activeList.map((player) => (
