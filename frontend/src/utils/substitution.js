@@ -290,8 +290,7 @@ export const selectOptimalLineup = (allPlayers) => {
 
   const startingXI = [startingGk, ...mandatoryStarters, ...flexStarters].filter(Boolean);
   // Sort starting XI by position (GK > DEF > MID > FWD) for consistent display ordering
-  const positionOrder = (p) => pos(p);
-  const sortedStartingXI = [...startingXI].sort((a, b) => positionOrder(a) - positionOrder(b));
+  const sortedStartingXI = [...startingXI].sort((a, b) => pos(a) - pos(b));
   const bench = [gks[1], ...benchOutfield].filter(Boolean);
 
   // Captain: highest base-points outfield (non-GK, non-manager) starter

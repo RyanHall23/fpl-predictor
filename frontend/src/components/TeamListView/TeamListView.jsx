@@ -8,8 +8,14 @@ import FixturePill from '../FixturePill/FixturePill';
 import { validateSubstitution } from '../../utils/substitution';
 
 const POSITION_MANAGER = 5;
+const POSITION_GK  = 1;
+const POSITION_DEF = 2;
+const POSITION_MID = 3;
+const POSITION_FWD = 4;
 
 const positionLabels = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD', 5: 'MAN' };
+// Sort order: GK(1) → DEF(2) → MID(3) → FWD(4) → MANAGER(5)
+const POSITION_SORT_ORDER = { [POSITION_GK]: 0, [POSITION_DEF]: 1, [POSITION_MID]: 2, [POSITION_FWD]: 3, [POSITION_MANAGER]: 4 };
 
 const STATUS_META = {
   d: { label: 'Doubtful', color: 'warning' },
@@ -305,8 +311,7 @@ const TeamListView = ({
   onRemovePlannedTransfer,
 }) => {
   const captain = activePlayers?.length ? activePlayers.find(p => p.is_captain) ?? null : null;
-  const POSITION_ORDER = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4 };
-  const sortByPosition = (arr) => [...arr].sort((a, b) => (POSITION_ORDER[a.position] ?? 9) - (POSITION_ORDER[b.position] ?? 9));
+  const sortByPosition = (arr) => [...arr].sort((a, b) => (POSITION_SORT_ORDER[a.position] ?? 9) - (POSITION_SORT_ORDER[b.position] ?? 9));
   const activeList = sortByPosition(activePlayers ?? []);
   const reserveList = sortByPosition(reservePlayers ?? []);
 
