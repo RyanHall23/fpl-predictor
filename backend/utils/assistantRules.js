@@ -556,37 +556,17 @@ const RULES = [
       );
       const hasDGW = dgwTeamIds.size > 0;
 
-      if (hasDGW) {
-        // Prioritise: DGW players not in squad, ranked by predicted points, ownership < 25%
-        const dgwCandidates = allPlayers
-          .filter((p) => !squadIds.has(p.id) && dgwTeamIds.has(p.team))
-          .filter((p) => toFloat(p.selected_by_percent) < 25)
-          .sort((a, b) => toFloat(b.predicted_points || b.ep_next) - toFloat(a.predicted_points || a.ep_next))
-          .slice(0, 3);
+      // DGW differentials: not in squad, from DGW teams, ownership < 25%, best predicted pts
+      const dgwCandidates = hasDGW
+        ? allPlayers
+            .filter((p) => !squadIds.has(p.id) && dgwTeamIds.has(p.team))
+            .filter((p) => toFloat(p.selected_by_percent) < 25)
+            .sort((a, b) => toFloat(b.predicted_points || b.ep_next) - toFloat(a.predicted_points || a.ep_next))
+            .slice(0, 3)
+        : [];
 
-        if (dgwCandidates.length > 0) {
-          const best = dgwCandidates[0];
-          const ownership = toFloat(best.selected_by_percent).toFixed(1);
-          const pts = toFloat(best.predicted_points || best.ep_next).toFixed(1);
-          const price = (best.now_cost / 10).toFixed(1);
-          return {
-            id: 'differential-pick',
-            type: 'opportunity',
-            title: `DGW${dgwGW} Differential Targets`,
-            message: `${best.web_name} (£${price}m, ${ownership}% owned) is a standout differential for GW${dgwGW}'s double gameweek — predicted ${pts} pts with two fixtures. Low ownership means big rank gains if they deliver.`,
-            players: dgwCandidates.map((p) => ({
-              id: p.id,
-              name: p.web_name,
-              price: p.now_cost / 10,
-              ownership: toFloat(p.selected_by_percent),
-              predictedPoints: toFloat(p.predicted_points || p.ep_next),
-            })),
-          };
-        }
-      }
-
-      // Fallback: general differential (low ownership, high ICT, good predicted points)
-      const candidates = allPlayers
+      // General differentials: not in squad, low ownership, high ICT, good predicted pts
+      const generalCandidates = allPlayers
         .filter((p) => !squadIds.has(p.id))
         .filter((p) => {
           const ownership = toFloat(p.selected_by_percent);
@@ -597,26 +577,49 @@ const RULES = [
         .sort((a, b) => toFloat(b.ict_index) - toFloat(a.ict_index))
         .slice(0, 3);
 
-      if (candidates.length === 0) return null;
+      if (dgwCandidates.length === 0 && generalCandidates.length === 0) return null;
 
-      const best = candidates[0];
-      const ownership = toFloat(best.selected_by_percent).toFixed(1);
-      const pts = toFloat(best.predicted_points || best.ep_next).toFixed(1);
-      const price = (best.now_cost / 10).toFixed(1);
+      const messageParts = [];
+
+      if (dgwCandidates.length > 0) {
+        const best = dgwCandidates[0];
+        const ownership = toFloat(best.selected_by_percent).toFixed(1);
+        const pts = toFloat(best.predicted_points || best.ep_next).toFixed(1);
+        const price = (best.now_cost / 10).toFixed(1);
+        messageParts.push(`DGW${dgwGW} differential: ${best.web_name} (£${price}m, ${ownership}% owned) — predicted ${pts} pts with two fixtures.`);
+      }
+
+      if (generalCandidates.length > 0) {
+        const best = generalCandidates[0];
+        const ownership = toFloat(best.selected_by_percent).toFixed(1);
+        const pts = toFloat(best.predicted_points || best.ep_next).toFixed(1);
+        const price = (best.now_cost / 10).toFixed(1);
+        messageParts.push(`General differential: ${best.web_name} (£${price}m, ${ownership}% owned) — predicted ${pts} pts with a strong ICT index.`);
+      }
 
       return {
         id: 'differential-pick',
         type: 'opportunity',
-        title: 'Differential Opportunity',
-        message: `${best.web_name} (£${price}m) is owned by only ${ownership}% of managers but is predicted to score ${pts} pts in GW${targetGW} with a strong ICT index. A well-timed differential pick.`,
-        players: candidates.map((p) => ({
-          id: p.id,
-          name: p.web_name,
-          price: p.now_cost / 10,
-          ownership: toFloat(p.selected_by_percent),
-          predictedPoints: toFloat(p.predicted_points || p.ep_next),
-          ictIndex: toFloat(p.ict_index),
-        })),
+        title: hasDGW ? `Differential Targets (incl. DGW${dgwGW})` : 'Differential Opportunity',
+        message: messageParts.join('\n'),
+        players: [
+          ...dgwCandidates.map((p) => ({
+            id: p.id,
+            name: p.web_name,
+            price: p.now_cost / 10,
+            ownership: toFloat(p.selected_by_percent),
+            predictedPoints: toFloat(p.predicted_points || p.ep_next),
+            tag: `DGW${dgwGW}`,
+          })),
+          ...generalCandidates.map((p) => ({
+            id: p.id,
+            name: p.web_name,
+            price: p.now_cost / 10,
+            ownership: toFloat(p.selected_by_percent),
+            predictedPoints: toFloat(p.predicted_points || p.ep_next),
+            ictIndex: toFloat(p.ict_index),
+          })),
+        ],
       };
     },
   },

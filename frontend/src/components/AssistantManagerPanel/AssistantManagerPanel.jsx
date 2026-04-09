@@ -21,10 +21,11 @@ function borderColor(theme, priority) {
   return theme.palette.text.disabled;
 }
 
-// Players with a trend field get a directional arrow label suffix
+// Players with a trend field get a directional arrow label suffix; tag field gets a prefix
 function playerLabel(p) {
-  if (!p.trend) return p.name;
-  return p.trend === 'rising' ? `${p.name} ▲` : `${p.name} ▼`;
+  const prefix = p.tag ? `[${p.tag}] ` : '';
+  if (!p.trend) return `${prefix}${p.name}`;
+  return p.trend === 'rising' ? `${prefix}${p.name} ▲` : `${prefix}${p.name} ▼`;
 }
 
 const AssistantManagerPanel = ({ entryId, currentGameweek }) => {
