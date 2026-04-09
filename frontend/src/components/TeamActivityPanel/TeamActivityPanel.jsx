@@ -77,7 +77,7 @@ const TeamActivityPanel = ({
       } }
     >
       { /* Team Stats - Top Section */ }
-      { profile && (
+      { entryId && profile && (
         <Paper
           sx={ {
             backgroundColor: theme.palette.background.paper,

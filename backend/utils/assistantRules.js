@@ -458,7 +458,7 @@ const RULES = [
         id: 'freehit-blank-gameweek',
         type: 'opportunity',
         title: `Consider Free Hit for GW${blankGW} Blanks`,
-        message: `GW${blankGW} has ${blankCount} of ${totalTeams} teams without a fixture (${teamNames.join(', ')}). This is prime territory for your Free Hit chip — it lets you field a temporary 15-player squad for one week to maximise coverage of playing teams, then revert to your existing squad.${freeHitNote}`,
+        message: `GW${blankGW} has ${blankCount} of ${totalTeams} teams without a fixture (${teamNames.join(', ')}). This is prime territory for your Free Hit chip.${freeHitNote}`,
         teams: blankTeams.map((t) => ({ id: t.id, name: t.name, shortName: t.short_name })),
         planGameweek: blankGW,
       };
