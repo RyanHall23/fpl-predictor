@@ -371,7 +371,101 @@ const RULES = [
     },
   },
 
-  // ── 8. Differential Pick Opportunity ─────────────────────────────────────
+  // ── 8. Plan Ahead: Double Gameweek Next+1 ────────────────────────────────
+  {
+    id: 'upcoming-double-gameweek',
+    priority: 1,
+    enabled: true,
+    requiresSquad: false,
+    generate(ctx) {
+      const { fixtures, targetGW, bootstrap, squadPlayers } = ctx;
+
+      const planGW = targetGW + 1;
+      if (planGW > 38) return null;
+
+      const teamFixtureCount = {};
+      fixtures
+        .filter((f) => f.event === planGW)
+        .forEach((f) => {
+          teamFixtureCount[f.team_h] = (teamFixtureCount[f.team_h] || 0) + 1;
+          teamFixtureCount[f.team_a] = (teamFixtureCount[f.team_a] || 0) + 1;
+        });
+
+      const dgwTeams = Object.entries(teamFixtureCount)
+        .filter(([, count]) => count >= 2)
+        .map(([id]) => bootstrap.teams.find((t) => t.id === parseInt(id, 10)))
+        .filter(Boolean);
+
+      if (dgwTeams.length === 0) return null;
+
+      const dgwTeamIds = new Set(dgwTeams.map((t) => t.id));
+      const teamNames = dgwTeams.map((t) => t.name);
+
+      let squadNote = '';
+      if (squadPlayers && squadPlayers.length > 0) {
+        const dgwSquadPlayers = squadPlayers.filter((p) => dgwTeamIds.has(p.team));
+        if (dgwSquadPlayers.length > 0) {
+          squadNote = ` You already have ${dgwSquadPlayers.map((p) => p.web_name).join(', ')} from ${dgwSquadPlayers.length === 1 ? 'this team' : 'these teams'} — good position.`;
+        }
+      }
+
+      return {
+        id: 'upcoming-double-gameweek',
+        type: 'opportunity',
+        title: `Plan Ahead: Double Gameweek ${planGW}`,
+        message: `GW${planGW} (next gameweek after this one) is a double gameweek for ${teamNames.join(', ')}. Use your free transfers this week to target players from ${dgwTeams.length === 1 ? 'this team' : 'these teams'} so you're set up to maximise points.${squadNote}`,
+        teams: dgwTeams.map((t) => ({ id: t.id, name: t.name, shortName: t.short_name })),
+        planGameweek: planGW,
+      };
+    },
+  },
+
+  // ── 9. Free Hit for Upcoming Blank Gameweek ───────────────────────────────
+  {
+    id: 'freehit-blank-gameweek',
+    priority: 1,
+    enabled: true,
+    requiresSquad: false,
+    generate(ctx) {
+      const { fixtures, targetGW, bootstrap, squadPicks } = ctx;
+
+      const blankGW = targetGW + 2;
+      if (blankGW > 38) return null;
+
+      const teamsWithFixture = new Set(
+        fixtures
+          .filter((f) => f.event === blankGW)
+          .flatMap((f) => [f.team_h, f.team_a]),
+      );
+
+      const totalTeams = bootstrap.teams.length;
+      const blankTeams = bootstrap.teams.filter((t) => !teamsWithFixture.has(t.id));
+      const blankCount = blankTeams.length;
+
+      // Only fire if a significant number of teams are blank (at least 6)
+      if (blankCount < 6) return null;
+
+      // Check if Free Hit chip is still available
+      let freeHitNote = '';
+      if (squadPicks && squadPicks.active_chip) {
+        // A chip is currently active — note it but still warn
+        freeHitNote = ' Note: you currently have a chip active.';
+      }
+
+      const teamNames = blankTeams.map((t) => t.name);
+
+      return {
+        id: 'freehit-blank-gameweek',
+        type: 'opportunity',
+        title: `Consider Free Hit for GW${blankGW} Blanks`,
+        message: `GW${blankGW} has ${blankCount} of ${totalTeams} teams without a fixture (${teamNames.join(', ')}). This is prime territory for your Free Hit chip — it lets you field a temporary 15-player squad for one week to maximise coverage of playing teams, then revert to your existing squad.${freeHitNote}`,
+        teams: blankTeams.map((t) => ({ id: t.id, name: t.name, shortName: t.short_name })),
+        planGameweek: blankGW,
+      };
+    },
+  },
+
+  // ── 10. Differential Pick Opportunity ────────────────────────────────────
   {
     id: 'differential-pick',
     priority: 3,
