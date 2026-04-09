@@ -2,6 +2,7 @@ import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, beforeEach } from 'vitest';
 import usePlannedTransfers from './usePlannedTransfers';
 
+// Both webName and web_name mirror real FPL data shape; the hook prefers webName first.
 const playerOut = {
   code: 1,
   webName: 'Salah',

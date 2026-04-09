@@ -9,9 +9,9 @@ vi.mock('../PlayerCard/PlayerCard', () => ({
   ),
 }));
 
-let _id = 0;
+let playerIdCounter = 0;
 const makePlayer = (overrides) => ({
-  code: ++_id,
+  code: ++playerIdCounter,
   webName: 'Player',
   position: 3,
   teamCode: 1,
