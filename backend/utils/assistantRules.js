@@ -348,7 +348,7 @@ const RULES = [
     enabled: true,
     requiresSquad: true,
     generate(ctx) {
-      const { currentGWPicks, prevGWPicks, targetGW } = ctx;
+      const { currentGWPicks, prevGWPicks, targetGW, fixtures, bootstrap, allPlayers, squadPlayers } = ctx;
       if (!currentGWPicks || !prevGWPicks) return null;
 
       // If transfers already made this GW, no need for the hint
@@ -362,11 +362,61 @@ const RULES = [
 
       if (minFreeTransfers < 2) return null;
 
+      // Check if the GW two ahead is a heavy blank (Free Hit territory)
+      const blankGW = targetGW + 2;
+      let contextMsg = `Use ${minFreeTransfers > 1 ? 'some' : 'it'} to strengthen your squad — unused free transfers stack up to a cap of 5.`;
+
+      if (blankGW <= 38) {
+        const teamsWithFixture = new Set(
+          fixtures
+            .filter((f) => f.event === blankGW)
+            .flatMap((f) => [f.team_h, f.team_a]),
+        );
+        const blankTeamIds = new Set(
+          bootstrap.teams.filter((t) => !teamsWithFixture.has(t.id)).map((t) => t.id),
+        );
+
+        if (blankTeamIds.size >= 6) {
+          // Free Hit blank GW scenario — suggest holding transfers and targeting DGW players instead
+          const dgwGW = targetGW + 1;
+          const dgwTeamFixtureCount = {};
+          fixtures
+            .filter((f) => f.event === dgwGW)
+            .forEach((f) => {
+              dgwTeamFixtureCount[f.team_h] = (dgwTeamFixtureCount[f.team_h] || 0) + 1;
+              dgwTeamFixtureCount[f.team_a] = (dgwTeamFixtureCount[f.team_a] || 0) + 1;
+            });
+          const dgwTeamIds = new Set(
+            Object.entries(dgwTeamFixtureCount)
+              .filter(([, count]) => count >= 2)
+              .map(([id]) => parseInt(id, 10)),
+          );
+
+          if (dgwTeamIds.size > 0) {
+            // Find best DGW players not yet in squad
+            const squadIds = new Set((squadPlayers || []).map((p) => p.id));
+            const dgwTargets = allPlayers
+              .filter((p) => dgwTeamIds.has(p.team) && !squadIds.has(p.id))
+              .sort((a, b) => toFloat(b.predicted_points || b.ep_next) - toFloat(a.predicted_points || a.ep_next))
+              .slice(0, 3);
+
+            if (dgwTargets.length > 0) {
+              const names = dgwTargets.map((p) => `${p.web_name} (£${(p.now_cost / 10).toFixed(1)}m)`).join(', ');
+              contextMsg = `With GW${blankGW} shaping up as a Free Hit gameweek, consider using ${minFreeTransfers > 1 ? 'your transfers' : 'your transfer'} to bring in double gameweek players for GW${dgwGW} now. Top targets: ${names}.`;
+            } else {
+              contextMsg = `With GW${blankGW} shaping up as a Free Hit gameweek, consider using ${minFreeTransfers > 1 ? 'your transfers' : 'your transfer'} to target double gameweek players for GW${dgwGW}.`;
+            }
+          } else {
+            contextMsg = `With GW${blankGW} shaping up as a Free Hit gameweek, consider saving ${minFreeTransfers > 1 ? 'your transfers' : 'your transfer'} for players who have fixtures that week.`;
+          }
+        }
+      }
+
       return {
         id: 'free-transfers',
         type: 'info',
         title: 'Free Transfers Available',
-        message: `You have at least ${minFreeTransfers} free transfer${minFreeTransfers > 1 ? 's' : ''} available in GW${targetGW}. Use ${minFreeTransfers > 1 ? 'some' : 'it'} to strengthen your squad — unused free transfers stack up to a cap of 5.`,
+        message: `You have at least ${minFreeTransfers} free transfer${minFreeTransfers > 1 ? 's' : ''} available in GW${targetGW}. ${contextMsg}`,
       };
     },
   },
@@ -413,7 +463,7 @@ const RULES = [
         id: 'upcoming-double-gameweek',
         type: 'opportunity',
         title: `Plan Ahead: Double Gameweek ${planGW}`,
-        message: `GW${planGW} (next gameweek after this one) is a double gameweek for ${teamNames.join(', ')}. Use your free transfers this week to target players from ${dgwTeams.length === 1 ? 'this team' : 'these teams'} so you're set up to maximise points.${squadNote}`,
+        message: `GW${planGW} is a double gameweek for ${teamNames.join(', ')}. Use your free transfers this week to target players from ${dgwTeams.length === 1 ? 'this team' : 'these teams'} so you're set up to maximise points.${squadNote}`,
         teams: dgwTeams.map((t) => ({ id: t.id, name: t.name, shortName: t.short_name })),
         planGameweek: planGW,
       };
@@ -476,18 +526,66 @@ const RULES = [
     },
   },
 
-  // ── 10. Differential Pick Opportunity ────────────────────────────────────
+  // ── 10. Differential / DGW Pick Opportunity ─────────────────────────────
   {
     id: 'differential-pick',
     priority: 3,
     enabled: true,
     requiresSquad: true,
     generate(ctx) {
-      const { allPlayers, squadPlayers, targetGW } = ctx;
+      const { allPlayers, squadPlayers, targetGW, fixtures } = ctx;
       if (!squadPlayers) return null;
 
       const squadIds = new Set(squadPlayers.map((p) => p.id));
 
+      // Check if the next GW (targetGW + 1) is a DGW
+      const dgwGW = targetGW + 1;
+      const dgwTeamFixtureCount = {};
+      if (dgwGW <= 38) {
+        fixtures
+          .filter((f) => f.event === dgwGW)
+          .forEach((f) => {
+            dgwTeamFixtureCount[f.team_h] = (dgwTeamFixtureCount[f.team_h] || 0) + 1;
+            dgwTeamFixtureCount[f.team_a] = (dgwTeamFixtureCount[f.team_a] || 0) + 1;
+          });
+      }
+      const dgwTeamIds = new Set(
+        Object.entries(dgwTeamFixtureCount)
+          .filter(([, count]) => count >= 2)
+          .map(([id]) => parseInt(id, 10)),
+      );
+      const hasDGW = dgwTeamIds.size > 0;
+
+      if (hasDGW) {
+        // Prioritise: DGW players not in squad, ranked by predicted points, ownership < 25%
+        const dgwCandidates = allPlayers
+          .filter((p) => !squadIds.has(p.id) && dgwTeamIds.has(p.team))
+          .filter((p) => toFloat(p.selected_by_percent) < 25)
+          .sort((a, b) => toFloat(b.predicted_points || b.ep_next) - toFloat(a.predicted_points || a.ep_next))
+          .slice(0, 3);
+
+        if (dgwCandidates.length > 0) {
+          const best = dgwCandidates[0];
+          const ownership = toFloat(best.selected_by_percent).toFixed(1);
+          const pts = toFloat(best.predicted_points || best.ep_next).toFixed(1);
+          const price = (best.now_cost / 10).toFixed(1);
+          return {
+            id: 'differential-pick',
+            type: 'opportunity',
+            title: `DGW${dgwGW} Differential Targets`,
+            message: `${best.web_name} (£${price}m, ${ownership}% owned) is a standout differential for GW${dgwGW}'s double gameweek — predicted ${pts} pts with two fixtures. Low ownership means big rank gains if they deliver.`,
+            players: dgwCandidates.map((p) => ({
+              id: p.id,
+              name: p.web_name,
+              price: p.now_cost / 10,
+              ownership: toFloat(p.selected_by_percent),
+              predictedPoints: toFloat(p.predicted_points || p.ep_next),
+            })),
+          };
+        }
+      }
+
+      // Fallback: general differential (low ownership, high ICT, good predicted points)
       const candidates = allPlayers
         .filter((p) => !squadIds.has(p.id))
         .filter((p) => {
