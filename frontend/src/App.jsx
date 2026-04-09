@@ -244,7 +244,7 @@ const App = () => {
       <Container maxWidth={ false } sx={ { flex: 1, marginTop: '8px', display: 'flex', flexDirection: 'column', px: { xs: 1, sm: 2 } } }>
         <Box sx={ { display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, gap: 2, flex: 1, alignItems: 'flex-start' } }>
           { /* Left - Pitch */ }
-          <Box sx={ { flex: { xs: '1 1 auto', lg: '0 0 38%' }, width: { xs: '100%', lg: 'auto' }, display: 'flex', flexDirection: 'column' } }>
+          <Box sx={ { flex: { xs: '1 1 auto', lg: '0 0 43%' }, width: { xs: '100%', lg: 'auto' }, display: 'flex', flexDirection: 'column' } }>
             { /* Banner shown when viewing an opponent's team */ }
             { viewingOpponentId && (
               <Box sx={ { mb: 1, display: 'flex', alignItems: 'center', gap: 1 } }>
