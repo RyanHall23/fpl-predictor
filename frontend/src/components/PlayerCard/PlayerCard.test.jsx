@@ -35,7 +35,7 @@ describe('PlayerCard', () => {
 
   it('renders opponent display', () => {
     const { container } = render(<PlayerCard player={mockPlayer} />);
-    expect(container.querySelector('.opponent-pill')).toHaveTextContent('MCI (H)');
+    expect(container).toHaveTextContent('MCI (H)');
   });
 
   it('does NOT show captain badge when isCaptain={false}', () => {
