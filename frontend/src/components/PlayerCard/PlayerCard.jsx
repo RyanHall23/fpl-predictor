@@ -254,15 +254,21 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
 
             { /* 2. Substitute */ }
             <Grid size={ 4 }>
-              <IconButton
-                size='small'
-                className='action-button-small substitute-button'
-                title='Substitute'
-                onClick={ () => { if (onPlayerClick) onPlayerClick(player, teamType); } }
-                sx={ { padding: '3px !important' } }
-              >
-                <SyncIcon sx={ { fontSize: 20 } } className='sync-icon' />
-              </IconButton>
+              { onPlayerClick ? (
+                <IconButton
+                  size='small'
+                  className='action-button-small substitute-button'
+                  title='Substitute'
+                  onClick={ () => onPlayerClick(player, teamType) }
+                  sx={ { padding: '3px !important' } }
+                >
+                  <SyncIcon sx={ { fontSize: 20 } } className='sync-icon' />
+                </IconButton>
+              ) : (
+                <IconButton size='small' disabled sx={ { visibility: 'hidden', padding: '3px !important' } }>
+                  <SyncIcon sx={ { fontSize: 20 } } />
+                </IconButton>
+              ) }
             </Grid>
 
             { /* 3. Transfer / restore / hidden placeholder */ }
