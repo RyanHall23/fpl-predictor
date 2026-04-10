@@ -236,8 +236,9 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
           aria-label={ `View ${player.webName} stats` }
           sx={ {
             width: '100%',
-            display: 'block',
-            textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
             '&:hover .player-name': { textDecoration: 'underline' },
           } }
         >
