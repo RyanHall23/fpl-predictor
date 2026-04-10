@@ -124,14 +124,19 @@ const App = () => {
   }, [snackbarOpen]);
 
   // Determine which planned transfers have been "voided" – i.e., their gameweek
-  // has already been reached but the playerOut is still in the current team
-  // (meaning the user never actually made that FPL transfer).
+  // has already been reached but the transfer was not executed in FPL.
+  // Two signals indicate this:
+  //   1. playerOut is still in the current team (was never transferred out), OR
+  //   2. playerIn is NOT in the current team (was never transferred in).
   const voidedTransferIds = useMemo(() => {
     if (!currentGameweek || isHighestPredictedTeam) return new Set();
     const currentTeamCodes = new Set([...activePlayers, ...reservePlayers].map(p => p.code));
     return new Set(
       plannedTransfers
-        .filter(t => t.gameweek <= currentGameweek && currentTeamCodes.has(t.playerOut.code))
+        .filter(t =>
+          t.gameweek <= currentGameweek &&
+          (currentTeamCodes.has(t.playerOut.code) || !currentTeamCodes.has(t.playerIn.code))
+        )
         .map(t => t.id)
     );
   }, [plannedTransfers, activePlayers, reservePlayers, currentGameweek, isHighestPredictedTeam]);
@@ -139,8 +144,9 @@ const App = () => {
   // When viewing a future gameweek, overlay planned transfers onto the displayed squad.
   // Transfers are applied cumulatively in gameweek order (e.g. GW32 applied before GW33).
   // This only affects display – the real activePlayers/reservePlayers remain unchanged.
+  // For locked (active/past) GWs the FPL picks data is authoritative — no overlay applied.
   const { effectiveActivePlayers, effectiveReservePlayers } = useMemo(() => {
-    if (!gameweekInfo?.isFuture || isHighestPredictedTeam || !currentGameweek) {
+    if (!gameweekInfo?.isFuture || isLockedGameweek || isHighestPredictedTeam || !currentGameweek) {
       return { effectiveActivePlayers: activePlayers, effectiveReservePlayers: reservePlayers };
     }
 
@@ -204,7 +210,11 @@ const App = () => {
     }
 
     return { effectiveActivePlayers: newActive, effectiveReservePlayers: newReserve };
-  }, [gameweekInfo, isHighestPredictedTeam, currentGameweek, plannedTransfers, activePlayers, reservePlayers, allPlayers]);
+  }, [gameweekInfo, isLockedGameweek, isHighestPredictedTeam, currentGameweek, plannedTransfers, activePlayers, reservePlayers, allPlayers]);
+
+  // Planned transfers shown to pitch/bench components — suppressed for locked GWs
+  // so stale planned-transfer badges don't render on top of actual picks data.
+  const displayPlannedTransfers = isLockedGameweek ? undefined : plannedTransfers;
 
   // Captain's base points (before 2× multiplier) — used by Triple Captain chip
   const captainBasePoints = useMemo(() => {
@@ -507,8 +517,8 @@ const App = () => {
                     currentGameweek={ currentGameweek }
                     isFutureGameweek={ !!gameweekInfo?.isFuture }
                     viewedGameweek={ gameweekInfo?.selected ?? currentGameweek }
-                    plannedTransfers={ !isHighestPredictedTeam ? plannedTransfers : undefined }
-                    onRemovePlannedTransfer={ !isHighestPredictedTeam ? removePlannedTransfer : undefined }
+                    plannedTransfers={ !isHighestPredictedTeam ? displayPlannedTransfers : undefined }
+                    onRemovePlannedTransfer={ (!isHighestPredictedTeam && !isLockedGameweek) ? removePlannedTransfer : undefined }
                     onTransfer={ handleTransfer }
                   />
                 ) : (
@@ -524,8 +534,8 @@ const App = () => {
                     currentGameweek={ currentGameweek }
                     isFutureGameweek={ !!gameweekInfo?.isFuture }
                     viewedGameweek={ gameweekInfo?.selected ?? currentGameweek }
-                    plannedTransfers={ !isHighestPredictedTeam ? plannedTransfers : undefined }
-                    onRemovePlannedTransfer={ !isHighestPredictedTeam ? removePlannedTransfer : undefined }
+                    plannedTransfers={ !isHighestPredictedTeam ? displayPlannedTransfers : undefined }
+                    onRemovePlannedTransfer={ (!isHighestPredictedTeam && !isLockedGameweek) ? removePlannedTransfer : undefined }
                     onTransfer={ handleTransfer }
                   />
                 ) }
