@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import axios from './api';
 import { saveChip, loadChip } from './utils/lineupStorage';
+import { computeProjectedBank, simulateFreeTransferCarryover } from './utils/freeHitSimulation';
 import NavigationBar from './components/NavigationBar/NavigationBar';
 import Container from '@mui/material/Container';
 import Box from '@mui/material/Box';
@@ -322,22 +323,8 @@ const App = () => {
     if (isHighestPredictedTeam || viewingOpponentId || bank == null) return null;
     if (!gameweekInfo?.isFuture) return null; // Only show for future GWs
     const viewedGW = gameweekInfo?.selected ?? currentGameweek;
-    // Apply cumulative transfer cost deltas up to and including viewedGW.
-    const delta = plannedTransfers
-      .filter(t => {
-        if (t.gameweek > viewedGW) return false;
-        // Free Hit transfers at a previous GW revert — their cost doesn't
-        // carry forward to the bank balance for subsequent GWs.
-        if (freeHitGWs.has(t.gameweek) && t.gameweek < viewedGW) return false;
-        return true;
-      })
-      .reduce((sum, t) => {
-        const sellPrice = t.playerOut.sellingPrice ?? t.playerOut.nowCost ?? 0;
-        const buyPrice  = t.playerIn.nowCost ?? 0;
-        return sum + sellPrice - buyPrice;
-      }, 0);
-    return bank + delta;
-  }, [isHighestPredictedTeam, viewingOpponentId, bank, gameweekInfo, currentGameweek, plannedTransfers]);
+    return computeProjectedBank(bank, plannedTransfers, viewedGW, freeHitGWs);
+  }, [isHighestPredictedTeam, viewingOpponentId, bank, gameweekInfo, currentGameweek, plannedTransfers, freeHitGWs]);
 
   // Funds coming in (sum of selling prices) and going out (sum of buying prices)
   // for planned transfers scheduled for the viewed GW specifically.
@@ -392,15 +379,11 @@ const App = () => {
       return counts;
     }, {});
 
-    // Simulate FT carry-over from the current GW up to (but not including) the viewed GW.
-    // Rule: ft_next = min(2, max(0, ft - transfers_made) + 1)
-    let simulatedFreeTransfers = freeTransfers;
-    for (let gw = currentGameweek; gw < viewedGW; gw += 1) {
-      // Free Hit transfers don't permanently consume free transfers — treat
-      // the GW as if 0 transfers were made for carry-over purposes.
-      const transfersThisGW = freeHitGWs.has(gw) ? 0 : (plannedTransfersByGW[gw] || 0);
-      simulatedFreeTransfers = Math.min(2, Math.max(0, simulatedFreeTransfers - transfersThisGW) + 1);
-    }
+    // Simulate FT carry-over from the current GW up to (but not including) the viewed GW,
+    // treating Free Hit GWs as if 0 transfers were made (FH squad reverts).
+    const simulatedFreeTransfers = simulateFreeTransferCarryover(
+      freeTransfers, currentGameweek, viewedGW, plannedTransfersByGW, freeHitGWs
+    );
 
     // For locked GWs the actual picks are authoritative — don't subtract planned transfers.
     const plannedCount = isLockedGameweek ? 0 : (plannedTransfersByGW[viewedGW] || 0);
@@ -410,7 +393,7 @@ const App = () => {
       remaining: Math.max(0, remaining),
       cost: remaining < 0 ? remaining * 4 : 0, // negative value = points deduction
     };
-  }, [isHighestPredictedTeam, viewingOpponentId, freeTransfers, gameweekInfo, currentGameweek, activeChip, plannedTransfers, isLockedGameweek]);
+  }, [isHighestPredictedTeam, viewingOpponentId, freeTransfers, gameweekInfo, currentGameweek, activeChip, plannedTransfers, isLockedGameweek, freeHitGWs]);
 
   // Handle setting team ID (saves to localStorage)
   const handleSetTeamId = (teamId) => {

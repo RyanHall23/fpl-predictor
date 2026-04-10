@@ -23,6 +23,11 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
   // Tracks the gameweek number of the currently loaded data so that the save
   // effect has a stable value even when gameweekInfo hasn't yet re-rendered.
   const [loadedGameweek, setLoadedGameweek] = useState(null);
+  // Tracks the entryId whose data is currently held in activePlayers/reservePlayers.
+  // Ensures the lineup-persist effect only writes when the loaded data actually
+  // belongs to the current entryId (prevents the old entry's lineup being saved
+  // under the new entry's localStorage key immediately after an entryId change).
+  const [loadedEntryId, setLoadedEntryId] = useState(null);
   // Set of player codes from the most recently loaded current/past/active GW.
   // Used as the fingerprint comparison baseline when restoring a future-GW
   // lineup, because the future-GW API re-optimises the squad ordering and
@@ -113,6 +118,9 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
       setTeamName(fetchedTeamName || '');
       setFreeTransfers(ft ?? null);
       setBank(bankBalance ?? null);
+      // Mark which entry's data is now in state so the persist effect can guard
+      // against writing the old lineup under a newly-switched entry's key.
+      setLoadedEntryId(entryId);
     } catch (error) {
       setTeamName('');
       setGameweekInfo(null);
@@ -132,10 +140,14 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
   // starting XI, bench order, or captain for a future gameweek.  Saved after
   // every state update so swaps, auto-pick, and captain changes are all covered.
   // Not saved for locked (past/active) GWs — those use FPL API data directly.
+  // Guard: only save when loadedEntryId matches entryId to prevent the stale
+  // lineup from the previous entry being written under the new entry's key
+  // immediately after an entryId switch (before the new data has loaded).
   useEffect(() => {
     if (!entryId || !loadedGameweek || isHighestPredictedTeam || activePlayers.length === 0) return;
+    if (loadedEntryId !== entryId) return;
     saveLineup(entryId, loadedGameweek, activePlayers, reservePlayers);
-  }, [activePlayers, reservePlayers, entryId, loadedGameweek, isHighestPredictedTeam]);
+  }, [activePlayers, reservePlayers, entryId, loadedGameweek, isHighestPredictedTeam, loadedEntryId]);
 
   // Handle player selection and swapping (only for user's team)
   //
