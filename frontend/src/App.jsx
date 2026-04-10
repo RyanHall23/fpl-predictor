@@ -61,6 +61,7 @@ const App = () => {
     gameweekInfo,
     setCaptain,
     autoPickLineup,
+    freeTransfers,
   } = useTeamData(
     currentEntryId,
     teamView === TEAM_VIEW.HIGHEST,
@@ -226,6 +227,22 @@ const App = () => {
     if (activeChip === 'bench_boost') return 0; // bench points are merged into total
     return calculateTotalPredictedPoints(effectiveReservePlayers);
   }, [activeChip, effectiveReservePlayers, calculateTotalPredictedPoints]);
+
+  // Free Transfers remaining for the viewed GW, after planned transfers are applied.
+  // null = not applicable (highest predicted team or opponent view).
+  // { chip: 'wildcard'|'free_hit' } = chip active, all transfers free.
+  // { remaining: number, cost: number } = FTs left and any points deduction.
+  const displayFreeTransfers = useMemo(() => {
+    if (isHighestPredictedTeam || viewingOpponentId || freeTransfers == null) return null;
+    const viewedGW = gameweekInfo?.selected ?? currentGameweek;
+    if (!viewedGW) return null;
+    if (activeChip === 'wildcard' || activeChip === 'free_hit') {
+      return { chip: activeChip };
+    }
+    const plannedCount = plannedTransfers.filter(t => t.gameweek === viewedGW).length;
+    const remaining = freeTransfers - plannedCount;
+    return { remaining: Math.max(0, remaining), cost: remaining < 0 ? remaining * -4 : 0 };
+  }, [isHighestPredictedTeam, viewingOpponentId, freeTransfers, gameweekInfo, currentGameweek, activeChip, plannedTransfers]);
 
   // Handle setting team ID (saves to localStorage)
   const handleSetTeamId = (teamId) => {
@@ -395,7 +412,7 @@ const App = () => {
                 ) }
 
                 { /* Stats + controls grid */ }
-                <Box sx={ { flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', textAlign: 'center', rowGap: 0.75 } }>
+                <Box sx={ { flex: 1, display: 'grid', gridTemplateColumns: displayFreeTransfers != null ? '1fr 1fr 1fr 1fr' : '1fr 1fr 1fr', textAlign: 'center', rowGap: 0.75 } }>
                   { /* Row 1 — labels */ }
                   <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>
                     Total Points
@@ -403,6 +420,11 @@ const App = () => {
                   <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>
                     Bench Points
                   </Typography>
+                  { displayFreeTransfers != null && (
+                    <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>
+                      Free Transfers
+                    </Typography>
+                  ) }
                   <Box sx={ { display: 'flex', justifyContent: 'center' } }>
                     { !isHighestPredictedTeam && !viewingOpponentId && activePlayers.length > 0 ? (
                       <Tooltip title='Auto pick best XI from your squad'>
@@ -427,6 +449,26 @@ const App = () => {
                   <Typography variant='h6' sx={ { fontWeight: 700, lineHeight: 1.2 } }>
                     { displayBenchPoints }
                   </Typography>
+                  { displayFreeTransfers != null && (
+                    <Box sx={ { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' } }>
+                      { displayFreeTransfers.chip ? (
+                        <Typography variant='h6' sx={ { fontWeight: 700, lineHeight: 1.2, color: displayFreeTransfers.chip === 'wildcard' ? '#6a1b9a' : '#e65100' } }>
+                          { displayFreeTransfers.chip === 'wildcard' ? 'WC' : 'FH' }
+                        </Typography>
+                      ) : (
+                        <>
+                          <Typography variant='h6' sx={ { fontWeight: 700, lineHeight: 1.2 } }>
+                            { displayFreeTransfers.remaining }
+                          </Typography>
+                          { displayFreeTransfers.cost < 0 && (
+                            <Typography variant='caption' sx={ { color: 'error.main', fontWeight: 600, lineHeight: 1 } }>
+                              { displayFreeTransfers.cost }pts
+                            </Typography>
+                          ) }
+                        </>
+                      ) }
+                    </Box>
+                  ) }
                   <Box sx={ { display: 'flex', justifyContent: 'center', alignItems: 'center' } }>
                     <ToggleButtonGroup
                       value={ pitchView }
