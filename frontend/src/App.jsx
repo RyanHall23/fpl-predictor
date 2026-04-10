@@ -262,7 +262,7 @@ const App = () => {
             { /* Stats + controls pod wrapping pitch/bench */ }
             <Paper variant='outlined' sx={ { px: 2, py: 1 } }>
               <Box sx={ { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', textAlign: 'center', rowGap: 0.75 } }>
-                { /* Row 1 — labels / auto pick button */ }
+                { /* Row 1 — labels */ }
                 <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>
                   Total Points
                 </Typography>

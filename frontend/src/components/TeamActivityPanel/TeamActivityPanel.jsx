@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { Box, Paper, Typography, Divider } from '@mui/material';
+import { Box, Chip, Paper, Typography, Divider } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import axios from '../../api';
 import RecommendedTransfers from '../RecommendedTransfers';
@@ -99,38 +99,93 @@ const TeamActivityPanel = ({
               </Typography>
             </Box>
             <Divider />
-            <Box sx={ { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 } }>
-              <Box>
-                <Typography variant='caption' color='text.secondary'>
-                  Global Position
-                </Typography>
-                <Typography variant='body1' fontWeight='bold'>
-                  { formatNumber(profile.entry.summary_overall_rank) }
-                </Typography>
+            <Box sx={ { display: 'flex', gap: 2, alignItems: 'flex-start' } }>
+              <Box sx={ { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5, flex: 1 } }>
+                <Box>
+                  <Typography variant='caption' color='text.secondary'>
+                    Global Position
+                  </Typography>
+                  <Typography variant='body1' fontWeight='bold'>
+                    { formatNumber(profile.entry.summary_overall_rank) }
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant='caption' color='text.secondary'>
+                    Total Points
+                  </Typography>
+                  <Typography variant='body1' fontWeight='bold'>
+                    { formatNumber(profile.totalPoints) }
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant='caption' color='text.secondary'>
+                    Team Value
+                  </Typography>
+                  <Typography variant='body1' fontWeight='bold'>
+                    { formatCurrency(profile.entry.last_deadline_value) }
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant='caption' color='text.secondary'>
+                    In The Bank
+                  </Typography>
+                  <Typography variant='body1' fontWeight='bold'>
+                    { formatCurrency(profile.entry.last_deadline_bank) }
+                  </Typography>
+                </Box>
               </Box>
-              <Box>
-                <Typography variant='caption' color='text.secondary'>
-                  Total Points
-                </Typography>
-                <Typography variant='body1' fontWeight='bold'>
-                  { formatNumber(profile.totalPoints) }
-                </Typography>
-              </Box>
-              <Box>
-                <Typography variant='caption' color='text.secondary'>
-                  Team Value
-                </Typography>
-                <Typography variant='body1' fontWeight='bold'>
-                  { formatCurrency(profile.entry.last_deadline_value) }
-                </Typography>
-              </Box>
-              <Box>
-                <Typography variant='caption' color='text.secondary'>
-                  In The Bank
-                </Typography>
-                <Typography variant='body1' fontWeight='bold'>
-                  { formatCurrency(profile.entry.last_deadline_bank) }
-                </Typography>
+              <Box sx={ { display: 'flex', flexDirection: 'column', gap: 1 } }>
+                { (() => {
+                  const CHIP_TYPES = [
+                    { key: 'wildcard', label: 'WC' },
+                    { key: 'freehit',  label: 'FH' },
+                    { key: 'bboost',   label: 'BB' },
+                    { key: '3xc',      label: 'TC' },
+                  ];
+                  const chips = profile.chips || [];
+                  const usedChips = CHIP_TYPES.flatMap(({ key, label }) =>
+                    chips.filter(c => c.name === key).sort((a, b) => a.event - b.event).map(u => ({ label, event: u.event }))
+                  );
+                  const unusedSlots = CHIP_TYPES.flatMap(({ key, label }) => {
+                    const count = chips.filter(c => c.name === key).length;
+                    return Array.from({ length: Math.max(0, 2 - count) }, () => ({ label }));
+                  });
+                  const chipGridSx = {
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(3, auto)',
+                    justifyContent: 'start',
+                    columnGap: 0.25,
+                    rowGap: 0.25,
+                  };
+                  return (
+                    <>
+                      <Box sx={ { display: 'flex', flexDirection: 'column', gap: 0.5 } }>
+                        <Typography variant='caption' color='text.secondary'>Used</Typography>
+                        { usedChips.length === 0
+                          ? <Typography variant='caption' color='text.disabled'>—</Typography>
+                          : <Box sx={ chipGridSx }>
+                              { usedChips.map((c, i) => (
+                                <Chip key={ i } label={ `${c.label}${c.event}` } size='small' color='primary'
+                                  sx={ { height: 20, fontSize: '0.65rem', fontWeight: 700 } } />
+                              )) }
+                            </Box>
+                        }
+                      </Box>
+                      <Box sx={ { display: 'flex', flexDirection: 'column', gap: 0.5 } }>
+                        <Typography variant='caption' color='text.secondary'>Unused</Typography>
+                        { unusedSlots.length === 0
+                          ? <Typography variant='caption' color='text.disabled'>—</Typography>
+                          : <Box sx={ chipGridSx }>
+                              { unusedSlots.map((c, i) => (
+                                <Chip key={ i } label={ c.label } size='small' color='success'
+                                  sx={ { height: 20, fontSize: '0.65rem', fontWeight: 700 } } />
+                              )) }
+                            </Box>
+                        }
+                      </Box>
+                    </>
+                  );
+                })() }
               </Box>
             </Box>
           </Box>
