@@ -101,6 +101,24 @@ const fetchFixtures = async () => {
 };
 
 /**
+ * Fetch fixtures for a specific gameweek event
+ * @param {number|string} eventId - Gameweek ID
+ * @returns {Promise<Array>} - Fixtures for the given event
+ */
+const fetchEventFixtures = async (eventId) => {
+  const validatedEventId = validateGameweek(eventId);
+  if (USE_FPL_API) {
+    const url = `${FPL_API_BASE}/fixtures/?event=${validatedEventId}`;
+    const response = await axios.get(url);
+    return response.data;
+  } else {
+    console.log(`[Mock Mode] Fetching event ${validatedEventId} fixtures from local data`);
+    const allFixtures = await loadMockData('fixtures.json');
+    return allFixtures.filter(f => f.event === validatedEventId);
+  }
+};
+
+/**
  * Fetch live gameweek data
  * @param {number|string} eventId - Gameweek ID
  * @returns {Promise<any>} - Live gameweek data
@@ -182,6 +200,7 @@ module.exports = {
   fetchPlayerPicks,
   fetchElementSummary,
   fetchFixtures,
+  fetchEventFixtures,
   fetchLiveGameweek,
   fetchEntry,
   fetchHistory,

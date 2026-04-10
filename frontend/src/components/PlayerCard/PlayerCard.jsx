@@ -15,6 +15,7 @@ import PropTypes from 'prop-types';
 import './styles.css';
 import TransferPlayer from '../TransferPlayer/TransferPlayer';
 import FixturePill from '../FixturePill/FixturePill';
+import PlayerStatsDialog from '../PlayerStatsDialog/PlayerStatsDialog';
 
 const POSITION_GK = 1;
 const POSITION_MANAGER = 5;
@@ -28,6 +29,7 @@ const STATUS_META = {
 
 const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTransferButtons = true, teamType, onPlayerClick, selectedPlayer, activePlayers, reservePlayers, onSetCaptain, currentGameweek, isFutureGameweek, viewedGameweek, plannedTransfers, onRemovePlannedTransfer }) => {
   const [transferDialogOpen, setTransferDialogOpen] = React.useState(false);
+  const [statsDialogOpen, setStatsDialogOpen] = React.useState(false);
 
   // predictedPoints is fully resolved by the backend (basePoints × multiplier).
   const predictedPoints = parseFloat(player.predictedPoints) || 0;
@@ -213,7 +215,9 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
             justifyContent: 'center',
             overflow: 'visible',
             position: 'relative',
+            cursor: 'pointer',
           } }
+          onClick={ () => setStatsDialogOpen(true) }
         >
           <img
             src={ `https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_${player.teamCode}-66.png` }
@@ -229,6 +233,7 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
         <Typography
           variant='body2'
           className='player-name'
+          onClick={ () => setStatsDialogOpen(true) }
           sx={ {
             fontSize: '11px',
             fontWeight: 600,
@@ -239,6 +244,8 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
             display: 'block',
             width: '100%',
             letterSpacing: '0.3px',
+            cursor: 'pointer',
+            '&:hover': { textDecoration: 'underline' },
           } }
         >
           { player.webName }
@@ -366,6 +373,13 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
           viewedGameweek={ viewedGameweek }
         />
       ) }
+
+      <PlayerStatsDialog
+        open={ statsDialogOpen }
+        onClose={ () => setStatsDialogOpen(false) }
+        player={ player }
+        viewedGameweek={ viewedGameweek }
+      />
     </Card>
   );
 };

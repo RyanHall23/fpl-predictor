@@ -6,6 +6,7 @@ import PropTypes from 'prop-types';
 import TransferPlayer from '../TransferPlayer/TransferPlayer';
 import FixturePill from '../FixturePill/FixturePill';
 import { validateSubstitution } from '../../utils/substitution';
+import PlayerStatsDialog from '../PlayerStatsDialog/PlayerStatsDialog';
 
 const POSITION_MANAGER = 5;
 const POSITION_GK  = 1;
@@ -54,6 +55,7 @@ const ListRow = ({
   showTransferButtons,
 }) => {
   const [transferDialogOpen, setTransferDialogOpen] = React.useState(false);
+  const [statsDialogOpen, setStatsDialogOpen] = React.useState(false);
 
   const predictedPoints = parseFloat(player.predictedPoints) || 0;
   const kickoff = formatKickoff(player.fixtureKickoff);
@@ -124,7 +126,7 @@ const ListRow = ({
         </TableCell>
 
         { /* KIT */ }
-        <TableCell sx={ cellSx }>
+        <TableCell sx={ cellSx } onClick={ (e) => { e.stopPropagation(); setStatsDialogOpen(true); } } style={ { cursor: 'pointer' } }>
           <img
             src={ `https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_${player.teamCode}-66.png` }
             alt={ player.webName }
@@ -134,8 +136,8 @@ const ListRow = ({
         </TableCell>
 
         { /* NAME */ }
-        <TableCell sx={ { ...cellSx, width: '100%', maxWidth: 0 } }>
-          <Typography variant='body2' fontWeight='medium' noWrap sx={ { overflow: 'hidden', textOverflow: 'ellipsis' } }>
+        <TableCell sx={ { ...cellSx, width: '100%', maxWidth: 0 } } onClick={ (e) => { e.stopPropagation(); setStatsDialogOpen(true); } } style={ { cursor: 'pointer' } }>
+          <Typography variant='body2' fontWeight='medium' noWrap sx={ { overflow: 'hidden', textOverflow: 'ellipsis', '&:hover': { textDecoration: 'underline' } } }>
             { player.webName }
           </Typography>
         </TableCell>
@@ -290,6 +292,13 @@ const ListRow = ({
           viewedGameweek={ viewedGameweek }
         />
       ) }
+
+      <PlayerStatsDialog
+        open={ statsDialogOpen }
+        onClose={ () => setStatsDialogOpen(false) }
+        player={ player }
+        viewedGameweek={ viewedGameweek }
+      />
     </>
   );
 };
