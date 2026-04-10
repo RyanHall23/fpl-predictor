@@ -56,8 +56,18 @@ class Player {
     // useActualPoints = true  → past or active GW  → use event_points
     // useActualPoints = false → future/current GW  → use ep_next (prediction)
     const useActualPoints  = enrichment.useActualPoints ?? false;
+    const gwStats = raw.gameweek_stats ?? null;
+    // When official bonus hasn't been assigned yet but we have a BPS estimate,
+    // add it to the live total so the card reflects the provisional total.
+    // For DGWs: gwStats.provisional_bonus only covers unsettled fixtures, so
+    // we add it regardless of the settled aggregate bonus (gwStats.bonus).
+    const unassignedProvisionalBonus =
+      useActualPoints &&
+      gwStats?.provisional_bonus != null
+        ? gwStats.provisional_bonus
+        : 0;
     const rawBase          = useActualPoints
-      ? (raw.event_points ?? 0)
+      ? (raw.event_points ?? 0) + unassignedProvisionalBonus
       : (raw.ep_next       ?? 0);
 
     // For bench players (isActive explicitly false), always use ×1 for display.
@@ -79,6 +89,10 @@ class Player {
     this.opponents = raw.opponents      ?? [];
     this.fixtureKickoff = raw.fixtureKickoff ?? null;
     this.difficulty = raw.difficulty ?? null;
+    this.teamName   = raw.teamShortName ?? null;
+
+    // Gameweek stats (set by enrichPlayersWithGameweekStats for past/active GWs)
+    this.gameweekStats = gwStats;
 
     // Pre-formatted opponent display string so the frontend never needs to
     // derive it inline. Supports Double Gameweeks (multiple opponents).
@@ -145,6 +159,8 @@ class Player {
       opponentDisplay:            this.opponentDisplay,
       fixtureKickoff:             this.fixtureKickoff,
       difficulty:                 this.difficulty,
+      teamName:                   this.teamName,
+      gameweekStats:              this.gameweekStats,
       isActive:                   this.isActive,
       slot:                       this.slot,
       user_team:                  this.user_team,

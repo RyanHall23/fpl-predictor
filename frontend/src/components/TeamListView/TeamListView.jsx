@@ -1,11 +1,12 @@
 import React from 'react';
-import { Box, Chip, IconButton, Paper, Table, TableBody, TableCell, TableRow, Tooltip, Typography } from '@mui/material';
+import { Box, ButtonBase, Chip, IconButton, Paper, Table, TableBody, TableCell, TableRow, Tooltip, Typography } from '@mui/material';
 import SyncIcon from '@mui/icons-material/Sync';
 import RestoreIcon from '@mui/icons-material/Restore';
 import PropTypes from 'prop-types';
 import TransferPlayer from '../TransferPlayer/TransferPlayer';
 import FixturePill from '../FixturePill/FixturePill';
 import { validateSubstitution } from '../../utils/substitution';
+import PlayerStatsDialog from '../PlayerStatsDialog/PlayerStatsDialog';
 
 const POSITION_MANAGER = 5;
 const POSITION_GK  = 1;
@@ -54,6 +55,7 @@ const ListRow = ({
   showTransferButtons,
 }) => {
   const [transferDialogOpen, setTransferDialogOpen] = React.useState(false);
+  const [statsDialogOpen, setStatsDialogOpen] = React.useState(false);
 
   const predictedPoints = parseFloat(player.predictedPoints) || 0;
   const kickoff = formatKickoff(player.fixtureKickoff);
@@ -125,19 +127,31 @@ const ListRow = ({
 
         { /* KIT */ }
         <TableCell sx={ cellSx }>
-          <img
-            src={ `https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_${player.teamCode}-66.png` }
-            alt={ player.webName }
-            style={ { width: 22, height: 22, objectFit: 'contain', display: 'block' } }
-            onError={ (e) => { e.target.style.display = 'none'; } }
-          />
+          <ButtonBase
+            onClick={ (e) => { e.stopPropagation(); setStatsDialogOpen(true); } }
+            aria-label={ `View ${player.webName} stats` }
+            sx={ { borderRadius: '4px' } }
+          >
+            <img
+              src={ `https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_${player.teamCode}-66.png` }
+              alt={ player.webName }
+              style={ { width: 22, height: 22, objectFit: 'contain', display: 'block' } }
+              onError={ (e) => { e.target.style.display = 'none'; } }
+            />
+          </ButtonBase>
         </TableCell>
 
         { /* NAME */ }
         <TableCell sx={ { ...cellSx, width: '100%', maxWidth: 0 } }>
-          <Typography variant='body2' fontWeight='medium' noWrap sx={ { overflow: 'hidden', textOverflow: 'ellipsis' } }>
-            { player.webName }
-          </Typography>
+          <ButtonBase
+            onClick={ (e) => { e.stopPropagation(); setStatsDialogOpen(true); } }
+            aria-label={ `View ${player.webName} stats` }
+            sx={ { width: '100%', textAlign: 'left', '&:hover .player-list-name': { textDecoration: 'underline' } } }
+          >
+            <Typography variant='body2' fontWeight='medium' noWrap className='player-list-name' sx={ { overflow: 'hidden', textOverflow: 'ellipsis' } }>
+              { player.webName }
+            </Typography>
+          </ButtonBase>
         </TableCell>
 
         { /* POINTS */ }
@@ -290,6 +304,13 @@ const ListRow = ({
           viewedGameweek={ viewedGameweek }
         />
       ) }
+
+      <PlayerStatsDialog
+        open={ statsDialogOpen }
+        onClose={ () => setStatsDialogOpen(false) }
+        player={ player }
+        viewedGameweek={ viewedGameweek }
+      />
     </>
   );
 };

@@ -104,7 +104,52 @@ const fetchBootstrapStatic = dataProvider.fetchBootstrapStatic;
 const fetchPlayerPicks = dataProvider.fetchPlayerPicks;
 const fetchElementSummary = dataProvider.fetchElementSummary;
 const fetchFixtures = dataProvider.fetchFixtures;
+const fetchEventFixtures = dataProvider.fetchEventFixtures;
 const fetchLiveGameweek = dataProvider.fetchLiveGameweek;
+
+/**
+ * Estimate bonus points from BPS standings for a single fixture's stats array.
+ * Handles ties per FPL rules: tied players share the higher prize,
+ * consuming that many prize positions before awarding the next tier.
+ * Only runs for fixtures that are started but not yet officially finished.
+ *
+ * @param {Array} stats - The stats array from a fixture object
+ * @returns {Object} Map of { [elementId]: estimatedBonus }
+ */
+const estimateBonusFromBPS = (stats) => {
+  const bpsStat = stats.find(s => s.identifier === 'bps');
+  if (!bpsStat) return {};
+
+  const entries = [
+    ...bpsStat.h.map(e => ({ element: e.element, bps: e.value })),
+    ...bpsStat.a.map(e => ({ element: e.element, bps: e.value })),
+  ].sort((a, b) => b.bps - a.bps);
+
+  if (entries.length === 0) return {};
+
+  const bonusMap = {};
+  const bonusLevels = [3, 2, 1];
+  let posIdx = 0;
+  let entryIdx = 0;
+
+  while (posIdx < bonusLevels.length && entryIdx < entries.length) {
+    const currentBps = entries[entryIdx].bps;
+    if (currentBps <= 0) break; // No bonus for zero or negative BPS
+    const currentBonus = bonusLevels[posIdx];
+    let countTied = 0;
+    while (
+      entryIdx + countTied < entries.length &&
+      entries[entryIdx + countTied].bps === currentBps
+    ) {
+      bonusMap[entries[entryIdx + countTied].element] = currentBonus;
+      countTied++;
+    }
+    entryIdx += countTied;
+    posIdx += countTied; // Consume a prize position for each tied player
+  }
+
+  return bonusMap;
+};
 
 /**
  * Enrich players with stats from a specific gameweek using actual API data.
@@ -112,8 +157,31 @@ const fetchLiveGameweek = dataProvider.fetchLiveGameweek;
  */
 const enrichPlayersWithGameweekStats = async (players, targetEventId) => {
   try {
-    // Fetch live gameweek data which contains actual points for each player
-    const liveData = await fetchLiveGameweek(targetEventId);
+    // Fetch live data and event fixtures in parallel
+    const [liveData, eventFixtures] = await Promise.all([
+      fetchLiveGameweek(targetEventId),
+      fetchEventFixtures(targetEventId).catch(() => []),
+    ]);
+
+    // Build provisional bonus map from BPS for live/provisional fixtures.
+    // Bonus is not officially settled until finished=true AND the next data
+    // pipeline run assigns it, so we estimate for any started fixture where
+    // bonus hasn't been assigned yet (finished_provisional covers the window
+    // between the final whistle and the official freeze).
+    const provisionalBonusMap = {};
+    for (const fixture of eventFixtures) {
+      const bonusNotSettled = fixture.started && fixture.stats?.length &&
+        !fixture.stats.find(s => s.identifier === 'bonus' && (s.h.length > 0 || s.a.length > 0));
+      if (bonusNotSettled) {
+        const bonuses = estimateBonusFromBPS(fixture.stats);
+        // Accumulate (sum) bonus per element to correctly handle DGWs where a
+        // player may appear in more than one in-progress fixture.
+        for (const [elementId, bonus] of Object.entries(bonuses)) {
+          provisionalBonusMap[elementId] = (provisionalBonusMap[elementId] ?? 0) + bonus;
+        }
+      }
+    }
+
     const playerStatsMap = {};
   
     // Build map of player ID to their stats for this gameweek
@@ -132,7 +200,11 @@ const enrichPlayersWithGameweekStats = async (players, targetEventId) => {
         red_cards: element.stats.red_cards,
         saves: element.stats.saves,
         bonus: element.stats.bonus,
-        bps: element.stats.bps
+        bps: element.stats.bps,
+        provisional_bonus: element.id in provisionalBonusMap
+          ? provisionalBonusMap[element.id]
+          : null,
+        explain: element.explain ?? [],
       };
     });
   
@@ -224,10 +296,18 @@ const enrichPlayersWithOpponents = (players, fixtures, teams, targetEventId) => 
     }
     fixturesByTeam[fixture.team_h].push({
       event: fixture.event,
+      fixture_id: fixture.id,
       opponent: fixture.team_a,
       is_home: true,
       difficulty: fixture.team_h_difficulty || 3, // Difficulty for home team (1=easy, 5=hard)
       kickoff_time: fixture.kickoff_time ?? null,
+      team_h: fixture.team_h,
+      team_a: fixture.team_a,
+      team_h_score: fixture.team_h_score ?? null,
+      team_a_score: fixture.team_a_score ?? null,
+      finished: fixture.finished ?? false,
+      started: fixture.started ?? false,
+      minutes: fixture.minutes ?? 0,
     });
     
     // Away team
@@ -236,10 +316,18 @@ const enrichPlayersWithOpponents = (players, fixtures, teams, targetEventId) => 
     }
     fixturesByTeam[fixture.team_a].push({
       event: fixture.event,
+      fixture_id: fixture.id,
       opponent: fixture.team_h,
       is_home: false,
       difficulty: fixture.team_a_difficulty || 3, // Difficulty for away team (1=easy, 5=hard)
       kickoff_time: fixture.kickoff_time ?? null,
+      team_h: fixture.team_h,
+      team_a: fixture.team_a,
+      team_h_score: fixture.team_h_score ?? null,
+      team_a_score: fixture.team_a_score ?? null,
+      finished: fixture.finished ?? false,
+      started: fixture.started ?? false,
+      minutes: fixture.minutes ?? 0,
     });
   });
   
@@ -270,6 +358,16 @@ const enrichPlayersWithOpponents = (players, fixtures, teams, targetEventId) => 
         is_home: fixture.is_home,
         difficulty: fixture.difficulty, // Include FPL difficulty rating (1-5)
         kickoff_time: fixture.kickoff_time ?? null,
+        fixture_id: fixture.fixture_id ?? null,
+        team_h: fixture.team_h ?? null,
+        team_a: fixture.team_a ?? null,
+        team_h_score: fixture.team_h_score ?? null,
+        team_a_score: fixture.team_a_score ?? null,
+        team_h_short: teamMap[fixture.team_h]?.short_name || null,
+        team_a_short: teamMap[fixture.team_a]?.short_name || null,
+        finished: fixture.finished ?? false,
+        started: fixture.started ?? false,
+        minutes: fixture.minutes ?? 0,
       }));
       
       // For backwards compatibility, set first fixture as primary opponent
@@ -288,6 +386,7 @@ const enrichPlayersWithOpponents = (players, fixtures, teams, targetEventId) => 
         fixture_event: firstFixture.event,
         fixture_count: fixtureCount,
         fixtureKickoff: firstFixture.kickoff_time ?? null,
+        teamShortName: teamMap[playerTeam]?.short_name || null,
         // ep_next is intentionally NOT overwritten here — it is set by the
         // prediction engine (applyAdvancedPredictions / recalculatePointsForGameweek)
         // which should be called after this function.
@@ -717,6 +816,7 @@ module.exports = {
   fetchPlayerPicks,
   fetchElementSummary,
   fetchFixtures,
+  fetchEventFixtures,
   fetchLiveGameweek,
   enrichPlayersWithOpponents,
   enrichPlayersWithGameweekStats,
