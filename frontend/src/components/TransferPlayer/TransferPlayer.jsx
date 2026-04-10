@@ -35,13 +35,21 @@ const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut, open, onClose
     const playerOutPosition = getPosition(playerOut);
     // Prevent duplicates: exclude any player already in the team by id or code
     const teamIds = new Set(team.map(tp => tp.id ?? tp.code));
+    // Count players per club in the squad after playerOut leaves
+    const clubCounts = {};
+    for (const tp of team) {
+        if ((tp.id ?? tp.code) === getId(playerOut)) continue; // playerOut is leaving
+        const clubId = tp.team;
+        if (clubId != null) clubCounts[clubId] = (clubCounts[clubId] || 0) + 1;
+    }
     const availablePlayers = allPlayers
         .filter(
             (p) =>
                 getPosition(p) === playerOutPosition &&
                 !teamIds.has(p.id) &&
                 !teamIds.has(p.code) &&
-                getId(p) !== getId(playerOut)
+                getId(p) !== getId(playerOut) &&
+                (clubCounts[p.team] ?? 0) < 3
         )
         .sort((a, b) => {
             const ptsA = parseFloat(a.ep_next) || 0;

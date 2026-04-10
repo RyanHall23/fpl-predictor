@@ -1,5 +1,7 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
+import axios from '../../api';
+import PointsFixturesForecast from '../PointsFixturesForecast/PointsFixturesForecast';
 import {
   Box,
   Typography,
@@ -33,6 +35,90 @@ import AddIcon from '@mui/icons-material/Add';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 
 const POSITION_LABELS = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD', 5: 'MAN' };
+
+// Module-level cache avoids re-fetching the same gameweek data across renders.
+const gwDataCache = {};
+
+/**
+ * For every planned transfer, fetch enriched player data for the transfer GW
+ * and the following two gameweeks so that the 3-GW forecast can be rendered.
+ *
+ * Returns forecastMap[gw][playerCode] = { points, opponents }
+ */
+function useForecastData(plannedTransfers, currentGameweek) {
+  const [forecastMap, setForecastMap] = useState({});
+  const fetchingRef = useRef(new Set());
+
+  useEffect(() => {
+    if (!plannedTransfers?.length || !currentGameweek) return;
+
+    const gwsNeeded = new Set();
+    plannedTransfers.forEach((t) => {
+      for (let i = 0; i <= 2; i++) {
+        const gw = t.gameweek + i;
+        if (gw >= 1 && gw <= 38) gwsNeeded.add(gw);
+      }
+    });
+
+    const toFetch = [...gwsNeeded].filter(
+      (gw) => !gwDataCache[gw] && !fetchingRef.current.has(gw)
+    );
+
+    if (toFetch.length === 0) {
+      // All data already cached — merge into state if not already present
+      setForecastMap((prev) => {
+        const merged = { ...prev };
+        let changed = false;
+        gwsNeeded.forEach((gw) => {
+          if (gwDataCache[gw] && !prev[gw]) {
+            merged[gw] = gwDataCache[gw];
+            changed = true;
+          }
+        });
+        return changed ? merged : prev;
+      });
+      return;
+    }
+
+    toFetch.forEach((gw) => fetchingRef.current.add(gw));
+
+    Promise.all(
+      toFetch.map((gw) =>
+        axios
+          .get(`/api/bootstrap-static/enriched?gameweek=${gw}`)
+          .then((res) => {
+            const byCode = {};
+            (res.data.elements || []).forEach((p) => {
+              byCode[p.code] = {
+                points: parseFloat(p.ep_next) || 0,
+                opponents:
+                  p.opponents && p.opponents.length > 0
+                    ? p.opponents
+                    : p.opponent_short
+                    ? [{ opponent_short: p.opponent_short, is_home: p.is_home }]
+                    : [],
+              };
+            });
+            gwDataCache[gw] = byCode;
+            fetchingRef.current.delete(gw);
+            return { gw, data: byCode };
+          })
+          .catch(() => {
+            fetchingRef.current.delete(gw);
+            return null;
+          })
+      )
+    ).then((results) => {
+      const updates = {};
+      results.forEach((r) => { if (r) updates[r.gw] = r.data; });
+      if (Object.keys(updates).length > 0) {
+        setForecastMap((prev) => ({ ...prev, ...updates }));
+      }
+    });
+  }, [plannedTransfers, currentGameweek]);
+
+  return forecastMap;
+}
 
 const AddTransferDialog = ({ open, onClose, onAdd, team, allPlayers, currentGameweek, plannedTransfers }) => {
   const theme = useTheme();
@@ -248,6 +334,22 @@ const PlannedTransfers = ({
     : Array.from({ length: 38 }, (_, i) => i + 1);
 
   const sorted = [...(plannedTransfers || [])].sort((a, b) => a.gameweek - b.gameweek);
+  const forecastMap = useForecastData(plannedTransfers, currentGameweek);
+
+  /** Build the 3-GW forecast array for a specific player code and base GW. */
+  const buildForecast = (playerCode, baseGw) =>
+    [0, 1, 2]
+      .map((offset) => {
+        const gw = baseGw + offset;
+        if (gw > 38) return null;
+        const gwEntry = forecastMap[gw]?.[playerCode];
+        return {
+          gw,
+          points: gwEntry?.points ?? 0,
+          opponents: gwEntry?.opponents ?? [],
+        };
+      })
+      .filter(Boolean);
 
   if (compact) {
     return (
@@ -270,8 +372,12 @@ const PlannedTransfers = ({
         ) : (
           <Box sx={ { display: 'flex', flexDirection: 'column', gap: 1 } }>
             { sorted.map((t, idx) => {
-              const diff = (t.playerIn.predictedPoints || 0) - (t.playerOut.predictedPoints || 0);
               const isVoided = voidedTransferIds.has(t.id);
+              const outForecast = buildForecast(t.playerOut.code, t.gameweek);
+              const inForecast  = buildForecast(t.playerIn.code,  t.gameweek);
+              const totalDiff =
+                inForecast.reduce((s, x) => s + x.points, 0) -
+                outForecast.reduce((s, x) => s + x.points, 0);
               return (
                 <Box key={ t.id }>
                   { idx > 0 && <Divider sx={ { mb: 1 } } /> }
@@ -283,7 +389,7 @@ const PlannedTransfers = ({
                   <Box
                     sx={ {
                       display: 'flex',
-                      alignItems: 'center',
+                      alignItems: 'flex-start',
                       gap: 0.5,
                       flexWrap: 'wrap',
                       opacity: isVoided ? 0.5 : 1,
@@ -296,9 +402,9 @@ const PlannedTransfers = ({
                         noWrap
                         sx={ isVoided ? { textDecoration: 'line-through' } : {} }
                       >{ t.playerOut.name }</Typography>
-                      <Typography variant='caption' color='error'>{ Math.round(t.playerOut.predictedPoints) } pts</Typography>
+                      <PointsFixturesForecast gwData={ outForecast } pointsColor='error' />
                     </Box>
-                    <SwapHorizIcon sx={ { fontSize: 18, color: 'text.secondary', flexShrink: 0 } } />
+                    <SwapHorizIcon sx={ { fontSize: 18, color: 'text.secondary', flexShrink: 0, mt: 0.5 } } />
                     <Box sx={ { flex: '1 1 0', minWidth: 0 } }>
                       <Typography
                         variant='body2'
@@ -306,12 +412,7 @@ const PlannedTransfers = ({
                         noWrap
                         sx={ isVoided ? { textDecoration: 'line-through' } : {} }
                       >{ t.playerIn.name }</Typography>
-                      <Box sx={ { display: 'flex', alignItems: 'center', gap: 0.5 } }>
-                        <Typography variant='caption' color='success.main'>{ Math.round(t.playerIn.predictedPoints) } pts</Typography>
-                        { diff > 0 && !isVoided && (
-                          <Chip label={ `+${Math.round(diff)}` } size='small' color='success' sx={ { height: 16, fontSize: '0.6rem' } } />
-                        ) }
-                      </Box>
+                      <PointsFixturesForecast gwData={ inForecast } pointsColor='success.main' diff={ !isVoided ? totalDiff : undefined } />
                     </Box>
                     <Select
                       size='small'
@@ -372,8 +473,12 @@ const PlannedTransfers = ({
           <Table size='small'>
             <TableBody>
               { sorted.map((t) => {
-                const diff = (t.playerIn.predictedPoints || 0) - (t.playerOut.predictedPoints || 0);
                 const isVoided = voidedTransferIds.has(t.id);
+                const outForecast = buildForecast(t.playerOut.code, t.gameweek);
+                const inForecast  = buildForecast(t.playerIn.code,  t.gameweek);
+                const totalDiff =
+                  inForecast.reduce((s, x) => s + x.points, 0) -
+                  outForecast.reduce((s, x) => s + x.points, 0);
                 return (
                   <TableRow
                     key={ t.id }
@@ -383,7 +488,7 @@ const PlannedTransfers = ({
                     } }
                   >
                     { /* Player Out */ }
-                    <TableCell sx={ { borderRight: `2px solid ${theme.palette.divider}`, minWidth: 130 } }>
+                    <TableCell sx={ { borderRight: `2px solid ${theme.palette.divider}`, minWidth: 150 } }>
                       { isVoided && (
                         <Typography variant='caption' color='warning.main' sx={ { display: 'block', fontStyle: 'italic' } }>
                           Not made
@@ -394,25 +499,20 @@ const PlannedTransfers = ({
                         fontWeight='bold'
                         sx={ isVoided ? { textDecoration: 'line-through' } : {} }
                       >{ t.playerOut.name }</Typography>
-                      <Typography variant='caption' color='error'>{ Math.round(t.playerOut.predictedPoints) } pts</Typography>
+                      <PointsFixturesForecast gwData={ outForecast } pointsColor='error' />
                     </TableCell>
                     { /* Arrow */ }
                     <TableCell sx={ { px: 0.5, width: 24 } }>
                       <SwapHorizIcon sx={ { fontSize: 20, color: 'text.secondary' } } />
                     </TableCell>
                     { /* Player In */ }
-                    <TableCell sx={ { minWidth: 130 } }>
+                    <TableCell sx={ { minWidth: 150 } }>
                       <Typography
                         variant='body2'
                         fontWeight='bold'
                         sx={ isVoided ? { textDecoration: 'line-through' } : {} }
                       >{ t.playerIn.name }</Typography>
-                      <Box sx={ { display: 'flex', alignItems: 'center', gap: 0.5 } }>
-                        <Typography variant='caption' color='success.main'>{ Math.round(t.playerIn.predictedPoints) } pts</Typography>
-                        { diff > 0 && !isVoided && (
-                          <Chip label={ `+${Math.round(diff)}` } size='small' color='success' sx={ { height: 18, fontSize: '0.65rem' } } />
-                        ) }
-                      </Box>
+                      <PointsFixturesForecast gwData={ inForecast } pointsColor='success.main' diff={ !isVoided ? totalDiff : undefined } />
                     </TableCell>
                     { /* Gameweek selector */ }
                     <TableCell sx={ { width: 90 } }>

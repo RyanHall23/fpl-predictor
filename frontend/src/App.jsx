@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import axios from './api';
 import NavigationBar from './components/NavigationBar/NavigationBar';
 import Container from '@mui/material/Container';
 import Box from '@mui/material/Box';
@@ -27,6 +28,13 @@ const TEAM_VIEW = {
   HIGHEST: 'highest'
 };
 
+const CHIPS = [
+  { id: 'bench_boost',    label: 'BB', name: 'Bench Boost',    description: 'Bench points are added to your total',            color: '#2e7d32' },
+  { id: 'triple_captain', label: 'TC', name: 'Triple Captain', description: '3× captain multiplier instead of 2×',             color: '#1565c0' },
+  { id: 'free_hit',       label: 'FH', name: 'Free Hit',       description: 'Unlimited free transfers — reverts next week',    color: '#e65100' },
+  { id: 'wildcard',       label: 'WC', name: 'Wildcard',       description: 'All transfers are free and permanent',            color: '#6a1b9a' },
+];
+
 const App = () => {
   const theme = useTheme();
   const [userEntryId, setUserEntryId] = useState(() => localStorage.getItem('teamId') || '');
@@ -37,6 +45,9 @@ const App = () => {
   const [selectedLeague, setSelectedLeague] = useState(null); // invitation league drill-down
   const [viewingOpponentId, setViewingOpponentId] = useState(null); // opponent team being viewed
   const [pitchView, setPitchView] = useState(() => localStorage.getItem('pitchView') || 'formation'); // 'formation' | 'list'
+  const [activeChip, setActiveChip] = useState(null); // 'bench_boost' | 'triple_captain' | 'free_hit' | 'wildcard' | null
+
+  const handleChipToggle = (chipId) => setActiveChip(prev => (prev === chipId ? null : chipId));
 
   const {
     activePlayers,
@@ -66,6 +77,30 @@ const App = () => {
   } = usePlannedTransfers();
 
   const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [localSnackbar, setLocalSnackbar] = useState('');
+  const [usedFplChips, setUsedFplChips] = useState([]); // chip names from FPL profile e.g. ['bboost', '3xc']
+
+  // Map our chip IDs to FPL API chip names
+  const FPL_CHIP_KEY = { bench_boost: 'bboost', triple_captain: '3xc', free_hit: 'freehit', wildcard: 'wildcard' };
+
+  // Each chip can be used at most 2× (one per half-season). Unused = used < 2 times.
+  const unusedChipIds = useMemo(
+    () => CHIPS.filter(c => usedFplChips.filter(n => n === FPL_CHIP_KEY[c.id]).length < 2).map(c => c.id),
+    [usedFplChips]
+  );
+
+  // Fetch used chips from FPL profile whenever we have a real user entry
+  useEffect(() => {
+    if (!currentEntryId || isHighestPredictedTeam) { setUsedFplChips([]); return; }
+    axios.get(`/api/entry/${currentEntryId}/profile`)
+      .then(res => setUsedFplChips((res.data.chips || []).map(c => c.name)))
+      .catch(() => setUsedFplChips([]));
+  }, [currentEntryId, isHighestPredictedTeam]);
+
+  // Clear active chip if it becomes unavailable (e.g. team changed)
+  useEffect(() => {
+    if (activeChip && !unusedChipIds.includes(activeChip)) setActiveChip(null);
+  }, [unusedChipIds, activeChip]);
 
   useEffect(() => {
     if (snackbar.message) setSnackbarOpen(true);
@@ -78,7 +113,7 @@ const App = () => {
     }
   }, [gameweekInfo]);
 
-  const handleSnackbarClose = () => setSnackbarOpen(false);
+  const handleSnackbarClose = () => { setSnackbarOpen(false); setLocalSnackbar(''); };
 
   useEffect(() => {
     if (snackbarOpen) {
@@ -170,6 +205,28 @@ const App = () => {
     return { effectiveActivePlayers: newActive, effectiveReservePlayers: newReserve };
   }, [gameweekInfo, isHighestPredictedTeam, currentGameweek, plannedTransfers, activePlayers, reservePlayers, allPlayers]);
 
+  // Captain's base points (before 2× multiplier) — used by Triple Captain chip
+  const captainBasePoints = useMemo(() => {
+    const cap = effectiveActivePlayers.find(p => p.is_captain);
+    if (!cap) return 0;
+    return cap.basePoints != null
+      ? Math.round(cap.basePoints)
+      : Math.round((cap.predictedPoints ?? 0) / (cap.multiplier || 2));
+  }, [effectiveActivePlayers]);
+
+  // Points displayed in the stats pod — adjusted for the active chip
+  const displayTotalPoints = useMemo(() => {
+    const active = calculateTotalPredictedPoints(effectiveActivePlayers);
+    if (activeChip === 'bench_boost') return active + calculateTotalPredictedPoints(effectiveReservePlayers);
+    if (activeChip === 'triple_captain') return active + captainBasePoints; // +1× extra → 3× total
+    return active;
+  }, [activeChip, effectiveActivePlayers, effectiveReservePlayers, calculateTotalPredictedPoints, captainBasePoints]);
+
+  const displayBenchPoints = useMemo(() => {
+    if (activeChip === 'bench_boost') return 0; // bench points are merged into total
+    return calculateTotalPredictedPoints(effectiveReservePlayers);
+  }, [activeChip, effectiveReservePlayers, calculateTotalPredictedPoints]);
+
   // Handle setting team ID (saves to localStorage)
   const handleSetTeamId = (teamId) => {
     if (teamId) {
@@ -221,10 +278,45 @@ const App = () => {
     setCurrentEntryId(userEntryId);
   };
 
+  /**
+   * Compute the squad (active + reserve) as it would look at `targetGW` after
+   * applying all planned transfers scheduled for future GWs up to and including
+   * `targetGW`.  Used for per-GW club-limit validation.
+   */
+  const squadAtGameweek = (targetGW) => {
+    const applicable = plannedTransfers
+      .filter(t => t.gameweek > currentGameweek && t.gameweek <= targetGW)
+      .sort((a, b) => a.gameweek - b.gameweek);
+
+    let squad = [...activePlayers, ...reservePlayers];
+    for (const t of applicable) {
+      const playerInData = allPlayers.find(p => p.code === t.playerIn.code);
+      if (!playerInData) continue;
+      const idx = squad.findIndex(p => p.code === t.playerOut.code);
+      if (idx !== -1) {
+        squad = [...squad];
+        squad[idx] = { ...playerInData };
+      }
+    }
+    return squad;
+  };
+
   const handleTransfer = (playerOut, playerIn, gameweek) => {
-    const playerInExists = [...effectiveActivePlayers, ...effectiveReservePlayers].some(p => p.code === playerIn.code);
-    if (playerInExists) return;
-    if (gameweek && currentGameweek) addPlannedTransfer(playerOut, playerIn, gameweek);
+    if (!gameweek || !currentGameweek) return;
+
+    // Build the squad at the target gameweek (before this new transfer)
+    const squadBefore = squadAtGameweek(gameweek);
+
+    if (squadBefore.some(p => p.code === playerIn.code)) return;
+
+    // Enforce max 3 players from the same club at that gameweek
+    const clubCount = squadBefore.filter(p => p.team === playerIn.team && p.code !== playerOut.code).length;
+    if (clubCount >= 3) {
+      setLocalSnackbar(`Can't add ${playerIn.webName ?? playerIn.web_name} \u2014 already 3 players from this club in GW${gameweek}`);
+      setSnackbarOpen(true);
+      return;
+    }
+    addPlannedTransfer(playerOut, playerIn, gameweek);
   };
 
   return (
@@ -237,8 +329,8 @@ const App = () => {
         selectedGameweek={ selectedGameweek }
         setSelectedGameweek={ setSelectedGameweek }
         currentGameweek={ currentGameweek }
-        mainPoints={ calculateTotalPredictedPoints(effectiveActivePlayers) }
-        benchPoints={ calculateTotalPredictedPoints(effectiveReservePlayers) }
+        mainPoints={ displayTotalPoints }
+        benchPoints={ displayBenchPoints }
         isPast={ gameweekInfo?.isPast }
         isActive={ gameweekInfo?.isActive }
       />
@@ -261,53 +353,96 @@ const App = () => {
             ) }
             { /* Stats + controls pod wrapping pitch/bench */ }
             <Paper variant='outlined' sx={ { px: 2, py: 1 } }>
-              <Box sx={ { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', textAlign: 'center', rowGap: 0.75 } }>
-                { /* Row 1 — labels / auto pick button */ }
-                <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>
-                  Total Points
-                </Typography>
-                <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>
-                  Bench Points
-                </Typography>
-                <Box sx={ { display: 'flex', justifyContent: 'center' } }>
-                  { !isHighestPredictedTeam && !viewingOpponentId && activePlayers.length > 0 ? (
-                    <Tooltip title='Auto pick best XI from your squad'>
-                      <Button
-                        size='small'
-                        variant='outlined'
-                        startIcon={ <AutoFixHighIcon sx={ { fontSize: 16 } } /> }
-                        onClick={ () => autoPickLineup(effectiveActivePlayers, effectiveReservePlayers) }
-                        sx={ { py: '3px', px: 1.25, minWidth: 0, fontSize: '0.75rem', '[data-mui-color-scheme="dark"] &': { color: '#fff', borderColor: 'rgba(255,255,255,0.5)' } } }
-                      >
-                        Auto Pick
-                      </Button>
-                    </Tooltip>
-                  ) : (
-                    <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>View</Typography>
-                  ) }
-                </Box>
-                { /* Row 2 — values / toggle */ }
-                <Typography variant='h6' sx={ { fontWeight: 700, lineHeight: 1.2 } }>
-                  { calculateTotalPredictedPoints(effectiveActivePlayers) }
-                </Typography>
-                <Typography variant='h6' sx={ { fontWeight: 700, lineHeight: 1.2 } }>
-                  { calculateTotalPredictedPoints(effectiveReservePlayers) }
-                </Typography>
-                <Box sx={ { display: 'flex', justifyContent: 'center', alignItems: 'center' } }>
-                  <ToggleButtonGroup
-                    value={ pitchView }
-                    exclusive
-                    onChange={ (_, val) => { if (val) { setPitchView(val); localStorage.setItem('pitchView', val); } } }
-                    size='small'
-                    sx={ { '& .MuiToggleButton-root': { padding: '4px 10px' } } }
-                  >
-                    <ToggleButton value='formation' title='Formation view'>
-                      <GridViewIcon sx={ { fontSize: 18 } } />
-                    </ToggleButton>
-                    <ToggleButton value='list' title='List view'>
-                      <TableRowsIcon sx={ { fontSize: 18 } } />
-                    </ToggleButton>
-                  </ToggleButtonGroup>
+              <Box sx={ { display: 'flex', alignItems: 'center', gap: 2 } }>
+                { /* Chips — left column (own team only) */ }
+                { !isHighestPredictedTeam && !viewingOpponentId && activePlayers.length > 0 && unusedChipIds.length > 0 && (
+                  <Box sx={ { display: 'flex', flexDirection: 'column', gap: 0.5, alignItems: 'center' } }>
+                    <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500, whiteSpace: 'nowrap' } }>
+                      Chips
+                    </Typography>
+                    <Box sx={ { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0.5 } }>
+                      { CHIPS.filter(chip => unusedChipIds.includes(chip.id)).map(chip => (
+                        <Tooltip key={ chip.id } title={ `${chip.name}: ${chip.description}` }>
+                          <Button
+                            size='small'
+                            variant={ activeChip === chip.id ? 'contained' : 'outlined' }
+                            onClick={ () => handleChipToggle(chip.id) }
+                            sx={ {
+                              minWidth: 0,
+                              px: 0.75, py: '2px',
+                              fontSize: '0.65rem',
+                              fontWeight: 700,
+                              lineHeight: 1.4,
+                              ...(activeChip === chip.id && {
+                                backgroundColor: chip.color,
+                                borderColor: chip.color,
+                                color: '#fff',
+                                '&:hover': { backgroundColor: chip.color, filter: 'brightness(1.1)' },
+                              }),
+                              ...(activeChip !== chip.id && {
+                                borderColor: chip.color,
+                                color: chip.color,
+                                '&:hover': { borderColor: chip.color, backgroundColor: `${chip.color}18` },
+                              }),
+                            } }
+                          >
+                            { chip.label }
+                          </Button>
+                        </Tooltip>
+                      )) }
+                    </Box>
+                  </Box>
+                ) }
+
+                { /* Stats + controls grid */ }
+                <Box sx={ { flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', textAlign: 'center', rowGap: 0.75 } }>
+                  { /* Row 1 — labels */ }
+                  <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>
+                    Total Points
+                  </Typography>
+                  <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>
+                    Bench Points
+                  </Typography>
+                  <Box sx={ { display: 'flex', justifyContent: 'center' } }>
+                    { !isHighestPredictedTeam && !viewingOpponentId && activePlayers.length > 0 ? (
+                      <Tooltip title='Auto pick best XI from your squad'>
+                        <Button
+                          size='small'
+                          variant='outlined'
+                          startIcon={ <AutoFixHighIcon sx={ { fontSize: 16 } } /> }
+                          onClick={ () => autoPickLineup(effectiveActivePlayers, effectiveReservePlayers) }
+                          sx={ { py: '3px', px: 1.25, minWidth: 0, fontSize: '0.75rem', '[data-mui-color-scheme="dark"] &': { color: '#fff', borderColor: 'rgba(255,255,255,0.5)' } } }
+                        >
+                          Auto Pick
+                        </Button>
+                      </Tooltip>
+                    ) : (
+                      <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>View</Typography>
+                    ) }
+                  </Box>
+                  { /* Row 2 — values / toggle */ }
+                  <Typography variant='h6' sx={ { fontWeight: 700, lineHeight: 1.2 } }>
+                    { displayTotalPoints }
+                  </Typography>
+                  <Typography variant='h6' sx={ { fontWeight: 700, lineHeight: 1.2 } }>
+                    { displayBenchPoints }
+                  </Typography>
+                  <Box sx={ { display: 'flex', justifyContent: 'center', alignItems: 'center' } }>
+                    <ToggleButtonGroup
+                      value={ pitchView }
+                      exclusive
+                      onChange={ (_, val) => { if (val) { setPitchView(val); localStorage.setItem('pitchView', val); } } }
+                      size='small'
+                      sx={ { '& .MuiToggleButton-root': { padding: '4px 10px' } } }
+                    >
+                      <ToggleButton value='formation' title='Formation view'>
+                        <GridViewIcon sx={ { fontSize: 18 } } />
+                      </ToggleButton>
+                      <ToggleButton value='list' title='List view'>
+                        <TableRowsIcon sx={ { fontSize: 18 } } />
+                      </ToggleButton>
+                    </ToggleButtonGroup>
+                  </Box>
                 </Box>
               </Box>
               <Box sx={ { mt: 1 } }>
@@ -388,11 +523,11 @@ const App = () => {
           </Box>
         </Box>
         <Snackbar
-          key={ snackbar.key }
+          key={ localSnackbar || snackbar.key }
           open={ snackbarOpen }
           autoHideDuration={ 6000 }
           onClose={ handleSnackbarClose }
-          message={ snackbar.message }
+          message={ localSnackbar || snackbar.message }
         />
       </Container>
     </Box>
