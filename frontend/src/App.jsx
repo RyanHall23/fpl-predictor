@@ -61,6 +61,7 @@ const App = () => {
     gameweekInfo,
     setCaptain,
     autoPickLineup,
+    freeTransfers,
   } = useTeamData(
     currentEntryId,
     teamView === TEAM_VIEW.HIGHEST,
@@ -122,15 +123,24 @@ const App = () => {
     }
   }, [snackbarOpen]);
 
+  // True when the viewed gameweek has already kicked off (active) or finished (past).
+  // Captain changes, substitutions, and new transfers are locked in this state.
+  const isLockedGameweek = !!(gameweekInfo?.isActive || gameweekInfo?.isPast);
+
   // Determine which planned transfers have been "voided" – i.e., their gameweek
-  // has already been reached but the playerOut is still in the current team
-  // (meaning the user never actually made that FPL transfer).
+  // has already been reached but the transfer was not executed in FPL.
+  // Two signals indicate this:
+  //   1. playerOut is still in the current team (was never transferred out), OR
+  //   2. playerIn is NOT in the current team (was never transferred in).
   const voidedTransferIds = useMemo(() => {
     if (!currentGameweek || isHighestPredictedTeam) return new Set();
     const currentTeamCodes = new Set([...activePlayers, ...reservePlayers].map(p => p.code));
     return new Set(
       plannedTransfers
-        .filter(t => t.gameweek <= currentGameweek && currentTeamCodes.has(t.playerOut.code))
+        .filter(t =>
+          t.gameweek <= currentGameweek &&
+          (currentTeamCodes.has(t.playerOut.code) || !currentTeamCodes.has(t.playerIn.code))
+        )
         .map(t => t.id)
     );
   }, [plannedTransfers, activePlayers, reservePlayers, currentGameweek, isHighestPredictedTeam]);
@@ -138,8 +148,9 @@ const App = () => {
   // When viewing a future gameweek, overlay planned transfers onto the displayed squad.
   // Transfers are applied cumulatively in gameweek order (e.g. GW32 applied before GW33).
   // This only affects display – the real activePlayers/reservePlayers remain unchanged.
+  // For locked (active/past) GWs the FPL picks data is authoritative — no overlay applied.
   const { effectiveActivePlayers, effectiveReservePlayers } = useMemo(() => {
-    if (!gameweekInfo?.isFuture || isHighestPredictedTeam || !currentGameweek) {
+    if (!gameweekInfo?.isFuture || isLockedGameweek || isHighestPredictedTeam || !currentGameweek) {
       return { effectiveActivePlayers: activePlayers, effectiveReservePlayers: reservePlayers };
     }
 
@@ -203,7 +214,11 @@ const App = () => {
     }
 
     return { effectiveActivePlayers: newActive, effectiveReservePlayers: newReserve };
-  }, [gameweekInfo, isHighestPredictedTeam, currentGameweek, plannedTransfers, activePlayers, reservePlayers, allPlayers]);
+  }, [gameweekInfo, isLockedGameweek, isHighestPredictedTeam, currentGameweek, plannedTransfers, activePlayers, reservePlayers, allPlayers]);
+
+  // Planned transfers shown to pitch/bench components — suppressed for locked GWs
+  // so stale planned-transfer badges don't render on top of actual picks data.
+  const displayPlannedTransfers = isLockedGameweek ? undefined : plannedTransfers;
 
   // Captain's base points (before 2× multiplier) — used by Triple Captain chip
   const captainBasePoints = useMemo(() => {
@@ -226,6 +241,43 @@ const App = () => {
     if (activeChip === 'bench_boost') return 0; // bench points are merged into total
     return calculateTotalPredictedPoints(effectiveReservePlayers);
   }, [activeChip, effectiveReservePlayers, calculateTotalPredictedPoints]);
+
+  // Free Transfers remaining for the viewed GW, after planned transfers are applied.
+  // null = not applicable (highest predicted team or opponent view).
+  // { chip: 'wildcard'|'free_hit' } = chip active, all transfers free.
+  // { remaining: number, cost: number } = FTs left and any points deduction (cost is negative when over limit).
+  const displayFreeTransfers = useMemo(() => {
+    if (isHighestPredictedTeam || viewingOpponentId || freeTransfers == null) return null;
+    const viewedGW = gameweekInfo?.selected ?? currentGameweek;
+    if (!viewedGW || !currentGameweek) return null;
+    if (activeChip === 'wildcard' || activeChip === 'free_hit') {
+      return { chip: activeChip };
+    }
+
+    // Bucket planned transfers by GW for carry-over simulation.
+    const plannedTransfersByGW = plannedTransfers.reduce((counts, transfer) => {
+      const gw = transfer.gameweek;
+      counts[gw] = (counts[gw] || 0) + 1;
+      return counts;
+    }, {});
+
+    // Simulate FT carry-over from the current GW up to (but not including) the viewed GW.
+    // Rule: ft_next = min(2, max(0, ft - transfers_made) + 1)
+    let simulatedFreeTransfers = freeTransfers;
+    for (let gw = currentGameweek; gw < viewedGW; gw += 1) {
+      const transfersThisGW = plannedTransfersByGW[gw] || 0;
+      simulatedFreeTransfers = Math.min(2, Math.max(0, simulatedFreeTransfers - transfersThisGW) + 1);
+    }
+
+    // For locked GWs the actual picks are authoritative — don't subtract planned transfers.
+    const plannedCount = isLockedGameweek ? 0 : (plannedTransfersByGW[viewedGW] || 0);
+    const remaining = simulatedFreeTransfers - plannedCount;
+
+    return {
+      remaining: Math.max(0, remaining),
+      cost: remaining < 0 ? remaining * 4 : 0, // negative value = points deduction
+    };
+  }, [isHighestPredictedTeam, viewingOpponentId, freeTransfers, gameweekInfo, currentGameweek, activeChip, plannedTransfers, isLockedGameweek]);
 
   // Handle setting team ID (saves to localStorage)
   const handleSetTeamId = (teamId) => {
@@ -303,6 +355,8 @@ const App = () => {
 
   const handleTransfer = (playerOut, playerIn, gameweek) => {
     if (!gameweek || !currentGameweek) return;
+    // Block transfers for active or past gameweeks
+    if (gameweek <= currentGameweek && isLockedGameweek) return;
 
     // Build the squad at the target gameweek (before this new transfer)
     const squadBefore = squadAtGameweek(gameweek);
@@ -354,8 +408,8 @@ const App = () => {
             { /* Stats + controls pod wrapping pitch/bench */ }
             <Paper variant='outlined' sx={ { px: 2, py: 1 } }>
               <Box sx={ { display: 'flex', alignItems: 'center', gap: 2 } }>
-                { /* Chips — left column (own team only) */ }
-                { !isHighestPredictedTeam && !viewingOpponentId && activePlayers.length > 0 && unusedChipIds.length > 0 && (
+                { /* Chips — left column (own team only, not shown for locked GWs) */ }
+                { !isHighestPredictedTeam && !viewingOpponentId && !isLockedGameweek && activePlayers.length > 0 && unusedChipIds.length > 0 && (
                   <Box sx={ { display: 'flex', flexDirection: 'column', gap: 0.5, alignItems: 'center' } }>
                     <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500, whiteSpace: 'nowrap' } }>
                       Chips
@@ -395,7 +449,7 @@ const App = () => {
                 ) }
 
                 { /* Stats + controls grid */ }
-                <Box sx={ { flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', textAlign: 'center', rowGap: 0.75 } }>
+                <Box sx={ { flex: 1, display: 'grid', gridTemplateColumns: displayFreeTransfers != null ? '1fr 1fr 1fr 1fr' : '1fr 1fr 1fr', textAlign: 'center', rowGap: 0.75 } }>
                   { /* Row 1 — labels */ }
                   <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>
                     Total Points
@@ -403,8 +457,13 @@ const App = () => {
                   <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>
                     Bench Points
                   </Typography>
+                  { displayFreeTransfers != null && (
+                    <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>
+                      Free Transfers
+                    </Typography>
+                  ) }
                   <Box sx={ { display: 'flex', justifyContent: 'center' } }>
-                    { !isHighestPredictedTeam && !viewingOpponentId && activePlayers.length > 0 ? (
+                    { !isHighestPredictedTeam && !viewingOpponentId && !isLockedGameweek && activePlayers.length > 0 ? (
                       <Tooltip title='Auto pick best XI from your squad'>
                         <Button
                           size='small'
@@ -427,6 +486,26 @@ const App = () => {
                   <Typography variant='h6' sx={ { fontWeight: 700, lineHeight: 1.2 } }>
                     { displayBenchPoints }
                   </Typography>
+                  { displayFreeTransfers != null && (
+                    <Box sx={ { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' } }>
+                      { displayFreeTransfers.chip ? (
+                        <Typography variant='h6' sx={ { fontWeight: 700, lineHeight: 1.2, color: displayFreeTransfers.chip === 'wildcard' ? '#6a1b9a' : '#e65100' } }>
+                          { displayFreeTransfers.chip === 'wildcard' ? 'WC' : 'FH' }
+                        </Typography>
+                      ) : (
+                        <>
+                          <Typography variant='h6' sx={ { fontWeight: 700, lineHeight: 1.2 } }>
+                            { displayFreeTransfers.remaining }
+                          </Typography>
+                          { displayFreeTransfers.cost < 0 && (
+                            <Typography variant='caption' sx={ { color: 'error.main', fontWeight: 600, lineHeight: 1 } }>
+                              { displayFreeTransfers.cost }pts
+                            </Typography>
+                          ) }
+                        </>
+                      ) }
+                    </Box>
+                  ) }
                   <Box sx={ { display: 'flex', justifyContent: 'center', alignItems: 'center' } }>
                     <ToggleButtonGroup
                       value={ pitchView }
@@ -450,34 +529,34 @@ const App = () => {
                   <TeamFormation
                     activePlayers={ effectiveActivePlayers }
                     reservePlayers={ effectiveReservePlayers }
-                    onPlayerClick={ (player, zone) => handlePlayerClick?.(player, zone, effectiveActivePlayers, effectiveReservePlayers) }
+                    onPlayerClick={ (!isLockedGameweek && handlePlayerClick) ? (player, zone) => handlePlayerClick(player, zone, effectiveActivePlayers, effectiveReservePlayers) : undefined }
                     selectedPlayer={ selectedPlayer }
                     team={ [...effectiveActivePlayers, ...effectiveReservePlayers] }
                     allPlayers={ allPlayers }
                     isHighestPredictedTeam={ isHighestPredictedTeam }
-                    onSetCaptain={ !isHighestPredictedTeam ? setCaptain : undefined }
+                    onSetCaptain={ (!isHighestPredictedTeam && !isLockedGameweek) ? setCaptain : undefined }
                     currentGameweek={ currentGameweek }
                     isFutureGameweek={ !!gameweekInfo?.isFuture }
                     viewedGameweek={ gameweekInfo?.selected ?? currentGameweek }
-                    plannedTransfers={ !isHighestPredictedTeam ? plannedTransfers : undefined }
-                    onRemovePlannedTransfer={ !isHighestPredictedTeam ? removePlannedTransfer : undefined }
+                    plannedTransfers={ !isHighestPredictedTeam ? displayPlannedTransfers : undefined }
+                    onRemovePlannedTransfer={ (!isHighestPredictedTeam && !isLockedGameweek) ? removePlannedTransfer : undefined }
                     onTransfer={ handleTransfer }
                   />
                 ) : (
                   <TeamListView
                     activePlayers={ effectiveActivePlayers }
                     reservePlayers={ effectiveReservePlayers }
-                    onPlayerClick={ (player, zone) => handlePlayerClick?.(player, zone, effectiveActivePlayers, effectiveReservePlayers) }
+                    onPlayerClick={ (!isLockedGameweek && handlePlayerClick) ? (player, zone) => handlePlayerClick(player, zone, effectiveActivePlayers, effectiveReservePlayers) : undefined }
                     selectedPlayer={ selectedPlayer }
                     team={ [...effectiveActivePlayers, ...effectiveReservePlayers] }
                     allPlayers={ allPlayers }
                     isHighestPredictedTeam={ isHighestPredictedTeam }
-                    onSetCaptain={ !isHighestPredictedTeam ? setCaptain : undefined }
+                    onSetCaptain={ (!isHighestPredictedTeam && !isLockedGameweek) ? setCaptain : undefined }
                     currentGameweek={ currentGameweek }
                     isFutureGameweek={ !!gameweekInfo?.isFuture }
                     viewedGameweek={ gameweekInfo?.selected ?? currentGameweek }
-                    plannedTransfers={ !isHighestPredictedTeam ? plannedTransfers : undefined }
-                    onRemovePlannedTransfer={ !isHighestPredictedTeam ? removePlannedTransfer : undefined }
+                    plannedTransfers={ !isHighestPredictedTeam ? displayPlannedTransfers : undefined }
+                    onRemovePlannedTransfer={ (!isHighestPredictedTeam && !isLockedGameweek) ? removePlannedTransfer : undefined }
                     onTransfer={ handleTransfer }
                   />
                 ) }

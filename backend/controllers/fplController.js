@@ -508,6 +508,32 @@ const getUserTeamForEntry = async (req, res) => {
       teamName = '';
     }
 
+    // Calculate free transfers available at the start of targetEvent from historical data.
+    // Rule: start with 1 FT; each GW ft = min(2, max(0, ft - transfers_made) + 1)
+    // Chip exceptions: Free Hit treats transfers as 0 (squad reverts); Wildcard resets next GW to 1.
+    let freeTransfers = 1;
+    try {
+      const historyData = await dataProvider.fetchHistory(entryId);
+      const gwHistory = (historyData.current || []).sort((a, b) => a.event - b.event);
+      let ft = 1;
+      for (const gw of gwHistory) {
+        if (gw.event >= targetEvent) break;
+        if (gw.event_chip === 'freehit') {
+          // Free Hit squad reverts — treat as 0 transfers consumed for FT carry-over
+          ft = Math.min(2, ft + 1);
+        } else if (gw.event_chip === 'wildcard') {
+          // Wildcard: all transfers free/permanent; resets next GW's FT count to 1
+          ft = 1;
+        } else {
+          const remaining = Math.max(0, ft - (gw.event_transfers || 0));
+          ft = Math.min(2, remaining + 1);
+        }
+      }
+      freeTransfers = ft;
+    } catch {
+      freeTransfers = 1;
+    }
+
     res.json({
       ...team.toJSON(),
       teamName,
@@ -517,6 +543,7 @@ const getUserTeamForEntry = async (req, res) => {
       isActiveGameweek,
       isFutureGameweek,
       gameweekData: targetEventData,
+      freeTransfers,
     });
   } catch (error) {
     console.error('Error building user team:', error);

@@ -641,38 +641,13 @@ const buildUserTeam = (players, picks, useActualPoints = false, isFutureGameweek
     multiplier:    captainPick     ? captainPick.multiplier  : 2,
   };
 
-  // ── Future GW: re-run greedy selection on the user's 15-player squad ─────
+  // ── Always preserve the user's actual pick positions and captain choice ─────
   //
-  // For future gameweeks the picks reflect the user's CURRENT GW lineup, which
-  // may not be the best 11 for the target GW (predicted points change week to
-  // week).  We delegate to buildTeam so it can greedy-pick the optimal starting
-  // XI from the squad using the target GW's predicted ep_next values.
-  if (isFutureGameweek && !useActualPoints) {
-    const result = buildTeam(players, picks, { filterZeroEp: false, isPastGameweek: false });
-    const activeCount = result.activePlayers.length;
-    const squad = [
-      ...result.activePlayers.map((raw, i) => new Player(raw, {
-        isActive:        true,
-        slot:            i + 1,
-        useActualPoints: false,
-        userTeam:        true,
-        is_captain:      raw.is_captain      ?? false,
-        is_vice_captain: raw.is_vice_captain ?? false,
-        multiplier:      raw.multiplier      ?? 1,
-      })),
-      ...result.reservePlayers.map((raw, i) => new Player(raw, {
-        isActive:        false,
-        slot:            activeCount + 1 + i,
-        useActualPoints: false,
-        userTeam:        true,
-        is_captain:      false,
-        is_vice_captain: raw.is_vice_captain ?? false,
-      })),
-    ];
-    return new Team(squad, { captainInfo: result.captainInfo ?? captainInfo });
-  }
-
-  // ── Current / past GW: preserve the user's actual pick positions ──────────
+  // For future gameweeks the picks still reflect the user's most recent GW
+  // lineup (future picks don't exist in the FPL API).  We honour their chosen
+  // order (pick.position 1–15) and captain flag.  The enriched `players` array
+  // already carries target-GW predicted points so the user can use Auto-Pick
+  // on the frontend to reorder if they wish.
   const sortedPicks = [...picks].sort((a, b) => a.position - b.position);
 
   const squad = sortedPicks
