@@ -478,10 +478,40 @@ const getUserTeamForEntry = async (req, res) => {
       return res.status(500).json({ error: 'Error fetching team picks' });
     }
 
-    let players = bootstrap.elements.map((p) => ({
-      ...p,
-      ep_next: parseFloat(p.ep_next) || 0,
-    }));
+    // Fetch transfer history to calculate accurate selling prices.
+    // FPL rule: selling_price = purchase_price + floor((now_cost - purchase_price) / 2)
+    // If price dropped below purchase: selling_price = now_cost (full loss, no profit share).
+    // For original squad members (never transferred): purchase_price = now_cost - cost_change_start.
+    let purchasePriceMap = {};
+    try {
+      const transfers = await dataProvider.fetchEntryTransfers(entryId);
+      // Sort ascending by event so later transfers overwrite earlier ones —
+      // handles sell-and-rebuy: the most recent transfer-in cost wins.
+      const sorted = [...transfers].sort((a, b) => {
+        if (a.event !== b.event) return a.event - b.event;
+        return (a.time ?? '').localeCompare(b.time ?? '');
+      });
+      for (const t of sorted) {
+        purchasePriceMap[t.element_in] = t.element_in_cost;
+      }
+    } catch {
+      // Non-fatal — will fall back to start-of-season price for all players
+    }
+
+    let players = bootstrap.elements.map((p) => {
+      // Determine purchase price: transfer record takes priority; otherwise use
+      // the season-start price derived from cost_change_start.
+      const purchasePrice = purchasePriceMap[p.id] ?? (p.now_cost - (p.cost_change_start ?? 0));
+      const sellingPrice = p.now_cost >= purchasePrice
+        ? purchasePrice + Math.floor((p.now_cost - purchasePrice) / 2)
+        : p.now_cost;
+      return {
+        ...p,
+        ep_next: parseFloat(p.ep_next) || 0,
+        purchase_price: purchasePrice,
+        selling_price: sellingPrice,
+      };
+    });
 
     const isPastGameweek = !!(targetEventData && targetEventData.finished);
     const isActiveGameweek = !!(targetEventData && targetEventData.is_current && !targetEventData.finished);
@@ -544,6 +574,7 @@ const getUserTeamForEntry = async (req, res) => {
       isFutureGameweek,
       gameweekData: targetEventData,
       freeTransfers,
+      bank: picksData.entry_history?.bank ?? null,
     });
   } catch (error) {
     console.error('Error building user team:', error);

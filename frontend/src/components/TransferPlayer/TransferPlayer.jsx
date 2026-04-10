@@ -87,7 +87,10 @@ const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut, open, onClose
                 <DialogContent>
                     { /* Player Out: fixed, not a dropdown */ }
                     <ListItem>
-                        <ListItemText primary={ playerOut.name } secondary={ playerOut.position } />
+                        <ListItemText
+                            primary={ playerOut.name }
+                            secondary={ `${ { 1: 'Goalkeeper', 2: 'Defender', 3: 'Midfielder', 4: 'Forward', 5: 'Manager' }[playerOut.position] ?? playerOut.position }${ (playerOut.sellingPrice ?? playerOut.nowCost) != null ? ` · £${((playerOut.sellingPrice ?? playerOut.nowCost) / 10).toFixed(1)}m` : '' }` }
+                        />
                     </ListItem>
                     { /* Player In: dropdown, only matching position */ }
                     <Autocomplete
@@ -113,7 +116,7 @@ const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut, open, onClose
                                 <ListItem { ...props } key={ option.id }>
                                     <ListItemText 
                                         primary={ option.web_name || option.webName || option.name } 
-                                        secondary={ `${Math.round(option.ep_next) || 0} pts • ${opponentText}` } 
+                                        secondary={ `${Math.round(option.ep_next) || 0} pts · ${opponentText}${ (option.nowCost ?? option.now_cost) != null ? ` · £${((option.nowCost ?? option.now_cost) / 10).toFixed(1)}m` : '' }` } 
                                     />
                                 </ListItem>
                             );

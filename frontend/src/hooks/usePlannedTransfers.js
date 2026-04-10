@@ -34,6 +34,8 @@ const usePlannedTransfers = () => {
           position: playerOut.position ?? playerOut.element_type,
           team: playerOut.team,
           predictedPoints: parseFloat(playerOut.basePoints ?? playerOut.predictedPoints ?? playerOut.ep_next ?? 0),
+          nowCost: playerOut.nowCost ?? playerOut.now_cost ?? null,
+          sellingPrice: playerOut.sellingPrice ?? playerOut.selling_price ?? playerOut.nowCost ?? playerOut.now_cost ?? null,
         },
         playerIn: {
           code: playerIn.code,
@@ -41,6 +43,7 @@ const usePlannedTransfers = () => {
           position: playerIn.position ?? playerIn.element_type,
           team: playerIn.team,
           predictedPoints: parseFloat(playerIn.ep_next ?? playerIn.predictedPoints ?? 0),
+          nowCost: playerIn.nowCost ?? playerIn.now_cost ?? null,
         },
         gameweek,
       };

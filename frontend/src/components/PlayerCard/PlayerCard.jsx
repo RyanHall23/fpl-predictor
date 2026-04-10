@@ -367,6 +367,25 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
 
           </Grid>
         ) }
+
+        { /* Price tag — shown on future GW cards */ }
+        { isFutureGameweek && player.nowCost != null && (
+          <Box
+            sx={ {
+              mx: -0.5,
+              mb: -0.5,
+              mt: 0.5,
+              borderTop: '1px solid',
+              borderColor: 'divider',
+              textAlign: 'center',
+              py: '2px',
+            } }
+          >
+            <Typography variant='caption' sx={ { fontSize: '0.65rem', fontWeight: 600, color: 'text.secondary', letterSpacing: '0.3px' } }>
+              £{ ((player.sellingPrice ?? player.nowCost) / 10).toFixed(1) }m
+            </Typography>
+          </Box>
+        ) }
       </CardContent>
 
       { transferDialogOpen && (
@@ -416,6 +435,7 @@ PlayerCard.propTypes = {
     status: PropTypes.string,
     chanceOfPlayingNextRound: PropTypes.number,
     news: PropTypes.string,
+    nowCost: PropTypes.number,
   }).isRequired,
   isCaptain: PropTypes.bool,
   team: PropTypes.array,

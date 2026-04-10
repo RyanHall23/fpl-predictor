@@ -176,6 +176,23 @@ const fetchHistory = async (entryId) => {
 };
 
 /**
+ * Fetch all transfers made by an entry (team)
+ * @param {number|string} entryId - FPL entry/team ID
+ * @returns {Promise<Array>} - Array of transfer objects { element_in, element_in_cost, element_out, element_out_cost, entry, event, time }
+ */
+const fetchEntryTransfers = async (entryId) => {
+  const validatedEntryId = validateEntryId(entryId);
+  if (USE_FPL_API) {
+    const url = `${FPL_API_BASE}/entry/${validatedEntryId}/transfers/`;
+    const response = await axios.get(url);
+    return response.data;
+  } else {
+    console.log(`[Mock Mode] Fetching transfers for entry ${validatedEntryId} from local data`);
+    return [];
+  }
+};
+
+/**
  * Fetch classic league standings
  * @param {number|string} leagueId - FPL classic league ID
  * @param {number} [page=1] - Page number for standings pagination
@@ -204,6 +221,7 @@ module.exports = {
   fetchLiveGameweek,
   fetchEntry,
   fetchHistory,
+  fetchEntryTransfers,
   fetchLeagueStandings,
   USE_FPL_API
 };
