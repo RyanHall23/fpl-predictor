@@ -245,18 +245,39 @@ const App = () => {
   // Free Transfers remaining for the viewed GW, after planned transfers are applied.
   // null = not applicable (highest predicted team or opponent view).
   // { chip: 'wildcard'|'free_hit' } = chip active, all transfers free.
-  // { remaining: number, cost: number } = FTs left and any points deduction.
+  // { remaining: number, cost: number } = FTs left and any points deduction (cost is negative when over limit).
   const displayFreeTransfers = useMemo(() => {
     if (isHighestPredictedTeam || viewingOpponentId || freeTransfers == null) return null;
     const viewedGW = gameweekInfo?.selected ?? currentGameweek;
-    if (!viewedGW) return null;
+    if (!viewedGW || !currentGameweek) return null;
     if (activeChip === 'wildcard' || activeChip === 'free_hit') {
       return { chip: activeChip };
     }
-    const plannedCount = plannedTransfers.filter(t => t.gameweek === viewedGW).length;
-    const remaining = freeTransfers - plannedCount;
-    return { remaining: Math.max(0, remaining), cost: remaining < 0 ? remaining * -4 : 0 };
-  }, [isHighestPredictedTeam, viewingOpponentId, freeTransfers, gameweekInfo, currentGameweek, activeChip, plannedTransfers]);
+
+    // Bucket planned transfers by GW for carry-over simulation.
+    const plannedTransfersByGW = plannedTransfers.reduce((counts, transfer) => {
+      const gw = transfer.gameweek;
+      counts[gw] = (counts[gw] || 0) + 1;
+      return counts;
+    }, {});
+
+    // Simulate FT carry-over from the current GW up to (but not including) the viewed GW.
+    // Rule: ft_next = min(2, max(0, ft - transfers_made) + 1)
+    let simulatedFreeTransfers = freeTransfers;
+    for (let gw = currentGameweek; gw < viewedGW; gw += 1) {
+      const transfersThisGW = plannedTransfersByGW[gw] || 0;
+      simulatedFreeTransfers = Math.min(2, Math.max(0, simulatedFreeTransfers - transfersThisGW) + 1);
+    }
+
+    // For locked GWs the actual picks are authoritative — don't subtract planned transfers.
+    const plannedCount = isLockedGameweek ? 0 : (plannedTransfersByGW[viewedGW] || 0);
+    const remaining = simulatedFreeTransfers - plannedCount;
+
+    return {
+      remaining: Math.max(0, remaining),
+      cost: remaining < 0 ? remaining * 4 : 0, // negative value = points deduction
+    };
+  }, [isHighestPredictedTeam, viewingOpponentId, freeTransfers, gameweekInfo, currentGameweek, activeChip, plannedTransfers, isLockedGameweek]);
 
   // Handle setting team ID (saves to localStorage)
   const handleSetTeamId = (teamId) => {

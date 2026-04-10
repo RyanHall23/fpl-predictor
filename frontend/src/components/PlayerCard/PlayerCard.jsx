@@ -154,7 +154,6 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
         padding: '6px',
         margin: '0 auto',
         position: 'relative',
-        transition: 'all 0.3s ease',
       } }
     >
       { /* Status dot — shown only when NOT available (injured/doubtful/suspended/unavailable) */ }
@@ -247,15 +246,13 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
 
         { /* Points and Opponent Row */ }
         <Box sx={ { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25 } }>
-          <Box className='opponent-pill'>
-            <FixturePill
-              fixtures={ fixtures.slice(0, fixtures.length >= 2 ? 2 : 1).map(fix => ({
-                label:      fix.text,
-                difficulty: fix.difficulty,
-              })) }
-              size='sm'
-            />
-          </Box>
+          <FixturePill
+            fixtures={ fixtures.slice(0, fixtures.length >= 2 ? 2 : 1).map(fix => ({
+              label:      fix.text,
+              difficulty: fix.difficulty,
+            })) }
+            size='sm'
+          />
           <Typography variant='h6' className='points-display' sx={ { fontSize: '14px', fontWeight: 700, textAlign: 'center', width: '100%', letterSpacing: '0.5px', padding: '1px 0' } }>
             { predictedPoints }
           </Typography>
@@ -336,7 +333,7 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
                     onClick={ () => setTransferDialogOpen(true) }
                     sx={ { padding: '3px !important' } }
                   >
-                    <Box className='transfer-arrows-icon'>
+                    <Box sx={ { display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
                       <svg width='20' height='20' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
                         <path d='M3 8 L12 8 L12 6 L18 10 L12 14 L12 12 L3 12 Z' fill='#4caf50' />
                         <path d='M21 16 L12 16 L12 18 L6 14 L12 10 L12 12 L21 12 Z' fill='#f44336' />
