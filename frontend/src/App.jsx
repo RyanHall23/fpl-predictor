@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import axios from './api';
+import { saveChip, loadChip } from './utils/lineupStorage';
 import NavigationBar from './components/NavigationBar/NavigationBar';
 import Container from '@mui/material/Container';
 import Box from '@mui/material/Box';
@@ -46,8 +47,26 @@ const App = () => {
   const [viewingOpponentId, setViewingOpponentId] = useState(null); // opponent team being viewed
   const [pitchView, setPitchView] = useState(() => localStorage.getItem('pitchView') || 'formation'); // 'formation' | 'list'
   const [activeChip, setActiveChip] = useState(null); // 'bench_boost' | 'triple_captain' | 'free_hit' | 'wildcard' | null
+  // Planned chips across all future GWs: { [gw]: chipId }.  Loaded from storage
+  // on mount and kept in sync whenever a chip is toggled.
+  const [plannedChipsByGW, setPlannedChipsByGW] = useState({});
 
-  const handleChipToggle = (chipId) => setActiveChip(prev => (prev === chipId ? null : chipId));
+  const handleChipToggle = (chipId) => {
+    const next = activeChip === chipId ? null : chipId;
+    setActiveChip(next);
+    const viewedGW = gameweekInfo?.selected;
+    if (!isHighestPredictedTeam && !isLockedGameweek && userEntryId && viewedGW) {
+      // Persist planned chip per-gameweek so it survives page refreshes.
+      // Only stored for future GWs — locked GWs read chip state from FPL directly.
+      saveChip(userEntryId, viewedGW, next);
+      setPlannedChipsByGW(prev => {
+        const updated = { ...prev };
+        if (next) updated[viewedGW] = next;
+        else delete updated[viewedGW];
+        return updated;
+      });
+    }
+  };
 
   const {
     activePlayers,
@@ -99,10 +118,60 @@ const App = () => {
       .catch(() => setUsedFplChips([]));
   }, [currentEntryId, isHighestPredictedTeam]);
 
-  // Clear active chip if it becomes unavailable (e.g. team changed)
+  // Load all future GW planned chips from localStorage into state whenever the
+  // entry or current gameweek changes (i.e. on mount and on team switch).
+  useEffect(() => {
+    if (!userEntryId || !currentGameweek) { setPlannedChipsByGW({}); return; }
+    const map = {};
+    for (let gw = currentGameweek + 1; gw <= 38; gw++) {
+      const chip = loadChip(userEntryId, gw);
+      if (chip) map[gw] = chip;
+    }
+    setPlannedChipsByGW(map);
+  }, [userEntryId, currentGameweek]);
+
+  // Set of future GW numbers where the user has planned a Free Hit chip.
+  // Only includes GWs where the chip is still available (not yet used in FPL).
+  const freeHitGWs = useMemo(() => {
+    const s = new Set();
+    if (!unusedChipIds.includes('free_hit')) return s;
+    Object.entries(plannedChipsByGW).forEach(([gw, chip]) => {
+      if (chip === 'free_hit') s.add(Number(gw));
+    });
+    return s;
+  }, [plannedChipsByGW, unusedChipIds]);
+
+  // Clear active chip from state if it becomes unavailable (e.g. team changed or
+  // chip already used in FPL).  The stored value is left intact so it can be
+  // re-applied if the user switches back to a valid gameweek.
   useEffect(() => {
     if (activeChip && !unusedChipIds.includes(activeChip)) setActiveChip(null);
   }, [unusedChipIds, activeChip]);
+
+  // Track the last gameweek we restored a chip for, so we only do it once per
+  // gameweek/entry combination and don't clobber a manual toggle on re-render.
+  const restoredChipKey = useRef(null);
+
+  // Restore stored chip when loading a future gameweek for the user's own team.
+  useEffect(() => {
+    if (
+      !gameweekInfo?.isFuture ||
+      isHighestPredictedTeam ||
+      viewingOpponentId ||
+      !userEntryId
+    ) return;
+    const viewedGW = gameweekInfo.selected;
+    const key = `${userEntryId}_${viewedGW}`;
+    if (restoredChipKey.current === key) return; // already restored for this GW
+    restoredChipKey.current = key;
+    const stored = loadChip(userEntryId, viewedGW);
+    // Only restore if the chip is still available (not yet used in FPL)
+    if (stored && unusedChipIds.includes(stored)) {
+      setActiveChip(stored);
+    } else {
+      setActiveChip(null);
+    }
+  }, [gameweekInfo, isHighestPredictedTeam, viewingOpponentId, userEntryId, unusedChipIds]);
 
   useEffect(() => {
     if (snackbar.message) setSnackbarOpen(true);
@@ -167,55 +236,79 @@ const App = () => {
       return { effectiveActivePlayers: activePlayers, effectiveReservePlayers: reservePlayers };
     }
 
-    let newActive = [...activePlayers];
-    let newReserve = [...reservePlayers];
-
-    for (const transfer of applicableTransfers) {
-      const playerInData = allPlayers.find(p => p.code === transfer.playerIn.code);
-      if (!playerInData) continue;
-
-      // Base points come from ep_next on the enriched allPlayers element.
-      const basePoints = Math.round(parseFloat(playerInData.ep_next) || 0);
-
-      const activeIdx = newActive.findIndex(p => p.code === transfer.playerOut.code);
-      if (activeIdx !== -1) {
-        const old = newActive[activeIdx];
-        const multiplier = old.multiplier || 1;
-        newActive = [...newActive];
-        newActive[activeIdx] = {
-          ...playerInData,
-          isActive: old.isActive,
-          slot: old.slot,
-          user_team: old.user_team,
-          is_captain: old.is_captain,
-          is_vice_captain: old.is_vice_captain,
-          multiplier,
-          basePoints,
-          predictedPoints: basePoints * multiplier,
-        };
-        continue;
+    // Helper: apply a list of transfers on top of active/reserve arrays.
+    const applyTransfers = (active, reserve, transfers) => {
+      let a = active;
+      let r = reserve;
+      for (const transfer of transfers) {
+        const playerInData = allPlayers.find(p => p.code === transfer.playerIn.code);
+        if (!playerInData) continue;
+        const basePoints = Math.round(parseFloat(playerInData.ep_next) || 0);
+        const activeIdx = a.findIndex(p => p.code === transfer.playerOut.code);
+        if (activeIdx !== -1) {
+          const old = a[activeIdx];
+          const multiplier = old.multiplier || 1;
+          a = [...a];
+          a[activeIdx] = {
+            ...playerInData,
+            isActive: old.isActive,
+            slot: old.slot,
+            user_team: old.user_team,
+            is_captain: old.is_captain,
+            is_vice_captain: old.is_vice_captain,
+            multiplier,
+            basePoints,
+            predictedPoints: basePoints * multiplier,
+          };
+          continue;
+        }
+        const reserveIdx = r.findIndex(p => p.code === transfer.playerOut.code);
+        if (reserveIdx !== -1) {
+          const old = r[reserveIdx];
+          r = [...r];
+          r[reserveIdx] = {
+            ...playerInData,
+            isActive: old.isActive,
+            slot: old.slot,
+            user_team: old.user_team,
+            is_captain: old.is_captain,
+            is_vice_captain: old.is_vice_captain,
+            multiplier: 1,
+            basePoints,
+            predictedPoints: basePoints,
+          };
+        }
       }
+      return { a, r };
+    };
 
-      const reserveIdx = newReserve.findIndex(p => p.code === transfer.playerOut.code);
-      if (reserveIdx !== -1) {
-        const old = newReserve[reserveIdx];
-        newReserve = [...newReserve];
-        newReserve[reserveIdx] = {
-          ...playerInData,
-          isActive: old.isActive,
-          slot: old.slot,
-          user_team: old.user_team,
-          is_captain: old.is_captain,
-          is_vice_captain: old.is_vice_captain,
-          multiplier: 1,
-          basePoints,
-          predictedPoints: basePoints,
-        };
-      }
+    // Group transfers by GW so we can process them one gameweek at a time.
+    const transfersByGW = {};
+    for (const t of applicableTransfers) {
+      if (!transfersByGW[t.gameweek]) transfersByGW[t.gameweek] = [];
+      transfersByGW[t.gameweek].push(t);
     }
 
-    return { effectiveActivePlayers: newActive, effectiveReservePlayers: newReserve };
-  }, [gameweekInfo, isLockedGameweek, isHighestPredictedTeam, currentGameweek, plannedTransfers, activePlayers, reservePlayers, allPlayers]);
+    let runActive  = [...activePlayers];
+    let runReserve = [...reservePlayers];
+
+    for (let gw = currentGameweek + 1; gw <= targetGW; gw++) {
+      const gwTransfers = transfersByGW[gw];
+      if (!gwTransfers || gwTransfers.length === 0) continue;
+
+      // Free Hit reverts the squad after the GW it is played.  Transfers in a
+      // Free Hit GW should only affect the display when viewing *that exact GW* —
+      // they must not carry forward to subsequent GWs.
+      const isFH = freeHitGWs.has(gw);
+      if (isFH && gw < targetGW) continue;
+
+      const { a, r } = applyTransfers(runActive, runReserve, gwTransfers);
+      runActive  = a;
+      runReserve = r;
+    }
+
+    return { effectiveActivePlayers: runActive, effectiveReservePlayers: runReserve };
+  }, [gameweekInfo, isLockedGameweek, isHighestPredictedTeam, currentGameweek, plannedTransfers, activePlayers, reservePlayers, allPlayers, freeHitGWs]);
 
   // Planned transfers shown to pitch/bench components — suppressed for locked GWs
   // so stale planned-transfer badges don't render on top of actual picks data.
@@ -231,7 +324,13 @@ const App = () => {
     const viewedGW = gameweekInfo?.selected ?? currentGameweek;
     // Apply cumulative transfer cost deltas up to and including viewedGW.
     const delta = plannedTransfers
-      .filter(t => t.gameweek <= viewedGW)
+      .filter(t => {
+        if (t.gameweek > viewedGW) return false;
+        // Free Hit transfers at a previous GW revert — their cost doesn't
+        // carry forward to the bank balance for subsequent GWs.
+        if (freeHitGWs.has(t.gameweek) && t.gameweek < viewedGW) return false;
+        return true;
+      })
       .reduce((sum, t) => {
         const sellPrice = t.playerOut.sellingPrice ?? t.playerOut.nowCost ?? 0;
         const buyPrice  = t.playerIn.nowCost ?? 0;
@@ -297,7 +396,9 @@ const App = () => {
     // Rule: ft_next = min(2, max(0, ft - transfers_made) + 1)
     let simulatedFreeTransfers = freeTransfers;
     for (let gw = currentGameweek; gw < viewedGW; gw += 1) {
-      const transfersThisGW = plannedTransfersByGW[gw] || 0;
+      // Free Hit transfers don't permanently consume free transfers — treat
+      // the GW as if 0 transfers were made for carry-over purposes.
+      const transfersThisGW = freeHitGWs.has(gw) ? 0 : (plannedTransfersByGW[gw] || 0);
       simulatedFreeTransfers = Math.min(2, Math.max(0, simulatedFreeTransfers - transfersThisGW) + 1);
     }
 
@@ -374,6 +475,9 @@ const App = () => {
 
     let squad = [...activePlayers, ...reservePlayers];
     for (const t of applicable) {
+      // Free Hit transfers at a GW before targetGW revert — don't modify the
+      // permanent squad composition used for club-limit validation.
+      if (freeHitGWs.has(t.gameweek) && t.gameweek < targetGW) continue;
       const playerInData = allPlayers.find(p => p.code === t.playerIn.code);
       if (!playerInData) continue;
       const idx = squad.findIndex(p => p.code === t.playerOut.code);
@@ -647,6 +751,7 @@ const App = () => {
               team={ [...activePlayers, ...reservePlayers] }
               allPlayers={ allPlayers }
               voidedTransferIds={ voidedTransferIds }
+              freeHitGWs={ freeHitGWs }
             />
           </Box>
         </Box>

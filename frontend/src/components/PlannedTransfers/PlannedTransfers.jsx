@@ -325,6 +325,7 @@ const PlannedTransfers = ({
   currentGameweek,
   compact = false,
   voidedTransferIds = new Set(),
+  freeHitGWs = new Set(),
 }) => {
   const theme = useTheme();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -373,6 +374,7 @@ const PlannedTransfers = ({
           <Box sx={ { display: 'flex', flexDirection: 'column', gap: 1 } }>
             { sorted.map((t, idx) => {
               const isVoided = voidedTransferIds.has(t.id);
+              const isFH = freeHitGWs.has(t.gameweek);
               const outForecast = buildForecast(t.playerOut.code, t.gameweek);
               const inForecast  = buildForecast(t.playerIn.code,  t.gameweek);
               const totalDiff =
@@ -385,6 +387,15 @@ const PlannedTransfers = ({
                     <Typography variant='caption' color='warning.main' sx={ { display: 'block', mb: 0.25, fontStyle: 'italic' } }>
                       Not made – transfer was not executed in FPL
                     </Typography>
+                  ) }
+                  { isFH && !isVoided && (
+                    <Tooltip title={ `Free Hit active — this transfer reverts after GW${t.gameweek}` }>
+                      <Chip
+                        label='Free Hit'
+                        size='small'
+                        sx={ { height: 18, fontSize: '0.6rem', fontWeight: 700, bgcolor: '#e65100', color: '#fff', mb: 0.5, cursor: 'default' } }
+                      />
+                    </Tooltip>
                   ) }
                   <Box
                     sx={ {
@@ -474,6 +485,7 @@ const PlannedTransfers = ({
             <TableBody>
               { sorted.map((t) => {
                 const isVoided = voidedTransferIds.has(t.id);
+                const isFH = freeHitGWs.has(t.gameweek);
                 const outForecast = buildForecast(t.playerOut.code, t.gameweek);
                 const inForecast  = buildForecast(t.playerIn.code,  t.gameweek);
                 const totalDiff =
@@ -493,6 +505,15 @@ const PlannedTransfers = ({
                         <Typography variant='caption' color='warning.main' sx={ { display: 'block', fontStyle: 'italic' } }>
                           Not made
                         </Typography>
+                      ) }
+                      { isFH && !isVoided && (
+                        <Tooltip title={ `Free Hit active — this transfer reverts after GW${t.gameweek}` }>
+                          <Chip
+                            label='Free Hit'
+                            size='small'
+                            sx={ { height: 18, fontSize: '0.6rem', fontWeight: 700, bgcolor: '#e65100', color: '#fff', mb: 0.5, cursor: 'default' } }
+                          />
+                        </Tooltip>
                       ) }
                       <Typography
                         variant='body2'
@@ -565,6 +586,7 @@ PlannedTransfers.propTypes = {
   currentGameweek: PropTypes.number,
   compact: PropTypes.bool,
   voidedTransferIds: PropTypes.instanceOf(Set),
+  freeHitGWs: PropTypes.instanceOf(Set),
 };
 
 export default PlannedTransfers;

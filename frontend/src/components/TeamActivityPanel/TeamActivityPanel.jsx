@@ -19,6 +19,7 @@ const TeamActivityPanel = ({
   team,
   allPlayers,
   voidedTransferIds,
+  freeHitGWs,
 }) => {
   const theme = useTheme();
   const [profile, setProfile] = useState(null);
@@ -292,6 +293,7 @@ const TeamActivityPanel = ({
             currentGameweek={ currentGameweek }
             compact={ true }
             voidedTransferIds={ voidedTransferIds }
+            freeHitGWs={ freeHitGWs }
           />
         </Paper>
       ) }
@@ -328,6 +330,7 @@ TeamActivityPanel.propTypes = {
   team: PropTypes.array,
   allPlayers: PropTypes.array,
   voidedTransferIds: PropTypes.instanceOf(Set),
+  freeHitGWs: PropTypes.instanceOf(Set),
 };
 
 export default TeamActivityPanel;
