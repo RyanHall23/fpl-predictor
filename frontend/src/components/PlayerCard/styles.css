@@ -1,17 +1,13 @@
-/* Dark mode - default */
+/* ── Visual-only: background, border, shadow, border-radius, transition ─────── */
+
+/* Dark mode — default */
 body .player-card {
   width: 105px;
-  height: 175px;
-  display: flex;
-  flex-direction: column;
   background: linear-gradient(135deg, #2a2d3a 0%, #1f2229 100%);
   border-radius: 12px;
   box-shadow: 0 4px 8px rgba(106, 27, 154, 0.2);
-  padding: 6px;
-  margin: 0 auto;
-  position: relative;
-  transition: all 0.3s ease;
   border: 1px solid rgba(171, 71, 188, 0.3);
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
 }
 
 body .player-card:hover {
@@ -19,7 +15,6 @@ body .player-card:hover {
   box-shadow: 0 6px 12px rgba(106, 27, 154, 0.3);
 }
 
-/* Selected player - red border */
 body .player-card-selected {
   border: 3px solid #f44336 !important;
   box-shadow: 0 0 12px rgba(244, 67, 54, 0.5), 0 4px 8px rgba(106, 27, 154, 0.2);
@@ -30,7 +25,6 @@ body .player-card-selected:hover {
   box-shadow: 0 0 16px rgba(244, 67, 54, 0.6), 0 6px 12px rgba(106, 27, 154, 0.3);
 }
 
-/* Valid swap target - green border */
 body .player-card-valid-target {
   border: 3px solid #4caf50 !important;
   box-shadow: 0 0 12px rgba(76, 175, 80, 0.5), 0 4px 8px rgba(106, 27, 154, 0.2);
@@ -53,7 +47,6 @@ html[data-mui-color-scheme='light'] body .player-card:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-/* Light mode - selected player */
 html[data-mui-color-scheme='light'] body .player-card-selected {
   border: 3px solid #f44336 !important;
   box-shadow: 0 0 12px rgba(244, 67, 54, 0.4), 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -63,7 +56,6 @@ html[data-mui-color-scheme='light'] body .player-card-selected:hover {
   box-shadow: 0 0 16px rgba(244, 67, 54, 0.5), 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-/* Light mode - valid swap target */
 html[data-mui-color-scheme='light'] body .player-card-valid-target {
   border: 3px solid #4caf50 !important;
   box-shadow: 0 0 12px rgba(76, 175, 80, 0.4), 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -73,6 +65,8 @@ html[data-mui-color-scheme='light'] body .player-card-valid-target {
 html[data-mui-color-scheme='light'] body .player-card-valid-target:hover {
   box-shadow: 0 0 16px rgba(76, 175, 80, 0.5), 0 4px 12px rgba(0, 0, 0, 0.15);
 }
+
+/* ── Status / dreamteam badges ───────────────────────────────────────────────── */
 
 body .status-badge {
   position: absolute;
@@ -99,27 +93,9 @@ html[data-mui-color-scheme='light'] body .dreamteam-icon {
   color: #ab47bc;
 }
 
-body .card-content {
-  padding: 4px !important;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
+/* ── Shirt — size drives card height naturally ───────────────────────────────── */
 
-body .avatar-box {
-  width: 100%;
-  height: 50px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: visible;
-  background-color: transparent;
-  position: relative;
-  margin-bottom: 0;
-}
-
-body .player-image {
+body .player-shirt {
   width: 30px;
   height: 50px;
   object-fit: cover;
@@ -127,68 +103,19 @@ body .player-image {
   display: block;
 }
 
+/* ── Text colours ────────────────────────────────────────────────────────────── */
+
 body .player-name {
-  font-size: 11px;
-  font-weight: 600;
   color: #ffffff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-align: center;
-  display: block;
-  width: 100%;
-  margin-bottom: 0;
-  letter-spacing: 0.3px;
 }
 
 html[data-mui-color-scheme='light'] body .player-name {
   color: #212121;
 }
 
-body .info-row {
-  margin: 0 !important;
-  width: 100%;
-}
-
-body .info-row .MuiGrid-item {
-  padding: 0 !important;
-}
-
-body .button-row {
-  margin: 0 !important;
-  width: 100%;
-}
-
-body .button-row .MuiGrid-item {
-  padding: 0 !important;
-}
-
-body .info-box {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px;
-  min-height: 24px;
-  width: 100%;
-}
-
-body .info-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: #ab47bc;
-  text-align: center;
-  width: 100%;
-}
-
 body .points-display {
-  font-size: 14px;
-  font-weight: 700;
   color: #ab47bc;
-  text-align: center;
-  width: 100%;
-  letter-spacing: 0.5px;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-  padding: 1px 0;
 }
 
 html[data-mui-color-scheme='light'] body .points-display {
@@ -196,19 +123,7 @@ html[data-mui-color-scheme='light'] body .points-display {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
-body .opponent-pill {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  gap: 2px;
-  width: 100%;
-}
-
-
-html[data-mui-color-scheme='light'] body .info-label {
-  color: #6a1b9a;
-}
+/* ── Action buttons ──────────────────────────────────────────────────────────── */
 
 body .action-button-small {
   width: 100%;
@@ -246,12 +161,9 @@ body .sync-icon {
   color: #ffffff;
 }
 
-body .transfer-arrows-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
+body .captain-button {
+  font-weight: bold;
+  font-size: 14px !important;
 }
 
 html[data-mui-color-scheme='light'] body .action-button-small {
@@ -284,21 +196,8 @@ html[data-mui-color-scheme='light'] body .sync-icon {
   color: #424242;
 }
 
+/* ── Win2k theme ─────────────────────────────────────────────────────────────── */
 
-body .action-button.clicked {
-  background-color: #ff4081;
-}
-
-body .action-button.not-clicked {
-  background-color: #3f51b5;
-}
-
-body .captain-button {
-  font-weight: bold;
-  font-size: 14px !important;
-}
-
-/* Win2k theme */
 body.win2k-theme .player-card {
   background: #d4d0c8;
   border-radius: 0;
@@ -342,11 +241,6 @@ body.win2k-theme .points-display {
   text-shadow: none;
 }
 
-
-body.win2k-theme .info-label {
-  color: #0000a8;
-}
-
 body.win2k-theme .dreamteam-icon {
   color: #0000a8;
   filter: none;
@@ -370,18 +264,7 @@ body.win2k-theme .action-button-small:active {
   box-shadow: inset 1px 1px 0 #000000, inset -1px -1px 0 #dfdfdf;
 }
 
-body.win2k-theme .action-button-small.substitute-button {
-  background: #d4d0c8;
-  color: #000000 !important;
-  border: 2px solid;
-  border-color: #ffffff #808080 #808080 #ffffff;
-}
-
-body.win2k-theme .action-button-small.substitute-button:hover {
-  background: #e0ddd8;
-  border-color: #ffffff #808080 #808080 #ffffff;
-}
-
+body.win2k-theme .action-button-small.substitute-button,
 body.win2k-theme .action-button-small.transfer-button {
   background: #d4d0c8;
   color: #000000 !important;
@@ -389,9 +272,9 @@ body.win2k-theme .action-button-small.transfer-button {
   border-color: #ffffff #808080 #808080 #ffffff;
 }
 
+body.win2k-theme .action-button-small.substitute-button:hover,
 body.win2k-theme .action-button-small.transfer-button:hover {
   background: #e0ddd8;
-  border-color: #ffffff #808080 #808080 #ffffff;
 }
 
 body.win2k-theme .captain-button {
@@ -403,14 +286,14 @@ body.win2k-theme .captain-button {
 
 body.win2k-theme .captain-button:hover {
   background: #e0ddd8;
-  border-color: #ffffff #808080 #808080 #ffffff;
 }
 
 body.win2k-theme .sync-icon {
   color: #000000;
 }
 
-/* Teletext theme */
+/* ── Teletext theme ──────────────────────────────────────────────────────────── */
+
 body.teletext-theme .player-card {
   background: #000000;
   border-radius: 0;
@@ -453,12 +336,6 @@ body.teletext-theme .player-name {
 body.teletext-theme .points-display {
   color: #ffff00;
   text-shadow: none;
-  font-family: "Courier New", "Courier", monospace;
-}
-
-
-body.teletext-theme .info-label {
-  color: #00ffff;
   font-family: "Courier New", "Courier", monospace;
 }
 
@@ -519,67 +396,42 @@ body.teletext-theme .sync-icon {
   color: #00ffff;
 }
 
-/* Mobile responsive - teletext theme (keep square corners on small screens) */
-@media (max-width: 600px) {
-  body.teletext-theme .player-card {
-    border-radius: 0;
-  }
-}
+/* ── Responsive — width + shirt size only, no heights on card ───────────────── */
 
-/* Mobile responsive - small screens */
 @media (max-width: 600px) {
   body .player-card {
     width: 75px;
-    height: auto;
-    min-height: 130px;
-    padding: 4px;
     border-radius: 8px;
   }
 
-  body .avatar-box {
-    height: 38px;
-    margin-bottom: 2px;
+  body.teletext-theme .player-card {
+    border-radius: 0;
   }
 
-  body .player-image {
-    width: 24px;
-    height: 38px;
+  body .player-shirt {
+    width: 22px;
+    height: 37px;
   }
 
   body .player-name {
     font-size: 9px;
-    margin-bottom: 3px;
   }
 
   body .points-display {
     font-size: 11px;
-    padding: 2px 0;
-  }
-
-
-  body .card-content {
-    padding: 4px !important;
-    gap: 3px;
   }
 
   body .action-button-small {
     min-height: 20px;
-    padding: 2px !important;
   }
 }
 
-/* Responsive - medium-large screens (1440p) */
 @media (min-width: 1440px) {
   body .player-card {
     width: 112px;
-    height: 185px;
   }
 
-  body .avatar-box {
-    height: 54px;
-  }
-
-  body .player-image {
+  body .player-shirt {
     width: 32px;
     height: 54px;
   }
@@ -593,30 +445,22 @@ body.teletext-theme .sync-icon {
   }
 }
 
-/* Responsive - 1920p / 2K screens */
 @media (min-width: 1920px) {
   body .player-card {
     width: 120px;
-    height: 200px;
   }
 
-  body .avatar-box {
-    height: 58px;
-  }
-
-  body .player-image {
+  body .player-shirt {
     width: 36px;
     height: 58px;
   }
 
   body .player-name {
     font-size: 12px;
-    margin-bottom: 6px;
   }
 
   body .points-display {
     font-size: 16px;
-    padding: 4px 0;
   }
 
   body .action-button-small {
@@ -624,34 +468,22 @@ body.teletext-theme .sync-icon {
   }
 }
 
-/* Responsive - 4K screens */
 @media (min-width: 2560px) {
   body .player-card {
     width: 128px;
-    height: 215px;
   }
 
-  body .card-content {
-    gap: 7px;
-  }
-
-  body .avatar-box {
-    height: 62px;
-  }
-
-  body .player-image {
+  body .player-shirt {
     width: 40px;
     height: 62px;
   }
 
   body .player-name {
     font-size: 13px;
-    margin-bottom: 7px;
   }
 
   body .points-display {
     font-size: 17px;
-    padding: 5px 0;
   }
 
   body .action-button-small {

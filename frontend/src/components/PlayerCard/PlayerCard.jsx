@@ -145,7 +145,18 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
     : null;
 
   return (
-    <Card className={ cardClassName }>
+    <Card
+      className={ cardClassName }
+      sx={ {
+        width: 105,
+        display: 'flex',
+        flexDirection: 'column',
+        padding: '6px',
+        margin: '0 auto',
+        position: 'relative',
+        transition: 'all 0.3s ease',
+      } }
+    >
       { /* Status dot — shown only when NOT available (injured/doubtful/suspended/unavailable) */ }
       { statusMeta && (
         <Tooltip title={ statusMeta.title } placement='top'>
@@ -184,13 +195,31 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
           </Box>
         </Tooltip>
       ) }
-      <CardContent className='card-content'>
+      <CardContent
+        sx={ {
+          padding: '4px !important',
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '1px',
+          '&:last-child': { paddingBottom: '4px !important' },
+        } }
+      >
         { /* Team Shirt */ }
-        <Box className='avatar-box'>
+        <Box
+          sx={ {
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            overflow: 'visible',
+            position: 'relative',
+          } }
+        >
           <img
             src={ `https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_${player.teamCode}-66.png` }
             alt={ player.webName }
-            className='player-image'
+            className='player-shirt'
             onError={ (e) => {
               e.target.style.display = 'none';
             } }
@@ -198,7 +227,21 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
         </Box>
 
         { /* Player Name */ }
-        <Typography variant='body2' className='player-name'>
+        <Typography
+          variant='body2'
+          className='player-name'
+          sx={ {
+            fontSize: '11px',
+            fontWeight: 600,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            textAlign: 'center',
+            display: 'block',
+            width: '100%',
+            letterSpacing: '0.3px',
+          } }
+        >
           { player.webName }
         </Typography>
 
@@ -213,13 +256,13 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
               size='sm'
             />
           </Box>
-          <Typography variant='h6' className='points-display'>
+          <Typography variant='h6' className='points-display' sx={ { fontSize: '14px', fontWeight: 700, textAlign: 'center', width: '100%', letterSpacing: '0.5px', padding: '1px 0' } }>
             { predictedPoints }
           </Typography>
         </Box>
 
-        { /* Action Buttons */ }
-        { showTransferButtons && team && allPlayers && onTransfer && (
+        { /* Action Buttons — only render if at least one button is interactive */ }
+        { showTransferButtons && team && allPlayers && onTransfer && (isCaptainEligible || onPlayerClick || isFutureGameweek) && (
           <Grid container spacing={ 1 } sx={ { mt: 0.5 } }>
 
             { /* 1. Captain */ }
