@@ -244,6 +244,10 @@ const App = () => {
     return { remaining: Math.max(0, remaining), cost: remaining < 0 ? remaining * -4 : 0 };
   }, [isHighestPredictedTeam, viewingOpponentId, freeTransfers, gameweekInfo, currentGameweek, activeChip, plannedTransfers]);
 
+  // True when the viewed gameweek has already kicked off (active) or finished (past).
+  // Captain changes, substitutions, and new transfers are locked in this state.
+  const isLockedGameweek = !!(gameweekInfo?.isActive || gameweekInfo?.isPast);
+
   // Handle setting team ID (saves to localStorage)
   const handleSetTeamId = (teamId) => {
     if (teamId) {
@@ -320,6 +324,8 @@ const App = () => {
 
   const handleTransfer = (playerOut, playerIn, gameweek) => {
     if (!gameweek || !currentGameweek) return;
+    // Block transfers for active or past gameweeks
+    if (gameweek <= currentGameweek && isLockedGameweek) return;
 
     // Build the squad at the target gameweek (before this new transfer)
     const squadBefore = squadAtGameweek(gameweek);
@@ -371,8 +377,8 @@ const App = () => {
             { /* Stats + controls pod wrapping pitch/bench */ }
             <Paper variant='outlined' sx={ { px: 2, py: 1 } }>
               <Box sx={ { display: 'flex', alignItems: 'center', gap: 2 } }>
-                { /* Chips — left column (own team only) */ }
-                { !isHighestPredictedTeam && !viewingOpponentId && activePlayers.length > 0 && unusedChipIds.length > 0 && (
+                { /* Chips — left column (own team only, not shown for locked GWs) */ }
+                { !isHighestPredictedTeam && !viewingOpponentId && !isLockedGameweek && activePlayers.length > 0 && unusedChipIds.length > 0 && (
                   <Box sx={ { display: 'flex', flexDirection: 'column', gap: 0.5, alignItems: 'center' } }>
                     <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500, whiteSpace: 'nowrap' } }>
                       Chips
@@ -426,7 +432,7 @@ const App = () => {
                     </Typography>
                   ) }
                   <Box sx={ { display: 'flex', justifyContent: 'center' } }>
-                    { !isHighestPredictedTeam && !viewingOpponentId && activePlayers.length > 0 ? (
+                    { !isHighestPredictedTeam && !viewingOpponentId && !isLockedGameweek && activePlayers.length > 0 ? (
                       <Tooltip title='Auto pick best XI from your squad'>
                         <Button
                           size='small'
@@ -492,12 +498,12 @@ const App = () => {
                   <TeamFormation
                     activePlayers={ effectiveActivePlayers }
                     reservePlayers={ effectiveReservePlayers }
-                    onPlayerClick={ (player, zone) => handlePlayerClick?.(player, zone, effectiveActivePlayers, effectiveReservePlayers) }
+                    onPlayerClick={ (!isLockedGameweek && handlePlayerClick) ? (player, zone) => handlePlayerClick(player, zone, effectiveActivePlayers, effectiveReservePlayers) : undefined }
                     selectedPlayer={ selectedPlayer }
                     team={ [...effectiveActivePlayers, ...effectiveReservePlayers] }
                     allPlayers={ allPlayers }
                     isHighestPredictedTeam={ isHighestPredictedTeam }
-                    onSetCaptain={ !isHighestPredictedTeam ? setCaptain : undefined }
+                    onSetCaptain={ (!isHighestPredictedTeam && !isLockedGameweek) ? setCaptain : undefined }
                     currentGameweek={ currentGameweek }
                     isFutureGameweek={ !!gameweekInfo?.isFuture }
                     viewedGameweek={ gameweekInfo?.selected ?? currentGameweek }
@@ -509,12 +515,12 @@ const App = () => {
                   <TeamListView
                     activePlayers={ effectiveActivePlayers }
                     reservePlayers={ effectiveReservePlayers }
-                    onPlayerClick={ (player, zone) => handlePlayerClick?.(player, zone, effectiveActivePlayers, effectiveReservePlayers) }
+                    onPlayerClick={ (!isLockedGameweek && handlePlayerClick) ? (player, zone) => handlePlayerClick(player, zone, effectiveActivePlayers, effectiveReservePlayers) : undefined }
                     selectedPlayer={ selectedPlayer }
                     team={ [...effectiveActivePlayers, ...effectiveReservePlayers] }
                     allPlayers={ allPlayers }
                     isHighestPredictedTeam={ isHighestPredictedTeam }
-                    onSetCaptain={ !isHighestPredictedTeam ? setCaptain : undefined }
+                    onSetCaptain={ (!isHighestPredictedTeam && !isLockedGameweek) ? setCaptain : undefined }
                     currentGameweek={ currentGameweek }
                     isFutureGameweek={ !!gameweekInfo?.isFuture }
                     viewedGameweek={ gameweekInfo?.selected ?? currentGameweek }
