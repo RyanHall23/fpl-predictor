@@ -174,7 +174,11 @@ const enrichPlayersWithGameweekStats = async (players, targetEventId) => {
         !fixture.stats.find(s => s.identifier === 'bonus' && (s.h.length > 0 || s.a.length > 0));
       if (bonusNotSettled) {
         const bonuses = estimateBonusFromBPS(fixture.stats);
-        Object.assign(provisionalBonusMap, bonuses);
+        // Accumulate (sum) bonus per element to correctly handle DGWs where a
+        // player may appear in more than one in-progress fixture.
+        for (const [elementId, bonus] of Object.entries(bonuses)) {
+          provisionalBonusMap[elementId] = (provisionalBonusMap[elementId] ?? 0) + bonus;
+        }
       }
     }
 
@@ -302,7 +306,9 @@ const enrichPlayersWithOpponents = (players, fixtures, teams, targetEventId) => 
       team_h_score: fixture.team_h_score ?? null,
       team_a_score: fixture.team_a_score ?? null,
       finished: fixture.finished ?? false,
-      started: fixture.started ?? false,      minutes: fixture.minutes ?? 0,    });
+      started: fixture.started ?? false,
+      minutes: fixture.minutes ?? 0,
+    });
     
     // Away team
     if (!fixturesByTeam[fixture.team_a]) {
@@ -320,7 +326,9 @@ const enrichPlayersWithOpponents = (players, fixtures, teams, targetEventId) => 
       team_h_score: fixture.team_h_score ?? null,
       team_a_score: fixture.team_a_score ?? null,
       finished: fixture.finished ?? false,
-      started: fixture.started ?? false,      minutes: fixture.minutes ?? 0,    });
+      started: fixture.started ?? false,
+      minutes: fixture.minutes ?? 0,
+    });
   });
   
   // Create team lookup by id

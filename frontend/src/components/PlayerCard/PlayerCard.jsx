@@ -4,6 +4,7 @@ import {
   CardContent,
   Typography,
   Box,
+  ButtonBase,
   IconButton,
   Grid,
   Tooltip,
@@ -207,7 +208,9 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
         } }
       >
         { /* Team Shirt */ }
-        <Box
+        <ButtonBase
+          onClick={ () => setStatsDialogOpen(true) }
+          aria-label={ `View ${player.webName} stats` }
           sx={ {
             width: '100%',
             display: 'flex',
@@ -215,9 +218,7 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
             justifyContent: 'center',
             overflow: 'visible',
             position: 'relative',
-            cursor: 'pointer',
           } }
-          onClick={ () => setStatsDialogOpen(true) }
         >
           <img
             src={ `https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_${player.teamCode}-66.png` }
@@ -227,29 +228,37 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
               e.target.style.display = 'none';
             } }
           />
-        </Box>
+        </ButtonBase>
 
         { /* Player Name */ }
-        <Typography
-          variant='body2'
-          className='player-name'
+        <ButtonBase
           onClick={ () => setStatsDialogOpen(true) }
+          aria-label={ `View ${player.webName} stats` }
           sx={ {
-            fontSize: '11px',
-            fontWeight: 600,
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            textAlign: 'center',
-            display: 'block',
             width: '100%',
-            letterSpacing: '0.3px',
-            cursor: 'pointer',
-            '&:hover': { textDecoration: 'underline' },
+            display: 'block',
+            textAlign: 'center',
+            '&:hover .player-name': { textDecoration: 'underline' },
           } }
         >
-          { player.webName }
-        </Typography>
+          <Typography
+            variant='body2'
+            className='player-name'
+            sx={ {
+              fontSize: '11px',
+              fontWeight: 600,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              textAlign: 'center',
+              display: 'block',
+              width: '100%',
+              letterSpacing: '0.3px',
+            } }
+          >
+            { player.webName }
+          </Typography>
+        </ButtonBase>
 
         { /* Points and Opponent Row */ }
         <Box sx={ { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25 } }>

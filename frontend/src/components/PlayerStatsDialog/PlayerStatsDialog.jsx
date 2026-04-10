@@ -78,7 +78,7 @@ const buildBreakdown = (entry, position, { provisionalBonus = null } = {}) => {
   }
 
   // Penalties saved (GK only)
-  if (entry.penalties_saved > 0) {
+  if (position === 1 && entry.penalties_saved > 0) {
     rows.push({ identifier: 'penalties_saved', value: entry.penalties_saved, points: entry.penalties_saved * 6 });
   }
 
@@ -273,14 +273,16 @@ BreakdownTable.propTypes = {
 const PlayerStatsDialog = ({ open, onClose, player, viewedGameweek }) => {
   const [summary, setSummary] = React.useState(null);
   const [loading, setLoading] = React.useState(false);
+  const [summaryError, setSummaryError] = React.useState(false);
 
   React.useEffect(() => {
     if (!open || !player?.id) return;
     setLoading(true);
     setSummary(null);
+    setSummaryError(false);
     axios.get(`/api/element-summary/${player.id}`)
       .then(res => setSummary(res.data))
-      .catch(() => setSummary(null))
+      .catch(() => setSummaryError(true))
       .finally(() => setLoading(false));
   }, [open, player?.id]);
 
@@ -293,8 +295,10 @@ const PlayerStatsDialog = ({ open, onClose, player, viewedGameweek }) => {
     ? (summary?.history ?? []).filter(h => h.round === viewedGameweek)
     : [];
 
-  // Provisional: game is live/active — no settled history yet but live stats exist
-  const isProvisional = !loading && historyEntries.length === 0 && !!gameweekStats;
+  // Provisional: derived from fixture status — at least one fixture has kicked off
+  // but not yet finished. This is more reliable than inferring from missing history,
+  // which could also mean a fetch failure or a past GW with no element-summary data.
+  const isProvisional = !!(opponents ?? []).some(o => o.started && !o.finished);
 
   // Total points for the gameweek.
   // When history exists but bonus hasn't been officially assigned yet,
@@ -305,7 +309,7 @@ const PlayerStatsDialog = ({ open, onClose, player, viewedGameweek }) => {
     ? settledTotal + (historyBonusTotal === 0 && gameweekStats?.provisional_bonus != null
         ? gameweekStats.provisional_bonus
         : 0)
-    : isProvisional ? (gameweekStats.points ?? null)
+    : isProvisional && gameweekStats ? (gameweekStats.points ?? null)
     : null;
 
   const hasHistory = historyEntries.length > 0;
@@ -345,6 +349,13 @@ const PlayerStatsDialog = ({ open, onClose, player, viewedGameweek }) => {
           <Box sx={ { display: 'flex', justifyContent: 'center', py: 2 } }>
             <CircularProgress size={ 24 } />
           </Box>
+        ) : summaryError ? (
+          <>
+            <Divider sx={ { mb: 1.5 } } />
+            <Typography variant='body2' color='error' sx={ { textAlign: 'center' } }>
+              Unable to load player stats. Please try again.
+            </Typography>
+          </>
         ) : hasHistory ? (
           <>
             <Divider sx={ { mb: 1.5 } } />

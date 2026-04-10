@@ -59,10 +59,11 @@ class Player {
     const gwStats = raw.gameweek_stats ?? null;
     // When official bonus hasn't been assigned yet but we have a BPS estimate,
     // add it to the live total so the card reflects the provisional total.
+    // For DGWs: gwStats.provisional_bonus only covers unsettled fixtures, so
+    // we add it regardless of the settled aggregate bonus (gwStats.bonus).
     const unassignedProvisionalBonus =
       useActualPoints &&
-      gwStats?.provisional_bonus != null &&
-      gwStats.bonus === 0
+      gwStats?.provisional_bonus != null
         ? gwStats.provisional_bonus
         : 0;
     const rawBase          = useActualPoints
