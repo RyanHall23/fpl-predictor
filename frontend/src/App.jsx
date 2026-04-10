@@ -123,6 +123,10 @@ const App = () => {
     }
   }, [snackbarOpen]);
 
+  // True when the viewed gameweek has already kicked off (active) or finished (past).
+  // Captain changes, substitutions, and new transfers are locked in this state.
+  const isLockedGameweek = !!(gameweekInfo?.isActive || gameweekInfo?.isPast);
+
   // Determine which planned transfers have been "voided" – i.e., their gameweek
   // has already been reached but the transfer was not executed in FPL.
   // Two signals indicate this:
@@ -253,10 +257,6 @@ const App = () => {
     const remaining = freeTransfers - plannedCount;
     return { remaining: Math.max(0, remaining), cost: remaining < 0 ? remaining * -4 : 0 };
   }, [isHighestPredictedTeam, viewingOpponentId, freeTransfers, gameweekInfo, currentGameweek, activeChip, plannedTransfers]);
-
-  // True when the viewed gameweek has already kicked off (active) or finished (past).
-  // Captain changes, substitutions, and new transfers are locked in this state.
-  const isLockedGameweek = !!(gameweekInfo?.isActive || gameweekInfo?.isPast);
 
   // Handle setting team ID (saves to localStorage)
   const handleSetTeamId = (teamId) => {
