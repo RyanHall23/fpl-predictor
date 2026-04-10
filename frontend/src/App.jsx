@@ -77,6 +77,7 @@ const App = () => {
   } = usePlannedTransfers();
 
   const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [localSnackbar, setLocalSnackbar] = useState('');
   const [usedFplChips, setUsedFplChips] = useState([]); // chip names from FPL profile e.g. ['bboost', '3xc']
 
   // Map our chip IDs to FPL API chip names
@@ -112,7 +113,7 @@ const App = () => {
     }
   }, [gameweekInfo]);
 
-  const handleSnackbarClose = () => setSnackbarOpen(false);
+  const handleSnackbarClose = () => { setSnackbarOpen(false); setLocalSnackbar(''); };
 
   useEffect(() => {
     if (snackbarOpen) {
@@ -277,10 +278,45 @@ const App = () => {
     setCurrentEntryId(userEntryId);
   };
 
+  /**
+   * Compute the squad (active + reserve) as it would look at `targetGW` after
+   * applying all planned transfers scheduled for future GWs up to and including
+   * `targetGW`.  Used for per-GW club-limit validation.
+   */
+  const squadAtGameweek = (targetGW) => {
+    const applicable = plannedTransfers
+      .filter(t => t.gameweek > currentGameweek && t.gameweek <= targetGW)
+      .sort((a, b) => a.gameweek - b.gameweek);
+
+    let squad = [...activePlayers, ...reservePlayers];
+    for (const t of applicable) {
+      const playerInData = allPlayers.find(p => p.code === t.playerIn.code);
+      if (!playerInData) continue;
+      const idx = squad.findIndex(p => p.code === t.playerOut.code);
+      if (idx !== -1) {
+        squad = [...squad];
+        squad[idx] = { ...playerInData };
+      }
+    }
+    return squad;
+  };
+
   const handleTransfer = (playerOut, playerIn, gameweek) => {
-    const playerInExists = [...effectiveActivePlayers, ...effectiveReservePlayers].some(p => p.code === playerIn.code);
-    if (playerInExists) return;
-    if (gameweek && currentGameweek) addPlannedTransfer(playerOut, playerIn, gameweek);
+    if (!gameweek || !currentGameweek) return;
+
+    // Build the squad at the target gameweek (before this new transfer)
+    const squadBefore = squadAtGameweek(gameweek);
+
+    if (squadBefore.some(p => p.code === playerIn.code)) return;
+
+    // Enforce max 3 players from the same club at that gameweek
+    const clubCount = squadBefore.filter(p => p.team === playerIn.team && p.code !== playerOut.code).length;
+    if (clubCount >= 3) {
+      setLocalSnackbar(`Can't add ${playerIn.webName ?? playerIn.web_name} \u2014 already 3 players from this club in GW${gameweek}`);
+      setSnackbarOpen(true);
+      return;
+    }
+    addPlannedTransfer(playerOut, playerIn, gameweek);
   };
 
   return (
@@ -487,11 +523,11 @@ const App = () => {
           </Box>
         </Box>
         <Snackbar
-          key={ snackbar.key }
+          key={ localSnackbar || snackbar.key }
           open={ snackbarOpen }
           autoHideDuration={ 6000 }
           onClose={ handleSnackbarClose }
-          message={ snackbar.message }
+          message={ localSnackbar || snackbar.message }
         />
       </Container>
     </Box>
