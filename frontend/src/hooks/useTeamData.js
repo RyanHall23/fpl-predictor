@@ -15,6 +15,7 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
   const [teamName, setTeamName] = useState('');
   const [gameweekInfo, setGameweekInfo] = useState(null);
   const [freeTransfers, setFreeTransfers] = useState(null);
+  const [bank, setBank] = useState(null);
   // Incremented each time the user successfully performs a manual substitution.
   // App.jsx watches this to skip selectOptimalLineup after a manual sub.
   const [swapVersion, setSwapVersion] = useState(0);
@@ -62,7 +63,7 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
       // internally — no separate /api/bootstrap-static call needed.
       const gameweekParam = selectedGameweek ? `?gameweek=${selectedGameweek}` : '';
       const response = await axios.get(`/api/entry/${entryId}/team${gameweekParam}`);
-      const { activePlayers: active, reservePlayers: reserve, teamName: fetchedTeamName, gameweek, currentGameweek, isPastGameweek, isFutureGameweek, isActiveGameweek, gameweekData, freeTransfers: ft } = response.data;
+      const { activePlayers: active, reservePlayers: reserve, teamName: fetchedTeamName, gameweek, currentGameweek, isPastGameweek, isFutureGameweek, isActiveGameweek, gameweekData, freeTransfers: ft, bank: bankBalance } = response.data;
 
       setGameweekInfo({
         selected: gameweek,
@@ -77,10 +78,12 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
       setReservePlayers(reserve);
       setTeamName(fetchedTeamName || '');
       setFreeTransfers(ft ?? null);
+      setBank(bankBalance ?? null);
     } catch (error) {
       setTeamName('');
       setGameweekInfo(null);
       setFreeTransfers(null);
+      setBank(null);
       console.error('Error fetching team data:', error);
     }
   }, [entryId, selectedGameweek]);
@@ -279,6 +282,7 @@ const calculateTotalPredictedPoints = (team) => {
     swapVersion,
     autoPickLineup,
     freeTransfers,
+    bank,
   };
 };
 

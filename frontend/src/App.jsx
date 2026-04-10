@@ -62,6 +62,7 @@ const App = () => {
     setCaptain,
     autoPickLineup,
     freeTransfers,
+    bank,
   } = useTeamData(
     currentEntryId,
     teamView === TEAM_VIEW.HIGHEST,
@@ -219,6 +220,37 @@ const App = () => {
   // Planned transfers shown to pitch/bench components — suppressed for locked GWs
   // so stale planned-transfer badges don't render on top of actual picks data.
   const displayPlannedTransfers = isLockedGameweek ? undefined : plannedTransfers;
+
+  // Bank balance adjusted for planned transfers targeting the viewed GW.
+  // null = not applicable (highest predicted team, opponent view, or no bank data).
+  // When viewing a future GW with planned transfers, projects the bank balance
+  // after applying the cumulative cost delta of those transfers.
+  const displayBank = useMemo(() => {
+    if (isHighestPredictedTeam || viewingOpponentId || bank == null) return null;
+    if (!gameweekInfo?.isFuture) return null; // Only show for future GWs
+    const viewedGW = gameweekInfo?.selected ?? currentGameweek;
+    // Apply cumulative transfer cost deltas up to and including viewedGW.
+    const delta = plannedTransfers
+      .filter(t => t.gameweek <= viewedGW)
+      .reduce((sum, t) => {
+        const sellPrice = t.playerOut.sellingPrice ?? t.playerOut.nowCost ?? 0;
+        const buyPrice  = t.playerIn.nowCost ?? 0;
+        return sum + sellPrice - buyPrice;
+      }, 0);
+    return bank + delta;
+  }, [isHighestPredictedTeam, viewingOpponentId, bank, gameweekInfo, currentGameweek, plannedTransfers]);
+
+  // Funds coming in (sum of selling prices) and going out (sum of buying prices)
+  // for planned transfers scheduled for the viewed GW specifically.
+  const displayTransferFunds = useMemo(() => {
+    if (!gameweekInfo?.isFuture || isHighestPredictedTeam || viewingOpponentId) return null;
+    const viewedGW = gameweekInfo?.selected ?? currentGameweek;
+    const gwTransfers = plannedTransfers.filter(t => t.gameweek === viewedGW);
+    if (gwTransfers.length === 0) return null;
+    const fundsIn  = gwTransfers.reduce((s, t) => s + (t.playerOut.sellingPrice ?? t.playerOut.nowCost ?? 0), 0);
+    const fundsOut = gwTransfers.reduce((s, t) => s + (t.playerIn.nowCost ?? 0), 0);
+    return { fundsIn, fundsOut };
+  }, [gameweekInfo, isHighestPredictedTeam, viewingOpponentId, currentGameweek, plannedTransfers]);
 
   // Captain's base points (before 2× multiplier) — used by Triple Captain chip
   const captainBasePoints = useMemo(() => {
@@ -449,7 +481,7 @@ const App = () => {
                 ) }
 
                 { /* Stats + controls grid */ }
-                <Box sx={ { flex: 1, display: 'grid', gridTemplateColumns: displayFreeTransfers != null ? '1fr 1fr 1fr 1fr' : '1fr 1fr 1fr', textAlign: 'center', rowGap: 0.75 } }>
+                <Box sx={ { flex: 1, display: 'grid', gridTemplateColumns: displayFreeTransfers != null || displayBank != null ? `1fr 1fr${ displayFreeTransfers != null ? ' 1fr' : '' }${ displayBank != null ? ' 1fr' : '' } 1fr` : '1fr 1fr 1fr', textAlign: 'center', rowGap: 0.75 } }>
                   { /* Row 1 — labels */ }
                   <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>
                     Total Points
@@ -460,6 +492,11 @@ const App = () => {
                   { displayFreeTransfers != null && (
                     <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>
                       Free Transfers
+                    </Typography>
+                  ) }
+                  { displayBank != null && (
+                    <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>
+                      In the Bank
                     </Typography>
                   ) }
                   <Box sx={ { display: 'flex', justifyContent: 'center' } }>
@@ -503,6 +540,18 @@ const App = () => {
                             </Typography>
                           ) }
                         </>
+                      ) }
+                    </Box>
+                  ) }
+                  { displayBank != null && (
+                    <Box sx={ { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' } }>
+                      <Typography variant='h6' sx={ { fontWeight: 700, lineHeight: 1.2, color: displayBank >= 0 ? 'success.main' : 'error.main' } }>
+                        £{ (displayBank / 10).toFixed(1) }m
+                      </Typography>
+                      { displayTransferFunds && (
+                        <Typography variant='caption' sx={ { color: 'text.secondary', fontWeight: 500, lineHeight: 1, whiteSpace: 'nowrap' } }>
+                          in £{ (displayTransferFunds.fundsIn / 10).toFixed(1) }m · out £{ (displayTransferFunds.fundsOut / 10).toFixed(1) }m
+                        </Typography>
                       ) }
                     </Box>
                   ) }

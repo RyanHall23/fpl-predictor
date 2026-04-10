@@ -87,7 +87,7 @@ const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut, open, onClose
                 <DialogContent>
                     { /* Player Out: fixed, not a dropdown */ }
                     <ListItem>
-                        <ListItemText primary={ playerOut.name } secondary={ playerOut.position } />
+                        <ListItemText primary={ playerOut.name } secondary={ { 1: 'Goalkeeper', 2: 'Defender', 3: 'Midfielder', 4: 'Forward', 5: 'Manager' }[playerOut.position] ?? playerOut.position } />
                     </ListItem>
                     { /* Player In: dropdown, only matching position */ }
                     <Autocomplete

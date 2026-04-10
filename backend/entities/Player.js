@@ -39,8 +39,8 @@ class Player {
     // they fall back to now_cost when building the highest-predicted team where
     // no user-specific purchase history is available.
     this.nowCost         = raw.now_cost;
-    this.purchasePrice   = enrichment.purchasePrice ?? raw.now_cost;
-    this.sellingPrice    = enrichment.sellingPrice  ?? raw.now_cost;
+    this.purchasePrice   = enrichment.purchasePrice ?? raw.purchase_price ?? raw.now_cost;
+    this.sellingPrice    = enrichment.sellingPrice  ?? raw.selling_price  ?? raw.now_cost;
 
     // Availability / injury status
     this.status                    = raw.status;
