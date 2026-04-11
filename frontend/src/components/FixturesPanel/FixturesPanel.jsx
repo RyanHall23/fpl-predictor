@@ -81,11 +81,12 @@ const EventRow = ({ event, homeId, homeAbbr, awayAbbr }) => {
   const abbr   = isHome ? homeAbbr : awayAbbr;
 
   let iconNode = null;
+  let nameSuffix = '';
   if (event.icon === 'goal') {
-    const suffix = event.penaltyKick ? ' (P)' : event.ownGoal ? ' (OG)' : '';
+    nameSuffix = event.penaltyKick ? ' (P)' : event.ownGoal ? ' (OG)' : '';
     iconNode = (
       <Typography component='span' variant='caption' sx={ { flexShrink: 0 } }>
-        ⚽{ suffix }
+        ⚽
       </Typography>
     );
   } else if (event.icon === 'yellow') {
@@ -108,7 +109,7 @@ const EventRow = ({ event, homeId, homeAbbr, awayAbbr }) => {
         { iconNode }
       </Box>
       <Typography variant='caption' sx={ { flex: 1, color: 'text.primary' } } noWrap>
-        { event.player || '—' }
+        { event.player || '—' }{ nameSuffix }
       </Typography>
       <Typography variant='caption' sx={ { color: 'text.secondary', flexShrink: 0 } }>
         { abbr }
