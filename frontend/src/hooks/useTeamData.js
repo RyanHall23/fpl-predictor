@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import axios from '../api';
 import {
   validateSubstitution,
@@ -6,6 +6,8 @@ import {
   selectOptimalLineup,
 } from '../utils/substitution';
 import { saveLineup, loadLineup, restoreLineup } from '../utils/lineupStorage';
+
+const LIVE_POLL_INTERVAL_MS = 60_000;
 
 const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGameweek = null) => {
   const [activePlayers, setActivePlayers] = useState([]);
@@ -28,6 +30,7 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
   // belongs to the current entryId (prevents the old entry's lineup being saved
   // under the new entry's localStorage key immediately after an entryId change).
   const [loadedEntryId, setLoadedEntryId] = useState(null);
+  const [lastUpdated, setLastUpdated] = useState(null);
   // Set of player codes from the most recently loaded current/past/active GW.
   // Used as the fingerprint comparison baseline when restoring a future-GW
   // lineup, because the future-GW API re-optimises the squad ordering and
@@ -58,6 +61,7 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
       
       setActivePlayers(active);
       setReservePlayers(reserve);
+      setLastUpdated(Date.now());
     } catch (error) {
       console.error('Error fetching highest predicted team data:', error);
     }
@@ -121,6 +125,7 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
       // Mark which entry's data is now in state so the persist effect can guard
       // against writing the old lineup under a newly-switched entry's key.
       setLoadedEntryId(entryId);
+      setLastUpdated(Date.now());
     } catch (error) {
       setTeamName('');
       setGameweekInfo(null);
@@ -135,6 +140,25 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
       fetchData();
     }
   }, [fetchData, isHighestPredictedTeam]);
+
+  // Live polling: re-fetch every LIVE_POLL_INTERVAL_MS when the gameweek is active.
+  const isActive = gameweekInfo?.isActive ?? false;
+  const pollRef = useRef(null);
+  useEffect(() => {
+    if (!isActive) return;
+    const tick = () => {
+      if (isHighestPredictedTeam) {
+        fetchHighestPredictedTeam();
+      } else {
+        fetchData();
+      }
+    };
+    pollRef.current = setInterval(tick, LIVE_POLL_INTERVAL_MS);
+    return () => clearInterval(pollRef.current);
+  // fetchHighestPredictedTeam is not memoised so exclude to avoid restart loops;
+  // fetchData is stable via useCallback.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isActive, isHighestPredictedTeam, fetchData]);
 
   // Persist lineup selection to localStorage whenever the user changes their
   // starting XI, bench order, or captain for a future gameweek.  Saved after
@@ -320,6 +344,15 @@ const calculateTotalPredictedPoints = (team) => {
     }
   };
 
+  // Immediately re-fetch whichever team is currently shown.
+  const refresh = useCallback(() => {
+    if (isHighestPredictedTeam) {
+      fetchHighestPredictedTeam();
+    } else {
+      fetchData();
+    }
+  }, [isHighestPredictedTeam, fetchData]);
+
   return {
     activePlayers,
     reservePlayers,
@@ -338,6 +371,9 @@ const calculateTotalPredictedPoints = (team) => {
     autoPickLineup,
     freeTransfers,
     bank,
+    isLive: isActive,
+    lastUpdated,
+    refresh,
   };
 };
 

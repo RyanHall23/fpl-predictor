@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, ButtonBase, Chip, IconButton, Paper, Table, TableBody, TableCell, TableRow, Tooltip, Typography } from '@mui/material';
+import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import SyncIcon from '@mui/icons-material/Sync';
 import RestoreIcon from '@mui/icons-material/Restore';
 import PropTypes from 'prop-types';
@@ -330,6 +331,8 @@ const TeamListView = ({
   viewedGameweek,
   plannedTransfers,
   onRemovePlannedTransfer,
+  isLive,
+  lastUpdated,
 }) => {
   const captain = activePlayers?.length ? activePlayers.find(p => p.is_captain) ?? null : null;
   const sortByPosition = (arr) => [...arr].sort((a, b) => (POSITION_SORT_ORDER[a.position] ?? 9) - (POSITION_SORT_ORDER[b.position] ?? 9));
@@ -351,6 +354,24 @@ const TeamListView = ({
 
   return (
     <Paper sx={ { borderRadius: 2, overflow: 'hidden', width: '100%', pb: '1px' } }>
+      { isLive && (
+        <Box sx={ {
+          display: 'flex', alignItems: 'center', gap: 0.75,
+          px: 1.5, py: 0.5,
+          bgcolor: 'success.dark',
+          borderBottom: '1px solid', borderBottomColor: 'divider',
+        } }>
+          <FiberManualRecordIcon sx={ { fontSize: 10, color: '#69f0ae', animation: 'pulse 1.5s ease-in-out infinite', '@keyframes pulse': { '0%,100%': { opacity: 1 }, '50%': { opacity: 0.3 } } } } />
+          <Typography variant='caption' fontWeight='bold' sx={ { color: '#fff', letterSpacing: '0.05em', textTransform: 'uppercase' } }>
+            Live
+          </Typography>
+          { lastUpdated && (
+            <Typography variant='caption' sx={ { color: 'rgba(255,255,255,0.7)', ml: 'auto' } }>
+              Updated { new Date(lastUpdated).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) }
+            </Typography>
+          ) }
+        </Box>
+      ) }
       <Table size='small' sx={ { tableLayout: 'auto' } }>
         <TableBody>
           { activeList.map((player) => (
@@ -466,6 +487,8 @@ TeamListView.propTypes = {
   viewedGameweek: PropTypes.number,
   plannedTransfers: PropTypes.array,
   onRemovePlannedTransfer: PropTypes.func,
+  isLive: PropTypes.bool,
+  lastUpdated: PropTypes.number,
 };
 
 export default TeamListView;

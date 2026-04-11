@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import axios from './api';
 import { saveChip, loadChip } from './utils/lineupStorage';
 import { computeProjectedBank, simulateFreeTransferCarryover } from './utils/freeHitSimulation';
@@ -21,6 +21,7 @@ import TeamListView from './components/TeamListView/TeamListView';
 import useTeamData from './hooks/useTeamData';
 import useAllPlayers from './hooks/useAllPlayers';
 import usePlannedTransfers from './hooks/usePlannedTransfers';
+import useLiveScores from './hooks/useLiveScores';
 import RightPanel from './components/RightPanel';
 import RecommendedTransfers from './components/RecommendedTransfers';
 import TeamActivityPanel from './components/TeamActivityPanel';
@@ -83,6 +84,9 @@ const App = () => {
     autoPickLineup,
     freeTransfers,
     bank,
+    isLive,
+    lastUpdated,
+    refresh,
   } = useTeamData(
     currentEntryId,
     teamView === TEAM_VIEW.HIGHEST,
@@ -90,6 +94,23 @@ const App = () => {
   );
 
   const { allPlayers } = useAllPlayers(selectedGameweek);
+
+  // Squad team names used to filter relevant ESPN score change notifications.
+  const squadTeamNames = useMemo(() => {
+    const names = new Set();
+    [...activePlayers, ...reservePlayers].forEach(p => { if (p.teamName) names.add(p.teamName); });
+    return [...names];
+  }, [activePlayers, reservePlayers]);
+
+  // Only trigger an immediate FPL re-fetch when the current gameweek is active.
+  const handleRelevantScoreChange = useCallback(() => {
+    if (gameweekInfo?.isActive) refresh();
+  }, [gameweekInfo?.isActive, refresh]);
+
+  const { matches: liveMatches } = useLiveScores({
+    onRelevantChange: handleRelevantScoreChange,
+    squadTeamNames,
+  });
 
   const {
     plannedTransfers,
@@ -694,6 +715,8 @@ const App = () => {
                     plannedTransfers={ !isHighestPredictedTeam ? displayPlannedTransfers : undefined }
                     onRemovePlannedTransfer={ (!isHighestPredictedTeam && !isLockedGameweek) ? removePlannedTransfer : undefined }
                     onTransfer={ handleTransfer }
+                    isLive={ isLive }
+                    lastUpdated={ lastUpdated }
                   />
                 ) }
               </Box>
@@ -717,6 +740,7 @@ const App = () => {
               currentEntryId={ currentEntryId }
               userEntryId={ userEntryId }
               gameweekDeadline={ gameweekInfo?.data?.deadline_time }
+              liveMatches={ liveMatches }
             />
           </Box>
 
