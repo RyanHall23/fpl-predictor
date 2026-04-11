@@ -28,12 +28,23 @@ const STATUS_META = {
   u: { label: 'Unavailable',  color: '#9e9e9e' },
 };
 
-const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTransferButtons = true, teamType, onPlayerClick, selectedPlayer, activePlayers, reservePlayers, onSetCaptain, currentGameweek, isFutureGameweek, isLiveGameweek, isPastGameweek, viewedGameweek, plannedTransfers, onRemovePlannedTransfer }) => {
+const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTransferButtons = true, teamType, onPlayerClick, selectedPlayer, activePlayers, reservePlayers, onSetCaptain, currentGameweek, isFutureGameweek, viewedGameweek, plannedTransfers, onRemovePlannedTransfer }) => {
   const [transferDialogOpen, setTransferDialogOpen] = React.useState(false);
   const [statsDialogOpen, setStatsDialogOpen] = React.useState(false);
 
   // predictedPoints is fully resolved by the backend (basePoints × multiplier).
   const predictedPoints = parseFloat(player.predictedPoints) || 0;
+
+  // Derive per-player points colour state from fixture data:
+  //   future GW       → purple (predicted)
+  //   all fixtures finished → green (complete)
+  //   otherwise       → amber (live or not yet played)
+  const pointsColorClass = (() => {
+    if (isFutureGameweek) return '';
+    const opps = player.opponents;
+    if (opps?.length > 0 && opps.every(o => o.finished)) return ' points-past';
+    return ' points-live';
+  })();
 
   // Player status badge — only shown when NOT available (injured/doubtful/suspended/unavailable)
   const chance = player.chanceOfPlayingNextRound;
@@ -270,7 +281,7 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
             })) }
             size='sm'
           />
-          <Typography variant='h6' className={ `points-display${isLiveGameweek ? ' points-live' : isPastGameweek ? ' points-past' : ''}` } sx={ { fontSize: '14px', fontWeight: 700, textAlign: 'center', width: '100%', letterSpacing: '0.5px', padding: '1px 0' } }>
+          <Typography variant='h6' className={ `points-display${pointsColorClass}` } sx={ { fontSize: '14px', fontWeight: 700, textAlign: 'center', width: '100%', letterSpacing: '0.5px', padding: '1px 0' } }>
             { predictedPoints }
           </Typography>
         </Box>
@@ -453,8 +464,6 @@ PlayerCard.propTypes = {
   onSetCaptain: PropTypes.func,
   currentGameweek: PropTypes.number,
   isFutureGameweek: PropTypes.bool,
-  isLiveGameweek: PropTypes.bool,
-  isPastGameweek: PropTypes.bool,
   viewedGameweek: PropTypes.number,
   plannedTransfers: PropTypes.array,
   onRemovePlannedTransfer: PropTypes.func,

@@ -50,8 +50,6 @@ const ListRow = ({
   onPlayerClick,
   onSetCaptain,
   isFutureGameweek,
-  isLiveGameweek,
-  isPastGameweek,
   viewedGameweek,
   plannedTransfers,
   onRemovePlannedTransfer,
@@ -68,6 +66,11 @@ const ListRow = ({
     teamsMatch(player.teamName, m.homeName) || teamsMatch(player.teamName, m.awayName)
   ) ?? null;
   const liveClock = espnMatch?.isLive ? espnMatch.clock : null;
+
+  // Per-player points colour: future GW → purple (secondary), all fixtures done → green, otherwise → amber
+  const allFixturesDone = !isFutureGameweek && player.opponents?.length > 0 && player.opponents.every(o => o.finished);
+  const pointsColor = isFutureGameweek ? 'secondary.main' : allFixturesDone ? 'success.main' : 'warning.main';
+  const pointsLightColor = isFutureGameweek ? undefined : allFixturesDone ? '#2e7d32' : '#e65100';
   const isCaptainEligible = !!onSetCaptain && player.position !== POSITION_MANAGER;
   const chance = player.chanceOfPlayingNextRound;
   let statusMeta = null;
@@ -170,10 +173,10 @@ const ListRow = ({
             fontWeight='bold'
             noWrap
             sx={ {
-              color: isLiveGameweek ? '#ffa726' : isPastGameweek ? '#66bb6a' : 'secondary.main',
-              'html[data-mui-color-scheme="light"] &': {
-                color: isLiveGameweek ? '#e65100' : isPastGameweek ? '#2e7d32' : undefined,
-              },
+              color: pointsColor,
+              ...(pointsLightColor && {
+                'html[data-mui-color-scheme="light"] &': { color: pointsLightColor },
+              }),
             } }
           >
             { predictedPoints }
@@ -354,8 +357,6 @@ const TeamListView = ({
   onSetCaptain,
   currentGameweek,
   isFutureGameweek,
-  isLiveGameweek,
-  isPastGameweek,
   viewedGameweek,
   plannedTransfers,
   onRemovePlannedTransfer,
@@ -377,7 +378,7 @@ const TeamListView = ({
 
   const sharedRowProps = {
     selectedPlayer, team, allPlayers, onTransfer, onPlayerClick,
-    isFutureGameweek, isLiveGameweek, isPastGameweek, viewedGameweek, plannedTransfers, onRemovePlannedTransfer,
+    isFutureGameweek, viewedGameweek, plannedTransfers, onRemovePlannedTransfer,
     currentGameweek, showTransferButtons: !isHighestPredictedTeam,
     liveMatches,
   };
@@ -496,8 +497,6 @@ ListRow.propTypes = {
   onPlayerClick: PropTypes.func,
   onSetCaptain: PropTypes.func,
   isFutureGameweek: PropTypes.bool,
-  isLiveGameweek: PropTypes.bool,
-  isPastGameweek: PropTypes.bool,
   viewedGameweek: PropTypes.number,
   plannedTransfers: PropTypes.array,
   onRemovePlannedTransfer: PropTypes.func,
@@ -518,8 +517,6 @@ TeamListView.propTypes = {
   onSetCaptain: PropTypes.func,
   currentGameweek: PropTypes.number,
   isFutureGameweek: PropTypes.bool,
-  isLiveGameweek: PropTypes.bool,
-  isPastGameweek: PropTypes.bool,
   viewedGameweek: PropTypes.number,
   plannedTransfers: PropTypes.array,
   onRemovePlannedTransfer: PropTypes.func,

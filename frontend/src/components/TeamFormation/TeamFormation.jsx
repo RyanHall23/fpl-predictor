@@ -13,7 +13,7 @@ const positionLabels = {
   5: 'MAN'
 };
 
-const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, allPlayers, onTransfer, isHighestPredictedTeam, onPlayerClick, onSetCaptain, currentGameweek, isFutureGameweek, isLiveGameweek, isPastGameweek, viewedGameweek, plannedTransfers, onRemovePlannedTransfer }) => {
+const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, allPlayers, onTransfer, isHighestPredictedTeam, onPlayerClick, onSetCaptain, currentGameweek, isFutureGameweek, viewedGameweek, plannedTransfers, onRemovePlannedTransfer }) => {
   // Captain is always provided by the backend (is_captain flag on player).
   // For user teams it comes from picks; for highest-predicted teams the backend
   // marks the best outfield starter as captain.
@@ -68,8 +68,6 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
                     onSetCaptain={ !isHighestPredictedTeam ? onSetCaptain : undefined }
                     currentGameweek={ currentGameweek }
                     isFutureGameweek={ isFutureGameweek }
-                    isLiveGameweek={ isLiveGameweek }
-                    isPastGameweek={ isPastGameweek }
                     viewedGameweek={ viewedGameweek }
                     plannedTransfers={ plannedTransfers }
                     onRemovePlannedTransfer={ onRemovePlannedTransfer }
@@ -96,8 +94,6 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
                       onSetCaptain={ !isHighestPredictedTeam ? onSetCaptain : undefined }
                       currentGameweek={ currentGameweek }
                       isFutureGameweek={ isFutureGameweek }
-                      isLiveGameweek={ isLiveGameweek }
-                      isPastGameweek={ isPastGameweek }
                       viewedGameweek={ viewedGameweek }
                       plannedTransfers={ plannedTransfers }
                       onRemovePlannedTransfer={ onRemovePlannedTransfer }
@@ -125,8 +121,6 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
                     onSetCaptain={ !isHighestPredictedTeam ? onSetCaptain : undefined }
                     currentGameweek={ currentGameweek }
                     isFutureGameweek={ isFutureGameweek }
-                    isLiveGameweek={ isLiveGameweek }
-                    isPastGameweek={ isPastGameweek }
                     viewedGameweek={ viewedGameweek }
                     plannedTransfers={ plannedTransfers }
                     onRemovePlannedTransfer={ onRemovePlannedTransfer }
@@ -153,8 +147,6 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
                     onSetCaptain={ !isHighestPredictedTeam ? onSetCaptain : undefined }
                     currentGameweek={ currentGameweek }
                     isFutureGameweek={ isFutureGameweek }
-                    isLiveGameweek={ isLiveGameweek }
-                    isPastGameweek={ isPastGameweek }
                     viewedGameweek={ viewedGameweek }
                     plannedTransfers={ plannedTransfers }
                     onRemovePlannedTransfer={ onRemovePlannedTransfer }
@@ -181,8 +173,6 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
                     onSetCaptain={ !isHighestPredictedTeam ? onSetCaptain : undefined }
                     currentGameweek={ currentGameweek }
                     isFutureGameweek={ isFutureGameweek }
-                    isLiveGameweek={ isLiveGameweek }
-                    isPastGameweek={ isPastGameweek }
                     viewedGameweek={ viewedGameweek }
                     plannedTransfers={ plannedTransfers }
                     onRemovePlannedTransfer={ onRemovePlannedTransfer }
@@ -218,8 +208,6 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
                       reservePlayers={ reservePlayers }
                       currentGameweek={ currentGameweek }
                       isFutureGameweek={ isFutureGameweek }
-                      isLiveGameweek={ isLiveGameweek }
-                      isPastGameweek={ isPastGameweek }
                       viewedGameweek={ viewedGameweek }
                       plannedTransfers={ plannedTransfers }
                       onRemovePlannedTransfer={ onRemovePlannedTransfer }
@@ -248,8 +236,6 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
                       reservePlayers={ reservePlayers }
                       currentGameweek={ currentGameweek }
                       isFutureGameweek={ isFutureGameweek }
-                      isLiveGameweek={ isLiveGameweek }
-                      isPastGameweek={ isPastGameweek }
                       viewedGameweek={ viewedGameweek }
                       plannedTransfers={ plannedTransfers }
                       onRemovePlannedTransfer={ onRemovePlannedTransfer }
@@ -282,8 +268,6 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
                       reservePlayers={ reservePlayers }
                       currentGameweek={ currentGameweek }
                       isFutureGameweek={ isFutureGameweek }
-                      isLiveGameweek={ isLiveGameweek }
-                      isPastGameweek={ isPastGameweek }
                       viewedGameweek={ viewedGameweek }
                       plannedTransfers={ plannedTransfers }
                       onRemovePlannedTransfer={ onRemovePlannedTransfer }
@@ -314,8 +298,6 @@ TeamFormation.propTypes = {
   onSetCaptain: PropTypes.func,
   currentGameweek: PropTypes.number,
   isFutureGameweek: PropTypes.bool,
-  isLiveGameweek: PropTypes.bool,
-  isPastGameweek: PropTypes.bool,
   viewedGameweek: PropTypes.number,
   plannedTransfers: PropTypes.array,
   onRemovePlannedTransfer: PropTypes.func,
