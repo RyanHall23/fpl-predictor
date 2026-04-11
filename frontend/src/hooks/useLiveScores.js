@@ -46,7 +46,6 @@ export const parseMatch = (event) => {
       minute:      d.clock?.displayValue ?? '',
       teamId:      d.team?.id,
       player:      d.athletesInvolved?.[0]?.shortName ?? '',
-      assist:      d.athletesInvolved?.[1]?.shortName ?? '',
       penaltyKick: d.penaltyKick ?? false,
       ownGoal:     d.ownGoal ?? false,
     };
