@@ -324,6 +324,7 @@ const ListRow = ({
         onClose={ () => setStatsDialogOpen(false) }
         player={ player }
         viewedGameweek={ viewedGameweek }
+        liveMatches={ liveMatches }
       />
     </>
   );
