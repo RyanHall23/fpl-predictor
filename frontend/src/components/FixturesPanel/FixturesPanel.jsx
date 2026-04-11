@@ -253,8 +253,8 @@ const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme, assisters }
             ) }
             { (() => {
               // Build per-team assister queues so each goal consumes the next available assister.
-              const homeQueue = (assisters ?? []).filter(a => a.abbr === espnMatch?.homeAbbr).flatMap(a => Array(a.value).fill(a.name));
-              const awayQueue = (assisters ?? []).filter(a => a.abbr === espnMatch?.awayAbbr).flatMap(a => Array(a.value).fill(a.name));
+              const homeQueue = (assisters ?? []).filter(a => a.abbr === espnMatch?.homeAbbr).flatMap(a => Array(Math.trunc(a.value)).fill(a.name));
+              const awayQueue = (assisters ?? []).filter(a => a.abbr === espnMatch?.awayAbbr).flatMap(a => Array(Math.trunc(a.value)).fill(a.name));
               return espnMatch?.details
                 .filter(d => d.icon !== 'other')
                 .map((event, idx) => {
@@ -279,7 +279,8 @@ const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme, assisters }
               <Box key={ idx } sx={ { display: 'flex', alignItems: 'center', gap: 0.75, py: '2px' } }>
                 <Typography variant='caption' sx={ { color: 'text.disabled', minWidth: 34, flexShrink: 0 } } />
                 <Box sx={ { width: 18, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
-                  <Typography component='span' variant='caption'>🅰️</Typography>
+                  <Typography component='span' variant='caption' aria-hidden='true'>🅰️</Typography>
+                  <Box component='span' sx={ { position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' } }>Assist:</Box>
                 </Box>
                 <Typography variant='caption' sx={ { flex: 1, color: 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }>
                   { a.name }{ a.value > 1 ? ` ×${a.value}` : '' }
@@ -386,7 +387,6 @@ const FixturesPanel = ({ gameweek, deadline, liveMatches }) => {
     if (espnMatch?.espnId) {
       // ── ESPN primary ────────────────────────────────────────────────────────
       if (fetchedSummaryRef.current.has(espnMatch.espnId)) return;
-      fetchedSummaryRef.current.add(espnMatch.espnId);
       let cancelled = false;
       fetch(ESPN_SUMMARY_URL(espnMatch.espnId))
         .then(r => r.json())
@@ -407,6 +407,7 @@ const FixturesPanel = ({ gameweek, deadline, liveMatches }) => {
               }
             }
           }
+          fetchedSummaryRef.current.add(espnMatch.espnId);
           setSummaryAssistersMap(prev => ({ ...prev, [espnMatch.espnId]: assisters }));
         })
         .catch(() => {});
