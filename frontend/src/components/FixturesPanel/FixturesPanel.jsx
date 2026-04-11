@@ -78,7 +78,7 @@ CardBox.propTypes = { color: PropTypes.string.isRequired };
 
 // ─── Single event row inside the expanded section ────────────────────────────
 
-const EventRow = ({ event, homeId, homeAbbr, awayAbbr }) => {
+const EventRow = ({ event, homeId, homeAbbr, awayAbbr, assist }) => {
   const isHome = event.teamId === homeId;
   const abbr   = isHome ? homeAbbr : awayAbbr;
 
@@ -100,7 +100,7 @@ const EventRow = ({ event, homeId, homeAbbr, awayAbbr }) => {
   }
 
   return (
-    <Box sx={ { display: 'flex', alignItems: 'center', gap: 0.75, py: '2px' } }>
+    <Box sx={ { display: 'flex', alignItems: 'flex-start', gap: 0.75, py: '2px' } }>
       <Typography
         variant='caption'
         sx={ { color: 'text.disabled', minWidth: 34, flexShrink: 0, fontVariantNumeric: 'tabular-nums' } }
@@ -110,9 +110,16 @@ const EventRow = ({ event, homeId, homeAbbr, awayAbbr }) => {
       <Box sx={ { width: 18, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
         { iconNode }
       </Box>
-      <Typography variant='caption' sx={ { flex: 1, color: 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }>
-        { event.player || '—' }{ nameSuffix }
-      </Typography>
+      <Box sx={ { flex: 1, overflow: 'hidden' } }>
+        <Typography variant='caption' sx={ { color: 'text.primary', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }>
+          { event.player || '—' }{ nameSuffix }
+        </Typography>
+        { assist && (
+          <Typography variant='caption' sx={ { color: 'text.primary', display: 'block', pl: 1.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }>
+            Assist: { assist }
+          </Typography>
+        ) }
+      </Box>
       <Typography variant='caption' sx={ { color: 'text.secondary', flexShrink: 0 } }>
         { abbr }
       </Typography>
@@ -125,6 +132,7 @@ EventRow.propTypes = {
   homeId:   PropTypes.string,
   homeAbbr: PropTypes.string,
   awayAbbr: PropTypes.string,
+  assist:   PropTypes.string,
 };
 
 // ─── Single fixture row (collapsible) ────────────────────────────────────────
@@ -243,36 +251,44 @@ const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme, assisters }
                 sx={ { mb: 0.75, height: 18, fontSize: '0.6rem', fontWeight: 700 } }
               />
             ) }
-            { espnMatch?.details
+            { (() => {
+              // Build per-team assister queues so each goal consumes the next available assister.
+              const homeQueue = (assisters ?? []).filter(a => a.abbr === espnMatch?.homeAbbr).flatMap(a => Array(a.value).fill(a.name));
+              const awayQueue = (assisters ?? []).filter(a => a.abbr === espnMatch?.awayAbbr).flatMap(a => Array(a.value).fill(a.name));
+              return espnMatch?.details
                 .filter(d => d.icon !== 'other')
-                .map((event, idx) => (
-                  <EventRow
-                    key={ `${event.minute ?? ''}-${event.teamId ?? ''}-${event.player ?? ''}-${event.icon}-${idx}` }
-                    event={ event }
-                    homeId={ espnMatch.homeId }
-                    homeAbbr={ espnMatch.homeAbbr }
-                    awayAbbr={ espnMatch.awayAbbr }
-                  />
-                ))
-            }
-            { assisters?.length > 0 && (
-              <Box sx={ { mt: espnMatch?.details?.some(d => d.icon !== 'other') ? 0.5 : 0 } }>
-                { assisters.map((a, idx) => (
-                  <Box key={ idx } sx={ { display: 'flex', alignItems: 'center', gap: 0.75, py: '2px' } }>
-                    <Typography variant='caption' sx={ { color: 'text.disabled', minWidth: 34, flexShrink: 0 } } />
-                    <Box sx={ { width: 18, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
-                      <Typography component='span' variant='caption' sx={ { flexShrink: 0 } }>🅰️</Typography>
-                    </Box>
-                    <Typography variant='caption' sx={ { flex: 1, color: 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }>
-                      { a.name }{ a.value > 1 ? ` ×${a.value}` : '' }
-                    </Typography>
-                    <Typography variant='caption' sx={ { color: 'text.secondary', flexShrink: 0 } }>
-                      { a.abbr }
-                    </Typography>
-                  </Box>
-                )) }
+                .map((event, idx) => {
+                  let assist = undefined;
+                  if (event.icon === 'goal' && !event.ownGoal && !event.penaltyKick) {
+                    const isHome = event.teamId === espnMatch.homeId;
+                    assist = isHome ? homeQueue.shift() : awayQueue.shift();
+                  }
+                  return (
+                    <EventRow
+                      key={ `${event.minute ?? ''}-${event.teamId ?? ''}-${event.player ?? ''}-${event.icon}-${idx}` }
+                      event={ event }
+                      homeId={ espnMatch.homeId }
+                      homeAbbr={ espnMatch.homeAbbr }
+                      awayAbbr={ espnMatch.awayAbbr }
+                      assist={ assist }
+                    />
+                  );
+                });
+            })() }
+            { !espnMatch && assisters?.length > 0 && assisters.map((a, idx) => (
+              <Box key={ idx } sx={ { display: 'flex', alignItems: 'center', gap: 0.75, py: '2px' } }>
+                <Typography variant='caption' sx={ { color: 'text.disabled', minWidth: 34, flexShrink: 0 } } />
+                <Box sx={ { width: 18, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
+                  <Typography component='span' variant='caption'>🅰️</Typography>
+                </Box>
+                <Typography variant='caption' sx={ { flex: 1, color: 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }>
+                  { a.name }{ a.value > 1 ? ` ×${a.value}` : '' }
+                </Typography>
+                <Typography variant='caption' sx={ { color: 'text.secondary', flexShrink: 0 } }>
+                  { a.abbr }
+                </Typography>
               </Box>
-            ) }
+            )) }
           </Box>
         </Collapse>
       ) }
