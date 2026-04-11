@@ -101,9 +101,11 @@ const buildBreakdown = (entry, position, { provisionalBonus = null } = {}) => {
     rows.push({ identifier: 'saves', value: entry.saves, points: Math.floor(entry.saves / 3) });
   }
 
-  // Defensive contribution — 2 pts per 12 contributions (threshold-based)
+  // Defensive contribution — 2 pts when threshold reached:
+  // GK/DEF: 10+ CBI+tackles; MID/FWD: 12+ CBI+tackles+recoveries
   if (entry.defensive_contribution > 0) {
-    const dcPts = Math.floor(entry.defensive_contribution / 12) * 2;
+    const dcThreshold = (position === 1 || position === 2) ? 10 : 12;
+    const dcPts = entry.defensive_contribution >= dcThreshold ? 2 : 0;
     rows.push({ identifier: 'defensive_contribution', value: entry.defensive_contribution, points: dcPts, provisional: false });
   }
 
