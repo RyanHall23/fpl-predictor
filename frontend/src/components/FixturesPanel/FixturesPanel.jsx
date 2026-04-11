@@ -147,7 +147,7 @@ const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme }) => {
   const isLive    = hasEspn ? espnMatch.isLive : (!isFinished && isStarted);
   const isOver    = hasEspn ? espnMatch.isFinished : isFinished;
   const clock     = (!isOver && hasEspn) ? espnMatch.clock : null;
-  const hasEvents = hasEspn && espnMatch.details.some(d => d.icon !== 'other');
+  const hasEvents = hasEspn && (isLive || espnMatch.details.some(d => d.icon !== 'other'));
 
   const teamNameSx = { flex: 1, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
 
@@ -233,9 +233,9 @@ const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme }) => {
               borderLeftColor: 'divider',
             } }
           >
-            { isLive && (
+            { isLive && espnMatch.clock && (
               <Chip
-                label='LIVE'
+                label={ espnMatch.clock }
                 size='small'
                 color='warning'
                 sx={ { mb: 0.75, height: 18, fontSize: '0.6rem', fontWeight: 700 } }
