@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, ButtonBase, Chip, IconButton, Paper, Table, TableBody, TableCell, TableRow, Tooltip, Typography } from '@mui/material';
+import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import SyncIcon from '@mui/icons-material/Sync';
 import RestoreIcon from '@mui/icons-material/Restore';
 import PropTypes from 'prop-types';
@@ -7,6 +8,7 @@ import TransferPlayer from '../TransferPlayer/TransferPlayer';
 import FixturePill from '../FixturePill/FixturePill';
 import { validateSubstitution } from '../../utils/substitution';
 import PlayerStatsDialog from '../PlayerStatsDialog/PlayerStatsDialog';
+import { teamsMatch } from '../../hooks/useLiveScores';
 
 const POSITION_MANAGER = 5;
 const POSITION_GK  = 1;
@@ -53,12 +55,17 @@ const ListRow = ({
   onRemovePlannedTransfer,
   currentGameweek,
   showTransferButtons,
+  liveMatches,
 }) => {
   const [transferDialogOpen, setTransferDialogOpen] = React.useState(false);
   const [statsDialogOpen, setStatsDialogOpen] = React.useState(false);
 
   const predictedPoints = parseFloat(player.predictedPoints) || 0;
   const kickoff = formatKickoff(player.fixtureKickoff);
+  const espnMatch = liveMatches?.find(m =>
+    teamsMatch(player.teamName, m.homeName) || teamsMatch(player.teamName, m.awayName)
+  ) ?? null;
+  const liveClock = espnMatch?.isLive ? espnMatch.clock : null;
   const isCaptainEligible = !!onSetCaptain && player.position !== POSITION_MANAGER;
   const chance = player.chanceOfPlayingNextRound;
   let statusMeta = null;
@@ -185,7 +192,14 @@ const ListRow = ({
               );
             })() }
             <Box sx={ { width: 52, flexShrink: 0, textAlign: 'left' } }>
-              { kickoff && (
+              { liveClock ? (
+                <Chip
+                  label={ liveClock }
+                  size='small'
+                  color='warning'
+                  sx={ { fontSize: '9px', height: 18, '& .MuiChip-label': { px: '5px' } } }
+                />
+              ) : kickoff && (
                 <Typography variant='caption' color='text.disabled' noWrap>{ kickoff }</Typography>
               ) }
             </Box>
@@ -310,6 +324,7 @@ const ListRow = ({
         onClose={ () => setStatsDialogOpen(false) }
         player={ player }
         viewedGameweek={ viewedGameweek }
+        liveMatches={ liveMatches }
       />
     </>
   );
@@ -330,6 +345,9 @@ const TeamListView = ({
   viewedGameweek,
   plannedTransfers,
   onRemovePlannedTransfer,
+  isLive,
+  lastUpdated,
+  liveMatches,
 }) => {
   const captain = activePlayers?.length ? activePlayers.find(p => p.is_captain) ?? null : null;
   const sortByPosition = (arr) => [...arr].sort((a, b) => (POSITION_SORT_ORDER[a.position] ?? 9) - (POSITION_SORT_ORDER[b.position] ?? 9));
@@ -347,10 +365,29 @@ const TeamListView = ({
     selectedPlayer, team, allPlayers, onTransfer, onPlayerClick,
     isFutureGameweek, viewedGameweek, plannedTransfers, onRemovePlannedTransfer,
     currentGameweek, showTransferButtons: !isHighestPredictedTeam,
+    liveMatches,
   };
 
   return (
     <Paper sx={ { borderRadius: 2, overflow: 'hidden', width: '100%', pb: '1px' } }>
+      { isLive && (
+        <Box sx={ {
+          display: 'flex', alignItems: 'center', gap: 0.75,
+          px: 1.5, py: 0.5,
+          bgcolor: 'success.dark',
+          borderBottom: '1px solid', borderBottomColor: 'divider',
+        } }>
+          <FiberManualRecordIcon sx={ { fontSize: 10, color: '#69f0ae', animation: 'pulse 1.5s ease-in-out infinite', '@keyframes pulse': { '0%,100%': { opacity: 1 }, '50%': { opacity: 0.3 } } } } />
+          <Typography variant='caption' fontWeight='bold' sx={ { color: '#fff', letterSpacing: '0.05em', textTransform: 'uppercase' } }>
+            Live
+          </Typography>
+          { lastUpdated && (
+            <Typography variant='caption' sx={ { color: 'rgba(255,255,255,0.7)', ml: 'auto' } }>
+              Updated { new Date(lastUpdated).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) }
+            </Typography>
+          ) }
+        </Box>
+      ) }
       <Table size='small' sx={ { tableLayout: 'auto' } }>
         <TableBody>
           { activeList.map((player) => (
@@ -432,6 +469,7 @@ ListRow.propTypes = {
     news: PropTypes.string,
     fixtureKickoff: PropTypes.string,
     difficulty: PropTypes.number,
+    teamName: PropTypes.string,
   }).isRequired,
   isCaptain: PropTypes.bool,
   teamType: PropTypes.string,
@@ -449,6 +487,7 @@ ListRow.propTypes = {
   onRemovePlannedTransfer: PropTypes.func,
   currentGameweek: PropTypes.number,
   showTransferButtons: PropTypes.bool,
+  liveMatches: PropTypes.array,
 };
 
 TeamListView.propTypes = {
@@ -466,6 +505,9 @@ TeamListView.propTypes = {
   viewedGameweek: PropTypes.number,
   plannedTransfers: PropTypes.array,
   onRemovePlannedTransfer: PropTypes.func,
+  isLive: PropTypes.bool,
+  lastUpdated: PropTypes.number,
+  liveMatches: PropTypes.array,
 };
 
 export default TeamListView;
