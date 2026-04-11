@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const ESPN_URL = 'https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/scoreboard';
 export const POLL_MS = 30_000;
@@ -74,6 +74,8 @@ export const parseMatch = (event) => {
  * Polls the ESPN PL scoreboard every 30 s.
  *
  * @param {Object}   options
+ * @param {boolean}  [options.enabled=true]         - When false, polling is
+ *   paused and the matches list is cleared.
  * @param {Function} [options.onRelevantChange] - Called immediately when a
  *   goal or red card is detected for a team in the user's squad.
  * @param {string[]} [options.squadTeamNames]   - FPL team names present in the
@@ -81,64 +83,88 @@ export const parseMatch = (event) => {
  *
  * @returns {{ matches: Array, anyLive: boolean }}
  */
-export default function useLiveScores({ onRelevantChange, squadTeamNames = [] } = {}) {
+export default function useLiveScores({ enabled = true, onRelevantChange, squadTeamNames = [] } = {}) {
   const [matches, setMatches] = useState([]);
 
   const prevRef       = useRef({});
   const onChangeRef   = useRef(onRelevantChange);
   const squadNamesRef = useRef(squadTeamNames);
 
-  // Keep refs current without restarting the interval on every render.
-  useEffect(() => { onChangeRef.current   = onRelevantChange; });
-  useEffect(() => { squadNamesRef.current = squadTeamNames;   });
-
-  const fetchScores = useCallback(async () => {
-    try {
-      const res    = await fetch(ESPN_URL);
-      const data   = await res.json();
-      const parsed = (data.events ?? []).map(parseMatch).filter(Boolean);
-
-      setMatches(parsed);
-
-      let relevantChange = false;
-
-      for (const m of parsed) {
-        const prev = prevRef.current[m.espnId];
-
-        if (prev) {
-          const scoreChanged = m.homeScore !== prev.homeScore || m.awayScore !== prev.awayScore;
-          const newDetails   = m.details.slice(prev.detailCount);
-          const newRed       = newDetails.some(d => d.icon === 'red');
-
-          if (scoreChanged || newRed) {
-            const squad = squadNamesRef.current;
-            const relevant =
-              squad.length === 0 ||
-              squad.some(t => teamsMatch(t, m.homeName) || teamsMatch(t, m.awayName));
-            if (relevant) relevantChange = true;
-          }
-        }
-
-        prevRef.current[m.espnId] = {
-          homeScore:   m.homeScore,
-          awayScore:   m.awayScore,
-          detailCount: m.details.length,
-        };
-      }
-
-      if (relevantChange && onChangeRef.current) {
-        onChangeRef.current();
-      }
-    } catch {
-      // Best-effort — live scores are non-critical
-    }
-  }, []);
+  // Keep refs in sync with the latest prop values without restarting the poll.
+  useEffect(() => { onChangeRef.current   = onRelevantChange; }, [onRelevantChange]);
+  useEffect(() => { squadNamesRef.current = squadTeamNames;   }, [squadTeamNames]);
 
   useEffect(() => {
-    fetchScores();
-    const id = setInterval(fetchScores, POLL_MS);
-    return () => clearInterval(id);
-  }, [fetchScores]);
+    if (!enabled) {
+      setMatches([]);
+      return;
+    }
+
+    let cancelled  = false;
+    let timeoutId  = null;
+    let controller = null;
+
+    const run = async () => {
+      if (cancelled) return;
+      const ac = new AbortController();
+      controller = ac;
+      try {
+        const res    = await fetch(ESPN_URL, { signal: ac.signal });
+        const data   = await res.json();
+        if (cancelled) return;
+
+        const parsed = (data.events ?? []).map(parseMatch).filter(Boolean);
+        setMatches(parsed);
+
+        let relevantChange = false;
+
+        for (const m of parsed) {
+          const prev = prevRef.current[m.espnId];
+
+          if (prev) {
+            const scoreChanged = m.homeScore !== prev.homeScore || m.awayScore !== prev.awayScore;
+            const newDetails   = m.details.slice(prev.detailCount);
+            const newRed       = newDetails.some(d => d.icon === 'red');
+
+            if (scoreChanged || newRed) {
+              const squad = squadNamesRef.current;
+              const relevant =
+                squad.length === 0 ||
+                squad.some(t => teamsMatch(t, m.homeName) || teamsMatch(t, m.awayName));
+              if (relevant) relevantChange = true;
+            }
+          }
+
+          prevRef.current[m.espnId] = {
+            homeScore:   m.homeScore,
+            awayScore:   m.awayScore,
+            detailCount: m.details.length,
+          };
+        }
+
+        if (relevantChange && onChangeRef.current) {
+          onChangeRef.current();
+        }
+      } catch (e) {
+        if (e.name !== 'AbortError') {
+          // Best-effort — live scores are non-critical
+        }
+      } finally {
+        controller = null;
+        if (!cancelled) {
+          timeoutId = setTimeout(run, POLL_MS);
+        }
+      }
+    };
+
+    run();
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+      controller?.abort();
+    };
+  }, [enabled]);
 
   return { matches, anyLive: matches.some(m => m.isLive) };
 }

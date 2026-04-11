@@ -43,7 +43,7 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
   }, [isHighestPredictedTeamInit]);
 
   // Fetch the highest predicted team from the backend
-  const fetchHighestPredictedTeam = async () => {
+  const fetchHighestPredictedTeam = useCallback(async () => {
     try {
       const gameweekParam = selectedGameweek ? `?gameweek=${selectedGameweek}` : '';
       const response = await axios.get(`/api/predicted-team${gameweekParam}`);
@@ -65,13 +65,13 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
     } catch (error) {
       console.error('Error fetching highest predicted team data:', error);
     }
-  };
+  }, [selectedGameweek]);
   
   useEffect(() => {
     if (isHighestPredictedTeam) {
       fetchHighestPredictedTeam();
     }
-  }, [isHighestPredictedTeam, selectedGameweek]);
+  }, [isHighestPredictedTeam, fetchHighestPredictedTeam]);
 
   // Fetch the user's actual team (already sorted/grouped by backend)
   const fetchData = useCallback(async () => {
@@ -142,23 +142,54 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
   }, [fetchData, isHighestPredictedTeam]);
 
   // Live polling: re-fetch every LIVE_POLL_INTERVAL_MS when the gameweek is active.
+  // Uses self-scheduling setTimeout with an in-flight guard so a slow response
+  // never results in overlapping requests or stale data overwriting newer state.
   const isActive = gameweekInfo?.isActive ?? false;
-  const pollRef = useRef(null);
+  const pollTimeoutRef = useRef(null);
+  const pollInFlightRef = useRef(false);
+  // Keep latest fetch callbacks in refs so the polling closure always calls the
+  // most-recent version without needing to restart the effect when they change.
+  const latestFetchDataRef = useRef(fetchData);
+  const latestFetchHighestPredictedTeamRef = useRef(fetchHighestPredictedTeam);
+  latestFetchDataRef.current = fetchData;
+  latestFetchHighestPredictedTeamRef.current = fetchHighestPredictedTeam;
+
   useEffect(() => {
     if (!isActive) return;
-    const tick = () => {
-      if (isHighestPredictedTeam) {
-        fetchHighestPredictedTeam();
-      } else {
-        fetchData();
+
+    let cancelled = false;
+
+    const scheduleNextPoll = () => {
+      if (cancelled) return;
+      pollTimeoutRef.current = setTimeout(runPoll, LIVE_POLL_INTERVAL_MS);
+    };
+
+    const runPoll = async () => {
+      if (cancelled || pollInFlightRef.current) {
+        scheduleNextPoll();
+        return;
+      }
+
+      pollInFlightRef.current = true;
+      try {
+        if (isHighestPredictedTeam) {
+          await latestFetchHighestPredictedTeamRef.current();
+        } else {
+          await latestFetchDataRef.current();
+        }
+      } finally {
+        pollInFlightRef.current = false;
+        scheduleNextPoll();
       }
     };
-    pollRef.current = setInterval(tick, LIVE_POLL_INTERVAL_MS);
-    return () => clearInterval(pollRef.current);
-  // fetchHighestPredictedTeam is not memoised so exclude to avoid restart loops;
-  // fetchData is stable via useCallback.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isActive, isHighestPredictedTeam, fetchData]);
+
+    pollTimeoutRef.current = setTimeout(runPoll, LIVE_POLL_INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(pollTimeoutRef.current);
+    };
+  }, [isActive, isHighestPredictedTeam]);
 
   // Persist lineup selection to localStorage whenever the user changes their
   // starting XI, bench order, or captain for a future gameweek.  Saved after
@@ -351,7 +382,7 @@ const calculateTotalPredictedPoints = (team) => {
     } else {
       fetchData();
     }
-  }, [isHighestPredictedTeam, fetchData]);
+  }, [isHighestPredictedTeam, fetchData, fetchHighestPredictedTeam]);
 
   return {
     activePlayers,

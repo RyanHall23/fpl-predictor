@@ -107,7 +107,12 @@ const App = () => {
     if (gameweekInfo?.isActive) refresh();
   }, [gameweekInfo?.isActive, refresh]);
 
+  // Only poll ESPN when the current gameweek is active to avoid unnecessary
+  // network traffic when viewing past or future gameweeks.
+  const liveScoresEnabled = !!gameweekInfo?.isActive;
+
   const { matches: liveMatches } = useLiveScores({
+    enabled: liveScoresEnabled,
     onRelevantChange: handleRelevantScoreChange,
     squadTeamNames,
   });

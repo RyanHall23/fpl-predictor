@@ -245,7 +245,7 @@ const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme }) => {
                 .filter(d => d.icon !== 'other')
                 .map((event, idx) => (
                   <EventRow
-                    key={ idx }
+                    key={ `${event.minute ?? ''}-${event.teamId ?? ''}-${event.player ?? ''}-${event.icon}-${idx}` }
                     event={ event }
                     homeId={ espnMatch.homeId }
                     homeAbbr={ espnMatch.homeAbbr }
@@ -302,6 +302,7 @@ const FixturesPanel = ({ gameweek, deadline, liveMatches }) => {
   // liveMatches (which only holds today's polling data).
   useEffect(() => {
     if (!fixtures.length) return;
+    let cancelled = false;
     const todayUtc = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
     const uniqueDates = [...new Set(
       fixtures
@@ -319,7 +320,12 @@ const FixturesPanel = ({ gameweek, deadline, liveMatches }) => {
           .then(data => (data.events ?? []).map(parseMatch).filter(Boolean))
           .catch(() => [])
       )
-    ).then(results => setHistoricalMatches(prev => [...prev, ...results.flat()]));
+    ).then(results => {
+      if (!cancelled) {
+        setHistoricalMatches(prev => [...prev, ...results.flat()]);
+      }
+    });
+    return () => { cancelled = true; };
   }, [fixtures]);
 
   // Combine today's live data with any fetched historical dates.
