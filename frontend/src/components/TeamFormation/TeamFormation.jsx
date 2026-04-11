@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Paper, Typography } from '@mui/material';
+import { Box, Divider, Paper, Typography } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import PropTypes from 'prop-types';
 import PlayerCard from '../PlayerCard/PlayerCard';
@@ -242,6 +242,10 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
                     />
                   </Box>
                 </Grid>
+              ) }
+              { /* Vertical separator between bench GK and outfield */ }
+              { benchGK && benchOutfield.length > 0 && (
+                <Divider orientation='vertical' flexItem sx={ { mx: 0.5, alignSelf: 'center', height: 80 } } />
               ) }
               { /* Outfield bench players */ }
               { benchOutfield.map((player) => (

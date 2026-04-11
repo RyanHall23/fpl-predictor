@@ -334,7 +334,14 @@ const TeamListView = ({
   const captain = activePlayers?.length ? activePlayers.find(p => p.is_captain) ?? null : null;
   const sortByPosition = (arr) => [...arr].sort((a, b) => (POSITION_SORT_ORDER[a.position] ?? 9) - (POSITION_SORT_ORDER[b.position] ?? 9));
   const activeList = sortByPosition(activePlayers ?? []);
-  const reserveList = sortByPosition(reservePlayers ?? []);
+  const reserveList = (() => {
+    const bench = reservePlayers ?? [];
+    const gk = bench.filter(p => p.position === POSITION_GK);
+    const outfield = bench.filter(p => p.position !== POSITION_GK && p.position !== POSITION_MANAGER)
+      .sort((a, b) => (parseFloat(b.predictedPoints) || 0) - (parseFloat(a.predictedPoints) || 0));
+    const manager = bench.filter(p => p.position === POSITION_MANAGER);
+    return [...manager, ...gk, ...outfield];
+  })();
 
   const sharedRowProps = {
     selectedPlayer, team, allPlayers, onTransfer, onPlayerClick,
@@ -375,18 +382,30 @@ const TeamListView = ({
             </TableCell>
           </TableRow>
 
-          { reserveList.map((player) => (
-            <ListRow
-              key={ player.code ?? player.webName }
-              player={ player }
-              isCaptain={ false }
-              teamType='reserve'
-              activePlayers={ activePlayers }
-              reservePlayers={ reservePlayers }
-              onSetCaptain={ undefined }
-              { ...sharedRowProps }
-            />
-          )) }
+          { reserveList.map((player, idx) => {
+            const prevPlayer = reserveList[idx - 1];
+            const showSeparator = idx > 0 && prevPlayer?.position === POSITION_GK && player.position !== POSITION_GK;
+            return (
+              <React.Fragment key={ player.code ?? player.webName }>
+                { showSeparator && (
+                  <TableRow>
+                    <TableCell colSpan={ 7 } sx={ { p: 0, border: 'none' } }>
+                      <Box sx={ { borderTop: '2px solid', borderTopColor: 'divider', mx: 1 } } />
+                    </TableCell>
+                  </TableRow>
+                ) }
+                <ListRow
+                  player={ player }
+                  isCaptain={ false }
+                  teamType='reserve'
+                  activePlayers={ activePlayers }
+                  reservePlayers={ reservePlayers }
+                  onSetCaptain={ undefined }
+                  { ...sharedRowProps }
+                />
+              </React.Fragment>
+            );
+          }) }
         </TableBody>
       </Table>
     </Paper>
