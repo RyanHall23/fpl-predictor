@@ -142,7 +142,8 @@ const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme }) => {
     : isFinished || (isStarted && fplHomeScore != null && fplAwayScore != null);
 
   const isLive    = hasEspn ? espnMatch.isLive : (!isFinished && isStarted);
-  const clock     = hasEspn ? espnMatch.clock  : null;
+  const isOver    = hasEspn ? espnMatch.isFinished : isFinished;
+  const clock     = (!isOver && hasEspn) ? espnMatch.clock : null;
   const hasEvents = hasEspn && espnMatch.details.some(d => d.icon !== 'other');
 
   const teamNameSx = { flex: 1, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
