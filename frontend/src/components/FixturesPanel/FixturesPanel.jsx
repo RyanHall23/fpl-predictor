@@ -104,7 +104,9 @@ const EventRow = ({ event, homeId, homeAbbr, awayAbbr }) => {
       >
         { event.minute }
       </Typography>
-      { iconNode }
+      <Box sx={ { width: 18, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
+        { iconNode }
+      </Box>
       <Typography variant='caption' sx={ { flex: 1, color: 'text.primary' } } noWrap>
         { event.player || '—' }
       </Typography>
