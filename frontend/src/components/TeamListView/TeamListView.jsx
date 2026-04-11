@@ -8,6 +8,7 @@ import TransferPlayer from '../TransferPlayer/TransferPlayer';
 import FixturePill from '../FixturePill/FixturePill';
 import { validateSubstitution } from '../../utils/substitution';
 import PlayerStatsDialog from '../PlayerStatsDialog/PlayerStatsDialog';
+import { teamsMatch } from '../../hooks/useLiveScores';
 
 const POSITION_MANAGER = 5;
 const POSITION_GK  = 1;
@@ -54,12 +55,17 @@ const ListRow = ({
   onRemovePlannedTransfer,
   currentGameweek,
   showTransferButtons,
+  liveMatches,
 }) => {
   const [transferDialogOpen, setTransferDialogOpen] = React.useState(false);
   const [statsDialogOpen, setStatsDialogOpen] = React.useState(false);
 
   const predictedPoints = parseFloat(player.predictedPoints) || 0;
   const kickoff = formatKickoff(player.fixtureKickoff);
+  const espnMatch = liveMatches?.find(m =>
+    teamsMatch(player.teamName, m.homeName) || teamsMatch(player.teamName, m.awayName)
+  ) ?? null;
+  const liveClock = espnMatch?.isLive ? espnMatch.clock : null;
   const isCaptainEligible = !!onSetCaptain && player.position !== POSITION_MANAGER;
   const chance = player.chanceOfPlayingNextRound;
   let statusMeta = null;
@@ -186,7 +192,14 @@ const ListRow = ({
               );
             })() }
             <Box sx={ { width: 52, flexShrink: 0, textAlign: 'left' } }>
-              { kickoff && (
+              { liveClock ? (
+                <Chip
+                  label={ liveClock }
+                  size='small'
+                  color='warning'
+                  sx={ { fontSize: '9px', height: 18, '& .MuiChip-label': { px: '5px' } } }
+                />
+              ) : kickoff && (
                 <Typography variant='caption' color='text.disabled' noWrap>{ kickoff }</Typography>
               ) }
             </Box>
@@ -333,6 +346,7 @@ const TeamListView = ({
   onRemovePlannedTransfer,
   isLive,
   lastUpdated,
+  liveMatches,
 }) => {
   const captain = activePlayers?.length ? activePlayers.find(p => p.is_captain) ?? null : null;
   const sortByPosition = (arr) => [...arr].sort((a, b) => (POSITION_SORT_ORDER[a.position] ?? 9) - (POSITION_SORT_ORDER[b.position] ?? 9));
@@ -350,6 +364,7 @@ const TeamListView = ({
     selectedPlayer, team, allPlayers, onTransfer, onPlayerClick,
     isFutureGameweek, viewedGameweek, plannedTransfers, onRemovePlannedTransfer,
     currentGameweek, showTransferButtons: !isHighestPredictedTeam,
+    liveMatches,
   };
 
   return (
@@ -453,6 +468,7 @@ ListRow.propTypes = {
     news: PropTypes.string,
     fixtureKickoff: PropTypes.string,
     difficulty: PropTypes.number,
+    teamName: PropTypes.string,
   }).isRequired,
   isCaptain: PropTypes.bool,
   teamType: PropTypes.string,
@@ -470,6 +486,7 @@ ListRow.propTypes = {
   onRemovePlannedTransfer: PropTypes.func,
   currentGameweek: PropTypes.number,
   showTransferButtons: PropTypes.bool,
+  liveMatches: PropTypes.array,
 };
 
 TeamListView.propTypes = {
@@ -489,6 +506,7 @@ TeamListView.propTypes = {
   onRemovePlannedTransfer: PropTypes.func,
   isLive: PropTypes.bool,
   lastUpdated: PropTypes.number,
+  liveMatches: PropTypes.array,
 };
 
 export default TeamListView;

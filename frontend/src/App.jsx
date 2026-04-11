@@ -722,6 +722,7 @@ const App = () => {
                     onTransfer={ handleTransfer }
                     isLive={ isLive }
                     lastUpdated={ lastUpdated }
+                    liveMatches={ liveMatches }
                   />
                 ) }
               </Box>
