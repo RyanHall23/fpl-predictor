@@ -66,6 +66,11 @@ const ListRow = ({
     teamsMatch(player.teamName, m.homeName) || teamsMatch(player.teamName, m.awayName)
   ) ?? null;
   const liveClock = espnMatch?.isLive ? espnMatch.clock : null;
+
+  // Per-player points colour: future GW → purple (secondary), all fixtures done → green, otherwise → amber
+  const allFixturesDone = !isFutureGameweek && player.opponents?.length > 0 && player.opponents.every(o => o.finished);
+  const pointsColor = isFutureGameweek ? 'secondary.main' : allFixturesDone ? 'success.main' : 'warning.main';
+  const pointsLightColor = isFutureGameweek ? undefined : allFixturesDone ? '#2e7d32' : '#e65100';
   const isCaptainEligible = !!onSetCaptain && player.position !== POSITION_MANAGER;
   const chance = player.chanceOfPlayingNextRound;
   let statusMeta = null;
@@ -163,7 +168,17 @@ const ListRow = ({
 
         { /* POINTS */ }
         <TableCell sx={ cellSx } align='right'>
-          <Typography variant='body2' fontWeight='bold' color='secondary' noWrap>
+          <Typography
+            variant='body2'
+            fontWeight='bold'
+            noWrap
+            sx={ {
+              color: pointsColor,
+              ...(pointsLightColor && {
+                'html[data-mui-color-scheme="light"] &': { color: pointsLightColor },
+              }),
+            } }
+          >
             { predictedPoints }
           </Typography>
         </TableCell>
