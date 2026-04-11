@@ -108,9 +108,16 @@ const EventRow = ({ event, homeId, homeAbbr, awayAbbr }) => {
       <Box sx={ { width: 18, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
         { iconNode }
       </Box>
-      <Typography variant='caption' sx={ { flex: 1, color: 'text.primary' } } noWrap>
-        { event.player || '—' }{ nameSuffix }
-      </Typography>
+      <Box sx={ { flex: 1, overflow: 'hidden' } }>
+        <Typography variant='caption' sx={ { color: 'text.primary' } } noWrap>
+          { event.player || '—' }{ nameSuffix }
+        </Typography>
+        { event.icon === 'goal' && event.assist && (
+          <Typography variant='caption' sx={ { color: 'text.disabled', display: 'block' } } noWrap>
+            🅰 { event.assist }
+          </Typography>
+        ) }
+      </Box>
       <Typography variant='caption' sx={ { color: 'text.secondary', flexShrink: 0 } }>
         { abbr }
       </Typography>
