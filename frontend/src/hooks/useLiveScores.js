@@ -3,6 +3,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 const ESPN_URL = 'https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/scoreboard';
 export const POLL_MS = 30_000;
 
+/** Returns the ESPN scoreboard URL for a specific date (YYYYMMDD string) or today. */
+export const espnScoreboardUrl = (yyyymmdd) =>
+  yyyymmdd ? `${ESPN_URL}?dates=${yyyymmdd}` : ESPN_URL;
+
 /** Normalise a team name to lowercase alphanumeric for fuzzy matching. */
 export const normName = (s) => (s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
@@ -23,7 +27,7 @@ export const teamsMatch = (fplName, espnName) => {
   return e.includes(fa) || fa.includes(e) || e.includes(f) || f.includes(e);
 };
 
-const parseMatch = (event) => {
+export const parseMatch = (event) => {
   const comp = event.competitions?.[0];
   if (!comp) return null;
 

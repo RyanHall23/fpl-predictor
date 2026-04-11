@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import {
   Alert,
@@ -13,7 +13,7 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import { useTheme } from '@mui/material/styles';
 import axios from '../../api';
-import { teamsMatch } from '../../hooks/useLiveScores';
+import { teamsMatch, parseMatch, espnScoreboardUrl } from '../../hooks/useLiveScores';
 
 const formatDateHeader = (date) =>
   date.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
@@ -135,9 +135,11 @@ const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme }) => {
   const hasEspn   = !!espnMatch;
   const scoreHome = hasEspn ? espnMatch.homeScore : fplHomeScore;
   const scoreAway = hasEspn ? espnMatch.awayScore : fplAwayScore;
+  // Show a score if: ESPN has it (live or finished), FPL has it (started with
+  // non-null scores, or marked finished), or ESPN says it's a past match.
   const showScore = hasEspn
-    ? espnMatch.isLive || espnMatch.isFinished
-    : isFinished || (isStarted && fplHomeScore !== null);
+    ? espnMatch.isLive || espnMatch.isFinished || espnMatch.state === 'post'
+    : isFinished || (isStarted && fplHomeScore != null && fplAwayScore != null);
 
   const isLive    = hasEspn ? espnMatch.isLive : (!isFinished && isStarted);
   const clock     = hasEspn ? espnMatch.clock  : null;
@@ -266,12 +268,20 @@ FixtureRow.propTypes = {
 
 const FixturesPanel = ({ gameweek, deadline, liveMatches }) => {
   const theme = useTheme();
-  const [fixtures, setFixtures]     = useState([]);
-  const [loading, setLoading]       = useState(false);
-  const [error, setError]           = useState(null);
-  const [expandedId, setExpandedId] = useState(null);
+  const [fixtures, setFixtures]       = useState([]);
+  const [loading, setLoading]         = useState(false);
+  const [error, setError]             = useState(null);
+  const [expandedId, setExpandedId]   = useState(null);
+  const [historicalMatches, setHistoricalMatches] = useState([]);
+  const fetchedDatesRef = useRef(new Set());
 
   const deadlinePill = getDeadlinePill(deadline, theme);
+
+  // Reset historical cache whenever the displayed gameweek changes.
+  useEffect(() => {
+    fetchedDatesRef.current = new Set();
+    setHistoricalMatches([]);
+  }, [gameweek]);
 
   useEffect(() => {
     if (!gameweek) return;
@@ -283,6 +293,36 @@ const FixturesPanel = ({ gameweek, deadline, liveMatches }) => {
       .catch(() => setError('Failed to load fixtures.'))
       .finally(() => setLoading(false));
   }, [gameweek]);
+
+  // After fixtures load, fetch ESPN data for any date not already covered by
+  // liveMatches (which only holds today's polling data).
+  useEffect(() => {
+    if (!fixtures.length) return;
+    const todayUtc = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const uniqueDates = [...new Set(
+      fixtures
+        .filter(f => f.kickoff_time)
+        .map(f => f.kickoff_time.slice(0, 10))
+        .filter(d => d !== todayUtc)
+    )];
+    const toFetch = uniqueDates.filter(d => !fetchedDatesRef.current.has(d));
+    if (!toFetch.length) return;
+    toFetch.forEach(d => fetchedDatesRef.current.add(d));
+    Promise.all(
+      toFetch.map(d =>
+        fetch(espnScoreboardUrl(d.replace(/-/g, '')))
+          .then(r => r.json())
+          .then(data => (data.events ?? []).map(parseMatch).filter(Boolean))
+          .catch(() => [])
+      )
+    ).then(results => setHistoricalMatches(prev => [...prev, ...results.flat()]));
+  }, [fixtures]);
+
+  // Combine today's live data with any fetched historical dates.
+  const allEspnMatches = useMemo(
+    () => [...(liveMatches ?? []), ...historicalMatches],
+    [liveMatches, historicalMatches]
+  );
 
   if (!gameweek) return null;
 
@@ -350,7 +390,7 @@ const FixturesPanel = ({ gameweek, deadline, liveMatches }) => {
           </Typography>
 
           { dayFixtures.map((fixture) => {
-            const espnMatch = findEspnMatch(fixture, liveMatches);
+            const espnMatch = findEspnMatch(fixture, allEspnMatches);
             return (
               <FixtureRow
                 key={ fixture.id }
