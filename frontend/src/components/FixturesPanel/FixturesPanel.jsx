@@ -15,6 +15,8 @@ import { useTheme } from '@mui/material/styles';
 import axios from '../../api';
 import { teamsMatch, parseMatch, espnScoreboardUrl } from '../../hooks/useLiveScores';
 
+const ESPN_SUMMARY_URL = (eventId) => `https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/summary?event=${eventId}`;
+
 const formatDateHeader = (date) =>
   date.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
 
@@ -76,7 +78,7 @@ CardBox.propTypes = { color: PropTypes.string.isRequired };
 
 // ─── Single event row inside the expanded section ────────────────────────────
 
-const EventRow = ({ event, homeId, homeAbbr, awayAbbr }) => {
+const EventRow = ({ event, homeId, homeAbbr, awayAbbr, assist }) => {
   const isHome = event.teamId === homeId;
   const abbr   = isHome ? homeAbbr : awayAbbr;
 
@@ -98,7 +100,7 @@ const EventRow = ({ event, homeId, homeAbbr, awayAbbr }) => {
   }
 
   return (
-    <Box sx={ { display: 'flex', alignItems: 'center', gap: 0.75, py: '2px' } }>
+    <Box sx={ { display: 'flex', alignItems: 'flex-start', gap: 0.75, py: '2px' } }>
       <Typography
         variant='caption'
         sx={ { color: 'text.disabled', minWidth: 34, flexShrink: 0, fontVariantNumeric: 'tabular-nums' } }
@@ -108,9 +110,16 @@ const EventRow = ({ event, homeId, homeAbbr, awayAbbr }) => {
       <Box sx={ { width: 18, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
         { iconNode }
       </Box>
-      <Typography variant='caption' sx={ { flex: 1, color: 'text.primary' } } noWrap>
-        { event.player || '—' }{ nameSuffix }
-      </Typography>
+      <Box sx={ { flex: 1, overflow: 'hidden' } }>
+        <Typography variant='caption' sx={ { color: 'text.primary', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }>
+          { event.player || '—' }{ nameSuffix }
+        </Typography>
+        { assist && (
+          <Typography variant='caption' sx={ { color: 'text.primary', display: 'block', pl: 1.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }>
+            Assist: { assist }
+          </Typography>
+        ) }
+      </Box>
       <Typography variant='caption' sx={ { color: 'text.secondary', flexShrink: 0 } }>
         { abbr }
       </Typography>
@@ -123,11 +132,12 @@ EventRow.propTypes = {
   homeId:   PropTypes.string,
   homeAbbr: PropTypes.string,
   awayAbbr: PropTypes.string,
+  assist:   PropTypes.string,
 };
 
 // ─── Single fixture row (collapsible) ────────────────────────────────────────
 
-const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme }) => {
+const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme, assisters }) => {
   const isFinished   = fixture.finished;
   const isStarted    = fixture.started;
   const fplHomeScore = fixture.team_h_score;
@@ -147,7 +157,7 @@ const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme }) => {
   const isLive    = hasEspn ? espnMatch.isLive : (!isFinished && isStarted);
   const isOver    = hasEspn ? espnMatch.isFinished : isFinished;
   const clock     = (!isOver && hasEspn) ? espnMatch.clock : null;
-  const hasEvents = hasEspn && (isLive || espnMatch.details.some(d => d.icon !== 'other'));
+  const hasEvents = (hasEspn && (isLive || espnMatch.details.some(d => d.icon !== 'other'))) || assisters?.length > 0;
 
   const teamNameSx = { flex: 1, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
 
@@ -241,18 +251,45 @@ const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme }) => {
                 sx={ { mb: 0.75, height: 18, fontSize: '0.6rem', fontWeight: 700 } }
               />
             ) }
-            { espnMatch.details
+            { (() => {
+              // Build per-team assister queues so each goal consumes the next available assister.
+              const homeQueue = (assisters ?? []).filter(a => a.abbr === espnMatch?.homeAbbr).flatMap(a => Array(Math.trunc(a.value)).fill(a.name));
+              const awayQueue = (assisters ?? []).filter(a => a.abbr === espnMatch?.awayAbbr).flatMap(a => Array(Math.trunc(a.value)).fill(a.name));
+              return espnMatch?.details
                 .filter(d => d.icon !== 'other')
-                .map((event, idx) => (
-                  <EventRow
-                    key={ `${event.minute ?? ''}-${event.teamId ?? ''}-${event.player ?? ''}-${event.icon}-${idx}` }
-                    event={ event }
-                    homeId={ espnMatch.homeId }
-                    homeAbbr={ espnMatch.homeAbbr }
-                    awayAbbr={ espnMatch.awayAbbr }
-                  />
-                ))
-            }
+                .map((event, idx) => {
+                  let assist = undefined;
+                  if (event.icon === 'goal' && !event.ownGoal && !event.penaltyKick) {
+                    const isHome = event.teamId === espnMatch.homeId;
+                    assist = isHome ? homeQueue.shift() : awayQueue.shift();
+                  }
+                  return (
+                    <EventRow
+                      key={ `${event.minute ?? ''}-${event.teamId ?? ''}-${event.player ?? ''}-${event.icon}-${idx}` }
+                      event={ event }
+                      homeId={ espnMatch.homeId }
+                      homeAbbr={ espnMatch.homeAbbr }
+                      awayAbbr={ espnMatch.awayAbbr }
+                      assist={ assist }
+                    />
+                  );
+                });
+            })() }
+            { !espnMatch && assisters?.length > 0 && assisters.map((a, idx) => (
+              <Box key={ idx } sx={ { display: 'flex', alignItems: 'center', gap: 0.75, py: '2px' } }>
+                <Typography variant='caption' sx={ { color: 'text.disabled', minWidth: 34, flexShrink: 0 } } />
+                <Box sx={ { width: 18, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
+                  <Typography component='span' variant='caption' aria-hidden='true'>🅰️</Typography>
+                  <Box component='span' sx={ { position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' } }>Assist:</Box>
+                </Box>
+                <Typography variant='caption' sx={ { flex: 1, color: 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }>
+                  { a.name }{ a.value > 1 ? ` ×${a.value}` : '' }
+                </Typography>
+                <Typography variant='caption' sx={ { color: 'text.secondary', flexShrink: 0 } }>
+                  { a.abbr }
+                </Typography>
+              </Box>
+            )) }
           </Box>
         </Collapse>
       ) }
@@ -263,6 +300,7 @@ const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme }) => {
 FixtureRow.propTypes = {
   fixture:   PropTypes.object.isRequired,
   espnMatch: PropTypes.object,
+  assisters: PropTypes.array,
   expanded:  PropTypes.bool,
   onToggle:  PropTypes.func,
   theme:     PropTypes.object.isRequired,
@@ -277,14 +315,18 @@ const FixturesPanel = ({ gameweek, deadline, liveMatches }) => {
   const [error, setError]             = useState(null);
   const [expandedId, setExpandedId]   = useState(null);
   const [historicalMatches, setHistoricalMatches] = useState([]);
-  const fetchedDatesRef = useRef(new Set());
+  const [summaryAssistersMap, setSummaryAssistersMap] = useState({}); // espnId -> [{name, abbr, value}]
+  const fetchedDatesRef    = useRef(new Set());
+  const fetchedSummaryRef  = useRef(new Set());
 
   const deadlinePill = getDeadlinePill(deadline, theme);
 
   // Reset historical cache whenever the displayed gameweek changes.
   useEffect(() => {
     fetchedDatesRef.current = new Set();
+    fetchedSummaryRef.current = new Set();
     setHistoricalMatches([]);
+    setSummaryAssistersMap({});
   }, [gameweek]);
 
   useEffect(() => {
@@ -333,6 +375,55 @@ const FixturesPanel = ({ gameweek, deadline, liveMatches }) => {
     () => [...(liveMatches ?? []), ...historicalMatches],
     [liveMatches, historicalMatches]
   );
+
+  // When a fixture is expanded, fetch the ESPN summary to get assister names.
+  // Falls back to enriched FPL fixture stats when no ESPN match is available.
+  useEffect(() => {
+    if (!expandedId) return;
+    const fixture   = fixtures.find(f => f.id === expandedId);
+    if (!fixture) return;
+    const espnMatch = findEspnMatch(fixture, allEspnMatches);
+
+    if (espnMatch?.espnId) {
+      // ── ESPN primary ────────────────────────────────────────────────────────
+      if (fetchedSummaryRef.current.has(espnMatch.espnId)) return;
+      let cancelled = false;
+      fetch(ESPN_SUMMARY_URL(espnMatch.espnId))
+        .then(r => r.json())
+        .then(data => {
+          if (cancelled) return;
+          const assisters = [];
+          for (const team of data.rosters ?? []) {
+            const abbr = team.team?.abbreviation ?? '';
+            for (const ath of team.roster ?? []) {
+              const gaStat = (ath.stats ?? []).find(s => s.name === 'goalAssists');
+              const gaVal  = parseFloat(gaStat?.value ?? 0);
+              if (gaVal > 0) {
+                assisters.push({
+                  name:  ath.athlete?.shortName ?? ath.athlete?.displayName ?? '',
+                  abbr,
+                  value: gaVal,
+                });
+              }
+            }
+          }
+          fetchedSummaryRef.current.add(espnMatch.espnId);
+          setSummaryAssistersMap(prev => ({ ...prev, [espnMatch.espnId]: assisters }));
+        })
+        .catch(() => {});
+      return () => { cancelled = true; };
+    } else {
+      // ── FPL fallback ─────────────────────────────────────────────────────────
+      const assistStat = fixture.stats?.find(s => s.identifier === 'assists');
+      if (!assistStat) return;
+      const assisters = [
+        ...(assistStat.h || []).map(e => ({ name: e.webName, abbr: fixture.team_h_short, value: e.value })),
+        ...(assistStat.a || []).map(e => ({ name: e.webName, abbr: fixture.team_a_short, value: e.value })),
+      ].filter(a => a.name && a.value > 0);
+      // Store under a synthetic key for FPL-only fixtures
+      setSummaryAssistersMap(prev => ({ ...prev, [`fpl-${fixture.id}`]: assisters }));
+    }
+  }, [expandedId, fixtures, allEspnMatches]);
 
   if (!gameweek) return null;
 
@@ -401,11 +492,14 @@ const FixturesPanel = ({ gameweek, deadline, liveMatches }) => {
 
           { dayFixtures.map((fixture) => {
             const espnMatch = findEspnMatch(fixture, allEspnMatches);
+            const assistKey = espnMatch?.espnId ?? `fpl-${fixture.id}`;
+            const assisters = summaryAssistersMap[assistKey] ?? null;
             return (
               <FixtureRow
                 key={ fixture.id }
                 fixture={ fixture }
                 espnMatch={ espnMatch }
+                assisters={ assisters }
                 expanded={ expandedId === fixture.id }
                 onToggle={ () => setExpandedId(prev => prev === fixture.id ? null : fixture.id) }
                 theme={ theme }

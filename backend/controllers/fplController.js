@@ -195,6 +195,30 @@ const getFixtures = async (req, res) => {
       filtered = fixtures.filter(f => f.event === gw);
     }
 
+    const elementsById = {};
+    (bootstrap.elements || []).forEach(e => { elementsById[e.id] = e; });
+
+    const enrichStats = (stats) => {
+      if (!stats?.length) return [];
+      return stats
+        .filter(s => s.identifier === 'goals_scored' || s.identifier === 'assists')
+        .map(s => ({
+          identifier: s.identifier,
+          h: (s.h || []).map(entry => ({
+            element: entry.element,
+            value: entry.value,
+            webName: elementsById[entry.element]?.web_name || '',
+            shortName: elementsById[entry.element]?.web_name || '',
+          })),
+          a: (s.a || []).map(entry => ({
+            element: entry.element,
+            value: entry.value,
+            webName: elementsById[entry.element]?.web_name || '',
+            shortName: elementsById[entry.element]?.web_name || '',
+          })),
+        }));
+    };
+
     const result = filtered.map(f => ({
       id: f.id,
       event: f.event,
@@ -209,6 +233,7 @@ const getFixtures = async (req, res) => {
       team_a_name: teamsById[f.team_a]?.name || '',
       team_h_short: teamsById[f.team_h]?.short_name || '',
       team_a_short: teamsById[f.team_a]?.short_name || '',
+      stats: enrichStats(f.stats),
     }));
 
     res.json(result);
