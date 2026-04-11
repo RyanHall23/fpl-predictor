@@ -50,6 +50,8 @@ const ListRow = ({
   onPlayerClick,
   onSetCaptain,
   isFutureGameweek,
+  isLiveGameweek,
+  isPastGameweek,
   viewedGameweek,
   plannedTransfers,
   onRemovePlannedTransfer,
@@ -163,7 +165,17 @@ const ListRow = ({
 
         { /* POINTS */ }
         <TableCell sx={ cellSx } align='right'>
-          <Typography variant='body2' fontWeight='bold' color='secondary' noWrap>
+          <Typography
+            variant='body2'
+            fontWeight='bold'
+            noWrap
+            sx={ {
+              color: isLiveGameweek ? '#ffa726' : isPastGameweek ? '#66bb6a' : 'secondary.main',
+              'html[data-mui-color-scheme="light"] &': {
+                color: isLiveGameweek ? '#e65100' : isPastGameweek ? '#2e7d32' : undefined,
+              },
+            } }
+          >
             { predictedPoints }
           </Typography>
         </TableCell>
@@ -342,6 +354,8 @@ const TeamListView = ({
   onSetCaptain,
   currentGameweek,
   isFutureGameweek,
+  isLiveGameweek,
+  isPastGameweek,
   viewedGameweek,
   plannedTransfers,
   onRemovePlannedTransfer,
@@ -363,7 +377,7 @@ const TeamListView = ({
 
   const sharedRowProps = {
     selectedPlayer, team, allPlayers, onTransfer, onPlayerClick,
-    isFutureGameweek, viewedGameweek, plannedTransfers, onRemovePlannedTransfer,
+    isFutureGameweek, isLiveGameweek, isPastGameweek, viewedGameweek, plannedTransfers, onRemovePlannedTransfer,
     currentGameweek, showTransferButtons: !isHighestPredictedTeam,
     liveMatches,
   };
@@ -482,6 +496,8 @@ ListRow.propTypes = {
   onPlayerClick: PropTypes.func,
   onSetCaptain: PropTypes.func,
   isFutureGameweek: PropTypes.bool,
+  isLiveGameweek: PropTypes.bool,
+  isPastGameweek: PropTypes.bool,
   viewedGameweek: PropTypes.number,
   plannedTransfers: PropTypes.array,
   onRemovePlannedTransfer: PropTypes.func,
@@ -502,6 +518,8 @@ TeamListView.propTypes = {
   onSetCaptain: PropTypes.func,
   currentGameweek: PropTypes.number,
   isFutureGameweek: PropTypes.bool,
+  isLiveGameweek: PropTypes.bool,
+  isPastGameweek: PropTypes.bool,
   viewedGameweek: PropTypes.number,
   plannedTransfers: PropTypes.array,
   onRemovePlannedTransfer: PropTypes.func,

@@ -28,7 +28,7 @@ const STATUS_META = {
   u: { label: 'Unavailable',  color: '#9e9e9e' },
 };
 
-const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTransferButtons = true, teamType, onPlayerClick, selectedPlayer, activePlayers, reservePlayers, onSetCaptain, currentGameweek, isFutureGameweek, viewedGameweek, plannedTransfers, onRemovePlannedTransfer }) => {
+const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTransferButtons = true, teamType, onPlayerClick, selectedPlayer, activePlayers, reservePlayers, onSetCaptain, currentGameweek, isFutureGameweek, isLiveGameweek, isPastGameweek, viewedGameweek, plannedTransfers, onRemovePlannedTransfer }) => {
   const [transferDialogOpen, setTransferDialogOpen] = React.useState(false);
   const [statsDialogOpen, setStatsDialogOpen] = React.useState(false);
 
@@ -270,7 +270,7 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
             })) }
             size='sm'
           />
-          <Typography variant='h6' className='points-display' sx={ { fontSize: '14px', fontWeight: 700, textAlign: 'center', width: '100%', letterSpacing: '0.5px', padding: '1px 0' } }>
+          <Typography variant='h6' className={ `points-display${isLiveGameweek ? ' points-live' : isPastGameweek ? ' points-past' : ''}` } sx={ { fontSize: '14px', fontWeight: 700, textAlign: 'center', width: '100%', letterSpacing: '0.5px', padding: '1px 0' } }>
             { predictedPoints }
           </Typography>
         </Box>
@@ -453,6 +453,8 @@ PlayerCard.propTypes = {
   onSetCaptain: PropTypes.func,
   currentGameweek: PropTypes.number,
   isFutureGameweek: PropTypes.bool,
+  isLiveGameweek: PropTypes.bool,
+  isPastGameweek: PropTypes.bool,
   viewedGameweek: PropTypes.number,
   plannedTransfers: PropTypes.array,
   onRemovePlannedTransfer: PropTypes.func,
