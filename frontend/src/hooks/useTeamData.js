@@ -5,6 +5,7 @@ import {
   applySubstitution,
   selectOptimalLineup,
 } from '../utils/substitution';
+import { saveLineup, loadLineup, restoreLineup } from '../utils/lineupStorage';
 
 const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGameweek = null) => {
   const [activePlayers, setActivePlayers] = useState([]);
@@ -19,6 +20,19 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
   // Incremented each time the user successfully performs a manual substitution.
   // App.jsx watches this to skip selectOptimalLineup after a manual sub.
   const [swapVersion, setSwapVersion] = useState(0);
+  // Tracks the gameweek number of the currently loaded data so that the save
+  // effect has a stable value even when gameweekInfo hasn't yet re-rendered.
+  const [loadedGameweek, setLoadedGameweek] = useState(null);
+  // Tracks the entryId whose data is currently held in activePlayers/reservePlayers.
+  // Ensures the lineup-persist effect only writes when the loaded data actually
+  // belongs to the current entryId (prevents the old entry's lineup being saved
+  // under the new entry's localStorage key immediately after an entryId change).
+  const [loadedEntryId, setLoadedEntryId] = useState(null);
+  // Set of player codes from the most recently loaded current/past/active GW.
+  // Used as the fingerprint comparison baseline when restoring a future-GW
+  // lineup, because the future-GW API re-optimises the squad ordering and
+  // should not be treated as the authoritative squad composition.
+  const [currentSquadCodes, setCurrentSquadCodes] = useState(null);
 
   // Sync internal state with prop changes (e.g., when restoring session)
   useEffect(() => {
@@ -40,6 +54,7 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
         isActive: isActiveGameweek,
         data: gameweekData
       });
+      setLoadedGameweek(null); // highest predicted team is never persisted
       
       setActivePlayers(active);
       setReservePlayers(reserve);
@@ -73,12 +88,39 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
         isActive: isActiveGameweek,
         data: gameweekData
       });
+      setLoadedGameweek(isFutureGameweek ? gameweek : null);
 
-      setActivePlayers(active);
-      setReservePlayers(reserve);
+      // Always capture the current squad codes when loading the actual (non-
+      // future) GW so we have a reliable baseline for fingerprint comparison.
+      if (!isFutureGameweek) {
+        setCurrentSquadCodes(new Set([...active, ...reserve].map((p) => p.code)));
+      }
+
+      // For future gameweeks, attempt to restore a previously saved lineup
+      // selection (substitutions, bench order, captain).  If the squad
+      // fingerprint no longer matches (transfer was made), the stored data is
+      // discarded and the fresh API data is used as-is.
+      let finalActive = active;
+      let finalReserve = reserve;
+      if (isFutureGameweek && entryId) {
+        const stored = loadLineup(entryId, gameweek);
+        // Pass currentSquadCodes (last real GW) as the comparison base so that
+        // the re-optimised future-GW player ordering cannot mask real transfers.
+        const restored = restoreLineup(active, reserve, stored, currentSquadCodes);
+        if (restored) {
+          finalActive = restored.activePlayers;
+          finalReserve = restored.reservePlayers;
+        }
+      }
+
+      setActivePlayers(finalActive);
+      setReservePlayers(finalReserve);
       setTeamName(fetchedTeamName || '');
       setFreeTransfers(ft ?? null);
       setBank(bankBalance ?? null);
+      // Mark which entry's data is now in state so the persist effect can guard
+      // against writing the old lineup under a newly-switched entry's key.
+      setLoadedEntryId(entryId);
     } catch (error) {
       setTeamName('');
       setGameweekInfo(null);
@@ -93,6 +135,19 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
       fetchData();
     }
   }, [fetchData, isHighestPredictedTeam]);
+
+  // Persist lineup selection to localStorage whenever the user changes their
+  // starting XI, bench order, or captain for a future gameweek.  Saved after
+  // every state update so swaps, auto-pick, and captain changes are all covered.
+  // Not saved for locked (past/active) GWs — those use FPL API data directly.
+  // Guard: only save when loadedEntryId matches entryId to prevent the stale
+  // lineup from the previous entry being written under the new entry's key
+  // immediately after an entryId switch (before the new data has loaded).
+  useEffect(() => {
+    if (!entryId || !loadedGameweek || isHighestPredictedTeam || activePlayers.length === 0) return;
+    if (loadedEntryId !== entryId) return;
+    saveLineup(entryId, loadedGameweek, activePlayers, reservePlayers);
+  }, [activePlayers, reservePlayers, entryId, loadedGameweek, isHighestPredictedTeam, loadedEntryId]);
 
   // Handle player selection and swapping (only for user's team)
   //
