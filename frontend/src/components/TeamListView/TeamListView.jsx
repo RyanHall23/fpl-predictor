@@ -62,6 +62,25 @@ const ListRow = ({
 
   const predictedPoints = parseFloat(player.predictedPoints) || 0;
   const kickoff = formatKickoff(player.fixtureKickoff);
+
+  // Determine points display state
+  const anyStarted  = player.opponents?.some(o => o.started)  ?? false;
+  const allFinished = (player.opponents?.length > 0) && (player.opponents?.every(o => o.finished) ?? false);
+  const isMatchLive = anyStarted && !allFinished;
+  const isMatchDone = allFinished;
+  const hasActual   = player.gameweekStats?.points != null;
+
+  let displayPoints, pointsColor;
+  if (isMatchDone && hasActual) {
+    displayPoints = player.gameweekStats.points;
+    pointsColor   = 'success.main';
+  } else if (isMatchLive && hasActual) {
+    displayPoints = player.gameweekStats.points;
+    pointsColor   = 'warning.main';
+  } else {
+    displayPoints = predictedPoints;
+    pointsColor   = 'info.main';
+  }
   const espnMatch = liveMatches?.find(m =>
     teamsMatch(player.teamName, m.homeName) || teamsMatch(player.teamName, m.awayName)
   ) ?? null;
@@ -163,8 +182,8 @@ const ListRow = ({
 
         { /* POINTS */ }
         <TableCell sx={ cellSx } align='right'>
-          <Typography variant='body2' fontWeight='bold' color='secondary' noWrap>
-            { predictedPoints }
+          <Typography variant='body2' fontWeight='bold' sx={ { color: pointsColor } } noWrap>
+            { displayPoints }
           </Typography>
         </TableCell>
 
@@ -470,6 +489,7 @@ ListRow.propTypes = {
     fixtureKickoff: PropTypes.string,
     difficulty: PropTypes.number,
     teamName: PropTypes.string,
+    gameweekStats: PropTypes.shape({ points: PropTypes.number }),
   }).isRequired,
   isCaptain: PropTypes.bool,
   teamType: PropTypes.string,
