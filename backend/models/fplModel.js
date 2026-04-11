@@ -305,7 +305,7 @@ const enrichPlayersWithOpponents = (players, fixtures, teams, targetEventId) => 
       team_a: fixture.team_a,
       team_h_score: fixture.team_h_score ?? null,
       team_a_score: fixture.team_a_score ?? null,
-      finished: fixture.finished ?? false,
+      finished: !!(fixture.finished || fixture.finished_provisional),
       started: fixture.started ?? false,
       minutes: fixture.minutes ?? 0,
     });
@@ -325,7 +325,7 @@ const enrichPlayersWithOpponents = (players, fixtures, teams, targetEventId) => 
       team_a: fixture.team_a,
       team_h_score: fixture.team_h_score ?? null,
       team_a_score: fixture.team_a_score ?? null,
-      finished: fixture.finished ?? false,
+      finished: !!(fixture.finished || fixture.finished_provisional),
       started: fixture.started ?? false,
       minutes: fixture.minutes ?? 0,
     });
@@ -365,7 +365,7 @@ const enrichPlayersWithOpponents = (players, fixtures, teams, targetEventId) => 
         team_a_score: fixture.team_a_score ?? null,
         team_h_short: teamMap[fixture.team_h]?.short_name || null,
         team_a_short: teamMap[fixture.team_a]?.short_name || null,
-        finished: fixture.finished ?? false,
+        finished: !!(fixture.finished || fixture.finished_provisional),
         started: fixture.started ?? false,
         minutes: fixture.minutes ?? 0,
       }));
