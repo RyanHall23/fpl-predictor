@@ -226,7 +226,7 @@ const BreakdownTable = ({ rows }) => {
               <TableCell className='breakdown-cell-label'>
                 { STAT_LABELS[stat.identifier] ?? stat.identifier }
                 { stat.provisional && (
-                  <Typography component='span' variant='caption' color='warning.main' className='u-ml-auto' style={ { marginLeft: 4 } }>
+                  <Typography component='span' variant='caption' color='warning.main' className='u-ml-0p5'>
                     (prov.)
                   </Typography>
                 ) }

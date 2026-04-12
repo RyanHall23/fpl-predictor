@@ -83,7 +83,7 @@ const TeamActivityPanel = ({
             </div>
             <Divider />
             <div className='u-flex u-gap-2 u-items-start'>
-              <div style={ { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, flex: 1 } }>
+              <div className='activity-stats-grid'>
                 <div>
                   <Typography variant='caption' color='text.secondary'>
                     Global Position
@@ -179,7 +179,7 @@ const TeamActivityPanel = ({
         ) : (
           <div>
             { /* Header row */ }
-            <div style={ { display: 'grid', gridTemplateColumns: '3rem 1fr 1fr 1fr', gap: 4, paddingLeft: 8, paddingRight: 8, marginBottom: 4 } }>
+            <div className='gw-header-row'>
               <Typography variant='caption' color='text.secondary'>GW</Typography>
               <Typography variant='caption' color='text.secondary' className='u-text-right'>Pts</Typography>
               <Typography variant='caption' color='text.secondary' className='u-text-right'>Rank</Typography>

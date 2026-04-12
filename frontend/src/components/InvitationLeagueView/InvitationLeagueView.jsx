@@ -71,8 +71,7 @@ const InvitationLeagueView = ({ league, onBack, onViewTeam }) => {
           size='small'
           startIcon={ <ArrowBackIcon /> }
           onClick={ onBack }
-          className='u-mr-auto'
-          style={ { marginRight: 8 } }
+          className='u-mr-1'
         >
           Back
         </Button>

@@ -194,7 +194,7 @@ const RecommendedTransfers = ({ entryId, currentGameweek, compact = false }) => 
                         { idx > 0 && <Divider className='u-my-1' /> }
                         <div className='u-flex u-items-start u-gap-0'>
                           { /* OUT — border-right acts as divider, only as tall as this box */ }
-                          <div className='cell-border-right' style={ { flex: '0 0 20%', minWidth: 0 } }>
+                          <div className='cell-border-right rec-out-col'>
                             <Typography variant='body2' fontWeight='bold' noWrap>
                               { rec.playerOut.web_name }
                             </Typography>
@@ -203,7 +203,7 @@ const RecommendedTransfers = ({ entryId, currentGameweek, compact = false }) => 
                             </Typography>
                           </div>
                           { /* IN — 3-column grid */ }
-                          <div style={ { flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, paddingLeft: 6, minWidth: 0 } }>
+                          <div className='rec-in-grid'>
                             { altsToShow.map((alt, altIdx) => (
                               <div key={ altIdx } className='u-min-w-0'>
                                 <Typography variant='body2' fontWeight='bold' noWrap>
@@ -248,7 +248,7 @@ const RecommendedTransfers = ({ entryId, currentGameweek, compact = false }) => 
                         
                         return (
                           <TableRow key={ idx } hover>
-                            <TableCell className='cell-border-right' style={ { minWidth: 280 } }>
+                            <TableCell className='cell-border-right cell-minw-280'>
                               <div>
                                 <Typography variant='body2' fontWeight='bold'>
                                   { rec.playerOut.web_name }
@@ -280,7 +280,7 @@ const RecommendedTransfers = ({ entryId, currentGameweek, compact = false }) => 
                               </div>
                             </TableCell>
                             { filteredAlternatives.slice(0, 3).map((alt, altIdx) => (
-                              <TableCell key={ altIdx } style={ { minWidth: 180 } }>
+                              <TableCell key={ altIdx } className='cell-minw-180'>
                                 <div>
                                   <Typography variant='body2' fontWeight='bold'>
                                     { alt.web_name }
@@ -305,7 +305,7 @@ const RecommendedTransfers = ({ entryId, currentGameweek, compact = false }) => 
                             )) }
                             { /* Fill empty cells if less than 3 alternatives */ }
                             { filteredAlternatives.length < 3 && [...Array(3 - filteredAlternatives.length)].map((_, emptyIdx) => (
-                              <TableCell key={ `empty-${emptyIdx}` } style={ { minWidth: 180 } } />
+                              <TableCell key={ `empty-${emptyIdx}` } className='cell-minw-180' />
                             )) }
                           </TableRow>
                         );

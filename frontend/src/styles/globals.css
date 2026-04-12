@@ -1368,3 +1368,19 @@ html[data-mui-color-scheme="light"] .dialog-paper-gradient {
 /* ── 30. PointsFixturesForecast ─────────────────────────────── */
 .pts-forecast-chip { height: 18px !important; font-size: var(--fs-xs) !important; }
 .pts-caption-dash  { font-size: 0.6rem; }
+
+.u-mr-1 { margin-right: var(--sp-1); }
+.u-ml-0p5 { margin-left: var(--sp-0p5); }
+.activity-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-1p5); flex: 1; }
+.gw-header-row {
+  display: grid;
+  grid-template-columns: 3rem 1fr 1fr 1fr;
+  gap: var(--sp-0p5);
+  padding-left: var(--sp-1);
+  padding-right: var(--sp-1);
+  margin-bottom: var(--sp-0p5);
+}
+.rec-out-col { flex: 0 0 20%; min-width: 0; }
+.rec-in-grid { flex: 1; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; padding-left: 6px; min-width: 0; }
+.cell-minw-280 { min-width: 280px; }
+.cell-minw-180 { min-width: 180px; }
