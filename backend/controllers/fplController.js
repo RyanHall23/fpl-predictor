@@ -541,7 +541,7 @@ const getUserTeamForEntry = async (req, res) => {
     const isPastGameweek = !!(targetEventData && targetEventData.finished);
     const isActiveGameweek = !!(targetEventData && targetEventData.is_current && !targetEventData.finished);
 
-    if (isPastGameweek || isActiveGameweek) {
+    if (isPastGameweek || -isActiveGameweek) {
       players = await fplModel.enrichPlayersWithGameweekStats(players, targetEvent);
     }
 
@@ -1130,6 +1130,7 @@ const getLeagueStandings = async (req, res) => {
     ]);
 
     const currentEvent = bootstrap.events.find(e => e.is_current) || bootstrap.events[0];
+    const isActiveGw = !!currentEvent.is_current && !currentEvent.finished;
 
     // Build base player list enriched with predicted points
     let allPlayers = bootstrap.elements.map(p => ({
@@ -1137,31 +1138,60 @@ const getLeagueStandings = async (req, res) => {
       ep_next: parseFloat(p.ep_next) || 0,
     }));
 
-    // Pre-compute per-player cumulative predicted points map
+    // Pre-compute per-player cumulative predicted points map (future GWs)
     const playerPointsMap = buildPlayerPointsMap(
       allPlayers, fixtures, bootstrap.teams, currentEvent.id, gameweeksAhead
     );
 
-    const entries = standingsData.standings?.results || [];
+    // Fetch live GW data in parallel with team picks.
+    // The FPL live endpoint updates in near-real-time during matches, so we use
+    // it to compute each team's live GW score rather than relying on the
+    // standings endpoint which only refreshes at end-of-day.
+    const [liveGwData, picksResults] = await Promise.all([
+      fplModel.fetchLiveGameweek(currentEvent.id).catch(() => null),
+      Promise.allSettled(
+        (standingsData.standings?.results || []).map(entry =>
+          fplModel.fetchPlayerPicks(entry.entry, currentEvent.id)
+        )
+      ),
+    ]);
 
-    // Fetch picks for all entries in parallel
-    const picksResults = await Promise.allSettled(
-      entries.map(entry => fplModel.fetchPlayerPicks(entry.entry, currentEvent.id))
-    );
+    // Build map of elementId → live total_points from FPL live endpoint
+    const livePointsMap = {};
+    if (liveGwData?.elements) {
+      liveGwData.elements.forEach(el => {
+        livePointsMap[el.id] = el.stats?.total_points ?? 0;
+      });
+    }
+
+    const entries = standingsData.standings?.results || [];
 
     const standingsWithPredictions = entries.map((entry, i) => {
       let predictedPoints = null;
+      let livePoints = null;
       const picksResult = picksResults[i];
       if (picksResult.status === 'fulfilled' && picksResult.value?.picks) {
-        // Sum predicted points for starting 11 only (bench players have multiplier 0)
-        predictedPoints = picksResult.value.picks.reduce((sum, pick) => {
+        const picks = picksResult.value.picks;
+
+        // Future GW predictions (existing logic)
+        predictedPoints = picks.reduce((sum, pick) => {
           if (pick.multiplier <= 0) return sum;
           const pts = playerPointsMap[pick.element] || 0;
           return sum + pts * pick.multiplier;
         }, 0);
         predictedPoints = parseFloat(predictedPoints.toFixed(1));
+
+        // Live GW points — sum actual live points respecting captain multiplier
+        if (Object.keys(livePointsMap).length > 0) {
+          livePoints = picks.reduce((sum, pick) => {
+            if (pick.multiplier <= 0) return sum;
+            const pts = livePointsMap[pick.element] || 0;
+            return sum + pts * pick.multiplier;
+          }, 0);
+          livePoints = parseFloat(livePoints.toFixed(0));
+        }
       }
-      return { ...entry, predicted_points: predictedPoints };
+      return { ...entry, predicted_points: predictedPoints, live_points: livePoints };
     });
 
     res.json({
@@ -1171,6 +1201,7 @@ const getLeagueStandings = async (req, res) => {
         results: standingsWithPredictions,
       },
       currentGameweek: currentEvent.id,
+      isActiveGw,
       gameweeksAhead,
     });
   } catch (error) {

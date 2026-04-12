@@ -45,7 +45,6 @@ const App = () => {
   const [teamView, setTeamView] = useState(() => localStorage.getItem('teamId') ? TEAM_VIEW.USER : TEAM_VIEW.HIGHEST);
   const [selectedGameweek, setSelectedGameweek] = useState(null); // null means current gameweek
   const [currentGameweek, setCurrentGameweek] = useState(null);
-  const [selectedLeague, setSelectedLeague] = useState(null); // invitation league drill-down
   const [viewingOpponentId, setViewingOpponentId] = useState(null); // opponent team being viewed
   const [pitchView, setPitchView] = useState(() => localStorage.getItem('pitchView') || 'formation'); // 'formation' | 'list'
   const [activeChip, setActiveChip] = useState(null); // 'bench_boost' | 'triple_captain' | 'free_hit' | 'wildcard' | null
@@ -733,13 +732,7 @@ const App = () => {
           <Box sx={ { flex: { xs: '1 1 auto', lg: '0 0 28%' }, width: { xs: '100%', lg: 'auto' }, display: 'flex', flexDirection: 'column', minHeight: { xs: 'auto', lg: '600px' } } }>
             <RightPanel
               entryId={ viewingOpponentId || currentEntryId }
-              onLeagueClick={ setSelectedLeague }
-              selectedLeague={ selectedLeague }
-              onBackFromLeague={ () => setSelectedLeague(null) }
-              onViewTeam={ (opponentEntryId) => {
-                handleViewOpponentTeam(opponentEntryId);
-                setSelectedLeague(null);
-              } }
+              onViewTeam={ handleViewOpponentTeam }
               currentGameweek={ currentGameweek }
               selectedGameweek={ selectedGameweek }
               viewingOpponentId={ viewingOpponentId }

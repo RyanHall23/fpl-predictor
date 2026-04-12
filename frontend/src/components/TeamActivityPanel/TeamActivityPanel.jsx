@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { Box, Chip, Paper, Typography, Divider } from '@mui/material';
+import { Box, Chip, Paper, Typography, Divider, List, ListItem, ListItemText } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
+import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp';
+import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
+import RemoveIcon from '@mui/icons-material/Remove';
 import axios from '../../api';
 import RecommendedTransfers from '../RecommendedTransfers';
 import PlannedTransfers from '../PlannedTransfers';
@@ -192,6 +195,66 @@ const TeamActivityPanel = ({
           </Box>
         </Paper>
       ) }
+
+      { /* My Leagues - between Team Stats and Recent Performance */ }
+      { entryId && profile && (() => {
+        const classicLeagues = profile.classicLeagues || [];
+        const invLeagues = classicLeagues.filter(l => l.league_type !== 's');
+        const genLeagues = classicLeagues.filter(l => l.league_type === 's');
+        const formatNumber = n => (n == null ? 'N/A' : n.toLocaleString());
+        const getRankIcon = (current, last) => {
+          if (last == null || current == null) return <RemoveIcon sx={ { color: 'text.secondary', fontSize: 16, verticalAlign: 'middle' } } />;
+          if (last > current) return <ArrowDropUpIcon sx={ { color: theme.palette.success.main, fontSize: 16, verticalAlign: 'middle' } } />;
+          if (last < current) return <ArrowDropDownIcon sx={ { color: theme.palette.error.main, fontSize: 16, verticalAlign: 'middle' } } />;
+          return <RemoveIcon sx={ { color: 'text.secondary', fontSize: 16, verticalAlign: 'middle' } } />;
+        };
+
+        return (
+          <Paper sx={ { backgroundColor: theme.palette.background.paper, borderRadius: 1, p: 2, flex: '0 0 auto' } }>
+            <Typography variant='h6' sx={ { mb: 1.5, fontWeight: 600 } }>My Leagues</Typography>
+            <Box sx={ { display: 'flex', gap: 2 } }>
+              { genLeagues.length > 0 && (
+                <Box sx={ { flex: 1, minWidth: 0 } }>
+                  <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 } }>General</Typography>
+                  <List dense disablePadding>
+                    { genLeagues.map(l => (
+                      <ListItem key={ l.id } disablePadding sx={ { py: 0.25 } }>
+                        <ListItemText
+                          primary={ <Typography variant='body2' noWrap>{ l.name }</Typography> }
+                          secondary={
+                            <Typography variant='caption' color='text.secondary'>
+                              Rank: { formatNumber(l.entry_rank) }{ ' ' }{ getRankIcon(l.entry_rank, l.entry_last_rank) }
+                            </Typography>
+                          }
+                        />
+                      </ListItem>
+                    )) }
+                  </List>
+                </Box>
+              ) }
+              { invLeagues.length > 0 && (
+                <Box sx={ { flex: 1, minWidth: 0 } }>
+                  <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 } }>Invitational</Typography>
+                  <List dense disablePadding>
+                    { invLeagues.map(l => (
+                      <ListItem key={ l.id } disablePadding sx={ { py: 0.25 } }>
+                        <ListItemText
+                          primary={ <Typography variant='body2' noWrap>{ l.name }</Typography> }
+                          secondary={
+                            <Typography variant='caption' color='text.secondary'>
+                              Rank: { formatNumber(l.entry_rank) }{ ' ' }{ getRankIcon(l.entry_rank, l.entry_last_rank) }
+                            </Typography>
+                          }
+                        />
+                      </ListItem>
+                    )) }
+                  </List>
+                </Box>
+              ) }
+            </Box>
+          </Paper>
+        );
+      })() }
 
       { /* Recent Performance - Middle Section */ }
       { entryId && (

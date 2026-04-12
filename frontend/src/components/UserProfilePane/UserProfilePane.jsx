@@ -8,11 +8,11 @@ import RemoveIcon from '@mui/icons-material/Remove';
 import axios from '../../api';
 import './styles.css';
 
-const getRankChangeIcon = (current, last) => {
-  if (last == null || current == null) return <RemoveIcon sx={ { color: 'grey.500', fontSize: 18, verticalAlign: 'middle' } } />;
-  if (last > current) return <ArrowDropUpIcon sx={ { color: 'green', fontSize: 18, verticalAlign: 'middle' } } />;
-  if (last < current) return <ArrowDropDownIcon sx={ { color: 'red', fontSize: 18, verticalAlign: 'middle' } } />;
-  return <RemoveIcon sx={ { color: 'grey.500', fontSize: 18, verticalAlign: 'middle' } } />;
+const getRankChangeIcon = (current, last, theme) => {
+  if (last == null || current == null) return <RemoveIcon sx={ { color: 'text.secondary', fontSize: 18, verticalAlign: 'middle' } } />;
+  if (last > current) return <ArrowDropUpIcon sx={ { color: theme?.palette?.success?.main ?? 'green', fontSize: 18, verticalAlign: 'middle' } } />;
+  if (last < current) return <ArrowDropDownIcon sx={ { color: theme?.palette?.error?.main ?? 'red', fontSize: 18, verticalAlign: 'middle' } } />;
+  return <RemoveIcon sx={ { color: 'text.secondary', fontSize: 18, verticalAlign: 'middle' } } />;
 };
 
 const UserProfilePane = ({ entryId, onLeagueClick }) => {
@@ -67,7 +67,7 @@ const UserProfilePane = ({ entryId, onLeagueClick }) => {
                   secondary={
                     <>
                       Rank: { formatNumber(l.entry_rank) }{ ' ' }
-                      { getRankChangeIcon(l.entry_rank, l.entry_last_rank) }
+                      { getRankChangeIcon(l.entry_rank, l.entry_last_rank, theme) }
                     </>
                   }
                 />
@@ -86,22 +86,24 @@ const UserProfilePane = ({ entryId, onLeagueClick }) => {
               </ListItem>
             ) }
             { invitationalLeagues.map(l => (
-              <ListItem key={ l.id } disablePadding>
+              <ListItem key={ l.id } disablePadding sx={ { mb: 0.5 } }>
                 <ListItemText
                   primary={
                     <Button
                       size='small'
-                      variant='text'
+                      variant='outlined'
                       onClick={ () => onLeagueClick && onLeagueClick(l) }
                       sx={ {
-                        p: 0,
-                        minWidth: 0,
                         textTransform: 'none',
-                        fontWeight: 'normal',
+                        fontWeight: 500,
                         textAlign: 'left',
                         justifyContent: 'flex-start',
-                        color: 'inherit',
-                        '&:hover': { textDecoration: 'underline', background: 'none' },
+                        width: '100%',
+                        borderColor: 'primary.main',
+                        color: 'primary.main',
+                        py: 0.25,
+                        px: 1,
+                        '&:hover': { borderColor: 'secondary.main', color: 'secondary.main', backgroundColor: 'rgba(171,71,188,0.08)' },
                       } }
                     >
                       { l.name }
@@ -110,7 +112,7 @@ const UserProfilePane = ({ entryId, onLeagueClick }) => {
                   secondary={
                     <>
                       Rank: { formatNumber(l.entry_rank) }{ ' ' }
-                      { getRankChangeIcon(l.entry_rank, l.entry_last_rank) }
+                      { getRankChangeIcon(l.entry_rank, l.entry_last_rank, theme) }
                     </>
                   }
                 />
