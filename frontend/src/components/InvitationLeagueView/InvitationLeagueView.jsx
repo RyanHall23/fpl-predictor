@@ -102,15 +102,12 @@ const InvitationLeagueView = ({ league, onViewTeam, currentGameweek, selectedGam
                   ? entry.live_points
                   : entry.event_total;
                 const isMe = userEntryId && String(entry.entry) === String(userEntryId);
+                const isDark = theme.palette.mode === 'dark';
                 return (
                   <TableRow
                     key={ entry.id }
                     hover
-                    sx={ isMe ? {
-                      backgroundColor: theme.palette.primary.dark,
-                      '& .MuiTableCell-root': { color: '#fff', fontWeight: 600 },
-                      '&:hover .MuiTableCell-root': { backgroundColor: theme.palette.primary.main },
-                    } : {} }
+                    className={ isMe ? 'league-row-me' : '' }
                   >
                     <TableCell>
                       { entry.rank }{ ' ' }

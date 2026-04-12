@@ -109,3 +109,36 @@ body.teletext-theme .MuiPaper-root.league-view-pane .MuiTableCell-head {
 body.teletext-theme .MuiPaper-root.league-view-pane .MuiTableRow-root:hover td {
   background: rgba(255, 255, 0, 0.1);
 }
+
+/* User row highlight — works across all themes */
+.MuiPaper-root.league-view-pane tr.league-row-me td {
+  background-color: #6a1b9a !important;
+  font-weight: 600;
+}
+.MuiPaper-root.league-view-pane tr.league-row-me td,
+.MuiPaper-root.league-view-pane tr.league-row-me td * {
+  color: #ffffff !important;
+}
+.MuiPaper-root.league-view-pane tr.league-row-me:hover td {
+  background-color: #7b1fa2 !important;
+}
+
+html[data-mui-color-scheme='light'] .MuiPaper-root.league-view-pane tr.league-row-me td {
+  background-color: #7b1fa2 !important;
+}
+
+body.win2k-theme .MuiPaper-root.league-view-pane tr.league-row-me td {
+  background-color: #000080 !important;
+}
+body.win2k-theme .MuiPaper-root.league-view-pane tr.league-row-me td,
+body.win2k-theme .MuiPaper-root.league-view-pane tr.league-row-me td * {
+  color: #ffffff !important;
+}
+
+body.teletext-theme .MuiPaper-root.league-view-pane tr.league-row-me td {
+  background-color: #ffff00 !important;
+}
+body.teletext-theme .MuiPaper-root.league-view-pane tr.league-row-me td,
+body.teletext-theme .MuiPaper-root.league-view-pane tr.league-row-me td * {
+  color: #000000 !important;
+}
