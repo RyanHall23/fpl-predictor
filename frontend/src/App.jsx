@@ -199,6 +199,15 @@ const App = () => {
     }
   }, [gameweekInfo, isHighestPredictedTeam, viewingOpponentId, userEntryId, unusedChipIds]);
 
+  // Determine the chip that should actually affect the currently viewed gameweek.
+  // Only apply planned/active chips when viewing a future GW for the user's own team.
+  const effectiveActiveChip = useMemo(() => {
+    if (!gameweekInfo?.isFuture || isHighestPredictedTeam || viewingOpponentId) return null;
+    const viewedGW = gameweekInfo.selected;
+    // Prefer a planned per-gameweek chip (persisted to storage), fallback to transient `activeChip`.
+    return plannedChipsByGW[viewedGW] ?? activeChip ?? null;
+  }, [gameweekInfo, isHighestPredictedTeam, viewingOpponentId, plannedChipsByGW, activeChip]);
+
   useEffect(() => {
     if (snackbar.message) setSnackbarOpen(true);
   }, [snackbar]);
@@ -372,18 +381,18 @@ const App = () => {
       : Math.round((cap.predictedPoints ?? 0) / (cap.multiplier || 2));
   }, [effectiveActivePlayers]);
 
-  // Points displayed in the stats pod — adjusted for the active chip
+  // Points displayed in the stats pod — adjusted for the effective chip for the viewed GW
   const displayTotalPoints = useMemo(() => {
     const active = calculateTotalPredictedPoints(effectiveActivePlayers);
-    if (activeChip === 'bench_boost') return active + calculateTotalPredictedPoints(effectiveReservePlayers);
-    if (activeChip === 'triple_captain') return active + captainBasePoints; // +1× extra → 3× total
+    if (effectiveActiveChip === 'bench_boost') return active + calculateTotalPredictedPoints(effectiveReservePlayers);
+    if (effectiveActiveChip === 'triple_captain') return active + captainBasePoints; // +1× extra → 3× total
     return active;
-  }, [activeChip, effectiveActivePlayers, effectiveReservePlayers, calculateTotalPredictedPoints, captainBasePoints]);
+  }, [effectiveActiveChip, effectiveActivePlayers, effectiveReservePlayers, calculateTotalPredictedPoints, captainBasePoints]);
 
   const displayBenchPoints = useMemo(() => {
-    if (activeChip === 'bench_boost') return 0; // bench points are merged into total
+    if (effectiveActiveChip === 'bench_boost') return 0; // bench points are merged into total
     return calculateTotalPredictedPoints(effectiveReservePlayers);
-  }, [activeChip, effectiveReservePlayers, calculateTotalPredictedPoints]);
+  }, [effectiveActiveChip, effectiveReservePlayers, calculateTotalPredictedPoints]);
 
   // Free Transfers remaining for the viewed GW, after planned transfers are applied.
   // null = not applicable (highest predicted team or opponent view).
