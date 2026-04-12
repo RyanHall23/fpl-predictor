@@ -516,6 +516,7 @@ const App = () => {
     addPlannedTransfer(playerOut, playerIn, gameweek);
   };
 
+  // Grid column count: 2 base (Total Points, Bench Points) + optional Free Transfers + optional Bank + 1 controls (AutoPick/View)
   const statsColCount = 2 + (displayFreeTransfers != null ? 1 : 0) + (displayBank != null ? 1 : 0) + 1;
 
   return (

@@ -203,7 +203,7 @@ const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, assisters }) => {
               const homeQueue = (assisters ?? []).filter(a => a.abbr === espnMatch?.homeAbbr).flatMap(a => Array(Math.trunc(a.value)).fill(a.name));
               const awayQueue = (assisters ?? []).filter(a => a.abbr === espnMatch?.awayAbbr).flatMap(a => Array(Math.trunc(a.value)).fill(a.name));
               return espnMatch?.details
-                .filter(d => d.icon !== 'other')
+                ?.filter(d => d.icon !== 'other')
                 .map((event, idx) => {
                   let assist = undefined;
                   if (event.icon === 'goal' && !event.ownGoal && !event.penaltyKick) {
