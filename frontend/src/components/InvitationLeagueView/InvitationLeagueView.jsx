@@ -9,8 +9,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  ToggleButton,
-  ToggleButtonGroup,
   Button,
   CircularProgress,
   Alert,
@@ -19,31 +17,38 @@ import {
 import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import RemoveIcon from '@mui/icons-material/Remove';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { useTheme } from '@mui/material/styles';
 import axios from '../../api';
+import './styles.css';
 
-const getRankChangeIcon = (current, last) => {
+const getRankChangeIcon = (current, last, theme) => {
   if (last == null || current == null)
-    return <RemoveIcon sx={ { color: 'grey.500', fontSize: 18, verticalAlign: 'middle' } } />;
+    return <RemoveIcon sx={ { color: 'text.secondary', fontSize: 18, verticalAlign: 'middle' } } />;
   if (last > current)
-    return <ArrowDropUpIcon sx={ { color: 'green', fontSize: 18, verticalAlign: 'middle' } } />;
+    return <ArrowDropUpIcon sx={ { color: theme.palette.success.main, fontSize: 18, verticalAlign: 'middle' } } />;
   if (last < current)
-    return <ArrowDropDownIcon sx={ { color: 'red', fontSize: 18, verticalAlign: 'middle' } } />;
-  return <RemoveIcon sx={ { color: 'grey.500', fontSize: 18, verticalAlign: 'middle' } } />;
+    return <ArrowDropDownIcon sx={ { color: theme.palette.error.main, fontSize: 18, verticalAlign: 'middle' } } />;
+  return <RemoveIcon sx={ { color: 'text.secondary', fontSize: 18, verticalAlign: 'middle' } } />;
 };
 
-const InvitationLeagueView = ({ league, onBack, onViewTeam }) => {
-  const [gameweeksAhead, setGameweeksAhead] = useState(1);
+const InvitationLeagueView = ({ league, onViewTeam, currentGameweek, selectedGameweek, onModeChange, userEntryId }) => {
+  const theme = useTheme();
   const [standings, setStandings] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const fetchStandings = useCallback(async (gwa) => {
+  // Derive display mode from selected vs current gameweek
+  const effectiveGW = selectedGameweek || currentGameweek;
+  const isFuture = currentGameweek != null && effectiveGW != null && effectiveGW > currentGameweek;
+  const isPast = currentGameweek != null && effectiveGW != null && effectiveGW < currentGameweek;
+  const gameweeksAhead = isFuture ? effectiveGW - currentGameweek : 1;
+
+  const fetchStandings = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
       const res = await axios.get(
-        `/api/leagues-classic/${league.id}/standings?gameweeksAhead=${gwa}`
+        `/api/leagues-classic/${league.id}/standings?gameweeksAhead=${gameweeksAhead}`
       );
       setStandings(res.data);
     } catch (err) {
@@ -51,54 +56,31 @@ const InvitationLeagueView = ({ league, onBack, onViewTeam }) => {
     } finally {
       setLoading(false);
     }
-  }, [league.id]);
+  }, [league.id, gameweeksAhead]);
+
+  const isActiveGw = standings?.isActiveGw ?? false;
+
+  // Derived labels — notify parent so it can render the chip in its header
+  const predictedLabel = gameweeksAhead === 1
+    ? 'Predicted (Next GW)'
+    : `Predicted (Next ${gameweeksAhead} GWs)`;
+  const gwModeLabel = isFuture
+    ? predictedLabel
+    : isPast
+      ? `GW ${effectiveGW} Pts`
+      : isActiveGw ? 'Live' : `GW ${effectiveGW} Pts`;
+  const gwModeColor = isFuture ? 'secondary' : (isPast || !isActiveGw) ? 'default' : 'success';
 
   useEffect(() => {
-    fetchStandings(gameweeksAhead);
-  }, [league.id, gameweeksAhead, fetchStandings]);
+    if (onModeChange) onModeChange({ label: gwModeLabel, color: gwModeColor, isFuture });
+  }, [gwModeLabel, gwModeColor, isFuture, onModeChange]);
 
-  const handleGwToggle = (_, value) => {
-    if (value !== null) setGameweeksAhead(value);
-  };
-
-  const predictedLabel = gameweeksAhead === 1
-    ? 'Predicted Pts (Next GW)'
-    : `Predicted Pts (Next ${gameweeksAhead} GWs)`;
+  useEffect(() => {
+    fetchStandings();
+  }, [fetchStandings]);
 
   return (
-    <Paper sx={ { p: 2 } }>
-      <Box sx={ { display: 'flex', alignItems: 'center', mb: 1 } }>
-        <Button
-          size='small'
-          startIcon={ <ArrowBackIcon /> }
-          onClick={ onBack }
-          sx={ { mr: 1 } }
-        >
-          Back
-        </Button>
-        <Typography variant='h6' component='span'>
-          { league.name }
-        </Typography>
-      </Box>
-
-      <Box sx={ { mb: 2 } }>
-        <Typography variant='body2' sx={ { mb: 0.5 } }>
-          Predicted points lookahead:
-        </Typography>
-        <ToggleButtonGroup
-          value={ gameweeksAhead }
-          exclusive
-          onChange={ handleGwToggle }
-          size='small'
-        >
-          <ToggleButton value={ 1 }>1 GW</ToggleButton>
-          <ToggleButton value={ 2 }>2 GWs</ToggleButton>
-          <ToggleButton value={ 3 }>3 GWs</ToggleButton>
-          <ToggleButton value={ 4 }>4 GWs</ToggleButton>
-          <ToggleButton value={ 5 }>5 GWs</ToggleButton>
-        </ToggleButtonGroup>
-      </Box>
-
+    <Paper className='league-view-pane' elevation={ 4 }>
       { error && <Alert severity='error' sx={ { mb: 1 } }>{ error }</Alert> }
 
       { loading ? (
@@ -114,38 +96,57 @@ const InvitationLeagueView = ({ league, onBack, onViewTeam }) => {
                 <TableCell>Team</TableCell>
                 <TableCell align='right'>GW Pts</TableCell>
                 <TableCell align='right'>Total</TableCell>
-                <TableCell align='right'>{ predictedLabel }</TableCell>
+                { isFuture && <TableCell align='right'>Predicted</TableCell> }
               </TableRow>
             </TableHead>
             <TableBody>
-              { standings.standings?.results?.map(entry => (
-                <TableRow key={ entry.id } hover>
-                  <TableCell>
-                    { entry.rank }{ ' ' }
-                    { getRankChangeIcon(entry.rank, entry.last_rank) }
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      size='small'
-                      variant='text'
-                      onClick={ () => onViewTeam(entry.entry, entry.entry_name) }
-                      sx={ { p: 0, minWidth: 0, textTransform: 'none', fontWeight: 'normal' } }
-                    >
-                      { entry.entry_name }
-                    </Button>
-                    <Typography variant='caption' display='block' color='text.secondary'>
-                      { entry.player_name }
-                    </Typography>
-                  </TableCell>
-                  <TableCell align='right'>{ entry.event_total }</TableCell>
-                  <TableCell align='right'>{ entry.total }</TableCell>
-                  <TableCell align='right'>
-                    { entry.predicted_points !== null && entry.predicted_points !== undefined
-                      ? entry.predicted_points
-                      : '–' }
-                  </TableCell>
-                </TableRow>
-              )) }
+              { standings.standings?.results?.map(entry => {
+                const gwPts = (isActiveGw && entry.live_points != null)
+                  ? entry.live_points
+                  : entry.event_total;
+                const isMe = userEntryId && String(entry.entry) === String(userEntryId);
+                return (
+                  <TableRow
+                    key={ entry.id }
+                    hover
+                    className={ isMe ? 'league-row-me' : '' }
+                  >
+                    <TableCell>
+                      { entry.rank }{ ' ' }
+                      { getRankChangeIcon(entry.rank, entry.last_rank, theme) }
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        size='small'
+                        variant='text'
+                        onClick={ () => onViewTeam(entry.entry, entry.entry_name) }
+                        sx={ {
+                          p: 0,
+                          minWidth: 0,
+                          textTransform: 'none',
+                          fontWeight: 'normal',
+                          textAlign: 'left',
+                          justifyContent: 'flex-start',
+                          color: 'inherit',
+                          '&:hover': { textDecoration: 'underline', background: 'none' },
+                        } }
+                      >
+                        { entry.entry_name }
+                      </Button>
+                      <Typography variant='caption' display='block' color='text.secondary'>
+                        { entry.player_name }
+                      </Typography>
+                    </TableCell>
+                    <TableCell align='right'>{ gwPts }</TableCell>
+                    <TableCell align='right'>{ entry.total }</TableCell>
+                    { isFuture && (
+                      <TableCell align='right'>
+                        { entry.predicted_points != null ? entry.predicted_points : '–' }
+                      </TableCell>
+                    ) }
+                  </TableRow>
+                );
+              }) }
             </TableBody>
           </Table>
         </TableContainer>
@@ -159,8 +160,11 @@ InvitationLeagueView.propTypes = {
     id: PropTypes.number.isRequired,
     name: PropTypes.string.isRequired,
   }).isRequired,
-  onBack: PropTypes.func.isRequired,
   onViewTeam: PropTypes.func.isRequired,
+  currentGameweek: PropTypes.number,
+  selectedGameweek: PropTypes.number,
+  onModeChange: PropTypes.func,
+  userEntryId: PropTypes.string,
 };
 
 export default InvitationLeagueView;

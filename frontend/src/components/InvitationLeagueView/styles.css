@@ -1,0 +1,144 @@
+/* Dark mode - default */
+.MuiPaper-root.league-view-pane {
+  background: linear-gradient(135deg, #23272f 0%, #281455 100%);
+  color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(106, 27, 154, 0.3);
+  padding: 8px;
+  transition: all 0.3s ease;
+}
+
+/* Light mode */
+html[data-mui-color-scheme='light'] .MuiPaper-root.league-view-pane {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  color: #212121;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.MuiPaper-root.league-view-pane .MuiTypography-h6,
+.MuiPaper-root.league-view-pane .MuiTypography-subtitle2 {
+  color: inherit;
+}
+
+.MuiPaper-root.league-view-pane .MuiDivider-root {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+html[data-mui-color-scheme='light'] .MuiPaper-root.league-view-pane .MuiDivider-root {
+  background-color: rgba(0, 0, 0, 0.12);
+}
+
+.MuiPaper-root.league-view-pane .MuiButton-root {
+  color: inherit;
+  transition: all 0.3s ease;
+}
+
+.MuiPaper-root.league-view-pane .MuiButton-root:hover {
+  background-color: rgba(171, 71, 188, 0.2);
+}
+
+html[data-mui-color-scheme='light'] .MuiPaper-root.league-view-pane .MuiButton-root:hover {
+  background-color: rgba(106, 27, 154, 0.1);
+}
+
+.MuiPaper-root.league-view-pane .MuiTableCell-root {
+  color: inherit;
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+html[data-mui-color-scheme='light'] .MuiPaper-root.league-view-pane .MuiTableCell-root {
+  border-bottom-color: rgba(0, 0, 0, 0.08);
+}
+
+.MuiPaper-root.league-view-pane .MuiTableCell-head {
+  background: #2a1a3e;
+  color: inherit;
+  font-weight: 600;
+}
+
+html[data-mui-color-scheme='light'] .MuiPaper-root.league-view-pane .MuiTableCell-head {
+  background: #ede7f6;
+}
+
+.MuiPaper-root.league-view-pane .MuiTableRow-root:hover td {
+  background: rgba(171, 71, 188, 0.12);
+}
+
+html[data-mui-color-scheme='light'] .MuiPaper-root.league-view-pane .MuiTableRow-root:hover td {
+  background: rgba(106, 27, 154, 0.06);
+}
+
+/* Win2k theme */
+body.win2k-theme .MuiPaper-root.league-view-pane {
+  background: #d4d0c8;
+  color: #000000;
+  border-radius: 0;
+  box-shadow: inset -1px -1px 0 #000000, inset 1px 1px 0 #dfdfdf;
+}
+
+body.win2k-theme .MuiPaper-root.league-view-pane .MuiDivider-root {
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+body.win2k-theme .MuiPaper-root.league-view-pane .MuiTableCell-head {
+  background: #b8b4ac;
+}
+
+body.win2k-theme .MuiPaper-root.league-view-pane .MuiTableRow-root:hover td {
+  background: rgba(0, 0, 128, 0.08);
+}
+
+/* Teletext theme */
+body.teletext-theme .MuiPaper-root.league-view-pane {
+  background: #000000;
+  color: #ffffff;
+  border-radius: 0;
+  border: 2px solid #ffff00;
+  box-shadow: none;
+  font-family: "Courier New", "Courier", monospace;
+}
+
+body.teletext-theme .MuiPaper-root.league-view-pane .MuiDivider-root {
+  background-color: #ffff00;
+}
+
+body.teletext-theme .MuiPaper-root.league-view-pane .MuiTableCell-head {
+  background: #000080;
+}
+
+body.teletext-theme .MuiPaper-root.league-view-pane .MuiTableRow-root:hover td {
+  background: rgba(255, 255, 0, 0.1);
+}
+
+/* User row highlight — works across all themes */
+.MuiPaper-root.league-view-pane tr.league-row-me td {
+  background-color: #6a1b9a !important;
+  font-weight: 600;
+}
+.MuiPaper-root.league-view-pane tr.league-row-me td,
+.MuiPaper-root.league-view-pane tr.league-row-me td * {
+  color: #ffffff !important;
+}
+.MuiPaper-root.league-view-pane tr.league-row-me:hover td {
+  background-color: #7b1fa2 !important;
+}
+
+html[data-mui-color-scheme='light'] .MuiPaper-root.league-view-pane tr.league-row-me td {
+  background-color: #7b1fa2 !important;
+}
+
+body.win2k-theme .MuiPaper-root.league-view-pane tr.league-row-me td {
+  background-color: #000080 !important;
+}
+body.win2k-theme .MuiPaper-root.league-view-pane tr.league-row-me td,
+body.win2k-theme .MuiPaper-root.league-view-pane tr.league-row-me td * {
+  color: #ffffff !important;
+}
+
+body.teletext-theme .MuiPaper-root.league-view-pane tr.league-row-me td {
+  background-color: #ffff00 !important;
+}
+body.teletext-theme .MuiPaper-root.league-view-pane tr.league-row-me td,
+body.teletext-theme .MuiPaper-root.league-view-pane tr.league-row-me td * {
+  color: #000000 !important;
+}
