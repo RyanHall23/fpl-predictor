@@ -31,7 +31,7 @@ const getRankChangeIcon = (current, last, theme) => {
   return <RemoveIcon sx={ { color: 'text.secondary', fontSize: 18, verticalAlign: 'middle' } } />;
 };
 
-const InvitationLeagueView = ({ league, onViewTeam, currentGameweek, selectedGameweek, onModeChange }) => {
+const InvitationLeagueView = ({ league, onViewTeam, currentGameweek, selectedGameweek, onModeChange, userEntryId }) => {
   const theme = useTheme();
   const [standings, setStandings] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -98,14 +98,20 @@ const InvitationLeagueView = ({ league, onViewTeam, currentGameweek, selectedGam
             </TableHead>
             <TableBody>
               { standings.standings?.results?.map(entry => {
-                // For the active GW, use live_points (computed from live endpoint).
-                // For past GWs, live_points holds the confirmed final score.
-                // Fall back to event_total only if live data is unavailable.
                 const gwPts = (!isFuture && entry.live_points != null)
                   ? entry.live_points
                   : entry.event_total;
+                const isMe = userEntryId && String(entry.entry) === String(userEntryId);
                 return (
-                  <TableRow key={ entry.id } hover>
+                  <TableRow
+                    key={ entry.id }
+                    hover
+                    sx={ isMe ? {
+                      backgroundColor: theme.palette.primary.dark,
+                      '& .MuiTableCell-root': { color: '#fff', fontWeight: 600 },
+                      '&:hover .MuiTableCell-root': { backgroundColor: theme.palette.primary.main },
+                    } : {} }
+                  >
                     <TableCell>
                       { entry.rank }{ ' ' }
                       { getRankChangeIcon(entry.rank, entry.last_rank, theme) }
@@ -159,6 +165,7 @@ InvitationLeagueView.propTypes = {
   currentGameweek: PropTypes.number,
   selectedGameweek: PropTypes.number,
   onModeChange: PropTypes.func,
+  userEntryId: PropTypes.string,
 };
 
 export default InvitationLeagueView;

@@ -15,6 +15,7 @@ import axios from '../../api';
 
 const RightPanel = ({ 
   entryId,
+  userEntryId,
   onViewTeam,
   currentGameweek,
   selectedGameweek,
@@ -103,6 +104,7 @@ const RightPanel = ({
               currentGameweek={ currentGameweek }
               selectedGameweek={ selectedGameweek }
               onModeChange={ setGwMode }
+              userEntryId={ userEntryId }
             />
           ) }
         </Box>
@@ -122,6 +124,7 @@ const RightPanel = ({
 
 RightPanel.propTypes = {
   entryId: PropTypes.string,
+  userEntryId: PropTypes.string,
   onViewTeam: PropTypes.func,
   currentGameweek: PropTypes.number,
   selectedGameweek: PropTypes.number,
