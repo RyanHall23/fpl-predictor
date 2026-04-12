@@ -29,7 +29,7 @@ const RightPanel = ({
   const [selectedLeagueId, setSelectedLeagueId] = useState('');
   const [gwMode, setGwMode] = useState(null); // { label, color, isFuture }
 
-  const storageKey = entryId ? `selectedLeagueId_${entryId}` : null;
+  const storageKey = userEntryId ? `selectedLeagueId_${userEntryId}` : null;
 
   useEffect(() => {
     if (!entryId) { setInvLeagues([]); setSelectedLeagueId(''); return; }

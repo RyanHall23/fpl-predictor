@@ -61,8 +61,11 @@ const InvitationLeagueView = ({ league, onViewTeam, currentGameweek, selectedGam
   const isActiveGw = standings?.isActiveGw ?? false;
 
   // Derived labels — notify parent so it can render the chip in its header
+  const predictedLabel = gameweeksAhead === 1
+    ? 'Predicted (Next GW)'
+    : `Predicted (Next ${gameweeksAhead} GWs)`;
   const gwModeLabel = isFuture
-    ? `Predicted (GW ${effectiveGW})`
+    ? predictedLabel
     : isPast
       ? `GW ${effectiveGW} Pts`
       : isActiveGw ? 'Live' : `GW ${effectiveGW} Pts`;
@@ -98,11 +101,10 @@ const InvitationLeagueView = ({ league, onViewTeam, currentGameweek, selectedGam
             </TableHead>
             <TableBody>
               { standings.standings?.results?.map(entry => {
-                const gwPts = (!isFuture && entry.live_points != null)
+                const gwPts = (isActiveGw && entry.live_points != null)
                   ? entry.live_points
                   : entry.event_total;
                 const isMe = userEntryId && String(entry.entry) === String(userEntryId);
-                const isDark = theme.palette.mode === 'dark';
                 return (
                   <TableRow
                     key={ entry.id }

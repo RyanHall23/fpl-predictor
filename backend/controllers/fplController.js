@@ -541,7 +541,7 @@ const getUserTeamForEntry = async (req, res) => {
     const isPastGameweek = !!(targetEventData && targetEventData.finished);
     const isActiveGameweek = !!(targetEventData && targetEventData.is_current && !targetEventData.finished);
 
-    if (isPastGameweek || -isActiveGameweek) {
+    if (isPastGameweek || isActiveGameweek) {
       players = await fplModel.enrichPlayersWithGameweekStats(players, targetEvent);
     }
 
