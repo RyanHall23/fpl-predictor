@@ -264,11 +264,10 @@ const RecommendedTransfers = ({ entryId, currentGameweek, compact = false }) => 
                                     className='u-block u-mt-0p5 u-nowrap text-xxs'
                                   >
                                     Current: £{ (rec.playerOut.now_cost / 10).toFixed(1) }m | 
-                                    <span style={ { 
-                                      color: rec.playerOut.selling_price > rec.playerOut.purchase_price ? 'var(--clr-success)' : 
-                                             rec.playerOut.selling_price < rec.playerOut.purchase_price ? 'var(--clr-error)' : 'inherit',
-                                      fontWeight: rec.playerOut.selling_price !== rec.playerOut.purchase_price ? 'bold' : 'normal'
-                                    } }>
+                                    <span className={ 
+                                      rec.playerOut.selling_price > rec.playerOut.purchase_price ? 'text-success u-font-bold' : 
+                                      rec.playerOut.selling_price < rec.playerOut.purchase_price ? 'text-error u-font-bold' : '' 
+                                    }>
                                       { ' ' }Sell: £{ (rec.playerOut.selling_price / 10).toFixed(1) }m
                                     </span> | Purchase: £{ (rec.playerOut.purchase_price / 10).toFixed(1) }m
                                   </Typography>

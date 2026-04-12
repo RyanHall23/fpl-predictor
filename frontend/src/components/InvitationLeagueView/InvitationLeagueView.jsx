@@ -23,12 +23,12 @@ import axios from '../../api';
 
 const getRankChangeIcon = (current, last) => {
   if (last == null || current == null)
-    return <RemoveIcon style={ { color: 'grey', fontSize: 18, verticalAlign: 'middle' } } />;
+    return <RemoveIcon className='rank-icon rank-neutral' />;
   if (last > current)
-    return <ArrowDropUpIcon style={ { color: 'green', fontSize: 18, verticalAlign: 'middle' } } />;
+    return <ArrowDropUpIcon className='rank-icon rank-up' />;
   if (last < current)
-    return <ArrowDropDownIcon style={ { color: 'red', fontSize: 18, verticalAlign: 'middle' } } />;
-  return <RemoveIcon style={ { color: 'grey', fontSize: 18, verticalAlign: 'middle' } } />;
+    return <ArrowDropDownIcon className='rank-icon rank-down' />;
+  return <RemoveIcon className='rank-icon rank-neutral' />;
 };
 
 const InvitationLeagueView = ({ league, onBack, onViewTeam }) => {

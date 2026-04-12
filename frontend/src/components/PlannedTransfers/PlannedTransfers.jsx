@@ -385,8 +385,7 @@ const PlannedTransfers = ({
                     </Tooltip>
                   ) }
                   <div
-                    className='u-flex u-items-start u-gap-0p5 u-flex-wrap'
-                    style={ { opacity: isVoided ? 0.5 : 1 } }
+                    className={ `u-flex u-items-start u-gap-0p5 u-flex-wrap${isVoided ? ' opacity-voided' : ''}` }
                   >
                     <div className='u-flex-1 u-min-w-0'>
                       <Typography
@@ -397,7 +396,7 @@ const PlannedTransfers = ({
                       >{ t.playerOut.name }</Typography>
                       <PointsFixturesForecast gwData={ outForecast } pointsColor='error' />
                     </div>
-                    <SwapHorizIcon className='u-shrink-0 u-mt-0p5' style={ { fontSize: 18, color: 'var(--clr-text-secondary)' } } />
+                    <SwapHorizIcon className='icon-swap u-shrink-0 u-mt-0p5' />
                     <div className='u-flex-1 u-min-w-0'>
                       <Typography
                         variant='body2'
@@ -419,7 +418,7 @@ const PlannedTransfers = ({
                       )) }
                     </Select>
                     <IconButton size='small' onClick={ () => onRemove(t.id) } className='icon-error icon-btn-xs'>
-                      <DeleteIcon style={ { fontSize: 16 } } />
+                      <DeleteIcon className='icon-delete' />
                     </IconButton>
                   </div>
                 </div>
@@ -476,7 +475,7 @@ const PlannedTransfers = ({
                 return (
                   <TableRow
                     key={ t.id }
-                    style={ { opacity: isVoided ? 0.55 : 1 } }
+                    className={ isVoided ? 'opacity-voided-2' : '' }
                     hover
                   >
                     { /* Player Out */ }
@@ -504,7 +503,7 @@ const PlannedTransfers = ({
                     </TableCell>
                     { /* Arrow */ }
                     <TableCell className='cell-px-sm'>
-                      <SwapHorizIcon style={ { fontSize: 20, color: 'var(--clr-text-secondary)' } } />
+                      <SwapHorizIcon className='icon-swap-lg' />
                     </TableCell>
                     { /* Player In */ }
                     <TableCell className='cell-minw-150'>

@@ -130,7 +130,7 @@ const ListRow = ({
             <img
               src={ `https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_${player.teamCode}-66.png` }
               alt={ player.webName }
-              style={ { width: 22, height: 22, objectFit: 'contain', display: 'block' } }
+              className='player-shirt-sm'
               onError={ (e) => { e.target.style.display = 'none'; } }
             />
           </ButtonBase>

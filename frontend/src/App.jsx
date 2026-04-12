@@ -11,7 +11,6 @@ import Typography from '@mui/material/Typography';
 import Snackbar from '@mui/material/Snackbar';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
-import { useTheme } from '@mui/material/styles';
 import TableRowsIcon from '@mui/icons-material/TableRows';
 import GridViewIcon from '@mui/icons-material/GridView';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
@@ -39,7 +38,6 @@ const CHIPS = [
 ];
 
 const App = () => {
-  const theme = useTheme();
   const [userEntryId, setUserEntryId] = useState(() => localStorage.getItem('teamId') || '');
   const [currentEntryId, setCurrentEntryId] = useState(() => localStorage.getItem('teamId') || '');
   const [teamView, setTeamView] = useState(() => localStorage.getItem('teamId') ? TEAM_VIEW.USER : TEAM_VIEW.HIGHEST);
@@ -518,8 +516,10 @@ const App = () => {
     addPlannedTransfer(playerOut, playerIn, gameweek);
   };
 
+  const statsColCount = 2 + (displayFreeTransfers != null ? 1 : 0) + (displayBank != null ? 1 : 0) + 1;
+
   return (
-    <Box sx={ { minHeight: '100vh', backgroundColor: theme.palette.background.default, display: 'flex', flexDirection: 'column' } }>
+    <Box className='app-root'>
       <NavigationBar
         teamView={ teamView }
         onSwitchTeamView={ handleSwitchTeamView }
@@ -533,13 +533,13 @@ const App = () => {
         isPast={ gameweekInfo?.isPast }
         isActive={ gameweekInfo?.isActive }
       />
-      <Container maxWidth={ false } sx={ { flex: 1, marginTop: '8px', display: 'flex', flexDirection: 'column', px: { xs: 1, sm: 2 } } }>
-        <Box sx={ { display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, gap: 2, flex: 1, alignItems: 'flex-start' } }>
+      <Container maxWidth={ false } className='app-content u-flex u-flex-col u-flex-1'>
+        <Box className='app-columns'>
           { /* Left - Pitch */ }
-          <Box sx={ { flex: { xs: '1 1 auto', lg: '0 0 43%' }, width: { xs: '100%', lg: 'auto' }, display: 'flex', flexDirection: 'column' } }>
+          <Box className='app-col-left'>
             { /* Banner shown when viewing an opponent's team */ }
             { viewingOpponentId && (
-              <Box sx={ { mb: 1, display: 'flex', alignItems: 'center', gap: 1 } }>
+              <Box className='opponent-banner'>
                 <Typography variant='body2' color='text.secondary'>
                   Viewing opponent&apos;s team
                 </Typography>
@@ -551,39 +551,22 @@ const App = () => {
               </Box>
             ) }
             { /* Stats + controls pod wrapping pitch/bench */ }
-            <Paper variant='outlined' sx={ { px: 2, py: 1 } }>
-              <Box sx={ { display: 'flex', alignItems: 'center', gap: 2 } }>
+            <Paper variant='outlined' className='stats-bar-paper'>
+              <Box className='stats-bar-outer'>
                 { /* Chips — left column (own team only, not shown for locked GWs) */ }
                 { !isHighestPredictedTeam && !viewingOpponentId && !isLockedGameweek && activePlayers.length > 0 && unusedChipIds.length > 0 && (
-                  <Box sx={ { display: 'flex', flexDirection: 'column', gap: 0.5, alignItems: 'center' } }>
-                    <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500, whiteSpace: 'nowrap' } }>
+                  <Box className='stats-bar-chip-col'>
+                    <Typography variant='caption' color='text.secondary' className='u-font-500 u-nowrap'>
                       Chips
                     </Typography>
-                    <Box sx={ { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0.5 } }>
+                    <Box className='stats-bar-chip-grid'>
                       { CHIPS.filter(chip => unusedChipIds.includes(chip.id)).map(chip => (
                         <Tooltip key={ chip.id } title={ `${chip.name}: ${chip.description}` }>
                           <Button
                             size='small'
                             variant={ activeChip === chip.id ? 'contained' : 'outlined' }
                             onClick={ () => handleChipToggle(chip.id) }
-                            sx={ {
-                              minWidth: 0,
-                              px: 0.75, py: '2px',
-                              fontSize: '0.65rem',
-                              fontWeight: 700,
-                              lineHeight: 1.4,
-                              ...(activeChip === chip.id && {
-                                backgroundColor: chip.color,
-                                borderColor: chip.color,
-                                color: '#fff',
-                                '&:hover': { backgroundColor: chip.color, filter: 'brightness(1.1)' },
-                              }),
-                              ...(activeChip !== chip.id && {
-                                borderColor: chip.color,
-                                color: chip.color,
-                                '&:hover': { borderColor: chip.color, backgroundColor: `${chip.color}18` },
-                              }),
-                            } }
+                            className={ `chip-btn chip-btn-${chip.id}${activeChip === chip.id ? ' chip-btn--active' : ''}` }
                           >
                             { chip.label }
                           </Button>
@@ -594,61 +577,61 @@ const App = () => {
                 ) }
 
                 { /* Stats + controls grid */ }
-                <Box sx={ { flex: 1, display: 'grid', gridTemplateColumns: displayFreeTransfers != null || displayBank != null ? `1fr 1fr${ displayFreeTransfers != null ? ' 1fr' : '' }${ displayBank != null ? ' 1fr' : '' } 1fr` : '1fr 1fr 1fr', textAlign: 'center', rowGap: 0.75 } }>
+                <Box className={ `stats-grid-base stats-grid-${statsColCount}col` }>
                   { /* Row 1 — labels */ }
-                  <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>
+                  <Typography variant='caption' color='text.secondary' className='u-font-500'>
                     Total Points
                   </Typography>
-                  <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>
+                  <Typography variant='caption' color='text.secondary' className='u-font-500'>
                     Bench Points
                   </Typography>
                   { displayFreeTransfers != null && (
-                    <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>
+                    <Typography variant='caption' color='text.secondary' className='u-font-500'>
                       Free Transfers
                     </Typography>
                   ) }
                   { displayBank != null && (
-                    <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>
+                    <Typography variant='caption' color='text.secondary' className='u-font-500'>
                       In the Bank
                     </Typography>
                   ) }
-                  <Box sx={ { display: 'flex', justifyContent: 'center' } }>
+                  <Box className='u-flex u-justify-center'>
                     { !isHighestPredictedTeam && !viewingOpponentId && !isLockedGameweek && activePlayers.length > 0 ? (
                       <Tooltip title='Auto pick best XI from your squad'>
                         <Button
                           size='small'
                           variant='outlined'
-                          startIcon={ <AutoFixHighIcon sx={ { fontSize: 16 } } /> }
+                          startIcon={ <AutoFixHighIcon className='icon-16' /> }
                           onClick={ () => autoPickLineup(effectiveActivePlayers, effectiveReservePlayers) }
-                          sx={ { py: '3px', px: 1.25, minWidth: 0, fontSize: '0.75rem', '[data-mui-color-scheme="dark"] &': { color: '#fff', borderColor: 'rgba(255,255,255,0.5)' } } }
+                          className='auto-pick-btn'
                         >
                           Auto Pick
                         </Button>
                       </Tooltip>
                     ) : (
-                      <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>View</Typography>
+                      <Typography variant='caption' color='text.secondary' className='u-font-500'>View</Typography>
                     ) }
                   </Box>
                   { /* Row 2 — values / toggle */ }
-                  <Typography variant='h6' sx={ { fontWeight: 700, lineHeight: 1.2 } }>
+                  <Typography variant='h6' className='u-font-bold u-line-1p2'>
                     { displayTotalPoints }
                   </Typography>
-                  <Typography variant='h6' sx={ { fontWeight: 700, lineHeight: 1.2 } }>
+                  <Typography variant='h6' className='u-font-bold u-line-1p2'>
                     { displayBenchPoints }
                   </Typography>
                   { displayFreeTransfers != null && (
-                    <Box sx={ { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' } }>
+                    <Box className='u-flex u-flex-col u-items-center u-justify-center'>
                       { displayFreeTransfers.chip ? (
-                        <Typography variant='h6' sx={ { fontWeight: 700, lineHeight: 1.2, color: displayFreeTransfers.chip === 'wildcard' ? '#6a1b9a' : '#e65100' } }>
+                        <Typography variant='h6' className={ `u-font-bold u-line-1p2 ${displayFreeTransfers.chip === 'wildcard' ? 'ft-chip-wildcard' : 'ft-chip-freehit'}` }>
                           { displayFreeTransfers.chip === 'wildcard' ? 'WC' : 'FH' }
                         </Typography>
                       ) : (
                         <>
-                          <Typography variant='h6' sx={ { fontWeight: 700, lineHeight: 1.2 } }>
+                          <Typography variant='h6' className='u-font-bold u-line-1p2'>
                             { displayFreeTransfers.remaining }
                           </Typography>
                           { displayFreeTransfers.cost < 0 && (
-                            <Typography variant='caption' sx={ { color: 'error.main', fontWeight: 600, lineHeight: 1 } }>
+                            <Typography variant='caption' color='error' className='u-font-600 u-line-1'>
                               { displayFreeTransfers.cost }pts
                             </Typography>
                           ) }
@@ -657,36 +640,36 @@ const App = () => {
                     </Box>
                   ) }
                   { displayBank != null && (
-                    <Box sx={ { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' } }>
-                      <Typography variant='h6' sx={ { fontWeight: 700, lineHeight: 1.2, color: displayBank >= 0 ? 'success.main' : 'error.main' } }>
+                    <Box className='u-flex u-flex-col u-items-center u-justify-center'>
+                      <Typography variant='h6' className={ `u-font-bold u-line-1p2 ${displayBank >= 0 ? 'text-success' : 'text-error'}` }>
                         £{ (displayBank / 10).toFixed(1) }m
                       </Typography>
                       { displayTransferFunds && (
-                        <Typography variant='caption' sx={ { color: 'text.secondary', fontWeight: 500, lineHeight: 1, whiteSpace: 'nowrap' } }>
+                        <Typography variant='caption' color='text.secondary' className='u-font-500 u-line-1 u-nowrap'>
                           in £{ (displayTransferFunds.fundsIn / 10).toFixed(1) }m · out £{ (displayTransferFunds.fundsOut / 10).toFixed(1) }m
                         </Typography>
                       ) }
                     </Box>
                   ) }
-                  <Box sx={ { display: 'flex', justifyContent: 'center', alignItems: 'center' } }>
+                  <Box className='u-flex u-justify-center u-items-center'>
                     <ToggleButtonGroup
                       value={ pitchView }
                       exclusive
                       onChange={ (_, val) => { if (val) { setPitchView(val); localStorage.setItem('pitchView', val); } } }
                       size='small'
-                      sx={ { '& .MuiToggleButton-root': { padding: '4px 10px' } } }
+                      className='toggle-group-sm'
                     >
                       <ToggleButton value='formation' title='Formation view'>
-                        <GridViewIcon sx={ { fontSize: 18 } } />
+                        <GridViewIcon className='icon-18' />
                       </ToggleButton>
                       <ToggleButton value='list' title='List view'>
-                        <TableRowsIcon sx={ { fontSize: 18 } } />
+                        <TableRowsIcon className='icon-18' />
                       </ToggleButton>
                     </ToggleButtonGroup>
                   </Box>
                 </Box>
               </Box>
-              <Box sx={ { mt: 1 } }>
+              <Box className='u-mt-1'>
                 { pitchView === 'formation' ? (
                   <TeamFormation
                     activePlayers={ effectiveActivePlayers }
@@ -730,7 +713,7 @@ const App = () => {
           </Box>
           
           { /* Middle - Panel */ }
-          <Box sx={ { flex: { xs: '1 1 auto', lg: '0 0 28%' }, width: { xs: '100%', lg: 'auto' }, display: 'flex', flexDirection: 'column', minHeight: { xs: 'auto', lg: '600px' } } }>
+          <Box className='app-col-mid'>
             <RightPanel
               entryId={ viewingOpponentId || currentEntryId }
               onLeagueClick={ setSelectedLeague }
@@ -751,7 +734,7 @@ const App = () => {
           </Box>
 
           { /* Right - Activity & Stats */ }
-          <Box sx={ { flex: { xs: '1 1 auto', lg: '1 1 0' }, width: { xs: '100%', lg: 'auto' }, display: 'flex', flexDirection: 'column', minHeight: { xs: 'auto', lg: '600px' } } }>
+          <Box className='app-col-right'>
             <TeamActivityPanel
               entryId={ viewingOpponentId || currentEntryId }
               currentGameweek={ currentGameweek }
