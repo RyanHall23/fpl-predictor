@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, ButtonBase, Chip, IconButton, Paper, Table, TableBody, TableCell, TableRow, Tooltip, Typography } from '@mui/material';
+import { ButtonBase, Chip, IconButton, Paper, Table, TableBody, TableCell, TableRow, Tooltip, Typography } from '@mui/material';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import SyncIcon from '@mui/icons-material/Sync';
 import RestoreIcon from '@mui/icons-material/Restore';
@@ -27,7 +27,7 @@ const STATUS_META = {
   u: { label: 'Unavailable', color: 'default' },
 };
 
-const cellSx = { py: 0.5, px: 0.75, border: 'none' };
+const cellSx = null; // replaced by className='cell-compact'
 
 const formatKickoff = (kickoffTime) => {
   if (!kickoffTime) return null;
@@ -69,8 +69,7 @@ const ListRow = ({
 
   // Per-player points colour: future GW → purple (secondary), all fixtures done → green, otherwise → amber
   const allFixturesDone = !isFutureGameweek && player.opponents?.length > 0 && player.opponents.every(o => o.finished);
-  const pointsColor = isFutureGameweek ? 'secondary.main' : allFixturesDone ? 'success.main' : 'warning.main';
-  const pointsLightColor = isFutureGameweek ? undefined : allFixturesDone ? '#2e7d32' : '#e65100';
+  const pointsColorClass = isFutureGameweek ? 'points-predicted' : allFixturesDone ? 'points-past' : 'points-live';
   const isCaptainEligible = !!onSetCaptain && player.position !== POSITION_MANAGER;
   const chance = player.chanceOfPlayingNextRound;
   let statusMeta = null;
@@ -100,49 +99,33 @@ const ListRow = ({
 
   const showActions = showTransferButtons && team && allPlayers && onTransfer;
 
-  const rowSx = {
-    borderBottom: '1px solid',
-    borderBottomColor: 'divider',
-    transition: 'background 0.15s ease',
-    ...(isSelected && {
-      background: 'rgba(244,67,54,0.15)',
-      borderLeft: '3px solid #f44336',
-    }),
-    ...(isValidTarget && !isSelected && {
-      background: 'rgba(76,175,80,0.12)',
-      borderLeft: '3px solid #4caf50',
-      cursor: 'pointer',
-    }),
-    ...(!isSelected && !isValidTarget && {
-      '&:hover': { background: 'rgba(171,71,188,0.08)' },
-      'html[data-mui-color-scheme="light"] &:hover': { background: 'rgba(106,27,154,0.06)' },
-    }),
-    'html[data-mui-color-scheme="light"] &': {
-      ...(isSelected && { background: 'rgba(244,67,54,0.08)' }),
-      ...(isValidTarget && !isSelected && { background: 'rgba(76,175,80,0.08)' }),
-    },
-  };
+  const rowClass = [
+    'list-row-base',
+    isSelected ? 'row-selected' : '',
+    isValidTarget && !isSelected ? 'row-valid-target' : '',
+    !isSelected && !isValidTarget ? 'row-default' : '',
+  ].filter(Boolean).join(' ');
 
   return (
     <>
       <TableRow
-        sx={ rowSx }
+        className={ rowClass }
         onClick={ isValidTarget ? () => onPlayerClick(player, teamType) : undefined }
       >
 
         { /* POS */ }
-        <TableCell sx={ cellSx }>
+        <TableCell className='cell-compact'>
           <Typography variant='caption' fontWeight='bold' color='text.secondary'>
             { positionLabels[player.position] ?? '?' }
           </Typography>
         </TableCell>
 
         { /* KIT */ }
-        <TableCell sx={ cellSx }>
+        <TableCell className='cell-compact'>
           <ButtonBase
             onClick={ (e) => { e.stopPropagation(); setStatsDialogOpen(true); } }
             aria-label={ `View ${player.webName} stats` }
-            sx={ { borderRadius: '4px' } }
+            className='chip-rounded'
           >
             <img
               src={ `https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_${player.teamCode}-66.png` }
@@ -154,38 +137,33 @@ const ListRow = ({
         </TableCell>
 
         { /* NAME */ }
-        <TableCell sx={ { ...cellSx, width: '100%', maxWidth: 0 } }>
+        <TableCell className='cell-compact-full'>
           <ButtonBase
             onClick={ (e) => { e.stopPropagation(); setStatsDialogOpen(true); } }
             aria-label={ `View ${player.webName} stats` }
-            sx={ { width: '100%', textAlign: 'left', '&:hover .player-list-name': { textDecoration: 'underline' } } }
+            className='player-list-name-btn'
           >
-            <Typography variant='body2' fontWeight='medium' noWrap className='player-list-name' sx={ { overflow: 'hidden', textOverflow: 'ellipsis' } }>
+            <Typography variant='body2' fontWeight='medium' noWrap className='player-list-name u-truncate'>
               { player.webName }
             </Typography>
           </ButtonBase>
         </TableCell>
 
         { /* POINTS */ }
-        <TableCell sx={ cellSx } align='right'>
+        <TableCell className='cell-compact' align='right'>
           <Typography
             variant='body2'
             fontWeight='bold'
             noWrap
-            sx={ {
-              color: pointsColor,
-              ...(pointsLightColor && {
-                'html[data-mui-color-scheme="light"] &': { color: pointsLightColor },
-              }),
-            } }
+            className={ pointsColorClass }
           >
             { predictedPoints }
           </Typography>
         </TableCell>
 
         { /* FIXTURE */ }
-        <TableCell sx={ cellSx } align='right'>
-          <Box sx={ { display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.75 } }>
+        <TableCell className='cell-compact' align='right'>
+          <div className='u-flex u-items-center u-justify-end u-gap-0p75'>
             { (() => {
               const isDgw = player.opponents?.length >= 2;
               if (isDgw) {
@@ -201,30 +179,30 @@ const ListRow = ({
                 return <FixturePill fixtures={ fixtures } size='md' />;
               }
               return (
-                <Box sx={ { flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 32 } }>
+                <div className='action-cell-btn'>
                   <Typography variant='caption' color='text.disabled'>-</Typography>
-                </Box>
+                </div>
               );
             })() }
-            <Box sx={ { width: 52, flexShrink: 0, textAlign: 'left' } }>
+            <div className='fixture-cell-wrap'>
               { liveClock ? (
                 <Chip
                   label={ liveClock }
                   size='small'
                   color='warning'
-                  sx={ { fontSize: '9px', height: 18, '& .MuiChip-label': { px: '5px' } } }
+                  className='chip-xs'
                 />
               ) : kickoff && (
                 <Typography variant='caption' color='text.disabled' noWrap>{ kickoff }</Typography>
               ) }
-            </Box>
-          </Box>
+            </div>
+          </div>
         </TableCell>
 
         { /* BUTTONS */ }
-        <TableCell sx={ cellSx } align='right'>
+        <TableCell className='cell-compact' align='right'>
           { showActions ? (
-            <Box sx={ { display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '1px' } }>
+            <div className='u-flex u-items-center u-justify-end u-gap-1px'>
 
               { /* 1. Captain */ }
               { isCaptainEligible ? (
@@ -234,22 +212,13 @@ const ListRow = ({
                     aria-label={ isCaptain ? 'Captain (current)' : 'Set as Captain' }
                     aria-pressed={ isCaptain }
                     onClick={ (e) => { e.stopPropagation(); if (!isCaptain) onSetCaptain(player.code); } }
-                    sx={ {
-                      fontWeight: 'bold',
-                      typography: 'caption',
-                      borderRadius: '4px',
-                      ...(isCaptain && {
-                        color: '#fff !important',
-                        backgroundColor: '#c8960c !important',
-                        '&:hover': { backgroundColor: '#b5850b !important' },
-                      }),
-                    } }
+                    className={ isCaptain ? 'captain-btn-active u-font-bold u-fs-xs chip-rounded' : 'u-font-bold u-fs-xs chip-rounded' }
                   >
                     C
                   </IconButton>
                 </Tooltip>
               ) : (
-                <IconButton size='small' disabled sx={ { visibility: 'hidden' } } aria-hidden='true'>
+                <IconButton size='small' disabled className='u-invisible' aria-hidden='true'>
                   <SyncIcon fontSize='small' />
                 </IconButton>
               ) }
@@ -280,40 +249,35 @@ const ListRow = ({
                   </IconButton>
                 )
               ) : (
-                <IconButton size='small' disabled sx={ { visibility: 'hidden' } } aria-hidden='true'>
+                <IconButton size='small' disabled className='u-invisible' aria-hidden='true'>
                   <SyncIcon fontSize='small' />
                 </IconButton>
               ) }
-            </Box>
+            </div>
           ) : (
             isCaptain && (
               <Tooltip title='Captain'>
-                <Box
+                <span
                   tabIndex={ 0 }
                   aria-label='Captain'
-                  sx={ {
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                    width: 22, height: 22, borderRadius: '50%',
-                    backgroundColor: '#1976d2', color: '#fff',
-                    fontWeight: 700, fontSize: '0.75rem',
-                  } }
+                  className='captain-inline-badge'
                 >
                   C
-                </Box>
+                </span>
               </Tooltip>
             )
           ) }
         </TableCell>
 
         { /* FLAG */ }
-        <TableCell sx={ cellSx }>
+        <TableCell className='cell-compact'>
           { statusMeta && (
             <Tooltip title={ statusMeta.title } placement='left'>
               <Chip
                 label={ statusMeta.label }
                 color={ statusMeta.color }
                 size='small'
-                sx={ { fontSize: '9px', height: 18, '& .MuiChip-label': { px: '5px' } } }
+                className='chip-xs'
               />
             </Tooltip>
           ) }
@@ -384,26 +348,21 @@ const TeamListView = ({
   };
 
   return (
-    <Paper sx={ { borderRadius: 2, overflow: 'hidden', width: '100%', pb: '1px' } }>
+    <Paper className='list-view-paper'>
       { isLive && (
-        <Box sx={ {
-          display: 'flex', alignItems: 'center', gap: 0.75,
-          px: 1.5, py: 0.5,
-          bgcolor: 'success.dark',
-          borderBottom: '1px solid', borderBottomColor: 'divider',
-        } }>
-          <FiberManualRecordIcon sx={ { fontSize: 10, color: '#69f0ae', animation: 'pulse 1.5s ease-in-out infinite', '@keyframes pulse': { '0%,100%': { opacity: 1 }, '50%': { opacity: 0.3 } } } } />
-          <Typography variant='caption' fontWeight='bold' sx={ { color: '#fff', letterSpacing: '0.05em', textTransform: 'uppercase' } }>
+        <div className='list-view-live-header'>
+          <FiberManualRecordIcon className='live-dot' />
+          <Typography variant='caption' fontWeight='bold' className='list-live-label'>
             Live
           </Typography>
           { lastUpdated && (
-            <Typography variant='caption' sx={ { color: 'rgba(255,255,255,0.7)', ml: 'auto' } }>
+            <Typography variant='caption' className='list-live-time'>
               Updated { new Date(lastUpdated).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) }
             </Typography>
           ) }
-        </Box>
+        </div>
       ) }
-      <Table size='small' sx={ { tableLayout: 'auto' } }>
+      <Table size='small' className='table-auto'>
         <TableBody>
           { activeList.map((player) => (
             <ListRow
@@ -421,14 +380,9 @@ const TeamListView = ({
           <TableRow>
             <TableCell
               colSpan={ 7 }
-              sx={ {
-                py: 0.75, px: 1,
-                borderTop: '1px solid', borderTopColor: 'divider',
-                borderBottom: '1px solid', borderBottomColor: 'divider',
-                bgcolor: 'action.hover',
-              } }
+              className='list-section-header-cell'
             >
-              <Typography variant='caption' color='text.disabled' fontWeight='bold' sx={ { letterSpacing: '0.08em', textTransform: 'uppercase' } }>
+              <Typography variant='caption' color='text.disabled' fontWeight='bold' className='u-letter-md u-uppercase'>
                 Bench
               </Typography>
             </TableCell>
@@ -441,8 +395,8 @@ const TeamListView = ({
               <React.Fragment key={ player.code ?? player.webName }>
                 { showSeparator && (
                   <TableRow>
-                    <TableCell colSpan={ 7 } sx={ { p: 0, border: 'none' } }>
-                      <Box sx={ { borderTop: '2px solid', borderTopColor: 'divider', mx: 1 } } />
+                    <TableCell colSpan={ 7 } className='cell-no-pad'>
+                      <div className='section-divider-line' />
                     </TableCell>
                   </TableRow>
                 ) }

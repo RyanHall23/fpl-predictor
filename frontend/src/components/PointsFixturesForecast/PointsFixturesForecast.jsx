@@ -1,6 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { Box, Chip, Typography } from '@mui/material';
+import { Chip, Typography } from '@mui/material';
 import FixturePill from '../FixturePill/FixturePill';
 
 /**
@@ -23,7 +23,7 @@ const PointsFixturesForecast = ({ gwData, pointsColor = 'text.primary', diff }) 
   const diffColor = diff > 0 ? 'success' : 'error';
 
   return (
-    <Box sx={ { display: 'flex', gap: 1, alignItems: 'center' } }>
+    <div className='u-flex u-gap-1 u-items-center'>
       { gwData.map(({ gw, points, opponents }) => {
         const fixtures = opponents && opponents.length > 0
           ? opponents.map((o) => ({
@@ -33,22 +33,22 @@ const PointsFixturesForecast = ({ gwData, pointsColor = 'text.primary', diff }) 
           : null;
 
         return (
-          <Box key={ gw } sx={ { textAlign: 'center' } }>
+          <div key={ gw } className='u-text-center'>
             <Typography
               variant='body2'
               fontWeight='bold'
               color={ pointsColor }
               display='block'
-              sx={ { lineHeight: 1.3 } }
+              className='u-line-1p3'
             >
               { Math.round(points) }
             </Typography>
             { fixtures ? (
               <FixturePill fixtures={ fixtures } size='sm' />
             ) : (
-              <Typography variant='caption' color='text.secondary' sx={ { fontSize: '0.6rem' } }>-</Typography>
+              <Typography variant='caption' color='text.secondary' className='pts-caption-dash'>-</Typography>
             ) }
-          </Box>
+          </div>
         );
       }) }
       { showDiff && (
@@ -56,10 +56,10 @@ const PointsFixturesForecast = ({ gwData, pointsColor = 'text.primary', diff }) 
           label={ diffLabel }
           size='small'
           color={ diffColor }
-          sx={ { height: 18, fontSize: '0.65rem', alignSelf: 'center' } }
+          className='pts-forecast-chip u-self-center'
         />
       ) }
-    </Box>
+    </div>
   );
 };
 

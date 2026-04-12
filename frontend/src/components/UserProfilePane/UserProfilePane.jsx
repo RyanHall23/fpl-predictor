@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { Paper, Typography, List, ListItem, ListItemText, Divider, Button, Box } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
 import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import RemoveIcon from '@mui/icons-material/Remove';
@@ -9,14 +8,13 @@ import axios from '../../api';
 import './styles.css';
 
 const getRankChangeIcon = (current, last) => {
-  if (last == null || current == null) return <RemoveIcon sx={ { color: 'grey.500', fontSize: 18, verticalAlign: 'middle' } } />;
-  if (last > current) return <ArrowDropUpIcon sx={ { color: 'green', fontSize: 18, verticalAlign: 'middle' } } />;
-  if (last < current) return <ArrowDropDownIcon sx={ { color: 'red', fontSize: 18, verticalAlign: 'middle' } } />;
-  return <RemoveIcon sx={ { color: 'grey.500', fontSize: 18, verticalAlign: 'middle' } } />;
+  if (last == null || current == null) return <RemoveIcon className='u-fs-md rank-neutral' />;
+  if (last > current) return <ArrowDropUpIcon className='u-fs-md rank-up' />;
+  if (last < current) return <ArrowDropDownIcon className='u-fs-md rank-down' />;
+  return <RemoveIcon className='u-fs-md rank-neutral' />;
 };
 
 const UserProfilePane = ({ entryId, onLeagueClick }) => {
-  const theme = useTheme();
   const [profile, setProfile] = useState(null);
 
   useEffect(() => {
@@ -37,23 +35,23 @@ const UserProfilePane = ({ entryId, onLeagueClick }) => {
 
   return (
     <Paper className='user-profile-pane' elevation={ 4 }>
-      <Box sx={ { display: 'flex', alignItems: 'baseline', gap: 1, flexWrap: 'wrap', mb: 0.5 } }>
-        <Typography variant='h6' sx={ { mb: 0 } }>
+      <Box className='profile-header u-mb-0p5'>
+        <Typography variant='h6' className='u-mb-0'>
           { profile.entry.player_first_name } { profile.entry.player_last_name }
         </Typography>
         <Typography variant='body2' color='text.secondary'>
           ({ profile.entry.name })
         </Typography>
       </Box>
-      <Typography variant='body2' sx={ { mb: 0.5 } }>
+      <Typography variant='body2' className='u-mb-0p5'>
         Points: <b>{ formatNumber(profile.totalPoints) }</b> | Overall: <b>{ formatNumber(profile.entry.summary_overall_rank) }</b>
       </Typography>
-      <Divider sx={ { my: 1 } } />
+      <Divider className='u-my-1' />
 
-      <Box sx={ { display: 'flex', gap: 0, maxHeight: '400px', overflow: 'auto' } }>
+      <Box className='profile-leagues-container'>
         { /* General Leagues - Left Column */ }
-        <Box sx={ { flex: 1, minWidth: 0 } }>
-          <Typography variant='subtitle2' sx={ { mt: 1 } }>General Leagues</Typography>
+        <Box className='profile-league-col'>
+          <Typography variant='subtitle2' className='u-mt-1'>General Leagues</Typography>
           <List dense>
             { generalLeagues.length === 0 && (
               <ListItem disablePadding>
@@ -77,8 +75,8 @@ const UserProfilePane = ({ entryId, onLeagueClick }) => {
         </Box>
 
         { /* Invitational Leagues - Right Column */ }
-        <Box sx={ { flex: 1, minWidth: 0 } }>
-          <Typography variant='subtitle2' sx={ { mt: 1 } }>Invitational Leagues</Typography>
+        <Box className='profile-league-col'>
+          <Typography variant='subtitle2' className='u-mt-1'>Invitational Leagues</Typography>
           <List dense>
             { invitationalLeagues.length === 0 && (
               <ListItem>
@@ -93,16 +91,7 @@ const UserProfilePane = ({ entryId, onLeagueClick }) => {
                       size='small'
                       variant='text'
                       onClick={ () => onLeagueClick && onLeagueClick(l) }
-                      sx={ {
-                        p: 0,
-                        minWidth: 0,
-                        textTransform: 'none',
-                        fontWeight: 'normal',
-                        textAlign: 'left',
-                        justifyContent: 'flex-start',
-                        color: 'inherit',
-                        '&:hover': { textDecoration: 'underline', background: 'none' },
-                      } }
+                      className='league-link-btn'
                     >
                       { l.name }
                     </Button>

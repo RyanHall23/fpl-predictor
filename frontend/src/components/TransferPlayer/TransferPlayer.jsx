@@ -13,12 +13,9 @@ import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
-import Box from '@mui/material/Box';
-import { useTheme } from '@mui/material/styles';
 
 // props: team, allPlayers, onTransfer, playerOut, open, onClose, currentGameweek, viewedGameweek
 const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut, open, onClose, currentGameweek, viewedGameweek }) => {
-    const theme = useTheme();
     // This dialog is only reachable from a future-GW view, so the earliest
     // plannable gameweek is always the one after the current GW.
     const minGameweek = currentGameweek ? currentGameweek + 1 : null;
@@ -74,16 +71,9 @@ const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut, open, onClose
         <Dialog 
             open={ open || false } 
             onClose={ handleCloseDialog }
-                PaperProps={ {
-                    sx: {
-                        background: theme.palette.mode === 'dark' 
-                            ? 'linear-gradient(135deg, #23272f 0%, #281455 100%)'
-                            : 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
-                        borderRadius: '12px',
-                    }
-                } }
+            PaperProps={ { className: 'dialog-paper-gradient' } }
             >
-                <DialogTitle sx={ { color: theme.palette.text.primary } }>Transfer Player</DialogTitle>
+                <DialogTitle>Transfer Player</DialogTitle>
                 <DialogContent>
                     { /* Player Out: fixed, not a dropdown */ }
                     <ListItem>
@@ -124,7 +114,7 @@ const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut, open, onClose
                     />
                     { /* Gameweek selector – only shown for future gameweeks */ }
                     { minGameweek && (
-                        <Box sx={ { mt: 2 } }>
+                        <div className='u-mt-2'>
                             <FormControl fullWidth size='small'>
                                 <InputLabel>Transfer in Gameweek</InputLabel>
                                 <Select
@@ -137,10 +127,10 @@ const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut, open, onClose
                                     )) }
                                 </Select>
                             </FormControl>
-                        </Box>
+                        </div>
                     ) }
                 </DialogContent>
-                <DialogActions sx={ { pb: 2, px: 3 } }>
+                <DialogActions className='dialog-actions-padded'>
                     <Button onClick={ handleCloseDialog } variant='outlined'>Cancel</Button>
                     <Button onClick={ handleTransfer } disabled={ !selectedIn } variant='contained' color='primary'>
                         Confirm Transfer

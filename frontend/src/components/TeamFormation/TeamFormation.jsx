@@ -14,169 +14,110 @@ const positionLabels = {
 };
 
 const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, allPlayers, onTransfer, isHighestPredictedTeam, onPlayerClick, onSetCaptain, currentGameweek, isFutureGameweek, viewedGameweek, plannedTransfers, onRemovePlannedTransfer }) => {
-  // Captain is always provided by the backend (is_captain flag on player).
-  // For user teams it comes from picks; for highest-predicted teams the backend
-  // marks the best outfield starter as captain.
   const captain = activePlayers && activePlayers.length
     ? activePlayers.find(p => p.is_captain) ?? null
     : null;
 
-  // Manager is always first in activePlayers
   const manager = activePlayers && activePlayers[0] && activePlayers[0].position === 5 ? activePlayers[0] : null;
   const gks = activePlayers.filter(p => p.position === 1);
-
   const defs = activePlayers.filter(p => p.position === 2);
   const mids = activePlayers.filter(p => p.position === 3);
   const atts = activePlayers.filter(p => p.position === 4);
 
-  // For the bench: manager first, then GK, then outfield in slot order.
-  // Ordering is preserved from the backend (reservePlayers sorted by slot).
   const benchManager = reservePlayers && reservePlayers.find(p => p.position === 5);
   const benchGK = reservePlayers && reservePlayers.find(p => p.position === 1);
   const benchOutfield = reservePlayers
     ? reservePlayers.filter(p => p.position !== 1 && p.position !== 5)
     : [];
 
+  const sharedCardProps = (player) => ({
+    player,
+    isCaptain: player === captain,
+    selectedPlayer,
+    teamType: 'active',
+    team,
+    allPlayers,
+    onTransfer,
+    showTransferButtons: !isHighestPredictedTeam,
+    onPlayerClick,
+    activePlayers,
+    reservePlayers,
+    onSetCaptain: !isHighestPredictedTeam ? onSetCaptain : undefined,
+    currentGameweek,
+    isFutureGameweek,
+    viewedGameweek,
+    plannedTransfers,
+    onRemovePlannedTransfer,
+  });
+
+  const benchCardProps = (player) => ({
+    player,
+    isCaptain: false,
+    selectedPlayer,
+    teamType: 'reserve',
+    team,
+    allPlayers,
+    onTransfer,
+    showTransferButtons: !isHighestPredictedTeam,
+    onPlayerClick,
+    activePlayers,
+    reservePlayers,
+    currentGameweek,
+    isFutureGameweek,
+    viewedGameweek,
+    plannedTransfers,
+    onRemovePlannedTransfer,
+  });
+
   return (
     <Grid container spacing={ 1 } justifyContent='center'>
       <Grid size={ 12 }>
-        <Paper className='main-paper' sx={ { position: 'relative', p: 1 } }>
+        <Paper className='main-paper u-relative u-p-1'>
           { /* Pitch markings */ }
           <div className='pitch-top-line' />
           <div className='pitch-bottom-line' />
           <div className='penalty-box-top' />
           <div className='goal-box-top' />
           <div className='penalty-arc-top' />
-          
-          <Box sx={ { position: 'relative', zIndex: 1 } }>
-            { /* GK and Manager row, centered together */ }
+
+          <Box className='u-relative u-z-1'>
+            { /* GK and Manager row */ }
             <Grid container justifyContent='center' alignItems='center' spacing={ 1 }>
               { gks.map((player) => (
                 <Grid key={ player.code || player.name }>
-                  <PlayerCard
-                    player={ player }
-                    isCaptain={ player === captain }
-                    selectedPlayer={ selectedPlayer }
-                    teamType='active'
-                    team={ team }
-                    allPlayers={ allPlayers }
-                    onTransfer={ onTransfer }
-                    showTransferButtons={ !isHighestPredictedTeam }
-                    onPlayerClick={ onPlayerClick }
-                    activePlayers={ activePlayers }
-                    reservePlayers={ reservePlayers }
-                    onSetCaptain={ !isHighestPredictedTeam ? onSetCaptain : undefined }
-                    currentGameweek={ currentGameweek }
-                    isFutureGameweek={ isFutureGameweek }
-                    viewedGameweek={ viewedGameweek }
-                    plannedTransfers={ plannedTransfers }
-                    onRemovePlannedTransfer={ onRemovePlannedTransfer }
-                  />
+                  <PlayerCard { ...sharedCardProps(player) } />
                 </Grid>
               )) }
               { manager && (
                 <Grid container justifyContent='center' alignItems='center' spacing={ 2 }>
-                  <Box display='flex' flexDirection='column' alignItems='center'>
-                    <Typography align='center' variant='subtitle1'>
-                    </Typography>
-                    <PlayerCard
-                      player={ manager }
-                      isCaptain={ manager === captain }
-                      selectedPlayer={ selectedPlayer }
-                      teamType='active'
-                      team={ team }
-                      allPlayers={ allPlayers }
-                      onTransfer={ onTransfer }
-                      showTransferButtons={ !isHighestPredictedTeam }
-                      onPlayerClick={ onPlayerClick }
-                      activePlayers={ activePlayers }
-                      reservePlayers={ reservePlayers }
-                      onSetCaptain={ !isHighestPredictedTeam ? onSetCaptain : undefined }
-                      currentGameweek={ currentGameweek }
-                      isFutureGameweek={ isFutureGameweek }
-                      viewedGameweek={ viewedGameweek }
-                      plannedTransfers={ plannedTransfers }
-                      onRemovePlannedTransfer={ onRemovePlannedTransfer }
-                    />
+                  <Box className='u-flex u-flex-col u-items-center'>
+                    <Typography align='center' variant='subtitle1' />
+                    <PlayerCard { ...sharedCardProps(manager) } />
                   </Box>
                 </Grid>
               ) }
             </Grid>
             { /* DEF row */ }
-            <Grid container spacing={ 1 } justifyContent='center' sx={ { mt: 1, flexWrap: { xs: 'wrap', sm: 'nowrap' } } }>
+            <Grid container spacing={ 1 } justifyContent='center' className='formation-row'>
               { defs.map((player) => (
                 <Grid key={ player.code || player.name }>
-                  <PlayerCard
-                    player={ player }
-                    isCaptain={ player === captain }
-                    selectedPlayer={ selectedPlayer }
-                    teamType='active'
-                    team={ team }
-                    allPlayers={ allPlayers }
-                    onTransfer={ onTransfer }
-                    showTransferButtons={ !isHighestPredictedTeam }
-                    onPlayerClick={ onPlayerClick }
-                    activePlayers={ activePlayers }
-                    reservePlayers={ reservePlayers }
-                    onSetCaptain={ !isHighestPredictedTeam ? onSetCaptain : undefined }
-                    currentGameweek={ currentGameweek }
-                    isFutureGameweek={ isFutureGameweek }
-                    viewedGameweek={ viewedGameweek }
-                    plannedTransfers={ plannedTransfers }
-                    onRemovePlannedTransfer={ onRemovePlannedTransfer }
-                  />
+                  <PlayerCard { ...sharedCardProps(player) } />
                 </Grid>
               )) }
             </Grid>
             { /* MID row */ }
-            <Grid container spacing={ 1 } justifyContent='center' sx={ { mt: 1, flexWrap: { xs: 'wrap', sm: 'nowrap' } } }>
+            <Grid container spacing={ 1 } justifyContent='center' className='formation-row'>
               { mids.map((player) => (
                 <Grid key={ player.code || player.name }>
-                  <PlayerCard
-                    player={ player }
-                    isCaptain={ player === captain }
-                    selectedPlayer={ selectedPlayer }
-                    teamType='active'
-                    team={ team }
-                    allPlayers={ allPlayers }
-                    onTransfer={ onTransfer }
-                    showTransferButtons={ !isHighestPredictedTeam }
-                    onPlayerClick={ onPlayerClick }
-                    activePlayers={ activePlayers }
-                    reservePlayers={ reservePlayers }
-                    onSetCaptain={ !isHighestPredictedTeam ? onSetCaptain : undefined }
-                    currentGameweek={ currentGameweek }
-                    isFutureGameweek={ isFutureGameweek }
-                    viewedGameweek={ viewedGameweek }
-                    plannedTransfers={ plannedTransfers }
-                    onRemovePlannedTransfer={ onRemovePlannedTransfer }
-                  />
+                  <PlayerCard { ...sharedCardProps(player) } />
                 </Grid>
               )) }
             </Grid>
             { /* ATT row */ }
-            <Grid container spacing={ 1 } justifyContent='center' sx={ { mt: 1, flexWrap: { xs: 'wrap', sm: 'nowrap' } } }>
+            <Grid container spacing={ 1 } justifyContent='center' className='formation-row'>
               { atts.map((player) => (
                 <Grid key={ player.code || player.name }>
-                  <PlayerCard
-                    player={ player }
-                    isCaptain={ player === captain }
-                    selectedPlayer={ selectedPlayer }
-                    teamType='active'
-                    team={ team }
-                    allPlayers={ allPlayers }
-                    onTransfer={ onTransfer }
-                    showTransferButtons={ !isHighestPredictedTeam }
-                    onPlayerClick={ onPlayerClick }
-                    activePlayers={ activePlayers }
-                    reservePlayers={ reservePlayers }
-                    onSetCaptain={ !isHighestPredictedTeam ? onSetCaptain : undefined }
-                    currentGameweek={ currentGameweek }
-                    isFutureGameweek={ isFutureGameweek }
-                    viewedGameweek={ viewedGameweek }
-                    plannedTransfers={ plannedTransfers }
-                    onRemovePlannedTransfer={ onRemovePlannedTransfer }
-                  />
+                  <PlayerCard { ...sharedCardProps(player) } />
                 </Grid>
               )) }
             </Grid>
@@ -184,94 +125,43 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
         </Paper>
       </Grid>
       <Grid size={ 12 }>
-        <Paper className='bench-paper' sx={ { p: 1, position: 'relative' } }>
-          <Box sx={ { position: 'relative', zIndex: 1 } }>
+        <Paper className='bench-paper u-p-1 u-relative'>
+          <Box className='u-relative u-z-1'>
             <Grid container spacing={ 1 } justifyContent='center'>
               { /* Bench manager first */ }
               { benchManager && (
                 <Grid key={ benchManager.code || benchManager.name }>
-                  <Box display='flex' flexDirection='column' alignItems='center'>
-                    <Typography align='center' variant='subtitle1' mt={ 1 }>
+                  <Box className='u-flex u-flex-col u-items-center'>
+                    <Typography align='center' variant='subtitle1' className='u-mt-1'>
                       { positionLabels[benchManager.position] }
                     </Typography>
-                    <PlayerCard
-                      player={ benchManager }
-                      isCaptain={ false }
-                      selectedPlayer={ selectedPlayer }
-                      teamType='reserve'
-                      team={ team }
-                      allPlayers={ allPlayers }
-                      onTransfer={ onTransfer }
-                      showTransferButtons={ !isHighestPredictedTeam }
-                      onPlayerClick={ onPlayerClick }
-                      activePlayers={ activePlayers }
-                      reservePlayers={ reservePlayers }
-                      currentGameweek={ currentGameweek }
-                      isFutureGameweek={ isFutureGameweek }
-                      viewedGameweek={ viewedGameweek }
-                      plannedTransfers={ plannedTransfers }
-                      onRemovePlannedTransfer={ onRemovePlannedTransfer }
-                    />
+                    <PlayerCard { ...benchCardProps(benchManager) } />
                   </Box>
                 </Grid>
               ) }
               { /* Bench GK second */ }
               { benchGK && (
                 <Grid key={ benchGK.code || benchGK.name }>
-                  <Box display='flex' flexDirection='column' alignItems='center'>
-                    <Typography align='center' variant='subtitle1' mt={ 1 }>
+                  <Box className='u-flex u-flex-col u-items-center'>
+                    <Typography align='center' variant='subtitle1' className='u-mt-1'>
                       { positionLabels[benchGK.position] }
                     </Typography>
-                    <PlayerCard
-                      player={ benchGK }
-                      isCaptain={ false }
-                      selectedPlayer={ selectedPlayer }
-                      teamType='reserve'
-                      team={ team }
-                      allPlayers={ allPlayers }
-                      onTransfer={ onTransfer }
-                      showTransferButtons={ !isHighestPredictedTeam }
-                      onPlayerClick={ onPlayerClick }
-                      activePlayers={ activePlayers }
-                      reservePlayers={ reservePlayers }
-                      currentGameweek={ currentGameweek }
-                      isFutureGameweek={ isFutureGameweek }
-                      viewedGameweek={ viewedGameweek }
-                      plannedTransfers={ plannedTransfers }
-                      onRemovePlannedTransfer={ onRemovePlannedTransfer }
-                    />
+                    <PlayerCard { ...benchCardProps(benchGK) } />
                   </Box>
                 </Grid>
               ) }
               { /* Vertical separator between bench GK and outfield */ }
               { benchGK && benchOutfield.length > 0 && (
-                <Divider orientation='vertical' flexItem sx={ { mx: 0.5, alignSelf: 'center', height: 80 } } />
+                <Divider orientation='vertical' flexItem className='bench-divider' />
               ) }
               { /* Outfield bench players */ }
               { benchOutfield.map((player) => (
                 <Grid key={ player.code || player.name }>
-                  <Box display='flex' flexDirection='column' alignItems='center'>
-                    <Typography align='center' variant='subtitle1' mt={ 1 }>
+                  <Box className='u-flex u-flex-col u-items-center'>
+                    <Typography align='center' variant='subtitle1' className='u-mt-1'>
                       { positionLabels[player.position] }
                     </Typography>
-                    <PlayerCard
-                      player={ player }
-                      isCaptain={ false }
-                      selectedPlayer={ selectedPlayer }
-                      teamType='reserve'
-                      team={ team }
-                      allPlayers={ allPlayers }
-                      onTransfer={ onTransfer }
-                      showTransferButtons={ !isHighestPredictedTeam }
-                      onPlayerClick={ onPlayerClick }
-                      activePlayers={ activePlayers }
-                      reservePlayers={ reservePlayers }
-                      currentGameweek={ currentGameweek }
-                      isFutureGameweek={ isFutureGameweek }
-                      viewedGameweek={ viewedGameweek }
-                      plannedTransfers={ plannedTransfers }
-                      onRemovePlannedTransfer={ onRemovePlannedTransfer }
-                    />
+                    <PlayerCard { ...benchCardProps(player) } />
                   </Box>
                 </Grid>
               )) }

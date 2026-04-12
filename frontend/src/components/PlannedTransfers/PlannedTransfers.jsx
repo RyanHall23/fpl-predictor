@@ -3,7 +3,6 @@ import PropTypes from 'prop-types';
 import axios from '../../api';
 import PointsFixturesForecast from '../PointsFixturesForecast/PointsFixturesForecast';
 import {
-  Box,
   Typography,
   Table,
   TableBody,
@@ -29,7 +28,6 @@ import {
   Divider,
   Tooltip,
 } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
@@ -121,7 +119,6 @@ function useForecastData(plannedTransfers, currentGameweek) {
 }
 
 const AddTransferDialog = ({ open, onClose, onAdd, team, allPlayers, currentGameweek, plannedTransfers }) => {
-  const theme = useTheme();
   const [playerOut, setPlayerOut] = useState(null);
   const [playerIn, setPlayerIn] = useState(null);
   const [gameweek, setGameweek] = useState((currentGameweek ?? 0) + 1);
@@ -215,18 +212,9 @@ const AddTransferDialog = ({ open, onClose, onAdd, team, allPlayers, currentGame
     <Dialog
       open={ open }
       onClose={ handleClose }
-      PaperProps={ {
-        sx: {
-          background:
-            theme.palette.mode === 'dark'
-              ? 'linear-gradient(135deg, #23272f 0%, #281455 100%)'
-              : 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
-          borderRadius: '12px',
-          minWidth: 320,
-        },
-      } }
+      PaperProps={ { className: 'dialog-paper-gradient', style: { minWidth: 320 } } }
     >
-      <DialogTitle sx={ { color: theme.palette.text.primary } }>Add Planned Transfer</DialogTitle>
+      <DialogTitle>Add Planned Transfer</DialogTitle>
       <DialogContent>
         { /* Player Out */ }
         <Autocomplete
@@ -278,7 +266,7 @@ const AddTransferDialog = ({ open, onClose, onAdd, team, allPlayers, currentGame
         />
 
         { /* Gameweek selector */ }
-        <Box sx={ { mt: 2 } }>
+        <div className='u-mt-2'>
           <FormControl fullWidth size='small'>
             <InputLabel>Transfer in Gameweek</InputLabel>
             <Select
@@ -291,9 +279,9 @@ const AddTransferDialog = ({ open, onClose, onAdd, team, allPlayers, currentGame
               )) }
             </Select>
           </FormControl>
-        </Box>
+        </div>
       </DialogContent>
-      <DialogActions sx={ { pb: 2, px: 3 } }>
+      <DialogActions className='dialog-actions-padded'>
         <Button onClick={ handleClose } variant='outlined'>Cancel</Button>
         <Button onClick={ handleAdd } disabled={ !playerOut || !playerIn } variant='contained' color='primary'>
           Add Transfer
@@ -327,7 +315,6 @@ const PlannedTransfers = ({
   voidedTransferIds = new Set(),
   freeHitGWs = new Set(),
 }) => {
-  const theme = useTheme();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
 
   const gwOptions = currentGameweek
@@ -354,24 +341,24 @@ const PlannedTransfers = ({
 
   if (compact) {
     return (
-      <Box>
-        <Box sx={ { display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 } }>
+      <div>
+        <div className='u-flex u-justify-between u-items-center u-mb-1p5'>
           <Typography variant='h6' fontWeight='bold'>Planned Transfers</Typography>
           <Tooltip title='Add planned transfer'>
             <IconButton
               size='small'
               onClick={ () => setAddDialogOpen(true) }
-              sx={ { color: theme.palette.primary.main } }
+              className='icon-primary'
             >
               <AddIcon />
             </IconButton>
           </Tooltip>
-        </Box>
+        </div>
 
         { sorted.length === 0 ? (
           <Typography variant='body2' color='text.secondary'>No planned transfers yet.</Typography>
         ) : (
-          <Box sx={ { display: 'flex', flexDirection: 'column', gap: 1 } }>
+          <div className='u-flex u-flex-col u-gap-1'>
             { sorted.map((t, idx) => {
               const isVoided = voidedTransferIds.has(t.id);
               const isFH = freeHitGWs.has(t.gameweek);
@@ -381,10 +368,10 @@ const PlannedTransfers = ({
                 inForecast.reduce((s, x) => s + x.points, 0) -
                 outForecast.reduce((s, x) => s + x.points, 0);
               return (
-                <Box key={ t.id }>
-                  { idx > 0 && <Divider sx={ { mb: 1 } } /> }
+                <div key={ t.id }>
+                  { idx > 0 && <Divider className='u-mb-1' /> }
                   { isVoided && (
-                    <Typography variant='caption' color='warning.main' sx={ { display: 'block', mb: 0.25, fontStyle: 'italic' } }>
+                    <Typography variant='caption' color='warning.main' className='u-block u-mb-0p25 u-font-italic'>
                       Not made – transfer was not executed in FPL
                     </Typography>
                   ) }
@@ -393,57 +380,52 @@ const PlannedTransfers = ({
                       <Chip
                         label='Free Hit'
                         size='small'
-                        sx={ { height: 18, fontSize: '0.6rem', fontWeight: 700, bgcolor: '#e65100', color: '#fff', mb: 0.5, cursor: 'default' } }
+                        className='transfer-chip-voided'
                       />
                     </Tooltip>
                   ) }
-                  <Box
-                    sx={ {
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: 0.5,
-                      flexWrap: 'wrap',
-                      opacity: isVoided ? 0.5 : 1,
-                    } }
+                  <div
+                    className='u-flex u-items-start u-gap-0p5 u-flex-wrap'
+                    style={ { opacity: isVoided ? 0.5 : 1 } }
                   >
-                    <Box sx={ { flex: '1 1 0', minWidth: 0 } }>
+                    <div className='u-flex-1 u-min-w-0'>
                       <Typography
                         variant='body2'
                         fontWeight='bold'
                         noWrap
-                        sx={ isVoided ? { textDecoration: 'line-through' } : {} }
+                        className={ isVoided ? 'transfer-voided' : '' }
                       >{ t.playerOut.name }</Typography>
                       <PointsFixturesForecast gwData={ outForecast } pointsColor='error' />
-                    </Box>
-                    <SwapHorizIcon sx={ { fontSize: 18, color: 'text.secondary', flexShrink: 0, mt: 0.5 } } />
-                    <Box sx={ { flex: '1 1 0', minWidth: 0 } }>
+                    </div>
+                    <SwapHorizIcon className='u-shrink-0 u-mt-0p5' style={ { fontSize: 18, color: 'var(--clr-text-secondary)' } } />
+                    <div className='u-flex-1 u-min-w-0'>
                       <Typography
                         variant='body2'
                         fontWeight='bold'
                         noWrap
-                        sx={ isVoided ? { textDecoration: 'line-through' } : {} }
+                        className={ isVoided ? 'transfer-voided' : '' }
                       >{ t.playerIn.name }</Typography>
                       <PointsFixturesForecast gwData={ inForecast } pointsColor='success.main' diff={ !isVoided ? totalDiff : undefined } />
-                    </Box>
+                    </div>
                     <Select
                       size='small'
                       value={ t.gameweek }
                       onChange={ (e) => onUpdateGameweek(t.id, e.target.value) }
-                      sx={ { fontSize: '0.7rem', height: 24, minWidth: 60 } }
+                      className='select-gw-sm'
                       disabled={ isVoided }
                     >
                       { gwOptions.map((gw) => (
-                        <MenuItem key={ gw } value={ gw } sx={ { fontSize: '0.75rem' } }>GW { gw }</MenuItem>
+                        <MenuItem key={ gw } value={ gw } className='menu-item-sm'>GW { gw }</MenuItem>
                       )) }
                     </Select>
-                    <IconButton size='small' onClick={ () => onRemove(t.id) } sx={ { color: theme.palette.error.main, p: 0.25 } }>
-                      <DeleteIcon sx={ { fontSize: 16 } } />
+                    <IconButton size='small' onClick={ () => onRemove(t.id) } className='icon-error icon-btn-xs'>
+                      <DeleteIcon style={ { fontSize: 16 } } />
                     </IconButton>
-                  </Box>
-                </Box>
+                  </div>
+                </div>
               );
             }) }
-          </Box>
+          </div>
         ) }
 
         <AddTransferDialog
@@ -455,32 +437,32 @@ const PlannedTransfers = ({
           currentGameweek={ currentGameweek }
           plannedTransfers={ plannedTransfers }
         />
-      </Box>
+      </div>
     );
   }
 
   // Full table view
   return (
-    <Box sx={ { mb: 3, mt: 2 } }>
-      <Box sx={ { display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 } }>
+    <div className='planned-transfers-normal'>
+      <div className='u-flex u-justify-between u-items-center u-mb-2'>
         <Typography variant='h6' fontWeight='bold'>Planned Transfers</Typography>
         <Tooltip title='Add planned transfer'>
           <IconButton
             size='small'
             onClick={ () => setAddDialogOpen(true) }
-            sx={ { color: theme.palette.primary.main } }
+            className='icon-primary'
           >
             <AddIcon />
           </IconButton>
         </Tooltip>
-      </Box>
+      </div>
 
       { sorted.length === 0 ? (
         <Typography variant='body2' color='text.secondary'>
           No planned transfers yet. Use the + button or transfer icons on the pitch.
         </Typography>
       ) : (
-        <TableContainer component={ Paper } sx={ { backgroundColor: theme.palette.mode === 'dark' ? '#1e2127' : '#ffffff' } }>
+        <TableContainer component={ Paper } className='table-themed'>
           <Table size='small'>
             <TableBody>
               { sorted.map((t) => {
@@ -494,15 +476,13 @@ const PlannedTransfers = ({
                 return (
                   <TableRow
                     key={ t.id }
-                    sx={ {
-                      '&:hover': { backgroundColor: theme.palette.action.hover },
-                      opacity: isVoided ? 0.55 : 1,
-                    } }
+                    style={ { opacity: isVoided ? 0.55 : 1 } }
+                    hover
                   >
                     { /* Player Out */ }
-                    <TableCell sx={ { borderRight: `2px solid ${theme.palette.divider}`, minWidth: 150 } }>
+                    <TableCell className='cell-border-right cell-minw-150'>
                       { isVoided && (
-                        <Typography variant='caption' color='warning.main' sx={ { display: 'block', fontStyle: 'italic' } }>
+                        <Typography variant='caption' color='warning.main' className='u-block u-font-italic'>
                           Not made
                         </Typography>
                       ) }
@@ -511,47 +491,47 @@ const PlannedTransfers = ({
                           <Chip
                             label='Free Hit'
                             size='small'
-                            sx={ { height: 18, fontSize: '0.6rem', fontWeight: 700, bgcolor: '#e65100', color: '#fff', mb: 0.5, cursor: 'default' } }
+                            className='transfer-chip-voided'
                           />
                         </Tooltip>
                       ) }
                       <Typography
                         variant='body2'
                         fontWeight='bold'
-                        sx={ isVoided ? { textDecoration: 'line-through' } : {} }
+                        className={ isVoided ? 'transfer-voided' : '' }
                       >{ t.playerOut.name }</Typography>
                       <PointsFixturesForecast gwData={ outForecast } pointsColor='error' />
                     </TableCell>
                     { /* Arrow */ }
-                    <TableCell sx={ { px: 0.5, width: 24 } }>
-                      <SwapHorizIcon sx={ { fontSize: 20, color: 'text.secondary' } } />
+                    <TableCell className='cell-px-sm'>
+                      <SwapHorizIcon style={ { fontSize: 20, color: 'var(--clr-text-secondary)' } } />
                     </TableCell>
                     { /* Player In */ }
-                    <TableCell sx={ { minWidth: 150 } }>
+                    <TableCell className='cell-minw-150'>
                       <Typography
                         variant='body2'
                         fontWeight='bold'
-                        sx={ isVoided ? { textDecoration: 'line-through' } : {} }
+                        className={ isVoided ? 'transfer-voided' : '' }
                       >{ t.playerIn.name }</Typography>
                       <PointsFixturesForecast gwData={ inForecast } pointsColor='success.main' diff={ !isVoided ? totalDiff : undefined } />
                     </TableCell>
                     { /* Gameweek selector */ }
-                    <TableCell sx={ { width: 90 } }>
+                    <TableCell className='cell-w-90'>
                       <Select
                         size='small'
                         value={ t.gameweek }
                         onChange={ (e) => onUpdateGameweek(t.id, e.target.value) }
-                        sx={ { fontSize: '0.75rem' } }
+                        className='menu-item-sm'
                         disabled={ isVoided }
                       >
                         { gwOptions.map((gw) => (
-                          <MenuItem key={ gw } value={ gw } sx={ { fontSize: '0.75rem' } }>GW { gw }</MenuItem>
+                          <MenuItem key={ gw } value={ gw } className='menu-item-sm'>GW { gw }</MenuItem>
                         )) }
                       </Select>
                     </TableCell>
                     { /* Delete */ }
-                    <TableCell sx={ { width: 40 } }>
-                      <IconButton size='small' onClick={ () => onRemove(t.id) } sx={ { color: theme.palette.error.main } }>
+                    <TableCell className='cell-w-40'>
+                      <IconButton size='small' onClick={ () => onRemove(t.id) } className='icon-error'>
                         <DeleteIcon fontSize='small' />
                       </IconButton>
                     </TableCell>
@@ -572,7 +552,7 @@ const PlannedTransfers = ({
         currentGameweek={ currentGameweek }
         plannedTransfers={ plannedTransfers }
       />
-    </Box>
+    </div>
   );
 };
 

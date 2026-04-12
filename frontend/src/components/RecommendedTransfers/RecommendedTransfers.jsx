@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import {
-  Box,
   Typography,
   Select,
   MenuItem,
@@ -20,7 +19,6 @@ import {
   Checkbox,
   Divider
 } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import axios from '../../api';
 
@@ -32,7 +30,6 @@ const positionLabels = {
 };
 
 const RecommendedTransfers = ({ entryId, currentGameweek, compact = false }) => {
-  const theme = useTheme();
   const [gameweeksAhead, setGameweeksAhead] = useState(1);
   const [similarPricingOnly, setSimilarPricingOnly] = useState(false);
   const [recommendations, setRecommendations] = useState(null);
@@ -89,13 +86,13 @@ const RecommendedTransfers = ({ entryId, currentGameweek, compact = false }) => 
   if (!entryId || !currentGameweek) return null;
 
   return (
-    <Box sx={ { mb: compact ? 0 : 3, mt: compact ? 0 : 2 } }>
+    <div className={ compact ? 'planned-transfers-compact' : 'planned-transfers-normal' }>
       { compact ? (
-        <Box sx={ { display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5, flexWrap: 'wrap', gap: 1 } }>
+        <div className='u-flex u-justify-between u-items-center u-mb-1p5 u-flex-wrap u-gap-1'>
           <Typography variant='h6' fontWeight='bold'>
             Recommended Transfers
           </Typography>
-          <FormControl size='small' sx={ { minWidth: 0, flex: '1 1 auto', maxWidth: 180 } }>
+          <FormControl size='small' className='form-control-flex'>
             <InputLabel>Period</InputLabel>
             <Select
               value={ gameweeksAhead }
@@ -109,13 +106,13 @@ const RecommendedTransfers = ({ entryId, currentGameweek, compact = false }) => 
               <MenuItem value={ 5 }>Next 5 GWs</MenuItem>
             </Select>
           </FormControl>
-        </Box>
+        </div>
       ) : (
-        <Box sx={ { display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 2 } }>
+        <div className='u-flex u-justify-between u-items-center u-mb-2 u-flex-wrap u-gap-2'>
           <Typography variant='h6' fontWeight='bold'>
             Recommended Transfers
           </Typography>
-          <Box sx={ { display: 'flex', gap: 2, alignItems: 'center' } }>
+          <div className='u-flex u-gap-2 u-items-center'>
             <FormControlLabel
               control={
                 <Checkbox
@@ -126,7 +123,7 @@ const RecommendedTransfers = ({ entryId, currentGameweek, compact = false }) => 
               }
               label='Similar Pricing'
             />
-            <FormControl size='small' sx={ { minWidth: 200 } }>
+            <FormControl size='small' className='form-control-md'>
               <InputLabel>Forecast Period</InputLabel>
               <Select
                 value={ gameweeksAhead }
@@ -140,24 +137,24 @@ const RecommendedTransfers = ({ entryId, currentGameweek, compact = false }) => 
                 <MenuItem value={ 5 }>Next 5 GWs (Cumulative)</MenuItem>
               </Select>
             </FormControl>
-          </Box>
-        </Box>
+          </div>
+        </div>
       ) }
 
       { loading && (
-        <Box sx={ { display: 'flex', justifyContent: 'center', py: 2 } }>
+        <div className='u-flex u-justify-center u-py-2'>
           <CircularProgress size={ 24 } />
-        </Box>
+        </div>
       ) }
 
       { error && (
-        <Alert severity='error' sx={ { mb: 2 } }>
+        <Alert severity='error' className='u-mb-2'>
           { error }
         </Alert>
       ) }
 
       { !loading && !error && recommendations && (
-        <Box>
+        <div>
           { (() => {
             // Flatten all recommendations across positions
             const allRecs = [];
@@ -187,36 +184,32 @@ const RecommendedTransfers = ({ entryId, currentGameweek, compact = false }) => 
 
             if (compact) {
               return (
-                <Box sx={ { display: 'flex', flexDirection: 'column' } }>
+                <div className='u-flex u-flex-col'>
                   { displayRecs.map((rec, idx) => {
                     const filteredAlternatives = filterAlternativesByPrice(rec.alternatives, rec.playerOut.now_cost);
                     if (filteredAlternatives.length === 0) return null;
                     const altsToShow = filteredAlternatives.slice(0, 3);
                     return (
-                      <Box key={ idx }>
-                        { idx > 0 && <Divider sx={ { my: 1 } } /> }
-                        <Box sx={ { display: 'flex', alignItems: 'flex-start', gap: 0 } }>
+                      <div key={ idx }>
+                        { idx > 0 && <Divider className='u-my-1' /> }
+                        <div className='u-flex u-items-start u-gap-0'>
                           { /* OUT — border-right acts as divider, only as tall as this box */ }
-                          <Box sx={ {
-                            flex: '0 0 20%',
-                            minWidth: 0,
-                            borderRight: `1px solid ${theme.palette.divider}`,
-                          } }>
+                          <div className='cell-border-right' style={ { flex: '0 0 20%', minWidth: 0 } }>
                             <Typography variant='body2' fontWeight='bold' noWrap>
                               { rec.playerOut.web_name }
                             </Typography>
                             <Typography variant='caption' color='error'>
                               { Math.round(rec.playerOut.predicted_points) } pts · £{ (rec.playerOut.now_cost / 10).toFixed(1) }m
                             </Typography>
-                          </Box>
+                          </div>
                           { /* IN — 3-column grid */ }
-                          <Box sx={ { flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 1, pl: 0.75, minWidth: 0 } }>
+                          <div style={ { flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, paddingLeft: 6, minWidth: 0 } }>
                             { altsToShow.map((alt, altIdx) => (
-                              <Box key={ altIdx } sx={ { minWidth: 0 } }>
+                              <div key={ altIdx } className='u-min-w-0'>
                                 <Typography variant='body2' fontWeight='bold' noWrap>
                                   { alt.web_name }
                                 </Typography>
-                                <Box sx={ { display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' } }>
+                                <div className='u-flex u-items-center u-gap-0p5 u-flex-wrap'>
                                   <Typography variant='caption' color='success.main'>
                                     { Math.round(alt.predicted_points) } pts
                                   </Typography>
@@ -225,25 +218,25 @@ const RecommendedTransfers = ({ entryId, currentGameweek, compact = false }) => 
                                     label={ `+${Math.round(alt.points_difference)}` }
                                     size='small'
                                     color='success'
-                                    sx={ { height: 18, fontSize: '0.65rem' } }
+                                    className='chip-trend'
                                   />
-                                </Box>
-                                <Typography variant='caption' color='text.secondary' sx={ { fontSize: '0.65rem' } }>
+                                </div>
+                                <Typography variant='caption' color='text.secondary' className='text-xxs'>
                                   £{ (alt.now_cost / 10).toFixed(1) }m
                                 </Typography>
-                              </Box>
+                              </div>
                             )) }
-                          </Box>
-                        </Box>
-                      </Box>
+                          </div>
+                        </div>
+                      </div>
                     );
                   }) }
-                </Box>
+                </div>
               );
             }
 
             return (
-              <TableContainer component={ Paper } sx={ { backgroundColor: theme.palette.mode === 'dark' ? '#1e2127' : '#ffffff' } }>
+              <TableContainer component={ Paper } className='table-themed'>
                 <Table size='small'>
                   <TableBody>
                     { displayRecs.map((rec, idx) => {
@@ -254,9 +247,9 @@ const RecommendedTransfers = ({ entryId, currentGameweek, compact = false }) => 
                         if (filteredAlternatives.length === 0) return null;
                         
                         return (
-                          <TableRow key={ idx } sx={ { '&:hover': { backgroundColor: theme.palette.action.hover } } }>
-                            <TableCell sx={ { borderRight: `2px solid ${theme.palette.divider}`, minWidth: 280 } }>
-                              <Box>
+                          <TableRow key={ idx } hover>
+                            <TableCell className='cell-border-right' style={ { minWidth: 280 } }>
+                              <div>
                                 <Typography variant='body2' fontWeight='bold'>
                                   { rec.playerOut.web_name }
                                 </Typography>
@@ -268,36 +261,31 @@ const RecommendedTransfers = ({ entryId, currentGameweek, compact = false }) => 
                                   <Typography 
                                     variant='caption' 
                                     color='textSecondary' 
-                                    sx={ { 
-                                      display: 'block', 
-                                      fontSize: '0.65rem',
-                                      mt: 0.5,
-                                      whiteSpace: 'nowrap'
-                                    } }
+                                    className='u-block u-mt-0p5 u-nowrap text-xxs'
                                   >
                                     Current: £{ (rec.playerOut.now_cost / 10).toFixed(1) }m | 
                                     <span style={ { 
-                                      color: rec.playerOut.selling_price > rec.playerOut.purchase_price ? theme.palette.success.main : 
-                                             rec.playerOut.selling_price < rec.playerOut.purchase_price ? theme.palette.error.main : 'inherit',
+                                      color: rec.playerOut.selling_price > rec.playerOut.purchase_price ? 'var(--clr-success)' : 
+                                             rec.playerOut.selling_price < rec.playerOut.purchase_price ? 'var(--clr-error)' : 'inherit',
                                       fontWeight: rec.playerOut.selling_price !== rec.playerOut.purchase_price ? 'bold' : 'normal'
                                     } }>
                                       { ' ' }Sell: £{ (rec.playerOut.selling_price / 10).toFixed(1) }m
                                     </span> | Purchase: £{ (rec.playerOut.purchase_price / 10).toFixed(1) }m
                                   </Typography>
                                 ) : (
-                                  <Typography variant='caption' color='textSecondary' sx={ { display: 'block', fontSize: '0.65rem' } }>
+                                  <Typography variant='caption' color='textSecondary' className='u-block text-xxs'>
                                     £{ (rec.playerOut.now_cost / 10).toFixed(1) }m
                                   </Typography>
                                 ) }
-                              </Box>
+                              </div>
                             </TableCell>
                             { filteredAlternatives.slice(0, 3).map((alt, altIdx) => (
-                              <TableCell key={ altIdx } sx={ { minWidth: 180 } }>
-                                <Box>
+                              <TableCell key={ altIdx } style={ { minWidth: 180 } }>
+                                <div>
                                   <Typography variant='body2' fontWeight='bold'>
                                     { alt.web_name }
                                   </Typography>
-                                  <Box sx={ { display: 'flex', alignItems: 'center', gap: 0.5 } }>
+                                  <div className='u-flex u-items-center u-gap-0p5'>
                                     <Typography variant='caption' color='success.main'>
                                       { Math.round(alt.predicted_points) } pts
                                     </Typography>
@@ -306,18 +294,18 @@ const RecommendedTransfers = ({ entryId, currentGameweek, compact = false }) => 
                                       label={ `+${Math.round(alt.points_difference)}` }
                                       size='small'
                                       color='success'
-                                      sx={ { height: 18, fontSize: '0.7rem' } }
+                                      className='chip-trend2'
                                     />
-                                  </Box>
-                                  <Typography variant='caption' color='textSecondary' sx={ { fontSize: '0.65rem' } }>
+                                  </div>
+                                  <Typography variant='caption' color='textSecondary' className='text-xxs'>
                                     £{ (alt.now_cost / 10).toFixed(1) }m
                                   </Typography>
-                                </Box>
+                                </div>
                               </TableCell>
                             )) }
                             { /* Fill empty cells if less than 3 alternatives */ }
                             { filteredAlternatives.length < 3 && [...Array(3 - filteredAlternatives.length)].map((_, emptyIdx) => (
-                              <TableCell key={ `empty-${emptyIdx}` } sx={ { minWidth: 180 } } />
+                              <TableCell key={ `empty-${emptyIdx}` } style={ { minWidth: 180 } } />
                             )) }
                           </TableRow>
                         );
@@ -335,13 +323,13 @@ const RecommendedTransfers = ({ entryId, currentGameweek, compact = false }) => 
           ) }
 
           { gameweeksAhead > 1 && (
-            <Typography variant='caption' color='textSecondary' sx={ { display: 'block', mt: 1 } }>
+            <Typography variant='caption' color='textSecondary' className='u-block u-mt-1'>
               * Points shown are cumulative across { gameweeksAhead } gameweeks (GW { recommendations.startGameweek } - { recommendations.endGameweek })
             </Typography>
           ) }
-        </Box>
+        </div>
       ) }
-    </Box>
+    </div>
   );
 };
 

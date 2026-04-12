@@ -114,38 +114,29 @@ const NavigationBar = ({
 
   return (
     <AppBar position='static'>
-      <Container maxWidth={ false } sx={ { px: { xs: 1, sm: 2 } } }>
-        <Toolbar disableGutters sx={ { flexWrap: { xs: 'wrap', md: 'nowrap' }, py: { xs: 0.5, md: 0 }, gap: { xs: 0.5, md: 0 }, minHeight: { xs: 'auto', md: '64px' } } }>
+      <Container maxWidth={ false } className='u-px-1'>
+        <Toolbar disableGutters className='nav-toolbar'>
           { /* App title — hidden on mobile */ }
           <Typography
             variant='h6'
             noWrap
             component='a'
-            sx={ {
-              flexShrink: 0,
-              display: { xs: 'none', md: 'flex' },
-              fontFamily: 'monospace',
-              fontWeight: 700,
-              letterSpacing: '.3rem',
-              color: 'inherit',
-              textDecoration: 'none',
-              mr: 2,
-            } }
+            className='nav-title'
           >
             FPL Predictor
           </Typography>
 
           { /* Right controls */ }
-          <Box sx={ { display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 }, flexShrink: 0, ml: 'auto' } }>
+          <Box className='nav-controls nav-controls-gap u-flex u-items-center'>
             { /* Team view toggle buttons */ }
-            <Box sx={ { display: 'flex', gap: 0.5 } }>
+            <Box className='u-flex u-gap-0p5'>
               { userTeamId && (
                 <Button
                   variant={ teamView === TEAM_VIEW.USER ? 'contained' : 'outlined' }
                   color='secondary'
                   onClick={ handleMyTeamClick }
                   size='small'
-                  sx={ { whiteSpace: 'nowrap', px: { xs: 1, sm: 2 }, fontSize: { xs: '0.7rem', sm: '0.875rem' } } }
+                  className='nav-btn'
                 >
                   My Team
                 </Button>
@@ -155,15 +146,15 @@ const NavigationBar = ({
                 color='secondary'
                 onClick={ handleHighestTeamClick }
                 size='small'
-                sx={ { whiteSpace: 'nowrap', px: { xs: 1, sm: 2 }, fontSize: { xs: '0.7rem', sm: '0.875rem' } } }
+                className='nav-btn'
               >
-                <Box component='span' sx={ { display: { xs: 'none', sm: 'inline' } } }>Highest Team</Box>
-                <Box component='span' sx={ { display: { xs: 'inline', sm: 'none' } } }>Best</Box>
+                <Box component='span' className='nav-btn-text-long'>Highest Team</Box>
+                <Box component='span' className='nav-btn-text-short'>Best</Box>
               </Button>
             </Box>
 
             { /* Gameweek Selector */ }
-            <Box sx={ { display: 'flex', alignItems: 'center', gap: 0.25 } }>
+            <Box className='u-flex u-items-center u-gap-0p25'>
               <Tooltip title='Previous gameweek'>
                 <span>
                   <IconButton
@@ -179,7 +170,7 @@ const NavigationBar = ({
                   </IconButton>
                 </span>
               </Tooltip>
-              <FormControl size='small' sx={ { minWidth: { xs: 80, sm: 120 } } }>
+              <FormControl size='small' className='nav-gw-select-control'>
                 <InputLabel id='gameweek-select-label'>GW</InputLabel>
                 <Select
                   labelId='gameweek-select-label'
@@ -187,10 +178,7 @@ const NavigationBar = ({
                   value={ selectedGameweek || currentGameweek || '' }
                   label='GW'
                   onChange={ (e) => setSelectedGameweek(e.target.value === currentGameweek ? null : e.target.value) }
-                  sx={ { 
-                    bgcolor: 'background.paper',
-                    '& .MuiSelect-select': { py: 1 }
-                  } }
+                  className='nav-gw-select'
                 >
                   { Array.from({ length: 38 }, (_, i) => i + 1).map((gw) => (
                     <MenuItem key={ gw } value={ gw }>
@@ -217,13 +205,13 @@ const NavigationBar = ({
             </Box>
 
             { /* Theme toggle + Team ID */ }
-            <Box sx={ { display: 'flex', alignItems: 'center' } }>
+            <Box className='u-flex u-items-center'>
               <Tooltip title={ mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode' }>
-                <IconButton onClick={ toggleTheme } color='inherit' sx={ { mr: { xs: 0, sm: 1 } } }>
+                <IconButton onClick={ toggleTheme } color='inherit' className='nav-theme-btn'>
                   { mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon /> }
                 </IconButton>
               </Tooltip>
-              <Button color='inherit' onClick={ handleOpenTeamIdDialog } size='small' sx={ { fontSize: { xs: '0.7rem', sm: '0.875rem' }, px: { xs: 0.5, sm: 1 } } }>
+              <Button color='inherit' onClick={ handleOpenTeamIdDialog } size='small' className='nav-id-btn'>
                 { userTeamId ? `ID: ${userTeamId}` : 'Set ID' }
               </Button>
             </Box>

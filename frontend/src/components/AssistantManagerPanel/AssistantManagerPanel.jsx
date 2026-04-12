@@ -1,7 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { Alert, Box, Button, Typography, CircularProgress, Chip } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
 import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import useAssistantManager from '../../hooks/useAssistantManager';
@@ -14,11 +13,11 @@ const TYPE_CHIP_COLOR = {
   info: 'info',
 };
 
-// Maps hint.priority → left-border colour key (resolved at render time)
-function borderColor(theme, priority) {
-  if (priority === 1) return theme.palette.warning.main;
-  if (priority === 2) return theme.palette.info.main;
-  return theme.palette.text.disabled;
+// Hint priority → CSS class
+function hintPriorityClass(priority) {
+  if (priority === 1) return 'hint-card hint-priority-1';
+  if (priority === 2) return 'hint-card hint-priority-2';
+  return 'hint-card hint-priority-3';
 }
 
 // Players with a trend field get a directional arrow label suffix
@@ -28,24 +27,21 @@ function playerLabel(p) {
 }
 
 const AssistantManagerPanel = ({ entryId, currentGameweek }) => {
-  const theme = useTheme();
   const { hints, loading, error, retry } = useAssistantManager(entryId, currentGameweek);
 
   return (
     <Box>
       { /* Header */ }
-      <Box sx={ { display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 } }>
-        <LightbulbOutlinedIcon
-          sx={ { fontSize: 20, color: theme.palette.warning.main } }
-        />
-        <Typography variant='h6' sx={ { fontWeight: 600 } }>
+      <Box className='u-flex u-items-center u-gap-1 u-mb-1p5'>
+        <LightbulbOutlinedIcon className='assistant-lightbulb' />
+        <Typography variant='h6' className='u-font-600'>
           Assistant Manager
         </Typography>
       </Box>
 
       { /* Loading */ }
       { loading && (
-        <Box sx={ { display: 'flex', justifyContent: 'center', py: 2 } }>
+        <Box className='u-flex u-justify-center u-py-2'>
           <CircularProgress size={ 20 } />
         </Box>
       ) }
@@ -54,7 +50,7 @@ const AssistantManagerPanel = ({ entryId, currentGameweek }) => {
       { !loading && error && (
         <Alert
           severity='error'
-          sx={ { mb: 1 } }
+          className='u-mb-1'
           action={
             <Button
               color='inherit'
@@ -79,26 +75,11 @@ const AssistantManagerPanel = ({ entryId, currentGameweek }) => {
 
       { /* Hints list */ }
       { !loading && !error && hints.length > 0 && (
-        <Box sx={ { display: 'flex', flexDirection: 'column', gap: 2 } }>
+        <Box className='u-flex u-flex-col u-gap-2'>
           { hints.map((hint) => (
-            <Box
-              key={ hint.id }
-              sx={ {
-                borderLeft: `3px solid ${borderColor(theme, hint.priority)}`,
-                pl: 1.5,
-                py: 0.25,
-              } }
-            >
+            <Box key={ hint.id } className={ hintPriorityClass(hint.priority) }>
               { /* Title row */ }
-              <Box
-                sx={ {
-                  display: 'flex',
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                  gap: 0.75,
-                  mb: 0.5,
-                } }
-              >
+              <Box className='hint-title-row'>
                 <Typography variant='body2' fontWeight={ 600 }>
                   { hint.title }
                 </Typography>
@@ -108,7 +89,7 @@ const AssistantManagerPanel = ({ entryId, currentGameweek }) => {
                     size='small'
                     color={ TYPE_CHIP_COLOR[hint.type] || 'default' }
                     variant='outlined'
-                    sx={ { height: 18, fontSize: '0.65rem', lineHeight: 1 } }
+                    className='chip-hint'
                   />
                 ) }
               </Box>
@@ -117,23 +98,21 @@ const AssistantManagerPanel = ({ entryId, currentGameweek }) => {
               <Typography
                 variant='body2'
                 color='text.secondary'
-                sx={ { lineHeight: 1.55, whiteSpace: 'pre-line' } }
+                className='u-line-1p55 u-pre-line'
               >
                 { hint.message }
               </Typography>
 
               { /* Player chips */ }
               { hint.players && hint.players.length > 0 && (
-                <Box
-                  sx={ { display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.75 } }
-                >
+                <Box className='hint-chips-row'>
                   { hint.players.slice(0, 6).map((p) => (
                     <Chip
                       key={ p.id ?? p.name }
                       label={ playerLabel(p) }
                       size='small'
                       variant='outlined'
-                      sx={ { height: 20, fontSize: '0.7rem' } }
+                      className='chip-player'
                     />
                   )) }
                 </Box>
@@ -141,16 +120,14 @@ const AssistantManagerPanel = ({ entryId, currentGameweek }) => {
 
               { /* Team chips */ }
               { hint.teams && hint.teams.length > 0 && (
-                <Box
-                  sx={ { display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.75 } }
-                >
+                <Box className='hint-chips-row'>
                   { hint.teams.map((t) => (
                     <Chip
                       key={ t.id }
                       label={ t.shortName ?? t.name }
                       size='small'
                       variant='outlined'
-                      sx={ { height: 20, fontSize: '0.7rem' } }
+                      className='chip-player'
                     />
                   )) }
                 </Box>

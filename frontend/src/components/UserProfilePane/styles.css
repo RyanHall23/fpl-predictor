@@ -1,18 +1,15 @@
-/* Dark mode - default */
+/* Dark mode — default */
 .MuiPaper-root.user-profile-pane {
-  background: linear-gradient(135deg, #23272f 0%, #281455 100%);
-  color: #fff;
-  border-radius: 12px;
+  background: var(--clr-paper-gradient);
+  color: var(--clr-text-primary);
+  border-radius: var(--radius-lg);
   box-shadow: 0 4px 16px rgba(106, 27, 154, 0.3);
   min-width: 250px;
   padding: 20px 16px;
-  transition: all 0.3s ease;
+  transition: var(--transition-base);
 }
 
-/* Light mode */
 html[data-mui-color-scheme='light'] .MuiPaper-root.user-profile-pane {
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  color: #212121;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 }
 
@@ -22,11 +19,7 @@ html[data-mui-color-scheme='light'] .MuiPaper-root.user-profile-pane {
 }
 
 .MuiPaper-root.user-profile-pane .MuiDivider-root {
-  background-color: rgba(255, 255, 255, 0.2);
-}
-
-html[data-mui-color-scheme='light'] .MuiPaper-root.user-profile-pane .MuiDivider-root {
-  background-color: rgba(0, 0, 0, 0.12);
+  background-color: var(--clr-divider);
 }
 
 .MuiPaper-root.user-profile-pane .MuiListItemText-primary,
@@ -37,7 +30,7 @@ html[data-mui-color-scheme='light'] .MuiPaper-root.user-profile-pane .MuiDivider
 .MuiPaper-root.user-profile-pane .MuiButton-root {
   color: inherit;
   border-color: currentColor;
-  transition: all 0.3s ease;
+  transition: var(--transition-base);
 }
 
 .MuiPaper-root.user-profile-pane .MuiButton-root:hover {
@@ -50,49 +43,39 @@ html[data-mui-color-scheme='light'] .MuiPaper-root.user-profile-pane .MuiButton-
 
 /* Win2k theme */
 body.win2k-theme .MuiPaper-root.user-profile-pane {
-  background: #d4d0c8;
-  color: #000000;
+  color: var(--clr-text-primary);
   border-radius: 0;
   box-shadow: inset -1px -1px 0 #000000, inset 1px 1px 0 #dfdfdf;
 }
 
-body.win2k-theme .MuiPaper-root.user-profile-pane .MuiDivider-root {
-  background-color: rgba(0, 0, 0, 0.3);
-}
-
 body.win2k-theme .MuiPaper-root.user-profile-pane .MuiButton-root:hover {
-  background-color: rgba(0, 0, 128, 0.12);
+  background-color: var(--clr-action-hover);
 }
 
 /* Teletext theme */
 body.teletext-theme .MuiPaper-root.user-profile-pane {
-  background: #000000;
-  color: #ffffff;
+  color: var(--clr-text-primary);
   border-radius: 0;
-  border: 2px solid #ffff00;
+  border: 2px solid var(--clr-primary);
   box-shadow: none;
-  font-family: "Courier New", "Courier", monospace;
-}
-
-body.teletext-theme .MuiPaper-root.user-profile-pane .MuiDivider-root {
-  background-color: #ffff00;
+  font-family: var(--font-default);
 }
 
 body.teletext-theme .MuiPaper-root.user-profile-pane .MuiTypography-root {
-  font-family: "Courier New", "Courier", monospace;
+  font-family: var(--font-default);
 }
 
 body.teletext-theme .MuiPaper-root.user-profile-pane .MuiListItemText-secondary {
   color: #00ffff;
-  font-family: "Courier New", "Courier", monospace;
+  font-family: var(--font-default);
 }
 
 body.teletext-theme .MuiPaper-root.user-profile-pane .MuiButton-root {
   background: transparent;
   border: none;
   box-shadow: none;
-  color: #ffff00;
-  font-family: "Courier New", "Courier", monospace;
+  color: var(--clr-primary);
+  font-family: var(--font-default);
   padding: 0;
 }
 

@@ -1,27 +1,9 @@
-:root {
-  --primary-color: #6a1b9a;
-  --secondary-color: #ab47bc;
-  --hover-color: #8e24aa;
-  --white-color: #ffffff;
-}
-
-.app-bar {
-  width: 100%;
-  background-color: var(--primary-color);
-}
-
-.toolbar-box {
-  flex-grow: 1;
-  display: flex;
-  align-items: center;
-}
-
-/* Dark mode - default */
+/* Dark mode — default */
 .text-field {
   margin-right: 16px;
   background-color: rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
-  transition: all 0.3s ease;
+  border-radius: var(--radius-sm);
+  transition: var(--transition-base);
 }
 
 .text-field .MuiInputBase-input {
@@ -38,7 +20,7 @@
 }
 
 .text-field.Mui-focused .MuiOutlinedInput-notchedOutline {
-  border-color: #ab47bc;
+  border-color: var(--clr-secondary);
 }
 
 /* Light mode */
@@ -55,11 +37,17 @@ html[data-mui-color-scheme='light'] .text-field .MuiOutlinedInput-notchedOutline
 }
 
 .submit-button {
-  background-color: var(--secondary-color);
-  color: var(--white-color);
-  transition: all 0.3s ease;
+  background-color: var(--clr-secondary);
+  color: #ffffff;
+  transition: var(--transition-base);
 }
 
 .submit-button:hover {
-  background-color: var(--hover-color);
+  background-color: var(--clr-primary-light);
+}
+
+/* GW select internal padding */
+.nav-gw-select .MuiSelect-select {
+  padding-top: var(--sp-1);
+  padding-bottom: var(--sp-1);
 }

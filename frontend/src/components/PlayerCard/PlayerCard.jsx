@@ -49,13 +49,14 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
   // Player status badge — only shown when NOT available (injured/doubtful/suspended/unavailable)
   const chance = player.chanceOfPlayingNextRound;
   let statusMeta = null;
+  const STATUS_CLASS_MAP = { d: 'doubtful', i: 'injured', s: 'suspended', u: 'unavailable' };
   if (STATUS_META[player.status]) {
     const base = STATUS_META[player.status];
     const percentSuffix = (chance != null && chance < 100) ? ` ${chance}%` : '';
     const newsNote = player.news ? ` — ${player.news}` : '';
-    statusMeta = { color: base.color, title: `${base.label}${percentSuffix}${newsNote}` };
+    statusMeta = { badgeClass: `status-badge status-badge-${STATUS_CLASS_MAP[player.status]}`, title: `${base.label}${percentSuffix}${newsNote}` };
   } else if (chance != null && chance < 100) {
-    statusMeta = { color: '#ff9800', title: `${chance}% chance of playing` };
+    statusMeta = { badgeClass: 'status-badge status-badge-limited', title: `${chance}% chance of playing` };
   }
 
   // Per-fixture data for the opponent pill (supports DGW with per-row FDR colour)
@@ -69,69 +70,54 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
     : [{ text: player.opponentDisplay || player.opponent || '-', difficulty: player.difficulty }];
 
   // Captain eligibility: any starting (non-bench) player except the manager.
-  // Bench players never receive onSetCaptain from TeamFormation, so they are
-  // already excluded without an explicit position check here.
   const isCaptainEligible = !!onSetCaptain && player.position !== POSITION_MANAGER;
 
   // Helper function to check if swap maintains formation requirements
-  // This is kept for instant UI feedback (green borders)
-  // Backend validation is authoritative when actually performing swap
   const checkFormationAfterSwap = (player1, player2, zone1, zone2) => {
     if (!activePlayers || !reservePlayers) return false;
-    
+
     let newActive  = [...activePlayers];
     let newReserve = [...reservePlayers];
-    
-    // Perform the swap
+
     const idx1 = zone1 === 'reserve'
       ? newReserve.findIndex(p => p.code === player1.code)
       : newActive.findIndex(p => p.code === player1.code);
     const idx2 = zone2 === 'reserve'
       ? newReserve.findIndex(p => p.code === player2.code)
       : newActive.findIndex(p => p.code === player2.code);
-    
+
     if (idx1 === -1 || idx2 === -1) return false;
-    
+
     if (zone1 === 'active' && zone2 === 'reserve') {
       [newActive[idx1], newReserve[idx2]] = [newReserve[idx2], newActive[idx1]];
     } else if (zone1 === 'reserve' && zone2 === 'active') {
       [newReserve[idx1], newActive[idx2]] = [newActive[idx2], newReserve[idx1]];
     }
-    
-    // Count positions in new active team
+
     const positionCounts = newActive.reduce((counts, p) => {
       counts[p.position] = (counts[p.position] || 0) + 1;
       return counts;
     }, {});
-    
-    // Check formation requirements (client-side preview only)
-    return (positionCounts[2] || 0) >= 3 && 
-           (positionCounts[3] || 0) >= 3 && 
+
+    return (positionCounts[2] || 0) >= 3 &&
+           (positionCounts[3] || 0) >= 3 &&
            (positionCounts[4] || 0) >= 1;
   };
 
-  // Determine if this card should be highlighted
   const isSelected = selectedPlayer && selectedPlayer.player.code === player.code;
-  
-  // Check if this is a valid swap target based on game rules
+
   let isValidTarget = false;
   if (selectedPlayer && !isSelected && teamType) {
     const selectedPos = selectedPlayer.player.position;
     const thisPos = player.position;
     const isDifferentZone = selectedPlayer.teamType !== teamType;
-    
-    // Must be in different zone (active vs reserve)
+
     if (isDifferentZone) {
-      // Managers cannot be substituted — only transferred
       if (selectedPos === 5 || thisPos === 5) {
         isValidTarget = false;
-      }
-      // Goalkeeper swap rule: goalkeepers can only swap with goalkeepers
-      else if (selectedPos === 1 || thisPos === 1) {
+      } else if (selectedPos === 1 || thisPos === 1) {
         isValidTarget = selectedPos === 1 && thisPos === 1;
-      }
-      // Outfield players - check formation requirements
-      else {
+      } else {
         isValidTarget = checkFormationAfterSwap(
           selectedPlayer.player,
           player,
@@ -141,8 +127,7 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
       }
     }
   }
-  
-  // Determine card class based on selection state
+
   let cardClassName = 'player-card';
   if (isSelected) {
     cardClassName += ' player-card-selected';
@@ -151,85 +136,42 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
   }
 
   // Find the planned transfer that brought this player in, if any (for future GWs).
-  // Used to show a Restore button instead of the Transfer button.
   const plannedInTransfer = isFutureGameweek && plannedTransfers
     ? plannedTransfers.find(
         t => t.playerIn.code === player.code && t.gameweek <= viewedGameweek
       )
     : null;
 
+  const captainBadgeClass = `captain-badge${player.inDreamteam ? ' captain-badge--with-dreamteam' : ''}`;
+
   return (
-    <Card
-      className={ cardClassName }
-      sx={ {
-        width: 105,
-        display: 'flex',
-        flexDirection: 'column',
-        padding: '6px',
-        margin: '0 auto',
-        position: 'relative',
-      } }
-    >
-      { /* Status dot — shown only when NOT available (injured/doubtful/suspended/unavailable) */ }
+    <Card className={ cardClassName }>
+      { /* Status dot */ }
       { statusMeta && (
         <Tooltip title={ statusMeta.title } placement='top'>
-          <Box className='status-badge' style={ { backgroundColor: statusMeta.color } } />
+          <Box className={ statusMeta.badgeClass } />
         </Tooltip>
       ) }
       { player.inDreamteam && <StarIcon className='dreamteam-icon' /> }
       { isCaptain && (
         <Tooltip title='Captain' placement='top'>
           <Box
-            className='captain-badge'
+            className={ captainBadgeClass }
             tabIndex={ 0 }
             aria-label='Captain'
-            sx={ {
-              position: 'absolute',
-              top: 8,
-              right: player.inDreamteam ? 36 : 8,
-              width: 22,
-              height: 22,
-              borderRadius: '50%',
-              backgroundColor: '#1976d2',
-              color: '#fff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 700,
-              fontSize: '0.75rem',
-              zIndex: 1,
-              boxShadow: 1,
-              cursor: 'default',
-            } }
           >
-            <Typography component='span' sx={ { fontSize: 'inherit', fontWeight: 'inherit', lineHeight: 1 } }>
+            <Typography component='span' className='u-line-1 u-font-inherit u-fs-inherit'>
               C
             </Typography>
           </Box>
         </Tooltip>
       ) }
-      <CardContent
-        sx={ {
-          padding: '4px !important',
-          width: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '1px',
-          '&:last-child': { paddingBottom: '4px !important' },
-        } }
-      >
+      <CardContent className='player-card-content'>
         { /* Team Shirt */ }
         <ButtonBase
           onClick={ () => setStatsDialogOpen(true) }
           aria-label={ `View ${player.webName} stats` }
-          sx={ {
-            width: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            overflow: 'visible',
-            position: 'relative',
-          } }
+          className='shirt-btn'
         >
           <img
             src={ `https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_${player.teamCode}-66.png` }
@@ -245,35 +187,18 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
         <ButtonBase
           onClick={ () => setStatsDialogOpen(true) }
           aria-label={ `View ${player.webName} stats` }
-          sx={ {
-            width: '100%',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            '&:hover .player-name': { textDecoration: 'underline' },
-          } }
+          className='player-name-btn'
         >
           <Typography
             variant='body2'
             className='player-name'
-            sx={ {
-              fontSize: '11px',
-              fontWeight: 600,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              textAlign: 'center',
-              display: 'block',
-              width: '100%',
-              letterSpacing: '0.3px',
-            } }
           >
             { player.webName }
           </Typography>
         </ButtonBase>
 
         { /* Points and Opponent Row */ }
-        <Box sx={ { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25 } }>
+        <Box className='player-points-row'>
           <FixturePill
             fixtures={ fixtures.slice(0, fixtures.length >= 2 ? 2 : 1).map(fix => ({
               label:      fix.text,
@@ -281,14 +206,14 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
             })) }
             size='sm'
           />
-          <Typography variant='h6' className={ `points-display${pointsColorClass}` } sx={ { fontSize: '14px', fontWeight: 700, textAlign: 'center', width: '100%', letterSpacing: '0.5px', padding: '1px 0' } }>
+          <Typography variant='h6' className={ `points-display${pointsColorClass}` }>
             { predictedPoints }
           </Typography>
         </Box>
 
-        { /* Action Buttons — only render if at least one button is interactive */ }
+        { /* Action Buttons */ }
         { showTransferButtons && team && allPlayers && onTransfer && (isCaptainEligible || onPlayerClick || isFutureGameweek) && (
-          <Grid container spacing={ 1 } sx={ { mt: 0.5 } }>
+          <Grid container spacing={ 1 } className='player-buttons-row'>
 
             { /* 1. Captain */ }
             <Grid size={ 4 }>
@@ -296,26 +221,15 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
                 <Tooltip title={ isCaptain ? 'Captain' : 'Set as Captain' }>
                   <IconButton
                     size='small'
-                    className='action-button-small captain-button'
+                    className={ `action-button-small captain-button${isCaptain ? ' captain-btn-active' : ''}` }
                     onClick={ () => { if (!isCaptain && onSetCaptain) onSetCaptain(player.code); } }
-                    sx={ {
-                      padding: '3px !important',
-                      fontWeight: 'bold',
-                      fontSize: '14px',
-                      borderRadius: '4px',
-                      ...(isCaptain && {
-                        color: '#fff !important',
-                        backgroundColor: '#c8960c !important',
-                        '&:hover': { backgroundColor: '#b5850b !important' },
-                      }),
-                    } }
                   >
                     C
                   </IconButton>
                 </Tooltip>
               ) : (
-                <IconButton size='small' disabled sx={ { visibility: 'hidden', padding: '4px !important' } }>
-                  <SyncIcon sx={ { fontSize: 20 } } />
+                <IconButton size='small' disabled className='u-hidden' aria-hidden='true'>
+                  <SyncIcon />
                 </IconButton>
               ) }
             </Grid>
@@ -328,13 +242,12 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
                   className='action-button-small substitute-button'
                   title='Substitute'
                   onClick={ () => onPlayerClick(player, teamType) }
-                  sx={ { padding: '3px !important' } }
                 >
-                  <SyncIcon sx={ { fontSize: 20 } } className='sync-icon' />
+                  <SyncIcon className='sync-icon' />
                 </IconButton>
               ) : (
-                <IconButton size='small' disabled sx={ { visibility: 'hidden', padding: '3px !important' } }>
-                  <SyncIcon sx={ { fontSize: 20 } } />
+                <IconButton size='small' disabled className='u-hidden' aria-hidden='true'>
+                  <SyncIcon />
                 </IconButton>
               ) }
             </Grid>
@@ -348,9 +261,8 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
                       size='small'
                       className='action-button-small restore-button'
                       onClick={ () => onRemovePlannedTransfer && onRemovePlannedTransfer(plannedInTransfer.id) }
-                      sx={ { padding: '3px !important' } }
                     >
-                      <RestoreIcon sx={ { fontSize: 20, color: '#ff9800' } } />
+                      <RestoreIcon className='restore-icon' />
                     </IconButton>
                   </Tooltip>
                 ) : (
@@ -359,19 +271,18 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
                     className='action-button-small transfer-button'
                     title='Transfer'
                     onClick={ () => setTransferDialogOpen(true) }
-                    sx={ { padding: '3px !important' } }
                   >
-                    <Box sx={ { display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
+                    <Box className='u-flex u-items-center u-justify-center'>
                       <svg width='20' height='20' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
-                        <path d='M3 8 L12 8 L12 6 L18 10 L12 14 L12 12 L3 12 Z' fill='#4caf50' />
-                        <path d='M21 16 L12 16 L12 18 L6 14 L12 10 L12 12 L21 12 Z' fill='#f44336' />
+                        <path d='M3 8 L12 8 L12 6 L18 10 L12 14 L12 12 L3 12 Z' className='transfer-arrow-in' />
+                        <path d='M21 16 L12 16 L12 18 L6 14 L12 10 L12 12 L21 12 Z' className='transfer-arrow-out' />
                       </svg>
                     </Box>
                   </IconButton>
                 )
               ) : (
-                <IconButton size='small' disabled sx={ { visibility: 'hidden', padding: '4px !important' } }>
-                  <SyncIcon sx={ { fontSize: 20 } } />
+                <IconButton size='small' disabled className='u-hidden' aria-hidden='true'>
+                  <SyncIcon />
                 </IconButton>
               ) }
             </Grid>
@@ -381,18 +292,8 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
 
         { /* Price tag — shown on future GW cards */ }
         { isFutureGameweek && player.nowCost != null && (
-          <Box
-            sx={ {
-              mx: -0.5,
-              mb: -0.5,
-              mt: 0.5,
-              borderTop: '1px solid',
-              borderColor: 'divider',
-              textAlign: 'center',
-              py: '2px',
-            } }
-          >
-            <Typography variant='caption' sx={ { fontSize: '0.65rem', fontWeight: 600, color: 'text.secondary', letterSpacing: '0.3px' } }>
+          <Box className='player-price-tag'>
+            <Typography variant='caption' className='u-fs-xs u-font-600 u-letter-lg'>
               £{ ((player.sellingPrice ?? player.nowCost) / 10).toFixed(1) }m
             </Typography>
           </Box>

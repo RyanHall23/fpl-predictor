@@ -14,7 +14,6 @@ import {
   Button,
   CircularProgress,
   Alert,
-  Box,
 } from '@mui/material';
 import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
@@ -24,12 +23,12 @@ import axios from '../../api';
 
 const getRankChangeIcon = (current, last) => {
   if (last == null || current == null)
-    return <RemoveIcon sx={ { color: 'grey.500', fontSize: 18, verticalAlign: 'middle' } } />;
+    return <RemoveIcon style={ { color: 'grey', fontSize: 18, verticalAlign: 'middle' } } />;
   if (last > current)
-    return <ArrowDropUpIcon sx={ { color: 'green', fontSize: 18, verticalAlign: 'middle' } } />;
+    return <ArrowDropUpIcon style={ { color: 'green', fontSize: 18, verticalAlign: 'middle' } } />;
   if (last < current)
-    return <ArrowDropDownIcon sx={ { color: 'red', fontSize: 18, verticalAlign: 'middle' } } />;
-  return <RemoveIcon sx={ { color: 'grey.500', fontSize: 18, verticalAlign: 'middle' } } />;
+    return <ArrowDropDownIcon style={ { color: 'red', fontSize: 18, verticalAlign: 'middle' } } />;
+  return <RemoveIcon style={ { color: 'grey', fontSize: 18, verticalAlign: 'middle' } } />;
 };
 
 const InvitationLeagueView = ({ league, onBack, onViewTeam }) => {
@@ -66,23 +65,24 @@ const InvitationLeagueView = ({ league, onBack, onViewTeam }) => {
     : `Predicted Pts (Next ${gameweeksAhead} GWs)`;
 
   return (
-    <Paper sx={ { p: 2 } }>
-      <Box sx={ { display: 'flex', alignItems: 'center', mb: 1 } }>
+    <Paper className='u-p-2'>
+      <div className='u-flex u-items-center u-mb-1'>
         <Button
           size='small'
           startIcon={ <ArrowBackIcon /> }
           onClick={ onBack }
-          sx={ { mr: 1 } }
+          className='u-mr-auto'
+          style={ { marginRight: 8 } }
         >
           Back
         </Button>
         <Typography variant='h6' component='span'>
           { league.name }
         </Typography>
-      </Box>
+      </div>
 
-      <Box sx={ { mb: 2 } }>
-        <Typography variant='body2' sx={ { mb: 0.5 } }>
+      <div className='u-mb-2'>
+        <Typography variant='body2' className='u-mb-0p5'>
           Predicted points lookahead:
         </Typography>
         <ToggleButtonGroup
@@ -97,16 +97,16 @@ const InvitationLeagueView = ({ league, onBack, onViewTeam }) => {
           <ToggleButton value={ 4 }>4 GWs</ToggleButton>
           <ToggleButton value={ 5 }>5 GWs</ToggleButton>
         </ToggleButtonGroup>
-      </Box>
+      </div>
 
-      { error && <Alert severity='error' sx={ { mb: 1 } }>{ error }</Alert> }
+      { error && <Alert severity='error' className='u-mb-1'>{ error }</Alert> }
 
       { loading ? (
-        <Box sx={ { display: 'flex', justifyContent: 'center', p: 3 } }>
+        <div className='u-flex u-justify-center u-p-3'>
           <CircularProgress size={ 28 } />
-        </Box>
+        </div>
       ) : standings ? (
-        <TableContainer sx={ { maxHeight: '400px', overflow: 'auto' } }>
+        <TableContainer className='league-table-container'>
           <Table size='small' stickyHeader>
             <TableHead>
               <TableRow>
@@ -129,7 +129,7 @@ const InvitationLeagueView = ({ league, onBack, onViewTeam }) => {
                       size='small'
                       variant='text'
                       onClick={ () => onViewTeam(entry.entry, entry.entry_name) }
-                      sx={ { p: 0, minWidth: 0, textTransform: 'none', fontWeight: 'normal' } }
+                      className='btn-text-link'
                     >
                       { entry.entry_name }
                     </Button>

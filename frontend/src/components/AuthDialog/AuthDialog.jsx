@@ -9,7 +9,6 @@ import {
   Button,
   Typography
 } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
 
 const isNumeric = (value) => /^\d*$/.test(value);
 
@@ -22,7 +21,6 @@ const AuthDialog = ({
   onChange,
   onSubmit
 }) => {
-  const theme = useTheme();
   // Show error if in register mode and teamid is not numeric and not empty
   const teamIdError = mode === 'register' && form.teamid && !isNumeric(form.teamid);
 
@@ -38,18 +36,9 @@ const AuthDialog = ({
     <Dialog 
       open={ open } 
       onClose={ onClose }
-      slotProps={ {
-        paper: {
-          sx: {
-            background: theme.palette.mode === 'dark' 
-              ? 'linear-gradient(135deg, #23272f 0%, #281455 100%)'
-              : 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
-            borderRadius: '12px',
-          }
-        }
-      } }
+      PaperProps={ { className: 'dialog-paper-gradient' } }
     >
-      <DialogTitle sx={ { color: theme.palette.text.primary } }>
+      <DialogTitle>
         { mode === 'login' ? 'Login' : 'Register' }
       </DialogTitle>
       <form

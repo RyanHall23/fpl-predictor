@@ -3,40 +3,28 @@ import PropTypes from 'prop-types';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Divider from '@mui/material/Divider';
-import { useTheme } from '@mui/material/styles';
 import UserProfilePane from '../UserProfilePane/UserProfilePane';
 import InvitationLeagueView from '../InvitationLeagueView/InvitationLeagueView';
 import FixturesPanel from '../FixturesPanel';
 
-const RightPanel = ({ 
-  entryId, 
-  onLeagueClick, 
-  selectedLeague, 
-  onBackFromLeague, 
+const RightPanel = ({
+  entryId,
+  onLeagueClick,
+  selectedLeague,
+  onBackFromLeague,
   onViewTeam,
   currentGameweek,
   selectedGameweek,
   gameweekDeadline,
   liveMatches,
 }) => {
-  const theme = useTheme();
   const displayGameweek = selectedGameweek || currentGameweek;
 
   return (
-    <Box
-      sx={ {
-        width: '100%',
-        height: '100%',
-        backgroundColor: theme.palette.background.paper,
-        borderRadius: 1,
-        overflow: 'auto',
-        display: 'flex',
-        flexDirection: 'column',
-      } }
-    >
+    <Box className='right-panel-box'>
       { entryId ? (
-        <Box sx={ { p: 2 } }>
-          <Typography variant='h6' sx={ { mb: 2, fontWeight: 600 } }>
+        <Box className='right-panel-section'>
+          <Typography variant='h6' className='right-panel-title'>
             League Standings
           </Typography>
           { selectedLeague ? (
@@ -56,14 +44,12 @@ const RightPanel = ({
 
       { displayGameweek && (
         <>
-          { entryId && <Divider sx={ { my: 1 } } /> }
-          <Box sx={ { p: 2 } }>
+          { entryId && <Divider className='u-my-1' /> }
+          <Box className='right-panel-section'>
             <FixturesPanel gameweek={ displayGameweek } deadline={ gameweekDeadline } liveMatches={ liveMatches } />
           </Box>
         </>
       ) }
-
-
     </Box>
   );
 };

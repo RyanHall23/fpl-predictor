@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { Box, Chip, Paper, Typography, Divider } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
+import { Chip, Paper, Typography, Divider } from '@mui/material';
 import axios from '../../api';
 import RecommendedTransfers from '../RecommendedTransfers';
 import PlannedTransfers from '../PlannedTransfers';
@@ -21,7 +20,6 @@ const TeamActivityPanel = ({
   voidedTransferIds,
   freeHitGWs,
 }) => {
-  const theme = useTheme();
   const [profile, setProfile] = useState(null);
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -47,7 +45,7 @@ const TeamActivityPanel = ({
       });
   }, [entryId]);
 
-  if (entryId && loading) return <Paper sx={ { p: 2 } }><Typography>Loading...</Typography></Paper>;
+  if (entryId && loading) return <Paper className='u-p-2'><Typography>Loading...</Typography></Paper>;
 
   const formatNumber = n => (n == null ? 'N/A' : n.toLocaleString());
   const formatCurrency = n => (n == null ? 'N/A' : `£${(n / 10).toFixed(1)}m`);
@@ -67,75 +65,59 @@ const TeamActivityPanel = ({
     : 0;
 
   return (
-    <Box
-      sx={ {
-        width: '100%',
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 2,
-        overflow: 'auto',
-      } }
-    >
+    <div className='activity-panel'>
       { /* Team Stats - Top Section */ }
       { entryId && profile && (
-        <Paper
-          sx={ {
-            backgroundColor: theme.palette.background.paper,
-            borderRadius: 1,
-            p: 2,
-            flex: '0 0 auto',
-          } }
-        >
-          <Typography variant='h6' sx={ { mb: 2, fontWeight: 600 } }>
+        <Paper className='activity-paper'>
+          <Typography variant='h6' className='u-mb-2 u-font-600'>
             Team Stats
           </Typography>
-          <Box sx={ { display: 'flex', flexDirection: 'column', gap: 1.5 } }>
-            <Box>
+          <div className='u-flex u-flex-col u-gap-1p5'>
+            <div>
               <Typography variant='caption' color='text.secondary'>
                 Manager
               </Typography>
               <Typography variant='body1' fontWeight='bold'>
                 { profile.entry.player_first_name } { profile.entry.player_last_name }
               </Typography>
-            </Box>
+            </div>
             <Divider />
-            <Box sx={ { display: 'flex', gap: 2, alignItems: 'flex-start' } }>
-              <Box sx={ { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5, flex: 1 } }>
-                <Box>
+            <div className='u-flex u-gap-2 u-items-start'>
+              <div style={ { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, flex: 1 } }>
+                <div>
                   <Typography variant='caption' color='text.secondary'>
                     Global Position
                   </Typography>
                   <Typography variant='body1' fontWeight='bold'>
                     { formatNumber(profile.entry.summary_overall_rank) }
                   </Typography>
-                </Box>
-                <Box>
+                </div>
+                <div>
                   <Typography variant='caption' color='text.secondary'>
                     Total Points
                   </Typography>
                   <Typography variant='body1' fontWeight='bold'>
                     { formatNumber(profile.totalPoints) }
                   </Typography>
-                </Box>
-                <Box>
+                </div>
+                <div>
                   <Typography variant='caption' color='text.secondary'>
                     Team Value
                   </Typography>
                   <Typography variant='body1' fontWeight='bold'>
                     { formatCurrency(profile.entry.last_deadline_value) }
                   </Typography>
-                </Box>
-                <Box>
+                </div>
+                <div>
                   <Typography variant='caption' color='text.secondary'>
                     In The Bank
                   </Typography>
                   <Typography variant='body1' fontWeight='bold'>
                     { formatCurrency(profile.entry.last_deadline_bank) }
                   </Typography>
-                </Box>
-              </Box>
-              <Box sx={ { display: 'flex', flexDirection: 'column', gap: 1 } }>
+                </div>
+              </div>
+              <div className='u-flex u-flex-col u-gap-1'>
                 { (() => {
                   const CHIP_TYPES = [
                     { key: 'wildcard', label: 'WC' },
@@ -151,120 +133,84 @@ const TeamActivityPanel = ({
                     const count = chips.filter(c => c.name === key).length;
                     return Array.from({ length: Math.max(0, 2 - count) }, () => ({ label }));
                   });
-                  const chipGridSx = {
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(3, auto)',
-                    justifyContent: 'start',
-                    columnGap: 0.25,
-                    rowGap: 0.25,
-                  };
                   return (
                     <>
-                      <Box sx={ { display: 'flex', flexDirection: 'column', gap: 0.5 } }>
+                      <div className='u-flex u-flex-col u-gap-0p5'>
                         <Typography variant='caption' color='text.secondary'>Used</Typography>
                         { usedChips.length === 0
                           ? <Typography variant='caption' color='text.disabled'>—</Typography>
-                          : <Box sx={ chipGridSx }>
+                          : <div className='chip-grid-3col'>
                               { usedChips.map((c, i) => (
                                 <Chip key={ i } label={ `${c.label}${c.event}` } size='small' color='primary'
-                                  sx={ { height: 20, fontSize: '0.65rem', fontWeight: 700 } } />
+                                  className='chip-sm-bold' />
                               )) }
-                            </Box>
+                            </div>
                         }
-                      </Box>
-                      <Box sx={ { display: 'flex', flexDirection: 'column', gap: 0.5 } }>
+                      </div>
+                      <div className='u-flex u-flex-col u-gap-0p5'>
                         <Typography variant='caption' color='text.secondary'>Unused</Typography>
                         { unusedSlots.length === 0
                           ? <Typography variant='caption' color='text.disabled'>—</Typography>
-                          : <Box sx={ chipGridSx }>
+                          : <div className='chip-grid-3col'>
                               { unusedSlots.map((c, i) => (
                                 <Chip key={ i } label={ c.label } size='small' color='success'
-                                  sx={ { height: 20, fontSize: '0.65rem', fontWeight: 700 } } />
+                                  className='chip-sm-bold' />
                               )) }
-                            </Box>
+                            </div>
                         }
-                      </Box>
+                      </div>
                     </>
                   );
                 })() }
-              </Box>
-            </Box>
-          </Box>
+              </div>
+            </div>
+          </div>
         </Paper>
       ) }
 
       { /* Recent Performance - Middle Section */ }
       { entryId && (
-      <Paper
-        sx={ {
-          backgroundColor: theme.palette.background.paper,
-          borderRadius: 1,
-          p: 2,
-          flex: '0 0 auto',
-        } }
-      >
-        <Typography variant='h6' sx={ { mb: 1.5, fontWeight: 600 } }>
+      <Paper className='activity-paper'>
+        <Typography variant='h6' className='u-mb-1p5 u-font-600'>
           Recent Performance
         </Typography>
         { recentHistory.length === 0 ? (
           <Typography variant='body2' color='text.secondary'>No recent gameweeks</Typography>
         ) : (
-          <Box>
+          <div>
             { /* Header row */ }
-            <Box sx={ { display: 'grid', gridTemplateColumns: '3rem 1fr 1fr 1fr', gap: 0.5, px: 1, mb: 0.5 } }>
+            <div style={ { display: 'grid', gridTemplateColumns: '3rem 1fr 1fr 1fr', gap: 4, paddingLeft: 8, paddingRight: 8, marginBottom: 4 } }>
               <Typography variant='caption' color='text.secondary'>GW</Typography>
-              <Typography variant='caption' color='text.secondary' sx={ { textAlign: 'right' } }>Pts</Typography>
-              <Typography variant='caption' color='text.secondary' sx={ { textAlign: 'right' } }>Rank</Typography>
-              <Typography variant='caption' color='text.secondary' sx={ { textAlign: 'right' } }>Value</Typography>
-            </Box>
-            <Divider sx={ { mb: 0.5 } } />
+              <Typography variant='caption' color='text.secondary' className='u-text-right'>Pts</Typography>
+              <Typography variant='caption' color='text.secondary' className='u-text-right'>Rank</Typography>
+              <Typography variant='caption' color='text.secondary' className='u-text-right'>Value</Typography>
+            </div>
+            <Divider className='u-mb-0p5' />
             { recentHistory.map((gw) => (
-              <Box
-                key={ gw.event }
-                sx={ {
-                  display: 'grid',
-                  gridTemplateColumns: '3rem 1fr 1fr 1fr',
-                  gap: 0.5,
-                  px: 1,
-                  py: 0.75,
-                  borderRadius: 1,
-                  '&:hover': { backgroundColor: theme.palette.action.hover },
-                } }
-              >
+              <div key={ gw.event } className='gw-row'>
                 <Typography variant='body2' fontWeight='600'>{ gw.event }</Typography>
                 <Typography
                   variant='body2'
-                  fontWeight='600'
-                  sx={ {
-                    textAlign: 'right',
-                    color: gw.points >= avgPoints ? theme.palette.success.main : theme.palette.error.main,
-                  } }
+                  className={ gw.points >= avgPoints ? 'gw-points-good' : 'gw-points-bad' }
                 >
                   { gw.points }
                 </Typography>
-                <Typography variant='body2' sx={ { textAlign: 'right', fontSize: '0.75rem' } }>
+                <Typography variant='body2' className='u-text-right u-fs-base'>
                   { formatRank(gw.overall_rank) }
                 </Typography>
-                <Typography variant='body2' sx={ { textAlign: 'right', fontSize: '0.75rem' } }>
+                <Typography variant='body2' className='u-text-right u-fs-base'>
                   { formatCurrency(gw.value) }
                 </Typography>
-              </Box>
+              </div>
             )) }
-          </Box>
+          </div>
         ) }
       </Paper>
       ) }
 
       { /* Recommended Transfers - Bottom Section */ }
       { currentEntryId && !viewingOpponentId && currentGameweek && (
-        <Paper
-          sx={ {
-            backgroundColor: theme.palette.background.paper,
-            borderRadius: 1,
-            p: 2,
-            flex: '0 0 auto',
-          } }
-        >
+        <Paper className='activity-paper'>
           <RecommendedTransfers
             entryId={ currentEntryId }
             currentGameweek={ currentGameweek }
@@ -275,14 +221,7 @@ const TeamActivityPanel = ({
 
       { /* Planned Transfers Section – shown for own team only */ }
       { currentEntryId && !viewingOpponentId && currentGameweek && onAddPlannedTransfer && (
-        <Paper
-          sx={ {
-            backgroundColor: theme.palette.background.paper,
-            borderRadius: 1,
-            p: 2,
-            flex: '0 0 auto',
-          } }
-        >
+        <Paper className='activity-paper'>
           <PlannedTransfers
             plannedTransfers={ plannedTransfers }
             onRemove={ onRemovePlannedTransfer }
@@ -300,21 +239,14 @@ const TeamActivityPanel = ({
 
       { /* Assistant Manager – always shown (general hints if no entryId) */ }
       { currentGameweek && (
-        <Paper
-          sx={ {
-            backgroundColor: theme.palette.background.paper,
-            borderRadius: 1,
-            p: 2,
-            flex: '0 0 auto',
-          } }
-        >
+        <Paper className='activity-paper'>
           <AssistantManagerPanel
             entryId={ viewingOpponentId ? undefined : entryId }
             currentGameweek={ currentGameweek }
           />
         </Paper>
       ) }
-    </Box>
+    </div>
   );
 };
 

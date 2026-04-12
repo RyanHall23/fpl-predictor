@@ -5,7 +5,6 @@ import {
   DialogContent,
   IconButton,
   Typography,
-  Box,
   Table,
   TableBody,
   TableRow,
@@ -167,32 +166,22 @@ const MatchCard = ({ fixture, playerTeamShort, espnClock }) => {
   const opponentLabel   = fixture.opponent_short || (playerIsHome ? awayShort : homeShort);
 
   return (
-    <Box
-      sx={ {
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 0.75,
-        px: 1.25,
-        py: 0.5,
-        bgcolor: 'action.hover',
-        borderRadius: 1.5,
-      } }
-    >
-      <Typography variant='body2' fontWeight={ 700 } sx={ { fontSize: '0.78rem' } }>
+    <div className='match-card'>
+      <Typography variant='body2' fontWeight={ 700 } className='match-card-text'>
         { playerTeamLabel }
       </Typography>
 
       { hasScore ? (
-        <Typography variant='body2' fontWeight={ 800 } sx={ { fontSize: '0.78rem', letterSpacing: 1 } }>
+        <Typography variant='body2' fontWeight={ 800 } className='match-card-score'>
           { team_h_score }–{ team_a_score }
         </Typography>
       ) : (
-        <Typography variant='body2' sx={ { fontSize: '0.78rem', color: 'text.disabled' } }>
+        <Typography variant='body2' color='text.disabled' className='match-card-text'>
           vs
         </Typography>
       ) }
 
-      <Typography variant='body2' sx={ { fontSize: '0.78rem', color: 'text.secondary' } }>
+      <Typography variant='body2' color='text.secondary' className='match-card-text'>
         { opponentLabel }
       </Typography>
 
@@ -200,9 +189,9 @@ const MatchCard = ({ fixture, playerTeamShort, espnClock }) => {
         label={ statusLabel }
         size='small'
         color={ finished ? 'default' : started ? 'success' : 'default' }
-        sx={ { fontSize: '0.65rem', height: 16, '& .MuiChip-label': { px: '5px' } } }
+        className='chip-mini'
       />
-    </Box>
+    </div>
   );
 };
 
@@ -215,7 +204,7 @@ MatchCard.propTypes = {
 const BreakdownTable = ({ rows }) => {
   if (!rows || rows.length === 0) {
     return (
-      <Typography variant='body2' color='text.secondary' sx={ { mt: 1 } }>
+      <Typography variant='body2' color='text.secondary' className='u-mt-1'>
         No stats recorded for this fixture.
       </Typography>
     );
@@ -224,39 +213,33 @@ const BreakdownTable = ({ rows }) => {
   return (
     <Table size='small'>
       <TableBody>
-        { rows.map((stat) => (
-          <TableRow key={ stat.identifier }>
-            <TableCell sx={ { pl: 0, border: 'none', py: 0.5 } }>
-              { STAT_LABELS[stat.identifier] ?? stat.identifier }
-              { stat.provisional && (
-                <Typography component='span' variant='caption' color='warning.main' sx={ { ml: 0.5 } }>
-                  (prov.)
-                </Typography>
-              ) }
-            </TableCell>
-            <TableCell align='right' sx={ { border: 'none', py: 0.5 } }>
-              { stat.value }
-            </TableCell>
-            <TableCell
-              align='right'
-              sx={ {
-                border: 'none',
-                py: 0.5,
-                pr: 0,
-                fontWeight: 600,
-                color: stat.provisional
-                  ? 'warning.main'
-                  : stat.points == null
-                  ? 'text.disabled'
-                  : stat.points > 0 ? 'success.main'
-                  : stat.points < 0 ? 'error.main'
-                  : 'text.secondary',
-              } }
-            >
-              { stat.points == null ? '—' : `${stat.points} pts` }
-            </TableCell>
-          </TableRow>
-        )) }
+        { rows.map((stat) => {
+          const ptsClass = stat.provisional
+            ? 'pts-provisional'
+            : stat.points == null
+            ? 'pts-null'
+            : stat.points > 0 ? 'pts-positive'
+            : stat.points < 0 ? 'pts-negative'
+            : 'pts-zero';
+          return (
+            <TableRow key={ stat.identifier }>
+              <TableCell className='breakdown-cell-label'>
+                { STAT_LABELS[stat.identifier] ?? stat.identifier }
+                { stat.provisional && (
+                  <Typography component='span' variant='caption' color='warning.main' className='u-ml-auto' style={ { marginLeft: 4 } }>
+                    (prov.)
+                  </Typography>
+                ) }
+              </TableCell>
+              <TableCell align='right' className='breakdown-cell-value'>
+                { stat.value }
+              </TableCell>
+              <TableCell align='right' className={ `breakdown-cell-pts ${ptsClass}` }>
+                { stat.points == null ? '—' : `${stat.points} pts` }
+              </TableCell>
+            </TableRow>
+          );
+        }) }
       </TableBody>
     </Table>
   );
@@ -327,7 +310,7 @@ const PlayerStatsDialog = ({ open, onClose, player, viewedGameweek, liveMatches 
 
   return (
     <Dialog open={ open } onClose={ onClose } maxWidth='xs' fullWidth>
-      <DialogTitle sx={ { pr: 6, pb: 1 } }>
+      <DialogTitle className='dialog-title-padded'>
         <Typography variant='h6' fontWeight={ 700 }>
           { name || webName }
         </Typography>
@@ -335,42 +318,42 @@ const PlayerStatsDialog = ({ open, onClose, player, viewedGameweek, liveMatches 
           aria-label='Close'
           onClick={ onClose }
           size='small'
-          sx={ { position: 'absolute', top: 8, right: 8 } }
+          className='stats-dialog-close'
         >
           <CloseIcon fontSize='small' />
         </IconButton>
       </DialogTitle>
 
-      <DialogContent sx={ { pt: 0 } }>
+      <DialogContent>
         { /* Fixture match pills */ }
         { opponents && opponents.length > 0 ? (
-          <Box sx={ { display: 'flex', gap: 0.75, flexWrap: 'wrap', mb: 1.5 } }>
+          <div className='u-flex u-flex-wrap u-gap-0p75 u-mb-1p5'>
             { opponents.map((opp, i) => (
               <MatchCard key={ opp.fixture_id ?? i } fixture={ opp } playerTeamShort={ teamName } espnClock={ espnClock } />
             )) }
-          </Box>
+          </div>
         ) : (
-          <Typography variant='body2' color='text.secondary' sx={ { mb: 2 } }>
+          <Typography variant='body2' color='text.secondary' className='u-mb-2'>
             No fixture this gameweek.
           </Typography>
         ) }
 
         { /* Points breakdown */ }
         { loading ? (
-          <Box sx={ { display: 'flex', justifyContent: 'center', py: 2 } }>
+          <div className='u-flex u-justify-center u-py-2'>
             <CircularProgress size={ 24 } />
-          </Box>
+          </div>
         ) : summaryError ? (
           <>
-            <Divider sx={ { mb: 1.5 } } />
-            <Typography variant='body2' color='error' sx={ { textAlign: 'center' } }>
+            <Divider className='u-mb-1p5' />
+            <Typography variant='body2' color='error' className='u-text-center'>
               Unable to load player stats. Please try again.
             </Typography>
           </>
         ) : hasHistory ? (
           <>
-            <Divider sx={ { mb: 1.5 } } />
-            <Box sx={ { display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 } }>
+            <Divider className='u-mb-1p5' />
+            <div className='u-flex u-items-center u-justify-between u-mb-1'>
               <Typography variant='subtitle2' fontWeight={ 700 }>
                 Points breakdown
               </Typography>
@@ -378,9 +361,9 @@ const PlayerStatsDialog = ({ open, onClose, player, viewedGameweek, liveMatches 
                 label={ `${totalPoints} pts` }
                 size='small'
                 color='secondary'
-                sx={ { fontWeight: 700 } }
+                className='u-font-bold'
               />
-            </Box>
+            </div>
 
             { historyEntries.length > 1 ? (
               // DGW — one section per fixture
@@ -394,12 +377,12 @@ const PlayerStatsDialog = ({ open, onClose, player, viewedGameweek, liveMatches 
                   ? { provisionalBonus: { value: gameweekStats.provisional_bonus } }
                   : {};
                 return (
-                  <Box key={ entry.fixture ?? i } sx={ { mb: 2 } }>
-                    <Typography variant='caption' color='text.secondary' fontWeight={ 600 } sx={ { textTransform: 'uppercase', letterSpacing: '0.06em' } }>
+                  <div key={ entry.fixture ?? i } className='u-mb-2'>
+                    <Typography variant='caption' color='text.secondary' fontWeight={ 600 } className='u-uppercase u-letter-sm'>
                       { label }
                     </Typography>
                     <BreakdownTable rows={ buildBreakdown(entry, position, provBonus) } />
-                  </Box>
+                  </div>
                 );
               })
             ) : (
@@ -414,8 +397,8 @@ const PlayerStatsDialog = ({ open, onClose, player, viewedGameweek, liveMatches 
           </>
         ) : isProvisional ? (
           <>
-            <Divider sx={ { mb: 1.5 } } />
-            <Box sx={ { display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 } }>
+            <Divider className='u-mb-1p5' />
+            <div className='u-flex u-items-center u-justify-between u-mb-1'>
               <Typography variant='subtitle2' fontWeight={ 700 }>
                 Points breakdown
               </Typography>
@@ -423,9 +406,9 @@ const PlayerStatsDialog = ({ open, onClose, player, viewedGameweek, liveMatches 
                 label={ `${totalPoints} pts (prov.)` }
                 size='small'
                 color='warning'
-                sx={ { fontWeight: 700 } }
+                className='u-font-bold'
               />
-            </Box>
+            </div>
             <BreakdownTable
               rows={ buildBreakdown(gameweekStats, position, {
                 provisionalBonus: {
@@ -436,8 +419,8 @@ const PlayerStatsDialog = ({ open, onClose, player, viewedGameweek, liveMatches 
           </>
         ) : opponents && opponents.length > 0 && (
           <>
-            <Divider sx={ { mb: 1.5 } } />
-            <Typography variant='body2' color='text.secondary' sx={ { textAlign: 'center' } }>
+            <Divider className='u-mb-1p5' />
+            <Typography variant='body2' color='text.secondary' className='u-text-center'>
               Points data not yet available for this gameweek.
             </Typography>
           </>

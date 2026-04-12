@@ -1,27 +1,14 @@
 import { Box, Typography } from '@mui/material';
 import PropTypes from 'prop-types';
 
-const FDR_COLORS = {
-  1: { bg: '#00c853', text: '#000' },
-  2: { bg: '#69f0ae', text: '#000' },
-  3: { bg: '#c8960c', text: '#fff' },
-  4: { bg: '#ff7043', text: '#fff' },
-  5: { bg: '#b71c1c', text: '#fff' },
-};
-
 /**
  * Fixed slot dimensions per size variant.
  *  - sm  : formation cards  (9 px font, narrower)
  *  - md  : list-view rows   (11 px font)
- *
- * slotMinWidth is applied per fixture segment in horizontal mode so that
- * all pills are the same width regardless of which letters appear in the
- * team abbreviation (e.g. "NEW" vs "LEE" render differently in proportional
- * fonts even though they have the same character count).
  */
-const SIZE_CONFIG = {
-  sm: { fontSize: '9px',  slotMinWidth: 44, borderRadius: '10px' },
-  md: { fontSize: '11px', slotMinWidth: 60, borderRadius: '10px' },
+const SIZE_CLASS = {
+  sm: 'fixture-pill-sm',
+  md: 'fixture-pill-md',
 };
 
 /**
@@ -33,56 +20,31 @@ const SIZE_CONFIG = {
  *   fixtures – Array of { label: string, difficulty: number }.
  *              Pass at most two items; only the first two are rendered.
  *   size     – 'sm' | 'md'  (default: 'md')
- *              'sm' for formation cards, 'md' for list-view rows.
  */
 function FixturePill({ fixtures, size }) {
   if (!fixtures || fixtures.length === 0) return null;
 
-  const { fontSize, slotMinWidth, borderRadius } = SIZE_CONFIG[size] ?? SIZE_CONFIG.md;
+  const sizeClass = SIZE_CLASS[size] ?? SIZE_CLASS.md;
   const items = fixtures.slice(0, 2);
 
   return (
-    <Box
-      sx={ {
-        display: 'inline-flex',
-        flexDirection: 'row',
-        borderRadius,
-        overflow: 'hidden',
-        flexShrink: 0,
-      } }
-    >
+    <Box className={ `fixture-pill ${sizeClass}` }>
       { items.map((fix, i) => {
-        const fdr = FDR_COLORS[fix.difficulty] ?? { bg: '#888', text: '#fff' };
-        const prevFdr = i > 0 ? (FDR_COLORS[items[i - 1].difficulty] ?? { bg: '#888', text: '#fff' }) : null;
+        const diff = fix.difficulty ?? 0;
+        const prevDiff = i > 0 ? (items[i - 1].difficulty ?? 0) : null;
 
         return (
-          <Box key={ i } sx={ { display: 'contents' } }>
+          <Box key={ i } className='u-contents'>
             { i > 0 && (
-              <Box sx={ {
-                width: 8,
-                flexShrink: 0,
-                alignSelf: 'stretch',
-                background: `linear-gradient(to bottom right, ${prevFdr.bg} 50%, ${fdr.bg} 50%)`,
-              } } />
+              <Box className={ `fixture-pill-sep fdr-sep-from-${prevDiff}-to-${diff}` } />
             ) }
-            <Box
-              sx={ {
-                bgcolor: fdr.bg,
-                color: fdr.text,
-                px: 0.5,
-                py: 0.15,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                minWidth: slotMinWidth,
-              } }
-            >
+            <Box className={ `fixture-pill-slot fdr-${diff}` }>
               <Typography
                 variant='caption'
                 fontWeight='bold'
                 component='span'
                 color='inherit'
-                sx={ { fontSize, lineHeight: 1.2, whiteSpace: 'nowrap' } }
+                className={ `${sizeClass}-text u-line-1p2 u-nowrap` }
               >
                 { fix.label }
               </Typography>

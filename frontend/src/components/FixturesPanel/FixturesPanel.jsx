@@ -11,7 +11,6 @@ import {
 } from '@mui/material';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
-import { useTheme } from '@mui/material/styles';
 import axios from '../../api';
 import { teamsMatch, parseMatch, espnScoreboardUrl } from '../../hooks/useLiveScores';
 
@@ -23,7 +22,7 @@ const formatDateHeader = (date) =>
 const formatTime = (date) =>
   date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 
-const getDeadlinePill = (deadline, theme) => {
+const getDeadlinePillClass = (deadline) => {
   if (!deadline) return null;
   const now = new Date();
   const dl = new Date(deadline);
@@ -31,25 +30,17 @@ const getDeadlinePill = (deadline, theme) => {
   if (dl <= now) return null;
   const hoursAway = (dl - now) / (1000 * 60 * 60);
 
-  let bg, color;
-  if (hoursAway < 24) {
-    bg = theme.palette.error.main;
-    color = theme.palette.error.contrastText;
-  } else if (hoursAway < 48) {
-    bg = theme.palette.warning.main;
-    color = theme.palette.warning.contrastText;
-  } else {
-    bg = theme.palette.success.main;
-    color = theme.palette.success.contrastText;
-  }
+  let cls;
+  if (hoursAway < 24)      cls = 'deadline-urgent';
+  else if (hoursAway < 48) cls = 'deadline-warning';
+  else                     cls = 'deadline-ok';
 
   const formatted = dl.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })
     + ' ' + dl.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 
-  return { bg, color, label: `Deadline: ${formatted}` };
+  return { cls, label: `Deadline: ${formatted}` };
 };
 
-/** Find the ESPN match that corresponds to a FPL fixture by fuzzy team name. */
 const findEspnMatch = (fixture, liveMatches) => {
   if (!liveMatches?.length) return null;
   return liveMatches.find(m =>
@@ -63,15 +54,7 @@ const findEspnMatch = (fixture, liveMatches) => {
 const CardBox = ({ color }) => (
   <Box
     component='span'
-    sx={ {
-      display: 'inline-block',
-      width: 7,
-      height: 11,
-      bgcolor: color,
-      borderRadius: '1px',
-      verticalAlign: 'middle',
-      flexShrink: 0,
-    } }
+    className={ `card-box card-box--${color === '#ffc107' ? 'yellow' : 'red'}` }
   />
 );
 CardBox.propTypes = { color: PropTypes.string.isRequired };
@@ -87,7 +70,7 @@ const EventRow = ({ event, homeId, homeAbbr, awayAbbr, assist }) => {
   if (event.icon === 'goal') {
     nameSuffix = event.penaltyKick ? ' (P)' : event.ownGoal ? ' (OG)' : '';
     iconNode = (
-      <Typography component='span' variant='caption' sx={ { flexShrink: 0 } }>
+      <Typography component='span' variant='caption' className='u-shrink-0'>
         ⚽
       </Typography>
     );
@@ -100,27 +83,24 @@ const EventRow = ({ event, homeId, homeAbbr, awayAbbr, assist }) => {
   }
 
   return (
-    <Box sx={ { display: 'flex', alignItems: 'flex-start', gap: 0.75, py: '2px' } }>
-      <Typography
-        variant='caption'
-        sx={ { color: 'text.disabled', minWidth: 34, flexShrink: 0, fontVariantNumeric: 'tabular-nums' } }
-      >
+    <Box className='event-row'>
+      <Typography variant='caption' className='event-minute'>
         { event.minute }
       </Typography>
-      <Box sx={ { width: 18, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
+      <Box className='event-icon-box'>
         { iconNode }
       </Box>
-      <Box sx={ { flex: 1, overflow: 'hidden' } }>
-        <Typography variant='caption' sx={ { color: 'text.primary', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }>
+      <Box className='event-player-box'>
+        <Typography variant='caption' className='event-player-name'>
           { event.player || '—' }{ nameSuffix }
         </Typography>
         { assist && (
-          <Typography variant='caption' sx={ { color: 'text.primary', display: 'block', pl: 1.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }>
+          <Typography variant='caption' className='event-player-name u-pl-assist'>
             Assist: { assist }
           </Typography>
         ) }
       </Box>
-      <Typography variant='caption' sx={ { color: 'text.secondary', flexShrink: 0 } }>
+      <Typography variant='caption' className='event-team-abbr'>
         { abbr }
       </Typography>
     </Box>
@@ -137,19 +117,16 @@ EventRow.propTypes = {
 
 // ─── Single fixture row (collapsible) ────────────────────────────────────────
 
-const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme, assisters }) => {
+const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, assisters }) => {
   const isFinished   = fixture.finished;
   const isStarted    = fixture.started;
   const fplHomeScore = fixture.team_h_score;
   const fplAwayScore = fixture.team_a_score;
   const timeStr      = fixture.kickoffDate ? formatTime(fixture.kickoffDate) : 'TBC';
 
-  // Prefer ESPN data for live/completed scores (more real-time).
   const hasEspn   = !!espnMatch;
   const scoreHome = hasEspn ? espnMatch.homeScore : fplHomeScore;
   const scoreAway = hasEspn ? espnMatch.awayScore : fplAwayScore;
-  // Show a score if: ESPN has it (live or finished), FPL has it (started with
-  // non-null scores, or marked finished), or ESPN says it's a past match.
   const showScore = hasEspn
     ? espnMatch.isLive || espnMatch.isFinished || espnMatch.state === 'post'
     : isFinished || (isStarted && fplHomeScore != null && fplAwayScore != null);
@@ -159,100 +136,70 @@ const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme, assisters }
   const clock     = (!isOver && hasEspn) ? espnMatch.clock : null;
   const hasEvents = (hasEspn && (isLive || espnMatch.details.some(d => d.icon !== 'other'))) || assisters?.length > 0;
 
-  const teamNameSx = { flex: 1, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
-
   return (
-    <Box sx={ { mb: 0.25 } }>
+    <Box className='u-mb-0p25'>
       { /* ── Fixture header row ── */ }
       <ButtonBase
         component='div'
         onClick={ hasEvents ? onToggle : undefined }
         disableRipple={ !hasEvents }
-        sx={ {
-          display: 'flex',
-          alignItems: 'center',
-          width: '100%',
-          py: 0.5,
-          px: 1,
-          borderRadius: 1,
-          cursor: hasEvents ? 'pointer' : 'default',
-          '&:hover': hasEvents ? { backgroundColor: theme.palette.action.hover } : {},
-          textAlign: 'left',
-        } }
+        className={ `fixture-row-btn${hasEvents ? '' : ' fixture-row-btn--static'}` }
       >
-        <Typography variant='body2' sx={ teamNameSx }>
+        <Typography variant='body2' className='u-flex-1 u-font-500 u-nowrap u-truncate'>
           { fixture.team_h_name }
         </Typography>
 
-        <Box sx={ { mx: 1, minWidth: 52, textAlign: 'center', flexShrink: 0 } }>
+        <Box className='fixture-score-cell u-shrink-0'>
           { showScore ? (
-            <Box sx={ { display: 'flex', flexDirection: 'column', alignItems: 'center' } }>
+            <Box className='u-flex u-flex-col u-items-center'>
               <Typography
                 variant='body2'
-                sx={ {
-                  fontWeight: 'bold',
-                  color: isLive ? theme.palette.warning.main : theme.palette.text.primary,
-                } }
+                className={ `u-font-bold${isLive ? ' fixture-score-live' : ''}` }
               >
                 { scoreHome } – { scoreAway }
               </Typography>
               { clock && (
-                <Typography
-                  variant='caption'
-                  sx={ { color: theme.palette.warning.main, lineHeight: 1, fontSize: '0.6rem' } }
-                >
+                <Typography variant='caption' className='fixture-clock'>
                   { clock }
                 </Typography>
               ) }
             </Box>
           ) : (
-            <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 600 } }>
+            <Typography variant='caption' color='text.secondary' className='u-font-600'>
               { timeStr }
             </Typography>
           ) }
         </Box>
 
-        <Typography variant='body2' sx={ { ...teamNameSx, textAlign: 'right' } }>
+        <Typography variant='body2' className='u-flex-1 u-font-500 u-nowrap u-truncate u-text-right'>
           { fixture.team_a_name }
         </Typography>
 
         { /* Expand / collapse chevron */ }
         { hasEvents ? (
-          <Box sx={ { ml: 0.5, color: 'text.disabled', display: 'flex', alignItems: 'center' } }>
+          <Box className='fixture-chevron'>
             { expanded
-              ? <KeyboardArrowUpIcon sx={ { fontSize: 16 } } />
-              : <KeyboardArrowDownIcon sx={ { fontSize: 16 } } /> }
+              ? <KeyboardArrowUpIcon className='fixture-chevron-icon' />
+              : <KeyboardArrowDownIcon className='fixture-chevron-icon' /> }
           </Box>
         ) : (
-          <Box sx={ { ml: 0.5, width: 16 } } />
+          <Box className='fixture-chevron-placeholder' />
         ) }
       </ButtonBase>
 
       { /* ── Expanded events ── */ }
       { hasEvents && (
         <Collapse in={ expanded } timeout='auto' unmountOnExit>
-          <Box
-            sx={ {
-              mx: 1,
-              mb: 0.5,
-              px: 1,
-              py: 0.5,
-              borderRadius: 1,
-              bgcolor: 'action.hover',
-              borderLeft: '2px solid',
-              borderLeftColor: 'divider',
-            } }
-          >
+          <Box className='fixture-events-box'>
             { isLive && espnMatch.clock && (
               <Chip
                 label={ espnMatch.clock }
                 size='small'
                 color='warning'
-                sx={ { mb: 0.75, height: 18, fontSize: '0.6rem', fontWeight: 700 } }
+                className='chip-clock'
               />
             ) }
             { (() => {
-              // Build per-team assister queues so each goal consumes the next available assister.
               const homeQueue = (assisters ?? []).filter(a => a.abbr === espnMatch?.homeAbbr).flatMap(a => Array(Math.trunc(a.value)).fill(a.name));
               const awayQueue = (assisters ?? []).filter(a => a.abbr === espnMatch?.awayAbbr).flatMap(a => Array(Math.trunc(a.value)).fill(a.name));
               return espnMatch?.details
@@ -260,8 +207,8 @@ const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme, assisters }
                 .map((event, idx) => {
                   let assist = undefined;
                   if (event.icon === 'goal' && !event.ownGoal && !event.penaltyKick) {
-                    const isHome = event.teamId === espnMatch.homeId;
-                    assist = isHome ? homeQueue.shift() : awayQueue.shift();
+                    const isHomeEv = event.teamId === espnMatch.homeId;
+                    assist = isHomeEv ? homeQueue.shift() : awayQueue.shift();
                   }
                   return (
                     <EventRow
@@ -276,16 +223,16 @@ const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme, assisters }
                 });
             })() }
             { !espnMatch && assisters?.length > 0 && assisters.map((a, idx) => (
-              <Box key={ idx } sx={ { display: 'flex', alignItems: 'center', gap: 0.75, py: '2px' } }>
-                <Typography variant='caption' sx={ { color: 'text.disabled', minWidth: 34, flexShrink: 0 } } />
-                <Box sx={ { width: 18, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
+              <Box key={ idx } className='event-row'>
+                <Typography variant='caption' className='event-minute' />
+                <Box className='event-icon-box'>
                   <Typography component='span' variant='caption' aria-hidden='true'>🅰️</Typography>
-                  <Box component='span' sx={ { position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' } }>Assist:</Box>
+                  <Box component='span' className='u-sr-only'>Assist:</Box>
                 </Box>
-                <Typography variant='caption' sx={ { flex: 1, color: 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }>
+                <Typography variant='caption' className='u-flex-1 event-player-name'>
                   { a.name }{ a.value > 1 ? ` ×${a.value}` : '' }
                 </Typography>
-                <Typography variant='caption' sx={ { color: 'text.secondary', flexShrink: 0 } }>
+                <Typography variant='caption' className='event-team-abbr'>
                   { a.abbr }
                 </Typography>
               </Box>
@@ -303,25 +250,22 @@ FixtureRow.propTypes = {
   assisters: PropTypes.array,
   expanded:  PropTypes.bool,
   onToggle:  PropTypes.func,
-  theme:     PropTypes.object.isRequired,
 };
 
 // ─── Panel ────────────────────────────────────────────────────────────────────
 
 const FixturesPanel = ({ gameweek, deadline, liveMatches }) => {
-  const theme = useTheme();
   const [fixtures, setFixtures]       = useState([]);
   const [loading, setLoading]         = useState(false);
   const [error, setError]             = useState(null);
   const [expandedId, setExpandedId]   = useState(null);
   const [historicalMatches, setHistoricalMatches] = useState([]);
-  const [summaryAssistersMap, setSummaryAssistersMap] = useState({}); // espnId -> [{name, abbr, value}]
+  const [summaryAssistersMap, setSummaryAssistersMap] = useState({});
   const fetchedDatesRef    = useRef(new Set());
   const fetchedSummaryRef  = useRef(new Set());
 
-  const deadlinePill = getDeadlinePill(deadline, theme);
+  const deadlinePill = getDeadlinePillClass(deadline);
 
-  // Reset historical cache whenever the displayed gameweek changes.
   useEffect(() => {
     fetchedDatesRef.current = new Set();
     fetchedSummaryRef.current = new Set();
@@ -340,12 +284,10 @@ const FixturesPanel = ({ gameweek, deadline, liveMatches }) => {
       .finally(() => setLoading(false));
   }, [gameweek]);
 
-  // After fixtures load, fetch ESPN data for any date not already covered by
-  // liveMatches (which only holds today's polling data).
   useEffect(() => {
     if (!fixtures.length) return;
     let cancelled = false;
-    const todayUtc = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const todayUtc = new Date().toISOString().slice(0, 10);
     const uniqueDates = [...new Set(
       fixtures
         .filter(f => f.kickoff_time)
@@ -370,14 +312,11 @@ const FixturesPanel = ({ gameweek, deadline, liveMatches }) => {
     return () => { cancelled = true; };
   }, [fixtures]);
 
-  // Combine today's live data with any fetched historical dates.
   const allEspnMatches = useMemo(
     () => [...(liveMatches ?? []), ...historicalMatches],
     [liveMatches, historicalMatches]
   );
 
-  // When a fixture is expanded, fetch the ESPN summary to get assister names.
-  // Falls back to enriched FPL fixture stats when no ESPN match is available.
   useEffect(() => {
     if (!expandedId) return;
     const fixture   = fixtures.find(f => f.id === expandedId);
@@ -385,7 +324,6 @@ const FixturesPanel = ({ gameweek, deadline, liveMatches }) => {
     const espnMatch = findEspnMatch(fixture, allEspnMatches);
 
     if (espnMatch?.espnId) {
-      // ── ESPN primary ────────────────────────────────────────────────────────
       if (fetchedSummaryRef.current.has(espnMatch.espnId)) return;
       let cancelled = false;
       fetch(ESPN_SUMMARY_URL(espnMatch.espnId))
@@ -413,14 +351,12 @@ const FixturesPanel = ({ gameweek, deadline, liveMatches }) => {
         .catch(() => {});
       return () => { cancelled = true; };
     } else {
-      // ── FPL fallback ─────────────────────────────────────────────────────────
       const assistStat = fixture.stats?.find(s => s.identifier === 'assists');
       if (!assistStat) return;
       const assisters = [
         ...(assistStat.h || []).map(e => ({ name: e.webName, abbr: fixture.team_h_short, value: e.value })),
         ...(assistStat.a || []).map(e => ({ name: e.webName, abbr: fixture.team_a_short, value: e.value })),
       ].filter(a => a.name && a.value > 0);
-      // Store under a synthetic key for FPL-only fixtures
       setSummaryAssistersMap(prev => ({ ...prev, [`fpl-${fixture.id}`]: assisters }));
     }
   }, [expandedId, fixtures, allEspnMatches]);
@@ -437,31 +373,19 @@ const FixturesPanel = ({ gameweek, deadline, liveMatches }) => {
 
   return (
     <Box>
-      <Box sx={ { display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, mb: 1 } }>
-        <Typography variant='h6' sx={ { fontWeight: 600 } }>
+      <Box className='u-flex u-items-center u-flex-wrap u-gap-1 u-mb-1'>
+        <Typography variant='h6' className='u-font-600'>
           GW{ gameweek } Fixtures
         </Typography>
         { deadlinePill && (
-          <Box
-            sx={ {
-              bgcolor: deadlinePill.bg,
-              color: deadlinePill.color,
-              borderRadius: '10px',
-              px: 1,
-              py: 0.25,
-              fontSize: '0.65rem',
-              fontWeight: 700,
-              whiteSpace: 'nowrap',
-              lineHeight: 1.4,
-            } }
-          >
+          <Box className={ `deadline-pill ${deadlinePill.cls}` }>
             { deadlinePill.label }
           </Box>
         ) }
       </Box>
 
       { loading && (
-        <Box sx={ { display: 'flex', justifyContent: 'center', py: 2 } }>
+        <Box className='u-flex u-justify-center u-py-2'>
           <CircularProgress size={ 24 } />
         </Box>
       ) }
@@ -475,18 +399,8 @@ const FixturesPanel = ({ gameweek, deadline, liveMatches }) => {
       ) }
 
       { !loading && !error && Object.entries(fixturesByDate).map(([dateLabel, dayFixtures]) => (
-        <Box key={ dateLabel } sx={ { mb: 1.5 } }>
-          <Typography
-            variant='caption'
-            sx={ {
-              fontWeight: 700,
-              color: theme.palette.text.secondary,
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              display: 'block',
-              mb: 0.5,
-            } }
-          >
+        <Box key={ dateLabel } className='u-mb-1p5'>
+          <Typography variant='caption' className='fixtures-date-label'>
             { dateLabel }
           </Typography>
 
@@ -502,7 +416,6 @@ const FixturesPanel = ({ gameweek, deadline, liveMatches }) => {
                 assisters={ assisters }
                 expanded={ expandedId === fixture.id }
                 onToggle={ () => setExpandedId(prev => prev === fixture.id ? null : fixture.id) }
-                theme={ theme }
               />
             );
           }) }
