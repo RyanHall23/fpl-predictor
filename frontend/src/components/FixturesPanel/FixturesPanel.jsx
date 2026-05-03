@@ -13,9 +13,7 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import { useTheme } from '@mui/material/styles';
 import axios from '../../api';
-import { teamsMatch, parseMatch, espnScoreboardUrl } from '../../hooks/useLiveScores';
-
-const ESPN_SUMMARY_URL = (eventId) => `https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/summary?event=${eventId}`;
+import { teamsMatch } from '../../hooks/useLiveScores';
 
 const formatDateHeader = (date) =>
   date.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
@@ -384,9 +382,9 @@ const FixturesPanel = ({ gameweek, deadline, liveMatches }) => {
     toFetch.forEach(d => fetchedDatesRef.current.add(d));
     Promise.all(
       toFetch.map(d =>
-        fetch(espnScoreboardUrl(d.replace(/-/g, '')))
-          .then(r => r.json())
-          .then(data => (data.events ?? []).map(parseMatch).filter(Boolean))
+        axios
+          .get(`/api/espn/scoreboard?dates=${d.replace(/-/g, '')}`)
+          .then(res => res.data)
           .catch(() => [])
       )
     ).then(results => {
@@ -415,26 +413,11 @@ const FixturesPanel = ({ gameweek, deadline, liveMatches }) => {
       // ── ESPN primary ────────────────────────────────────────────────────────
       if (fetchedSummaryRef.current.has(espnMatch.espnId)) return;
       let cancelled = false;
-      fetch(ESPN_SUMMARY_URL(espnMatch.espnId))
-        .then(r => r.json())
-        .then(data => {
+      axios
+        .get(`/api/espn/summary/${espnMatch.espnId}`)
+        .then(res => {
           if (cancelled) return;
-          // Traditional assists recorded by ESPN (goalAssists roster stat)
-          const espnAssisters = [];
-          for (const team of data.rosters ?? []) {
-            const abbr = team.team?.abbreviation ?? '';
-            for (const ath of team.roster ?? []) {
-              const gaStat = (ath.stats ?? []).find(s => s.name === 'goalAssists');
-              const gaVal  = parseFloat(gaStat?.value ?? 0);
-              if (gaVal > 0) {
-                espnAssisters.push({
-                  name:  ath.athlete?.shortName ?? ath.athlete?.displayName ?? '',
-                  abbr,
-                  value: gaVal,
-                });
-              }
-            }
-          }
+          const { espnAssisters, summaryEventMap } = res.data;
 
           // FPL records non-traditional assists ESPN omits (e.g. winning a penalty).
           // Use fixture stats from the FPL API to find the delta.
@@ -459,23 +442,6 @@ const FixturesPanel = ({ gameweek, deadline, liveMatches }) => {
             } else if (fplA.value > espnA.value) {
               // Player has more FPL assists than ESPN records (surplus are FPL-only)
               fplOnlyAssisters.push({ ...fplA, value: fplA.value - espnA.value });
-            }
-          }
-
-          // Build a minute+teamId → secondPlayer lookup from the summary's keyPlays.
-          // This is more reliable than the scoreboard's athletesInvolved[1] for
-          // penalty kicks and own goals, which are often omitted there.
-          const summaryEventMap = {};
-          for (const play of (data.keyPlays ?? data.plays ?? [])) {
-            if (!play.scoringPlay) continue;
-            const min   = play.clock?.displayValue ?? '';
-            const tid   = play.team?.id ?? '';
-            const second = play.athletesInvolved?.[1]?.shortName
-              ?? play.athletesInvolved?.[1]?.displayName ?? '';
-            if (second && min && tid) {
-              // Key by minute+teamId; if two goals happen at the same minute for
-              // the same team (very rare), the latter overwrites — acceptable.
-              summaryEventMap[`${min}_${tid}`] = second;
             }
           }
 

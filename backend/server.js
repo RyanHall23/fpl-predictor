@@ -4,6 +4,8 @@ const path = require('path');
 const fs = require('fs');
 const fplController = require('./controllers/fplController');
 const assistantController = require('./controllers/assistantController');
+const espnController = require('./controllers/espnController');
+const authRoutes = require('./routes/auth');
 const { apiLimiter } = require('./middleware/rateLimiter');
 const app = express();
 const port = process.env.PORT || 5000;
@@ -34,6 +36,13 @@ app.post('/api/available-transfers/:playerCode', apiLimiter, fplController.getAv
 // NOTE: /general must be registered before /:entryId to avoid route shadowing
 app.get('/api/assistant/general', apiLimiter, assistantController.getAssistantHints);
 app.get('/api/assistant/:entryId', apiLimiter, assistantController.getAssistantHints);
+
+// ESPN API proxy routes — browser never calls ESPN directly
+app.get('/api/espn/scoreboard', apiLimiter, espnController.getScoreboard);
+app.get('/api/espn/summary/:eventId', apiLimiter, espnController.getSummary);
+
+// Auth routes (user registration, login, profile management)
+app.use('/api/auth', authRoutes);
 
 // Serve built Vite frontend from the same process
 const distPath = path.join(__dirname, '..', 'frontend', 'dist');

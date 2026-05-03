@@ -1,11 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import api from '../api';
 
-const ESPN_URL = 'https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/scoreboard';
 export const POLL_MS = 30_000;
-
-/** Returns the ESPN scoreboard URL for a specific date (YYYYMMDD string) or today. */
-export const espnScoreboardUrl = (yyyymmdd) =>
-  yyyymmdd ? `${ESPN_URL}?dates=${yyyymmdd}` : ESPN_URL;
 
 /** Normalise a team name to lowercase alphanumeric for fuzzy matching. */
 export const normName = (s) => (s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -27,52 +23,11 @@ export const teamsMatch = (fplName, espnName) => {
   return e.includes(fa) || fa.includes(e) || e.includes(f) || f.includes(e);
 };
 
-export const parseMatch = (event) => {
-  const comp = event.competitions?.[0];
-  if (!comp) return null;
-
-  const home = comp.competitors?.find(c => c.homeAway === 'home');
-  const away = comp.competitors?.find(c => c.homeAway === 'away');
-  const st   = comp.status;
-
-  const details = (comp.details ?? []).map(d => {
-    let icon = 'other';
-    if (d.scoringPlay)      icon = 'goal';
-    else if (d.redCard)     icon = 'red';
-    else if (d.yellowCard)  icon = 'yellow';
-
-    return {
-      icon,
-      minute:        d.clock?.displayValue ?? '',
-      teamId:        d.team?.id,
-      player:        d.athletesInvolved?.[0]?.shortName ?? d.athletesInvolved?.[0]?.displayName ?? '',
-      secondPlayer:  d.athletesInvolved?.[1]?.shortName ?? d.athletesInvolved?.[1]?.displayName ?? '',
-      penaltyKick:   d.penaltyKick ?? false,
-      ownGoal:       d.ownGoal ?? false,
-    };
-  });
-
-  return {
-    espnId:       event.id,
-    homeName:     home?.team?.displayName ?? '',
-    awayName:     away?.team?.displayName ?? '',
-    homeAbbr:     home?.team?.abbreviation ?? '',
-    awayAbbr:     away?.team?.abbreviation ?? '',
-    homeScore:    parseInt(home?.score ?? '0', 10) || 0,
-    awayScore:    parseInt(away?.score ?? '0', 10) || 0,
-    homeId:       home?.team?.id,
-    awayId:       away?.team?.id,
-    state:        st?.type?.state ?? 'pre',   // "pre" | "in" | "post"
-    isLive:       st?.type?.state === 'in',
-    isFinished:   st?.type?.state === 'post',
-    clock:        st?.displayClock ?? '',
-    statusDetail: st?.type?.shortDetail ?? '',
-    details,
-  };
-};
-
 /**
- * Polls the ESPN PL scoreboard every 30 s.
+ * Polls the ESPN PL scoreboard every 30 s via the backend proxy.
+ *
+ * The backend parses raw ESPN events and returns an array of match objects
+ * matching the same shape this hook previously produced with parseMatch.
  *
  * @param {Object}   options
  * @param {boolean}  [options.enabled=true]         - When false, polling is
@@ -110,11 +65,10 @@ export default function useLiveScores({ enabled = true, onRelevantChange, squadT
       const ac = new AbortController();
       controller = ac;
       try {
-        const res    = await fetch(ESPN_URL, { signal: ac.signal });
-        const data   = await res.json();
+        const res    = await api.get('/api/espn/scoreboard', { signal: ac.signal });
+        const parsed = res.data;
         if (cancelled) return;
 
-        const parsed = (data.events ?? []).map(parseMatch).filter(Boolean);
         setMatches(parsed);
 
         let relevantChange = false;
@@ -147,7 +101,7 @@ export default function useLiveScores({ enabled = true, onRelevantChange, squadT
           onChangeRef.current();
         }
       } catch (e) {
-        if (e.name !== 'AbortError') {
+        if (e.name !== 'AbortError' && e.name !== 'CanceledError') {
           // Best-effort — live scores are non-critical
         }
       } finally {
@@ -169,3 +123,4 @@ export default function useLiveScores({ enabled = true, onRelevantChange, squadT
 
   return { matches, anyLive: matches.some(m => m.isLive) };
 }
+
