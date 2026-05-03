@@ -27,6 +27,7 @@ const buildOpponentDisplay = (player) => {
 };
 
 
+/**
  * Calculate purchase prices for current squad by analyzing FPL picks history
  * Handles in/out/in scenarios by finding when each player was most recently added
  * @param {number} entryId - FPL entry/team ID
