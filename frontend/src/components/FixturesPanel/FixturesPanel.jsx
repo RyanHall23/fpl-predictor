@@ -128,11 +128,11 @@ const EventRow = ({ event, homeId, homeAbbr, awayAbbr, assist }) => {
 };
 
 EventRow.propTypes = {
-  event:    PropTypes.object.isRequired,
-  homeId:   PropTypes.string,
-  homeAbbr: PropTypes.string,
-  awayAbbr: PropTypes.string,
-  assist:   PropTypes.string,
+  event:       PropTypes.object.isRequired,
+  homeId:      PropTypes.string,
+  homeAbbr:    PropTypes.string,
+  awayAbbr:    PropTypes.string,
+  assist:      PropTypes.string,
 };
 
 // ─── Single fixture row (collapsible) ────────────────────────────────────────
@@ -157,7 +157,8 @@ const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme, assisters }
   const isLive    = hasEspn ? espnMatch.isLive : (!isFinished && isStarted);
   const isOver    = hasEspn ? espnMatch.isFinished : isFinished;
   const clock     = (!isOver && hasEspn) ? espnMatch.clock : null;
-  const hasEvents = (hasEspn && (isLive || espnMatch.details.some(d => d.icon !== 'other'))) || assisters?.length > 0;
+  const hasEvents = (hasEspn && (isLive || espnMatch.details.some(d => d.icon !== 'other'))) ||
+    (assisters?.espnAssisters?.length > 0 || assisters?.fplOnlyAssisters?.length > 0);
 
   const teamNameSx = { flex: 1, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
 
@@ -252,16 +253,28 @@ const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme, assisters }
               />
             ) }
             { (() => {
-              // Build per-team assister queues so each goal consumes the next available assister.
-              const homeQueue = (assisters ?? []).filter(a => a.abbr === espnMatch?.homeAbbr).flatMap(a => Array(Math.trunc(a.value)).fill(a.name));
-              const awayQueue = (assisters ?? []).filter(a => a.abbr === espnMatch?.awayAbbr).flatMap(a => Array(Math.trunc(a.value)).fill(a.name));
+              // Build separate queues: ESPN for traditional assists, FPL for non-traditional
+              // (e.g. winning a penalty) which ESPN does not record.
+              const espnAssistersList = assisters?.espnAssisters ?? [];
+              const fplOnlyAssistersList = assisters?.fplOnlyAssisters ?? [];
+              const homeEspnQueue = espnAssistersList.filter(a => a.abbr === espnMatch?.homeAbbr).flatMap(a => Array(Math.trunc(a.value)).fill(a.name));
+              const awayEspnQueue = espnAssistersList.filter(a => a.abbr === espnMatch?.awayAbbr).flatMap(a => Array(Math.trunc(a.value)).fill(a.name));
+              const homeFplQueue  = fplOnlyAssistersList.filter(a => a.abbr === espnMatch?.homeAbbr).flatMap(a => Array(Math.trunc(a.value)).fill(a.name));
+              const awayFplQueue  = fplOnlyAssistersList.filter(a => a.abbr === espnMatch?.awayAbbr).flatMap(a => Array(Math.trunc(a.value)).fill(a.name));
               return espnMatch?.details
                 .filter(d => d.icon !== 'other')
                 .map((event, idx) => {
                   let assist = undefined;
-                  if (event.icon === 'goal' && !event.ownGoal && !event.penaltyKick) {
+                  let isFplAssist = false;
+                  if (event.icon === 'goal' && !event.ownGoal) {
                     const isHome = event.teamId === espnMatch.homeId;
-                    assist = isHome ? homeQueue.shift() : awayQueue.shift();
+                    if (event.penaltyKick) {
+                      // FPL records the penalty winner as an assist; ESPN does not
+                      assist = isHome ? homeFplQueue.shift() : awayFplQueue.shift();
+                      isFplAssist = !!assist;
+                    } else {
+                      assist = isHome ? homeEspnQueue.shift() : awayEspnQueue.shift();
+                    }
                   }
                   return (
                     <EventRow
@@ -271,11 +284,12 @@ const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme, assisters }
                       homeAbbr={ espnMatch.homeAbbr }
                       awayAbbr={ espnMatch.awayAbbr }
                       assist={ assist }
+                      isFplAssist={ isFplAssist }
                     />
                   );
                 });
             })() }
-            { !espnMatch && assisters?.length > 0 && assisters.map((a, idx) => (
+            { !espnMatch && assisters?.fplOnlyAssisters?.length > 0 && assisters.fplOnlyAssisters.map((a, idx) => (
               <Box key={ idx } sx={ { display: 'flex', alignItems: 'center', gap: 0.75, py: '2px' } }>
                 <Typography variant='caption' sx={ { color: 'text.disabled', minWidth: 34, flexShrink: 0 } } />
                 <Box sx={ { width: 18, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
@@ -392,14 +406,15 @@ const FixturesPanel = ({ gameweek, deadline, liveMatches }) => {
         .then(r => r.json())
         .then(data => {
           if (cancelled) return;
-          const assisters = [];
+          // Traditional assists recorded by ESPN (goalAssists roster stat)
+          const espnAssisters = [];
           for (const team of data.rosters ?? []) {
             const abbr = team.team?.abbreviation ?? '';
             for (const ath of team.roster ?? []) {
               const gaStat = (ath.stats ?? []).find(s => s.name === 'goalAssists');
               const gaVal  = parseFloat(gaStat?.value ?? 0);
               if (gaVal > 0) {
-                assisters.push({
+                espnAssisters.push({
                   name:  ath.athlete?.shortName ?? ath.athlete?.displayName ?? '',
                   abbr,
                   value: gaVal,
@@ -407,8 +422,38 @@ const FixturesPanel = ({ gameweek, deadline, liveMatches }) => {
               }
             }
           }
+
+          // FPL records non-traditional assists ESPN omits (e.g. winning a penalty).
+          // Use fixture stats from the FPL API to find the delta.
+          const fplAssistStat = fixture.stats?.find(s => s.identifier === 'assists');
+          // Store FPL assisters with ESPN abbreviations so queue filtering is consistent.
+          const fplAssisters = [
+            ...(fplAssistStat?.h || []).map(e => ({ name: e.webName, abbr: espnMatch.homeAbbr, value: e.value })),
+            ...(fplAssistStat?.a || []).map(e => ({ name: e.webName, abbr: espnMatch.awayAbbr, value: e.value })),
+          ].filter(a => a.name && a.value > 0);
+
+          // Identify assisters present in FPL but not ESPN — these are the FPL-unique assists.
+          const normN = (n) => (n ?? '').toLowerCase().replace(/[^a-z]/g, '');
+          const fplOnlyAssisters = [];
+          for (const fplA of fplAssisters) {
+            const espnA = espnAssisters.find(e =>
+              e.abbr === fplA.abbr &&
+              (normN(e.name).includes(normN(fplA.name)) || normN(fplA.name).includes(normN(e.name)))
+            );
+            if (!espnA) {
+              // FPL records this assist but ESPN does not (e.g. penalty won)
+              fplOnlyAssisters.push({ ...fplA });
+            } else if (fplA.value > espnA.value) {
+              // Player has more FPL assists than ESPN records (surplus are FPL-only)
+              fplOnlyAssisters.push({ ...fplA, value: fplA.value - espnA.value });
+            }
+          }
+
           fetchedSummaryRef.current.add(espnMatch.espnId);
-          setSummaryAssistersMap(prev => ({ ...prev, [espnMatch.espnId]: assisters }));
+          setSummaryAssistersMap(prev => ({
+            ...prev,
+            [espnMatch.espnId]: { espnAssisters, fplOnlyAssisters },
+          }));
         })
         .catch(() => {});
       return () => { cancelled = true; };
@@ -416,12 +461,15 @@ const FixturesPanel = ({ gameweek, deadline, liveMatches }) => {
       // ── FPL fallback ─────────────────────────────────────────────────────────
       const assistStat = fixture.stats?.find(s => s.identifier === 'assists');
       if (!assistStat) return;
-      const assisters = [
+      const fplOnlyAssisters = [
         ...(assistStat.h || []).map(e => ({ name: e.webName, abbr: fixture.team_h_short, value: e.value })),
         ...(assistStat.a || []).map(e => ({ name: e.webName, abbr: fixture.team_a_short, value: e.value })),
       ].filter(a => a.name && a.value > 0);
       // Store under a synthetic key for FPL-only fixtures
-      setSummaryAssistersMap(prev => ({ ...prev, [`fpl-${fixture.id}`]: assisters }));
+      setSummaryAssistersMap(prev => ({
+        ...prev,
+        [`fpl-${fixture.id}`]: { espnAssisters: [], fplOnlyAssisters },
+      }));
     }
   }, [expandedId, fixtures, allEspnMatches]);
 
