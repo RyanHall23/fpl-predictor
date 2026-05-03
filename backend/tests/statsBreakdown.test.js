@@ -36,6 +36,22 @@ describe('buildBreakdown – null / empty input', () => {
     const rows = buildBreakdown(makeEntry(), 3);
     assert.deepStrictEqual(rows, []);
   });
+
+  test('returns [] for null position', () => {
+    assert.deepStrictEqual(buildBreakdown(makeEntry({ minutes: 90, goals_scored: 1 }), null), []);
+  });
+
+  test('returns [] for undefined position', () => {
+    assert.deepStrictEqual(buildBreakdown(makeEntry({ minutes: 90, goals_scored: 1 }), undefined), []);
+  });
+
+  test('returns [] for position 0 (invalid)', () => {
+    assert.deepStrictEqual(buildBreakdown(makeEntry({ minutes: 90, goals_scored: 1 }), 0), []);
+  });
+
+  test('returns [] for position 5 (manager placeholder — not a valid scoring position)', () => {
+    assert.deepStrictEqual(buildBreakdown(makeEntry({ minutes: 90, goals_scored: 1 }), 5), []);
+  });
 });
 
 describe('buildBreakdown – minutes played', () => {

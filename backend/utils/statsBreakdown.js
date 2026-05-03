@@ -16,6 +16,15 @@
  */
 function buildBreakdown(entry, position, provisionalBonus = null) {
   if (!entry) return [];
+
+  // Guard against an invalid position — without a known position the
+  // position-dependent scoring rules (goals, clean sheets, saves, etc.)
+  // cannot be computed correctly, so return an empty breakdown rather than
+  // silently producing wrong point values.
+  if (position !== 1 && position !== 2 && position !== 3 && position !== 4) {
+    return [];
+  }
+
   const rows = [];
   const mins = entry.minutes ?? 0;
 

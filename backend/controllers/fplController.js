@@ -1281,10 +1281,12 @@ const getPlayersForecast = async (req, res) => {
     return res.status(400).json({ error: 'Missing required gameweeks query parameter' });
   }
 
-  const gwList = String(gameweeks)
-    .split(',')
-    .map(g => parseInt(g.trim(), 10))
-    .filter(g => Number.isFinite(g) && g >= 1 && g <= 38);
+  const gwList = [...new Set(
+    String(gameweeks)
+      .split(',')
+      .map(g => parseInt(g.trim(), 10))
+      .filter(g => Number.isFinite(g) && g >= 1 && g <= 38)
+  )];
 
   if (!gwList.length) {
     return res.status(400).json({ error: 'No valid gameweeks provided (must be integers between 1 and 38)' });

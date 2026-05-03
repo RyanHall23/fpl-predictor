@@ -94,15 +94,18 @@ function useForecastData(plannedTransfers, currentGameweek) {
         const updates = {};
         Object.entries(res.data).forEach(([gwStr, byCode]) => {
           const gw = parseInt(gwStr, 10);
-          gwDataCache[gw] = byCode;
-          fetchingRef.current.delete(gw);
-          updates[gw] = byCode;
+          if (Number.isFinite(gw)) {
+            gwDataCache[gw] = byCode;
+            updates[gw] = byCode;
+          }
         });
         if (Object.keys(updates).length > 0) {
           setForecastMap((prev) => ({ ...prev, ...updates }));
         }
       })
-      .catch(() => {
+      .catch(() => {})
+      .finally(() => {
+        // Always release all requested GWs so they can be retried on the next render.
         toFetch.forEach((gw) => fetchingRef.current.delete(gw));
       });
   }, [plannedTransfers, currentGameweek]);

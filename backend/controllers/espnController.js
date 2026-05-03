@@ -144,6 +144,14 @@ const getSummary = async (req, res) => {
       && /^[A-Za-z0-9]{1,10}$/.test(homeAbbr)
       && /^[A-Za-z0-9]{1,10}$/.test(awayAbbr);
 
+    // If the caller supplied any FPL params but not a complete valid set,
+    // return 400 so they get a clear error rather than a silent empty result.
+    if (hasFplParams && !validFplParams) {
+      return res.status(400).json({
+        error: 'When supplying FPL fixture context all three params are required and must be valid: fplFixtureId (integer), homeAbbr (1-10 alphanumeric), awayAbbr (1-10 alphanumeric)',
+      });
+    }
+
     const url      = `${ESPN_BASE}/summary?event=${eventId}`;
     const response = await axios.get(url, { timeout: 10000 });
     const data     = response.data;
