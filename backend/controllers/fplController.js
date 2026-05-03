@@ -1313,11 +1313,8 @@ const getPlayersForecast = async (req, res) => {
       players.forEach(p => {
         byCode[p.code] = {
           points: parseFloat(p.ep_next) || 0,
-          opponents: p.opponents && p.opponents.length > 0
-            ? p.opponents
-            : p.opponent_short
-              ? [{ opponent_short: p.opponent_short, is_home: p.is_home }]
-              : [],
+          // enrichPlayersWithOpponents always sets opponents ([] when no fixture)
+          opponents: p.opponents ?? [],
         };
       });
       result[gw] = byCode;
