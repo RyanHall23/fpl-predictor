@@ -268,9 +268,9 @@ const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme, assisters }
                   if (event.icon === 'goal') {
                     const isHome = event.teamId === espnMatch.homeId;
                     if (event.ownGoal) {
-                      // Own goals can have an FPL assist (the player who forced it).
-                      // The assist credit goes to the attacking team — the opposite side.
-                      assist = isHome ? awayFplQueue.shift() : homeFplQueue.shift();
+                      // Own goals can have an FPL assist (e.g. the attacker who forced it).
+                      // event.teamId is the team that benefits, and the assister is from that same team.
+                      assist = isHome ? homeFplQueue.shift() : awayFplQueue.shift();
                     } else if (event.penaltyKick) {
                       // FPL records the penalty winner as an assist; ESPN does not
                       assist = isHome ? homeFplQueue.shift() : awayFplQueue.shift();
