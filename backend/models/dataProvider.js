@@ -11,6 +11,19 @@ const USE_FPL_API = (process.env.USE_FPL_API ?? 'true') === 'true';
 // Whitelist of allowed FPL API endpoints
 const FPL_API_BASE = 'https://fantasy.premierleague.com/api';
 
+// Axios instance that mimics a browser request.
+// fantasy.premierleague.com blocks requests from cloud datacenter IPs unless
+// they carry browser-like headers (User-Agent, Referer, etc.).
+const fplAxios = axios.create({
+  headers: {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    'Accept': 'application/json, text/plain, */*',
+    'Accept-Language': 'en-GB,en;q=0.9',
+    'Referer': 'https://fantasy.premierleague.com/',
+    'Origin': 'https://fantasy.premierleague.com',
+  },
+});
+
 // Mock data is in backend/mockData, one level up from models directory
 const MOCK_DATA_DIR = path.join(__dirname, '..', 'mockData');
 
@@ -37,7 +50,7 @@ const loadMockData = async (filename) => {
 const fetchBootstrapStatic = async () => {
   if (USE_FPL_API) {
     const url = `${FPL_API_BASE}/bootstrap-static/`;
-    const response = await axios.get(url);
+    const response = await fplAxios.get(url);
     return response.data;
   } else {
     console.log('[Mock Mode] Fetching bootstrap-static from local data');
@@ -58,7 +71,7 @@ const fetchPlayerPicks = async (entryId, eventId) => {
   
   if (USE_FPL_API) {
     const url = `${FPL_API_BASE}/entry/${validatedEntryId}/event/${validatedEventId}/picks/`;
-    const response = await axios.get(url);
+    const response = await fplAxios.get(url);
     return response.data;
   } else {
     console.log(`[Mock Mode] Fetching player picks for entry ${validatedEntryId} event ${validatedEventId} from local data`);
@@ -77,7 +90,7 @@ const fetchElementSummary = async (playerId) => {
   
   if (USE_FPL_API) {
     const url = `${FPL_API_BASE}/element-summary/${validatedPlayerId}/`;
-    const response = await axios.get(url);
+    const response = await fplAxios.get(url);
     return response.data;
   } else {
     console.log(`[Mock Mode] Fetching element summary for player ${validatedPlayerId} from local data`);
@@ -92,7 +105,7 @@ const fetchElementSummary = async (playerId) => {
 const fetchFixtures = async () => {
   if (USE_FPL_API) {
     const url = `${FPL_API_BASE}/fixtures/`;
-    const response = await axios.get(url);
+    const response = await fplAxios.get(url);
     return response.data;
   } else {
     console.log('[Mock Mode] Fetching fixtures from local data');
@@ -109,7 +122,7 @@ const fetchEventFixtures = async (eventId) => {
   const validatedEventId = validateGameweek(eventId);
   if (USE_FPL_API) {
     const url = `${FPL_API_BASE}/fixtures/?event=${validatedEventId}`;
-    const response = await axios.get(url);
+    const response = await fplAxios.get(url);
     return response.data;
   } else {
     console.log(`[Mock Mode] Fetching event ${validatedEventId} fixtures from local data`);
@@ -129,7 +142,7 @@ const fetchLiveGameweek = async (eventId) => {
   
   if (USE_FPL_API) {
     const url = `${FPL_API_BASE}/event/${validatedEventId}/live/`;
-    const response = await axios.get(url);
+    const response = await fplAxios.get(url);
     return response.data;
   } else {
     console.log(`[Mock Mode] Fetching live gameweek ${validatedEventId} from local data`);
@@ -148,7 +161,7 @@ const fetchEntry = async (entryId) => {
   
   if (USE_FPL_API) {
     const url = `${FPL_API_BASE}/entry/${validatedEntryId}/`;
-    const response = await axios.get(url);
+    const response = await fplAxios.get(url);
     return response.data;
   } else {
     console.log(`[Mock Mode] Fetching entry ${validatedEntryId} from local data`);
@@ -167,7 +180,7 @@ const fetchHistory = async (entryId) => {
   
   if (USE_FPL_API) {
     const url = `${FPL_API_BASE}/entry/${validatedEntryId}/history/`;
-    const response = await axios.get(url);
+    const response = await fplAxios.get(url);
     return response.data;
   } else {
     console.log(`[Mock Mode] Fetching history for entry ${validatedEntryId} from local data`);
@@ -184,7 +197,7 @@ const fetchEntryTransfers = async (entryId) => {
   const validatedEntryId = validateEntryId(entryId);
   if (USE_FPL_API) {
     const url = `${FPL_API_BASE}/entry/${validatedEntryId}/transfers/`;
-    const response = await axios.get(url);
+    const response = await fplAxios.get(url);
     return response.data;
   } else {
     console.log(`[Mock Mode] Fetching transfers for entry ${validatedEntryId} from local data`);
@@ -204,7 +217,7 @@ const fetchLeagueStandings = async (leagueId, page = 1) => {
 
   if (USE_FPL_API) {
     const url = `${FPL_API_BASE}/leagues-classic/${validatedLeagueId}/standings/?page_standings=${page}`;
-    const response = await axios.get(url);
+    const response = await fplAxios.get(url);
     return response.data;
   } else {
     console.log(`[Mock Mode] Fetching league standings for league ${validatedLeagueId} from local data`);
