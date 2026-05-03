@@ -261,8 +261,9 @@ const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme, assisters }
               const awayEspnQueue = espnAssistersList.filter(a => a.abbr === espnMatch?.awayAbbr).flatMap(a => Array(Math.trunc(a.value)).fill(a.name));
               const homeFplQueue  = fplOnlyAssistersList.filter(a => a.abbr === espnMatch?.homeAbbr).flatMap(a => Array(Math.trunc(a.value)).fill(a.name));
               const awayFplQueue  = fplOnlyAssistersList.filter(a => a.abbr === espnMatch?.awayAbbr).flatMap(a => Array(Math.trunc(a.value)).fill(a.name));
-              // Try to match secondPlayer (ESPN's athletesInvolved[1]) against a FPL queue by name.
-              // Falls back to queue order when ESPN provides no secondary player name.
+              // summaryEventMap uses minute+teamId keys from the ESPN summary's keyPlays,
+              // which reliably carries athletesInvolved[1] for penalties and OG forcers.
+              const summaryEventMap = assisters?.summaryEventMap ?? {};
               const normN = (n) => (n ?? '').toLowerCase().replace(/[^a-z]/g, '');
               const shiftFplByName = (queue, hint) => {
                 if (hint) {
@@ -280,12 +281,11 @@ const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme, assisters }
                   let assist = undefined;
                   if (event.icon === 'goal') {
                     const isHome = event.teamId === espnMatch.homeId;
-                    if (event.ownGoal) {
-                      // FPL credits the attacker who forced the OG; ESPN records them as secondPlayer.
-                      assist = shiftFplByName(isHome ? homeFplQueue : awayFplQueue, event.secondPlayer);
-                    } else if (event.penaltyKick) {
-                      // FPL credits the player who won the penalty; ESPN records them as secondPlayer.
-                      assist = shiftFplByName(isHome ? homeFplQueue : awayFplQueue, event.secondPlayer);
+                    if (event.ownGoal || event.penaltyKick) {
+                      // Prefer the richer summary keyPlays secondary player (keyed by minute+teamId)
+                      // over the scoreboard's athletesInvolved[1] which is often absent.
+                      const hint = summaryEventMap[`${event.minute}_${event.teamId}`] || event.secondPlayer;
+                      assist = shiftFplByName(isHome ? homeFplQueue : awayFplQueue, hint);
                     } else {
                       assist = isHome ? homeEspnQueue.shift() : awayEspnQueue.shift();
                     }
@@ -462,10 +462,27 @@ const FixturesPanel = ({ gameweek, deadline, liveMatches }) => {
             }
           }
 
+          // Build a minute+teamId → secondPlayer lookup from the summary's keyPlays.
+          // This is more reliable than the scoreboard's athletesInvolved[1] for
+          // penalty kicks and own goals, which are often omitted there.
+          const summaryEventMap = {};
+          for (const play of (data.keyPlays ?? data.plays ?? [])) {
+            if (!play.scoringPlay) continue;
+            const min   = play.clock?.displayValue ?? '';
+            const tid   = play.team?.id ?? '';
+            const second = play.athletesInvolved?.[1]?.shortName
+              ?? play.athletesInvolved?.[1]?.displayName ?? '';
+            if (second && min && tid) {
+              // Key by minute+teamId; if two goals happen at the same minute for
+              // the same team (very rare), the latter overwrites — acceptable.
+              summaryEventMap[`${min}_${tid}`] = second;
+            }
+          }
+
           fetchedSummaryRef.current.add(espnMatch.espnId);
           setSummaryAssistersMap(prev => ({
             ...prev,
-            [espnMatch.espnId]: { espnAssisters, fplOnlyAssisters },
+            [espnMatch.espnId]: { espnAssisters, fplOnlyAssisters, summaryEventMap },
           }));
         })
         .catch(() => {});
