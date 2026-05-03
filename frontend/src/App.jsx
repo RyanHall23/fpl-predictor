@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import axios from './api';
 import { saveChip, loadChip } from './utils/lineupStorage';
-import { computeProjectedBank, simulateFreeTransferCarryover } from './utils/freeHitSimulation';
+import usePlanData from './hooks/usePlanData';
 import NavigationBar from './components/NavigationBar/NavigationBar';
 import Container from '@mui/material/Container';
 import Box from '@mui/material/Box';
@@ -23,7 +23,6 @@ import useAllPlayers from './hooks/useAllPlayers';
 import usePlannedTransfers from './hooks/usePlannedTransfers';
 import useLiveScores from './hooks/useLiveScores';
 import RightPanel from './components/RightPanel';
-import RecommendedTransfers from './components/RecommendedTransfers';
 import TeamActivityPanel from './components/TeamActivityPanel';
 
 const TEAM_VIEW = {
@@ -74,7 +73,6 @@ const App = () => {
     reservePlayers,
     snackbar,
     handlePlayerClick,
-    calculateTotalPredictedPoints,
     toggleTeamView,
     isHighestPredictedTeam,
     selectedPlayer,
@@ -127,15 +125,6 @@ const App = () => {
   const [localSnackbar, setLocalSnackbar] = useState('');
   const [usedFplChips, setUsedFplChips] = useState([]); // chip names from FPL profile e.g. ['bboost', '3xc']
 
-  // Map our chip IDs to FPL API chip names
-  const FPL_CHIP_KEY = { bench_boost: 'bboost', triple_captain: '3xc', free_hit: 'freehit', wildcard: 'wildcard' };
-
-  // Each chip can be used at most 2× (one per half-season). Unused = used < 2 times.
-  const unusedChipIds = useMemo(
-    () => CHIPS.filter(c => usedFplChips.filter(n => n === FPL_CHIP_KEY[c.id]).length < 2).map(c => c.id),
-    [usedFplChips]
-  );
-
   // Fetch used chips from FPL profile whenever we have a real user entry
   useEffect(() => {
     if (!currentEntryId || isHighestPredictedTeam) { setUsedFplChips([]); return; }
@@ -156,22 +145,11 @@ const App = () => {
     setPlannedChipsByGW(map);
   }, [userEntryId, currentGameweek]);
 
-  // Set of future GW numbers where the user has planned a Free Hit chip.
-  // Only includes GWs where the chip is still available (not yet used in FPL).
-  const freeHitGWs = useMemo(() => {
-    const s = new Set();
-    if (!unusedChipIds.includes('free_hit')) return s;
-    Object.entries(plannedChipsByGW).forEach(([gw, chip]) => {
-      if (chip === 'free_hit') s.add(Number(gw));
-    });
-    return s;
-  }, [plannedChipsByGW, unusedChipIds]);
-
   // Clear active chip from state if it becomes unavailable (e.g. team changed or
   // chip already used in FPL).  The stored value is left intact so it can be
   // re-applied if the user switches back to a valid gameweek.
   useEffect(() => {
-    if (activeChip && !unusedChipIds.includes(activeChip)) setActiveChip(null);
+    if (activeChip && unusedChipIds && !unusedChipIds.includes(activeChip)) setActiveChip(null);
   }, [unusedChipIds, activeChip]);
 
   // Track the last gameweek we restored a chip for, so we only do it once per
@@ -192,21 +170,12 @@ const App = () => {
     restoredChipKey.current = key;
     const stored = loadChip(userEntryId, viewedGW);
     // Only restore if the chip is still available (not yet used in FPL)
-    if (stored && unusedChipIds.includes(stored)) {
+    if (stored && unusedChipIds?.includes(stored)) {
       setActiveChip(stored);
     } else {
       setActiveChip(null);
     }
   }, [gameweekInfo, isHighestPredictedTeam, viewingOpponentId, userEntryId, unusedChipIds]);
-
-  // Determine the chip that should actually affect the currently viewed gameweek.
-  // Only apply planned/active chips when viewing a future GW for the user's own team.
-  const effectiveActiveChip = useMemo(() => {
-    if (!gameweekInfo?.isFuture || isHighestPredictedTeam || viewingOpponentId) return null;
-    const viewedGW = gameweekInfo.selected;
-    // Prefer a planned per-gameweek chip (persisted to storage), fallback to transient `activeChip`.
-    return plannedChipsByGW[viewedGW] ?? activeChip ?? null;
-  }, [gameweekInfo, isHighestPredictedTeam, viewingOpponentId, plannedChipsByGW, activeChip]);
 
   useEffect(() => {
     if (snackbar.message) setSnackbarOpen(true);
@@ -232,202 +201,54 @@ const App = () => {
   // Captain changes, substitutions, and new transfers are locked in this state.
   const isLockedGameweek = !!(gameweekInfo?.isActive || gameweekInfo?.isPast);
 
-  // Determine which planned transfers have been "voided" – i.e., their gameweek
-  // has already been reached but the transfer was not executed in FPL.
-  // Two signals indicate this:
-  //   1. playerOut is still in the current team (was never transferred out), OR
-  //   2. playerIn is NOT in the current team (was never transferred in).
-  const voidedTransferIds = useMemo(() => {
-    if (!currentGameweek || isHighestPredictedTeam) return new Set();
-    const currentTeamCodes = new Set([...activePlayers, ...reservePlayers].map(p => p.code));
-    return new Set(
-      plannedTransfers
-        .filter(t =>
-          t.gameweek <= currentGameweek &&
-          (currentTeamCodes.has(t.playerOut.code) || !currentTeamCodes.has(t.playerIn.code))
-        )
-        .map(t => t.id)
-    );
-  }, [plannedTransfers, activePlayers, reservePlayers, currentGameweek, isHighestPredictedTeam]);
+  // All derived display values are computed server-side via the plan endpoint.
+  const {
+    effectiveActivePlayers: planActivePlayers,
+    effectiveReservePlayers: planReservePlayers,
+    displayBank,
+    displayTransferFunds,
+    displayTotalPoints,
+    displayBenchPoints,
+    displayFreeTransfers,
+    voidedTransferIds: voidedTransferIdsArray,
+    unusedChipIds,
+  } = usePlanData({
+    activePlayers,
+    reservePlayers,
+    bank,
+    freeTransfers,
+    currentGameweek,
+    targetGameweek: gameweekInfo?.selected ?? currentGameweek,
+    plannedTransfers,
+    plannedChipsByGW,
+    usedFplChips,
+    activeChip,
+    isHighestPredictedTeam,
+    isLockedGameweek,
+    viewingOpponentId,
+  });
 
-  // When viewing a future gameweek, overlay planned transfers onto the displayed squad.
-  // Transfers are applied cumulatively in gameweek order (e.g. GW32 applied before GW33).
-  // This only affects display – the real activePlayers/reservePlayers remain unchanged.
-  // For locked (active/past) GWs the FPL picks data is authoritative — no overlay applied.
-  const { effectiveActivePlayers, effectiveReservePlayers } = useMemo(() => {
-    if (!gameweekInfo?.isFuture || isLockedGameweek || isHighestPredictedTeam || !currentGameweek) {
-      return { effectiveActivePlayers: activePlayers, effectiveReservePlayers: reservePlayers };
-    }
+  // Use effective players from plan if available, otherwise fall back to raw squad.
+  const effectiveActivePlayers  = planActivePlayers  ?? activePlayers;
+  const effectiveReservePlayers = planReservePlayers ?? reservePlayers;
 
-    const targetGW = gameweekInfo.selected;
+  // voidedTransferIds as a Set for prop compatibility with TeamActivityPanel.
+  const voidedTransferIds = useMemo(() => new Set(voidedTransferIdsArray ?? []), [voidedTransferIdsArray]);
 
-    // Only apply transfers scheduled for future gameweeks up to the viewed one.
-    // voidedTransferIds only tracks past-GW transfers so the check is omitted here.
-    const applicableTransfers = plannedTransfers
-      .filter(t => t.gameweek > currentGameweek && t.gameweek <= targetGW)
-      .sort((a, b) => a.gameweek - b.gameweek);
-
-    if (applicableTransfers.length === 0) {
-      return { effectiveActivePlayers: activePlayers, effectiveReservePlayers: reservePlayers };
-    }
-
-    // Helper: apply a list of transfers on top of active/reserve arrays.
-    const applyTransfers = (active, reserve, transfers) => {
-      let a = active;
-      let r = reserve;
-      for (const transfer of transfers) {
-        const playerInData = allPlayers.find(p => p.code === transfer.playerIn.code);
-        if (!playerInData) continue;
-        const basePoints = Math.round(parseFloat(playerInData.ep_next) || 0);
-        const activeIdx = a.findIndex(p => p.code === transfer.playerOut.code);
-        if (activeIdx !== -1) {
-          const old = a[activeIdx];
-          const multiplier = old.multiplier || 1;
-          a = [...a];
-          a[activeIdx] = {
-            ...playerInData,
-            isActive: old.isActive,
-            slot: old.slot,
-            user_team: old.user_team,
-            is_captain: old.is_captain,
-            is_vice_captain: old.is_vice_captain,
-            multiplier,
-            basePoints,
-            predictedPoints: basePoints * multiplier,
-          };
-          continue;
-        }
-        const reserveIdx = r.findIndex(p => p.code === transfer.playerOut.code);
-        if (reserveIdx !== -1) {
-          const old = r[reserveIdx];
-          r = [...r];
-          r[reserveIdx] = {
-            ...playerInData,
-            isActive: old.isActive,
-            slot: old.slot,
-            user_team: old.user_team,
-            is_captain: old.is_captain,
-            is_vice_captain: old.is_vice_captain,
-            multiplier: 1,
-            basePoints,
-            predictedPoints: basePoints,
-          };
-        }
-      }
-      return { a, r };
-    };
-
-    // Group transfers by GW so we can process them one gameweek at a time.
-    const transfersByGW = {};
-    for (const t of applicableTransfers) {
-      if (!transfersByGW[t.gameweek]) transfersByGW[t.gameweek] = [];
-      transfersByGW[t.gameweek].push(t);
-    }
-
-    let runActive  = [...activePlayers];
-    let runReserve = [...reservePlayers];
-
-    for (let gw = currentGameweek + 1; gw <= targetGW; gw++) {
-      const gwTransfers = transfersByGW[gw];
-      if (!gwTransfers || gwTransfers.length === 0) continue;
-
-      // Free Hit reverts the squad after the GW it is played.  Transfers in a
-      // Free Hit GW should only affect the display when viewing *that exact GW* —
-      // they must not carry forward to subsequent GWs.
-      const isFH = freeHitGWs.has(gw);
-      if (isFH && gw < targetGW) continue;
-
-      const { a, r } = applyTransfers(runActive, runReserve, gwTransfers);
-      runActive  = a;
-      runReserve = r;
-    }
-
-    return { effectiveActivePlayers: runActive, effectiveReservePlayers: runReserve };
-  }, [gameweekInfo, isLockedGameweek, isHighestPredictedTeam, currentGameweek, plannedTransfers, activePlayers, reservePlayers, allPlayers, freeHitGWs]);
+  // freeHitGWs derived from plan's unusedChipIds + local plannedChipsByGW.
+  // This is UI state aggregation, not business logic.
+  const freeHitGWs = useMemo(() => {
+    const s = new Set();
+    if (!(unusedChipIds ?? []).includes('free_hit')) return s;
+    Object.entries(plannedChipsByGW).forEach(([gw, chip]) => {
+      if (chip === 'free_hit') s.add(Number(gw));
+    });
+    return s;
+  }, [plannedChipsByGW, unusedChipIds]);
 
   // Planned transfers shown to pitch/bench components — suppressed for locked GWs
   // so stale planned-transfer badges don't render on top of actual picks data.
   const displayPlannedTransfers = isLockedGameweek ? undefined : plannedTransfers;
-
-  // Bank balance adjusted for planned transfers targeting the viewed GW.
-  // null = not applicable (highest predicted team, opponent view, or no bank data).
-  // When viewing a future GW with planned transfers, projects the bank balance
-  // after applying the cumulative cost delta of those transfers.
-  const displayBank = useMemo(() => {
-    if (isHighestPredictedTeam || viewingOpponentId || bank == null) return null;
-    if (!gameweekInfo?.isFuture) return null; // Only show for future GWs
-    const viewedGW = gameweekInfo?.selected ?? currentGameweek;
-    return computeProjectedBank(bank, plannedTransfers, viewedGW, freeHitGWs);
-  }, [isHighestPredictedTeam, viewingOpponentId, bank, gameweekInfo, currentGameweek, plannedTransfers, freeHitGWs]);
-
-  // Funds coming in (sum of selling prices) and going out (sum of buying prices)
-  // for planned transfers scheduled for the viewed GW specifically.
-  const displayTransferFunds = useMemo(() => {
-    if (!gameweekInfo?.isFuture || isHighestPredictedTeam || viewingOpponentId) return null;
-    const viewedGW = gameweekInfo?.selected ?? currentGameweek;
-    const gwTransfers = plannedTransfers.filter(t => t.gameweek === viewedGW);
-    if (gwTransfers.length === 0) return null;
-    const fundsIn  = gwTransfers.reduce((s, t) => s + (t.playerOut.sellingPrice ?? t.playerOut.nowCost ?? 0), 0);
-    const fundsOut = gwTransfers.reduce((s, t) => s + (t.playerIn.nowCost ?? 0), 0);
-    return { fundsIn, fundsOut };
-  }, [gameweekInfo, isHighestPredictedTeam, viewingOpponentId, currentGameweek, plannedTransfers]);
-
-  // Captain's base points (before 2× multiplier) — used by Triple Captain chip
-  const captainBasePoints = useMemo(() => {
-    const cap = effectiveActivePlayers.find(p => p.is_captain);
-    if (!cap) return 0;
-    return cap.basePoints != null
-      ? Math.round(cap.basePoints)
-      : Math.round((cap.predictedPoints ?? 0) / (cap.multiplier || 2));
-  }, [effectiveActivePlayers]);
-
-  // Points displayed in the stats pod — adjusted for the effective chip for the viewed GW
-  const displayTotalPoints = useMemo(() => {
-    const active = calculateTotalPredictedPoints(effectiveActivePlayers);
-    if (effectiveActiveChip === 'bench_boost') return active + calculateTotalPredictedPoints(effectiveReservePlayers);
-    if (effectiveActiveChip === 'triple_captain') return active + captainBasePoints; // +1× extra → 3× total
-    return active;
-  }, [effectiveActiveChip, effectiveActivePlayers, effectiveReservePlayers, calculateTotalPredictedPoints, captainBasePoints]);
-
-  const displayBenchPoints = useMemo(() => {
-    if (effectiveActiveChip === 'bench_boost') return 0; // bench points are merged into total
-    return calculateTotalPredictedPoints(effectiveReservePlayers);
-  }, [effectiveActiveChip, effectiveReservePlayers, calculateTotalPredictedPoints]);
-
-  // Free Transfers remaining for the viewed GW, after planned transfers are applied.
-  // null = not applicable (highest predicted team or opponent view).
-  // { chip: 'wildcard'|'free_hit' } = chip active, all transfers free.
-  // { remaining: number, cost: number } = FTs left and any points deduction (cost is negative when over limit).
-  const displayFreeTransfers = useMemo(() => {
-    if (isHighestPredictedTeam || viewingOpponentId || freeTransfers == null) return null;
-    const viewedGW = gameweekInfo?.selected ?? currentGameweek;
-    if (!viewedGW || !currentGameweek) return null;
-    if (activeChip === 'wildcard' || activeChip === 'free_hit') {
-      return { chip: activeChip };
-    }
-
-    // Bucket planned transfers by GW for carry-over simulation.
-    const plannedTransfersByGW = plannedTransfers.reduce((counts, transfer) => {
-      const gw = transfer.gameweek;
-      counts[gw] = (counts[gw] || 0) + 1;
-      return counts;
-    }, {});
-
-    // Simulate FT carry-over from the current GW up to (but not including) the viewed GW,
-    // treating Free Hit GWs as if 0 transfers were made (FH squad reverts).
-    const simulatedFreeTransfers = simulateFreeTransferCarryover(
-      freeTransfers, currentGameweek, viewedGW, plannedTransfersByGW, freeHitGWs
-    );
-
-    // For locked GWs the actual picks are authoritative — don't subtract planned transfers.
-    const plannedCount = isLockedGameweek ? 0 : (plannedTransfersByGW[viewedGW] || 0);
-    const remaining = simulatedFreeTransfers - plannedCount;
-
-    return {
-      remaining: Math.max(0, remaining),
-      cost: remaining < 0 ? remaining * 4 : 0, // negative value = points deduction
-    };
-  }, [isHighestPredictedTeam, viewingOpponentId, freeTransfers, gameweekInfo, currentGameweek, activeChip, plannedTransfers, isLockedGameweek, freeHitGWs]);
 
   // Handle setting team ID (saves to localStorage)
   const handleSetTeamId = (teamId) => {
@@ -480,48 +301,28 @@ const App = () => {
     setCurrentEntryId(userEntryId);
   };
 
-  /**
-   * Compute the squad (active + reserve) as it would look at `targetGW` after
-   * applying all planned transfers scheduled for future GWs up to and including
-   * `targetGW`.  Used for per-GW club-limit validation.
-   */
-  const squadAtGameweek = (targetGW) => {
-    const applicable = plannedTransfers
-      .filter(t => t.gameweek > currentGameweek && t.gameweek <= targetGW)
-      .sort((a, b) => a.gameweek - b.gameweek);
-
-    let squad = [...activePlayers, ...reservePlayers];
-    for (const t of applicable) {
-      // Free Hit transfers at a GW before targetGW revert — don't modify the
-      // permanent squad composition used for club-limit validation.
-      if (freeHitGWs.has(t.gameweek) && t.gameweek < targetGW) continue;
-      const playerInData = allPlayers.find(p => p.code === t.playerIn.code);
-      if (!playerInData) continue;
-      const idx = squad.findIndex(p => p.code === t.playerOut.code);
-      if (idx !== -1) {
-        squad = [...squad];
-        squad[idx] = { ...playerInData };
-      }
-    }
-    return squad;
-  };
-
-  const handleTransfer = (playerOut, playerIn, gameweek) => {
+  const handleTransfer = async (playerOut, playerIn, gameweek) => {
     if (!gameweek || !currentGameweek) return;
-    // Block transfers for active or past gameweeks
     if (gameweek <= currentGameweek && isLockedGameweek) return;
 
-    // Build the squad at the target gameweek (before this new transfer)
-    const squadBefore = squadAtGameweek(gameweek);
-
-    if (squadBefore.some(p => p.code === playerIn.code)) return;
-
-    // Enforce max 3 players from the same club at that gameweek
-    const clubCount = squadBefore.filter(p => p.team === playerIn.team && p.code !== playerOut.code).length;
-    if (clubCount >= 3) {
-      setLocalSnackbar(`Can't add ${playerIn.webName ?? playerIn.web_name} \u2014 already 3 players from this club in GW${gameweek}`);
-      setSnackbarOpen(true);
-      return;
+    try {
+      const { data } = await axios.post('/api/team/check-transfer', {
+        playerIn:  { code: playerIn.code, team: playerIn.team, webName: playerIn.webName ?? playerIn.web_name },
+        playerOut: { code: playerOut.code },
+        gameweek,
+        currentGameweek,
+        plannedTransfers,
+        activePlayers,
+        reservePlayers,
+        freeHitGWs: [...freeHitGWs],
+      });
+      if (!data.valid) {
+        setLocalSnackbar(data.error);
+        setSnackbarOpen(true);
+        return;
+      }
+    } catch {
+      // If check fails, allow transfer to proceed (non-critical validation)
     }
     addPlannedTransfer(playerOut, playerIn, gameweek);
   };
@@ -562,13 +363,13 @@ const App = () => {
             <Paper variant='outlined' sx={ { px: 2, py: 1 } }>
               <Box sx={ { display: 'flex', alignItems: 'center', gap: 2 } }>
                 { /* Chips — left column (own team only, not shown for locked GWs) */ }
-                { !isHighestPredictedTeam && !viewingOpponentId && !isLockedGameweek && activePlayers.length > 0 && unusedChipIds.length > 0 && (
+                { !isHighestPredictedTeam && !viewingOpponentId && !isLockedGameweek && activePlayers.length > 0 && unusedChipIds?.length > 0 && (
                   <Box sx={ { display: 'flex', flexDirection: 'column', gap: 0.5, alignItems: 'center' } }>
                     <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500, whiteSpace: 'nowrap' } }>
                       Chips
                     </Typography>
                     <Box sx={ { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0.5 } }>
-                      { CHIPS.filter(chip => unusedChipIds.includes(chip.id)).map(chip => (
+                      { CHIPS.filter(chip => unusedChipIds?.includes(chip.id)).map(chip => (
                         <Tooltip key={ chip.id } title={ `${chip.name}: ${chip.description}` }>
                           <Button
                             size='small'

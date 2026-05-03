@@ -693,6 +693,38 @@ const getAllPlayersEnriched = async (req, res) => {
     // Apply the advanced prediction engine for the target gameweek so that
     // blank-GW teams correctly receive 0 predicted points in the transfer UI.
     players = fplModel.applyAdvancedPredictions(players, fixtures, data.teams, targetEvent);
+
+    // Add normalized fields so the frontend can consume them directly without mapping.
+    players = players.map(p => {
+      const opponents = p.opponents || [];
+      let opponentDisplay;
+      if (opponents.length > 0) {
+        opponentDisplay = opponents.map(opp => {
+          const name = opp.opponent_short || '-';
+          if (opp.is_home == null) return name;
+          return opp.is_home ? `${name} (H)` : `${name} (A)`;
+        }).join(' ');
+      } else {
+        const opp = p.opponent_short || '-';
+        if (opp === '-' || p.is_home == null) {
+          opponentDisplay = opp;
+        } else {
+          opponentDisplay = p.is_home ? `${opp} (H)` : `${opp} (A)`;
+        }
+      }
+      return {
+        ...p,
+        name:            `${p.first_name} ${p.second_name}`,
+        webName:         p.web_name,
+        position:        p.element_type,
+        opponent:        p.opponent_short || '-',
+        opponents,
+        opponentDisplay,
+        teamCode:        p.team_code,
+        nowCost:         p.now_cost,
+        photo:           p.code ? `//resources.premierleague.com/premierleague25/photos/players/110x140/${p.code}.png` : undefined,
+      };
+    });
     
     res.json({ elements: players, teams: data.teams, events: data.events });
   } catch (error) {

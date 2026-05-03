@@ -5,7 +5,7 @@ const fs = require('fs');
 const fplController = require('./controllers/fplController');
 const assistantController = require('./controllers/assistantController');
 const espnController = require('./controllers/espnController');
-const authRoutes = require('./routes/auth');
+const teamController = require('./controllers/teamController');
 const chipsRoutes = require('./routes/chips');
 const squadRoutes = require('./routes/squad');
 const transfersRoutes = require('./routes/transfers');
@@ -44,8 +44,13 @@ app.get('/api/assistant/:entryId', apiLimiter, assistantController.getAssistantH
 app.get('/api/espn/scoreboard', apiLimiter, espnController.getScoreboard);
 app.get('/api/espn/summary/:eventId', apiLimiter, espnController.getSummary);
 
-// Auth, chips, squad and transfer routes
-app.use('/api/auth', authRoutes);
+// Team planning — all business logic served from the backend
+app.post('/api/team/plan', apiLimiter, teamController.plan);
+app.post('/api/team/auto-pick', apiLimiter, teamController.autoPick);
+app.post('/api/team/set-captain', apiLimiter, teamController.setCaptain);
+app.post('/api/team/check-transfer', apiLimiter, teamController.checkTransfer);
+
+// Chips, squad and transfer routes (account/auth removed — only team ID required)
 app.use('/api/chips', chipsRoutes);
 app.use('/api/squad', squadRoutes);
 app.use('/api/transfers', transfersRoutes);

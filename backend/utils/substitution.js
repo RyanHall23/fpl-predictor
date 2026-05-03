@@ -162,6 +162,132 @@ const validateSubstitution = (player1, player2, zone1, zone2, activePlayers, res
   return { valid: true, error: '' };
 };
 
+/**
+ * Derive a player's base (uncaptained) points.
+ */
+const getBase = (p) =>
+  p.basePoints != null
+    ? p.basePoints
+    : Math.round((p.predictedPoints ?? 0) / (p.multiplier || 1));
+
+/**
+ * Apply a validated substitution.
+ * Returns new { activePlayers, reservePlayers } without mutating originals.
+ */
+const applySubstitution = (activePlayers, reservePlayers, player1, player2, zone1, zone2) => {
+  const newActive  = [...activePlayers];
+  const newReserve = [...reservePlayers];
+
+  const z1 = zone1 === 'active' ? newActive : newReserve;
+  const z2 = zone2 === 'active' ? newActive : newReserve;
+
+  const idx1 = z1.findIndex((p) => p.code === player1.code);
+  const idx2 = z2.findIndex((p) => p.code === player2.code);
+
+  if (idx1 === -1 || idx2 === -1) return { activePlayers, reservePlayers };
+
+  const outPlayer = zone1 === 'active' ? player1 : player2;
+  const inPlayer  = zone1 === 'reserve' ? player1 : player2;
+
+  let p1 = { ...player1 };
+  let p2 = { ...player2 };
+
+  if (outPlayer.is_captain) {
+    const outBase = Math.round(getBase(outPlayer));
+    const inBase  = Math.round(getBase(inPlayer));
+    if (p1.code === outPlayer.code) {
+      p1 = { ...p1, is_captain: false, multiplier: 1, predictedPoints: outBase };
+      p2 = { ...p2, is_captain: true,  multiplier: 2, predictedPoints: inBase * 2 };
+    } else {
+      p2 = { ...p2, is_captain: false, multiplier: 1, predictedPoints: outBase };
+      p1 = { ...p1, is_captain: true,  multiplier: 2, predictedPoints: inBase * 2 };
+    }
+  }
+
+  if (outPlayer.is_vice_captain && !outPlayer.is_captain) {
+    if (p1.code === outPlayer.code) {
+      p1 = { ...p1, is_vice_captain: false };
+      p2 = { ...p2, is_vice_captain: true };
+    } else {
+      p2 = { ...p2, is_vice_captain: false };
+      p1 = { ...p1, is_vice_captain: true };
+    }
+  }
+
+  z1[idx1] = p2;
+  z2[idx2] = p1;
+
+  return { activePlayers: newActive, reservePlayers: newReserve };
+};
+
+/**
+ * Select the optimal starting XI from a full squad of 15 players.
+ *
+ * Algorithm:
+ *   1. Best GK (by base points) starts; other GK goes to bench.
+ *   2. Mandatory: top 3 DEF + top 3 MID + top 1 FWD = 7 outfield starters.
+ *   3. 3 flex slots from remaining outfield pool.
+ *   4. Captain: highest base-points outfield starter.
+ *   5. Vice-captain: second-highest.
+ *
+ * @param {Array} allPlayers - All 15 squad members combined.
+ * @returns {{ activePlayers: Array, reservePlayers: Array }}
+ */
+const selectOptimalLineup = (allPlayers) => {
+  const pos = (p) => getPosition(p);
+  const sortDesc = (arr) => [...arr].sort((a, b) => getBase(b) - getBase(a));
+
+  const managers    = allPlayers.filter(p => pos(p) === POSITION.MANAGER);
+  const nonManagers = allPlayers.filter(p => pos(p) !== POSITION.MANAGER);
+
+  const gks  = sortDesc(nonManagers.filter(p => pos(p) === POSITION.GK));
+  const defs = sortDesc(nonManagers.filter(p => pos(p) === POSITION.DEF));
+  const mids = sortDesc(nonManagers.filter(p => pos(p) === POSITION.MID));
+  const fwds = sortDesc(nonManagers.filter(p => pos(p) === POSITION.FWD));
+
+  const startingGk       = gks[0];
+  const mandatoryStarters = [...defs.slice(0, 3), ...mids.slice(0, 3), ...fwds.slice(0, 1)];
+  const flexPool         = sortDesc([...defs.slice(3), ...mids.slice(3), ...fwds.slice(1)]);
+  const flexStarters     = flexPool.slice(0, 3);
+  const benchOutfield    = flexPool.slice(3);
+
+  const startingXI = [startingGk, ...mandatoryStarters, ...flexStarters].filter(Boolean);
+  const sortedXI   = [...startingXI].sort((a, b) => pos(a) - pos(b));
+  const bench      = [gks[1], ...benchOutfield].filter(Boolean);
+
+  const outfieldStarters = sortedXI.filter(p => pos(p) !== POSITION.GK && pos(p) !== POSITION.MANAGER);
+  if (outfieldStarters.length === 0) {
+    return {
+      activePlayers:  [...managers.slice(0, 1), ...sortedXI].filter(Boolean),
+      reservePlayers: [...bench, ...managers.slice(1)].filter(Boolean),
+    };
+  }
+
+  const captainPlayer = outfieldStarters.reduce((best, p) => getBase(p) > getBase(best) ? p : best);
+  const nonCaptain    = outfieldStarters.filter(p => p.code !== captainPlayer.code);
+  const vcPlayer      = nonCaptain.length > 0
+    ? nonCaptain.reduce((best, p) => getBase(p) > getBase(best) ? p : best)
+    : null;
+
+  const applyRoles = (players) =>
+    players.map((p) => {
+      if (pos(p) === POSITION.MANAGER) return p;
+      const base = Math.round(getBase(p));
+      if (p.code === captainPlayer.code) {
+        return { ...p, is_captain: true, is_vice_captain: false, multiplier: 2, predictedPoints: base * 2 };
+      }
+      if (vcPlayer && p.code === vcPlayer.code) {
+        return { ...p, is_captain: false, is_vice_captain: true, multiplier: 1, predictedPoints: base };
+      }
+      return { ...p, is_captain: false, is_vice_captain: false, multiplier: 1, predictedPoints: base };
+    });
+
+  return {
+    activePlayers:  applyRoles([...managers.slice(0, 1), ...sortedXI]),
+    reservePlayers: applyRoles([...bench, ...managers.slice(1)]),
+  };
+};
+
 module.exports = {
   POSITION,
   getPosition,
@@ -169,4 +295,6 @@ module.exports = {
   isValidFormation,
   getFormationError,
   validateSubstitution,
+  applySubstitution,
+  selectOptimalLineup,
 };

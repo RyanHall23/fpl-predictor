@@ -1,10 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import axios from '../api';
-import {
-  validateSubstitution,
-  applySubstitution,
-  selectOptimalLineup,
-} from '../utils/substitution';
+import { applySubstitution, validateSubstitution } from '../utils/substitution';
 import { saveLineup, loadLineup, restoreLineup } from '../utils/lineupStorage';
 
 const LIVE_POLL_INTERVAL_MS = 60_000;
@@ -316,54 +312,36 @@ const isValidSwap = (player1, player2, zone1, zone2, currentActive, currentReser
 
 const calculateTotalPredictedPoints = (team) => {
   if (!team || team.length === 0) return 0;
-
-  return team.reduce((total, player) => {
-    const points = parseFloat(player.predictedPoints) || 0;
-    return total + points;
-  }, 0);
+  return team.reduce((total, player) => total + (parseFloat(player.predictedPoints) || 0), 0);
 };
 
-  // Change the captain of the current user team.
-  // The player identified by playerCode becomes captain (multiplier 2×),
-  // all other players revert to their base points (multiplier 1×).
-  // Both activePlayers and reservePlayers are updated so that captaincy works
-  // correctly for future GWs where selectOptimalLineup may have promoted reserve
-  // players into the effective starting XI.
-  const setCaptain = useCallback((playerCode) => {
-    // Derive true base points before the captain multiplier is applied.
-    // Prefer the explicit basePoints field (already an integer); otherwise
-    // undo the current multiplier.  Math.round() is applied at each call site
-    // so that the captain score (base × 2) is always a whole even number.
-    const getBase = (p) =>
-      p.basePoints != null
-        ? p.basePoints
-        : (p.predictedPoints ?? 0) / (p.multiplier || 1);
-
-    const applyToTeam = (prev) =>
-      prev.map((player) => {
-        if (player.code === playerCode) {
-          const base = Math.round(getBase(player));
-          return { ...player, is_captain: true, multiplier: 2, predictedPoints: base * 2 };
-        }
-        if (player.is_captain) {
-          const base = Math.round(getBase(player));
-          return { ...player, is_captain: false, multiplier: 1, predictedPoints: base };
-        }
-        return player;
+  const setCaptain = useCallback(async (playerCode) => {
+    try {
+      const { data } = await axios.post('/api/team/set-captain', {
+        playerCode,
+        activePlayers,
+        reservePlayers,
       });
+      setActivePlayers(data.activePlayers);
+      setReservePlayers(data.reservePlayers);
+    } catch {
+      // Non-fatal — captain change already reflected optimistically if needed
+    }
+  }, [activePlayers, reservePlayers]);
 
-    setActivePlayers(applyToTeam);
-    setReservePlayers(applyToTeam);
-  }, []);
-
-  const autoPickLineup = useCallback((effectiveActive, effectiveReserve) => {
-    const all = [...(effectiveActive ?? activePlayers), ...(effectiveReserve ?? reservePlayers)];
-    if (all.length < 11) return;
-    const { activePlayers: newActive, reservePlayers: newReserve } = selectOptimalLineup(all);
-    setActivePlayers(newActive);
-    setReservePlayers(newReserve);
-    setSelectedPlayer(null);
-    setSnackbar({ message: '', key: 0 });
+  const autoPickLineup = useCallback(async (effectiveActive, effectiveReserve) => {
+    try {
+      const { data } = await axios.post('/api/team/auto-pick', {
+        activePlayers:  effectiveActive  ?? activePlayers,
+        reservePlayers: effectiveReserve ?? reservePlayers,
+      });
+      setActivePlayers(data.activePlayers);
+      setReservePlayers(data.reservePlayers);
+      setSelectedPlayer(null);
+      setSnackbar({ message: '', key: 0 });
+    } catch {
+      // Non-fatal
+    }
   }, [activePlayers, reservePlayers]);
 
   const toggleTeamView = () => {
