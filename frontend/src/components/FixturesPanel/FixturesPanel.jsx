@@ -413,38 +413,19 @@ const FixturesPanel = ({ gameweek, deadline, liveMatches }) => {
       // ── ESPN primary ────────────────────────────────────────────────────────
       if (fetchedSummaryRef.current.has(espnMatch.espnId)) return;
       let cancelled = false;
+      // Pass FPL fixture context so the backend can compute fplOnlyAssisters
+      // (assisters recorded by FPL but absent from ESPN, e.g. penalty won).
+      const summaryUrl = `/api/espn/summary/${espnMatch.espnId}`
+        + `?fplFixtureId=${fixture.id}`
+        + `&homeAbbr=${encodeURIComponent(espnMatch.homeAbbr)}`
+        + `&awayAbbr=${encodeURIComponent(espnMatch.awayAbbr)}`;
       axios
-        .get(`/api/espn/summary/${espnMatch.espnId}`)
+        .get(summaryUrl)
         .then(res => {
           if (cancelled) return;
-          const { espnAssisters, summaryEventMap } = res.data;
-
-          // FPL records non-traditional assists ESPN omits (e.g. winning a penalty).
-          // Use fixture stats from the FPL API to find the delta.
-          const fplAssistStat = fixture.stats?.find(s => s.identifier === 'assists');
-          // Store FPL assisters with ESPN abbreviations so queue filtering is consistent.
-          const fplAssisters = [
-            ...(fplAssistStat?.h || []).map(e => ({ name: e.webName, abbr: espnMatch.homeAbbr, value: e.value })),
-            ...(fplAssistStat?.a || []).map(e => ({ name: e.webName, abbr: espnMatch.awayAbbr, value: e.value })),
-          ].filter(a => a.name && a.value > 0);
-
-          // Identify assisters present in FPL but not ESPN — these are the FPL-unique assists.
-          const normN = (n) => (n ?? '').toLowerCase().replace(/[^a-z]/g, '');
-          const fplOnlyAssisters = [];
-          for (const fplA of fplAssisters) {
-            const espnA = espnAssisters.find(e =>
-              e.abbr === fplA.abbr &&
-              (normN(e.name).includes(normN(fplA.name)) || normN(fplA.name).includes(normN(e.name)))
-            );
-            if (!espnA) {
-              // FPL records this assist but ESPN does not (e.g. penalty won)
-              fplOnlyAssisters.push({ ...fplA });
-            } else if (fplA.value > espnA.value) {
-              // Player has more FPL assists than ESPN records (surplus are FPL-only)
-              fplOnlyAssisters.push({ ...fplA, value: fplA.value - espnA.value });
-            }
-          }
-
+          // fplOnlyAssisters is now computed server-side; fall back to empty
+          // array if the backend did not include the field for any reason.
+          const { espnAssisters, fplOnlyAssisters = [], summaryEventMap } = res.data;
           fetchedSummaryRef.current.add(espnMatch.espnId);
           setSummaryAssistersMap(prev => ({
             ...prev,

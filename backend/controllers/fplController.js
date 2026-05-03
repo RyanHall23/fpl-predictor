@@ -1,5 +1,30 @@
 const fplModel = require('../models/fplModel');
 const dataProvider = require('../models/dataProvider');
+const { buildBreakdown } = require('../utils/statsBreakdown');
+
+/**
+ * Format a player's opponent(s) as a human-readable display string.
+ * E.g. "MCI (H)" or "LIV (A) ARS (H)" for a DGW.
+ *
+ * Mirrors the buildOpponentDisplay helper previously in
+ * frontend/src/hooks/useAllPlayers.js so the backend returns a ready-to-use
+ * string and the frontend does not need to duplicate the formatting logic.
+ *
+ * @param {Object} player - Enriched player object with opponents/opponent_short/is_home.
+ * @returns {string}
+ */
+const buildOpponentDisplay = (player) => {
+  if (player.opponents && player.opponents.length > 0) {
+    return player.opponents.map(opp => {
+      const name = opp.opponent_short || '-';
+      if (opp.is_home === null || opp.is_home === undefined) return name;
+      return opp.is_home ? `${name} (H)` : `${name} (A)`;
+    }).join(' ');
+  }
+  const opp = player.opponent_short || '-';
+  if (opp === '-' || player.is_home === null || player.is_home === undefined) return opp;
+  return player.is_home ? `${opp} (H)` : `${opp} (A)`;
+};
 
 
 /**
@@ -265,8 +290,26 @@ const getElementSummary = async (req, res) => {
     return res.status(400).json({ error: 'Invalid playerId' });
   }
   try {
-    const data = await fplModel.fetchElementSummary(playerId);
-    res.json(data);
+    const [data, bootstrap] = await Promise.all([
+      fplModel.fetchElementSummary(playerId),
+      fplModel.fetchBootstrapStatic(),
+    ]);
+
+    // Look up the player's position (element_type) from bootstrap-static so that
+    // the per-stat FPL points breakdown can be computed server-side.
+    const playerMeta = bootstrap.elements.find(p => p.id === parseInt(playerId, 10));
+    const position = playerMeta?.element_type ?? null;
+
+    // Enrich each history entry with a pre-computed points breakdown so the
+    // frontend does not need to implement FPL scoring rules itself.
+    const enrichedHistory = position != null
+      ? (data.history ?? []).map(entry => ({
+          ...entry,
+          breakdown: buildBreakdown(entry, position),
+        }))
+      : data.history;
+
+    res.json({ ...data, history: enrichedHistory });
   } catch (error) {
     console.error('Error fetching element summary:', error);
     res.status(500).json({ error: 'Error fetching element summary' });
@@ -693,6 +736,13 @@ const getAllPlayersEnriched = async (req, res) => {
     // Apply the advanced prediction engine for the target gameweek so that
     // blank-GW teams correctly receive 0 predicted points in the transfer UI.
     players = fplModel.applyAdvancedPredictions(players, fixtures, data.teams, targetEvent);
+
+    // Add a pre-formatted opponent display string so the frontend does not need
+    // to duplicate the formatting logic for single vs DGW fixtures.
+    players = players.map(p => ({
+      ...p,
+      opponent_display: buildOpponentDisplay(p),
+    }));
     
     res.json({ elements: players, teams: data.teams, events: data.events });
   } catch (error) {
@@ -1210,6 +1260,76 @@ const getLeagueStandings = async (req, res) => {
   }
 };
 
+/**
+ * GET /api/bootstrap-static/forecast?gameweeks=32,33,34
+ *
+ * Returns per-player predicted points and fixture data for one or more
+ * specific gameweeks in a single request.
+ *
+ * This replaces the pattern where the frontend called
+ * /api/bootstrap-static/enriched?gameweek=X once per gameweek to build
+ * a multi-GW forecast.  A single aggregated call reduces round-trips and
+ * keeps the per-GW prediction logic server-side.
+ *
+ * Response shape: { [gw]: { [playerCode]: { points, opponents } } }
+ *
+ * @param {string} gameweeks - Comma-separated gameweek numbers, e.g. "32,33,34".
+ */
+const getPlayersForecast = async (req, res) => {
+  const { gameweeks } = req.query;
+
+  if (!gameweeks) {
+    return res.status(400).json({ error: 'Missing required gameweeks query parameter' });
+  }
+
+  const gwList = [...new Set(
+    String(gameweeks)
+      .split(',')
+      .map(g => parseInt(g.trim(), 10))
+      .filter(g => Number.isFinite(g) && g >= 1 && g <= 38)
+  )];
+
+  if (!gwList.length) {
+    return res.status(400).json({ error: 'No valid gameweeks provided (must be integers between 1 and 38)' });
+  }
+
+  // Cap to a reasonable limit to prevent abuse
+  const MAX_GWS = 10;
+  if (gwList.length > MAX_GWS) {
+    return res.status(400).json({ error: `Too many gameweeks requested (max ${MAX_GWS})` });
+  }
+
+  try {
+    const [bootstrap, fixtures] = await Promise.all([
+      fplModel.fetchBootstrapStatic(),
+      fplModel.fetchFixtures(),
+    ]);
+
+    const result = {};
+
+    for (const gw of gwList) {
+      let players = bootstrap.elements.map(p => ({ ...p }));
+      players = fplModel.enrichPlayersWithOpponents(players, fixtures, bootstrap.teams, gw);
+      players = fplModel.applyAdvancedPredictions(players, fixtures, bootstrap.teams, gw);
+
+      const byCode = {};
+      players.forEach(p => {
+        byCode[p.code] = {
+          points: parseFloat(p.ep_next) || 0,
+          // enrichPlayersWithOpponents always sets opponents ([] when no fixture)
+          opponents: p.opponents ?? [],
+        };
+      });
+      result[gw] = byCode;
+    }
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error fetching players forecast:', error.message);
+    res.status(500).json({ error: 'Error fetching players forecast' });
+  }
+};
+
 module.exports = {
   getBootstrapStatic,
   getFixtures,
@@ -1224,5 +1344,6 @@ module.exports = {
   validateSwap,
   getAvailableTransfers,
   getRecommendedTransfers,
-  getLeagueStandings
+  getLeagueStandings,
+  getPlayersForecast,
 };

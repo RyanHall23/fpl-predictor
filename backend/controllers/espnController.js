@@ -10,8 +10,17 @@
  */
 
 const axios = require('axios');
+const dataProvider = require('../models/dataProvider');
 
 const ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1';
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Normalise a player name for fuzzy comparison:
+ * lower-case, strip everything that isn't a letter.
+ */
+const normName = (n) => (n ?? '').toLowerCase().replace(/[^a-z]/g, '');
 
 // ─── parseMatch ───────────────────────────────────────────────────────────────
 // Transforms one raw ESPN event object into the internal match shape consumed
@@ -95,26 +104,52 @@ const getScoreboard = async (req, res) => {
 };
 
 /**
- * GET /api/espn/summary/:eventId
+ * GET /api/espn/summary/:eventId[?fplFixtureId=X&homeAbbr=X&awayAbbr=X]
  *
  * Fetches the ESPN match summary for a completed or in-progress game and
  * returns a structured object containing:
- *   espnAssisters  – traditional assists recorded by ESPN (roster goal-assist
- *                    stats), shaped as [{ name, abbr, value }].
- *   summaryEventMap – minute+teamId keyed map of secondary player names from
- *                    key plays, used to attribute assists for penalties/OGs.
+ *   espnAssisters    – traditional assists recorded by ESPN (roster goal-assist
+ *                      stats), shaped as [{ name, abbr, value }].
+ *   fplOnlyAssisters – assists recorded by FPL but absent from ESPN (e.g.
+ *                      winning a penalty).  Computed server-side when the
+ *                      optional fplFixtureId, homeAbbr, and awayAbbr query
+ *                      params are provided; empty array otherwise.
+ *   summaryEventMap  – minute+teamId keyed map of secondary player names from
+ *                      key plays, used to attribute assists for penalties/OGs.
  *
- * The frontend is responsible for computing `fplOnlyAssisters` (FPL-recorded
- * assists not present in ESPN) since that comparison requires FPL fixture
- * stats that the frontend already holds.
+ * Optional query params:
+ *   fplFixtureId – FPL fixture ID (integer) used to look up FPL assist stats.
+ *   homeAbbr     – ESPN abbreviation for the home team (e.g. "LIV").
+ *   awayAbbr     – ESPN abbreviation for the away team (e.g. "MCI").
+ *
+ * When fplFixtureId, homeAbbr, and awayAbbr are all supplied the backend
+ * fetches FPL fixture stats, diffs them against the ESPN assister list, and
+ * returns the delta as fplOnlyAssisters — moving this reconciliation logic
+ * out of the frontend FixturesPanel component.
  */
 const getSummary = async (req, res) => {
   try {
     const { eventId } = req.params;
+    const { fplFixtureId, homeAbbr, awayAbbr } = req.query;
 
     // Validate eventId — ESPN event IDs are numeric strings
     if (!eventId || !/^\d+$/.test(eventId)) {
       return res.status(400).json({ error: 'Invalid ESPN event ID' });
+    }
+
+    // Validate optional FPL fixture params when any is provided
+    const hasFplParams = fplFixtureId !== undefined || homeAbbr !== undefined || awayAbbr !== undefined;
+    const validFplParams = hasFplParams
+      && /^\d+$/.test(fplFixtureId)
+      && /^[A-Za-z0-9]{1,10}$/.test(homeAbbr)
+      && /^[A-Za-z0-9]{1,10}$/.test(awayAbbr);
+
+    // If the caller supplied any FPL params but not a complete valid set,
+    // return 400 so they get a clear error rather than a silent empty result.
+    if (hasFplParams && !validFplParams) {
+      return res.status(400).json({
+        error: 'When supplying FPL fixture context all three params are required and must be valid: fplFixtureId (integer), homeAbbr (1-10 alphanumeric), awayAbbr (1-10 alphanumeric)',
+      });
     }
 
     const url      = `${ESPN_BASE}/summary?event=${eventId}`;
@@ -153,7 +188,62 @@ const getSummary = async (req, res) => {
       }
     }
 
-    res.json({ espnAssisters, summaryEventMap });
+    // ── Compute fplOnlyAssisters when FPL fixture context is supplied ────────
+    // FPL records non-traditional assists that ESPN omits (e.g. winning a
+    // penalty).  The frontend previously computed this diff; it is now done
+    // here so the FixturesPanel component receives the final data directly.
+    let fplOnlyAssisters = [];
+    if (validFplParams) {
+      try {
+        const [allFixtures, bootstrap] = await Promise.all([
+          dataProvider.fetchFixtures(),
+          dataProvider.fetchBootstrapStatic(),
+        ]);
+
+        const fixture = allFixtures.find(f => f.id === parseInt(fplFixtureId, 10));
+        if (fixture) {
+          // Build a quick element-ID → webName lookup
+          const elementsById = {};
+          (bootstrap.elements || []).forEach(e => { elementsById[e.id] = e.web_name || ''; });
+
+          const assistStat = (fixture.stats ?? []).find(s => s.identifier === 'assists');
+          if (assistStat) {
+            // Tag home assists with homeAbbr, away assists with awayAbbr
+            const fplAssisters = [
+              ...(assistStat.h || []).map(e => ({
+                name:  elementsById[e.element] || '',
+                abbr:  homeAbbr,
+                value: e.value,
+              })),
+              ...(assistStat.a || []).map(e => ({
+                name:  elementsById[e.element] || '',
+                abbr:  awayAbbr,
+                value: e.value,
+              })),
+            ].filter(a => a.name && a.value > 0);
+
+            // Diff: keep FPL assisters not matched (or under-counted) in ESPN
+            for (const fplA of fplAssisters) {
+              const espnA = espnAssisters.find(e =>
+                e.abbr === fplA.abbr &&
+                (normName(e.name).includes(normName(fplA.name)) ||
+                  normName(fplA.name).includes(normName(e.name)))
+              );
+              if (!espnA) {
+                fplOnlyAssisters.push({ ...fplA });
+              } else if (fplA.value > espnA.value) {
+                fplOnlyAssisters.push({ ...fplA, value: fplA.value - espnA.value });
+              }
+            }
+          }
+        }
+      } catch (fplErr) {
+        // Non-fatal: log and return empty fplOnlyAssisters rather than failing the request
+        console.warn('[ESPN] getSummary: failed to compute fplOnlyAssisters:', fplErr.message);
+      }
+    }
+
+    res.json({ espnAssisters, fplOnlyAssisters, summaryEventMap });
   } catch (error) {
     console.error('[ESPN] getSummary error:', error.message);
     res.status(502).json({ error: 'Failed to fetch ESPN summary' });
