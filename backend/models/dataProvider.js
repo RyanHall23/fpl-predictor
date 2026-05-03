@@ -15,6 +15,7 @@ const FPL_API_BASE = 'https://fantasy.premierleague.com/api';
 // fantasy.premierleague.com blocks requests from cloud datacenter IPs unless
 // they carry browser-like headers (User-Agent, Referer, etc.).
 const fplAxios = axios.create({
+  timeout: 8000,
   headers: {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
     'Accept': 'application/json, text/plain, */*',
@@ -23,6 +24,22 @@ const fplAxios = axios.create({
     'Origin': 'https://fantasy.premierleague.com',
   },
 });
+
+// Log every FPL API error with the upstream status code so Vercel logs show
+// exactly what the FPL API is returning (403, 429, 503, timeout, etc.).
+fplAxios.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    const status = err.response?.status;
+    const url    = err.config?.url ?? '(unknown)';
+    if (status) {
+      console.error(`[fplAxios] FPL API returned HTTP ${status} for ${url}`);
+    } else {
+      console.error(`[fplAxios] FPL API request failed for ${url}: ${err.message}`);
+    }
+    return Promise.reject(err);
+  }
+);
 
 // Mock data is in backend/mockData, one level up from models directory
 const MOCK_DATA_DIR = path.join(__dirname, '..', 'mockData');

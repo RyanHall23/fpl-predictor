@@ -1,6 +1,24 @@
 const fplModel = require('../models/fplModel');
 const dataProvider = require('../models/dataProvider');
 
+/**
+ * Derive an appropriate HTTP status code from an upstream Axios error.
+ * Forwards 4xx from FPL as 502 (bad gateway) so the client can distinguish
+ * "FPL API blocked us" from a genuine internal server error.
+ */
+function fplErrorStatus(err) {
+  const upstream = err?.response?.status;
+  if (upstream) return 502;
+  if (err?.code === 'ECONNABORTED') return 504; // timeout
+  return 500;
+}
+function fplErrorMessage(err, fallback) {
+  const upstream = err?.response?.status;
+  if (upstream) return `${fallback} (FPL API returned ${upstream})`;
+  if (err?.code === 'ECONNABORTED') return `${fallback} (FPL API timed out)`;
+  return fallback;
+}
+
 
 /**
  * Calculate purchase prices for current squad by analyzing FPL picks history
