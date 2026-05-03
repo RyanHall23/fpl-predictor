@@ -1,25 +1,20 @@
 const jwt = require('jsonwebtoken');
 
 const DEFAULT_JWT_SECRET = 'changeme';
+const JWT_SECRET = process.env.JWT_SECRET || DEFAULT_JWT_SECRET;
 
 // Warn once at startup when using the insecure default (development only).
-if (process.env.NODE_ENV !== 'production' &&
-    (!process.env.JWT_SECRET || process.env.JWT_SECRET === DEFAULT_JWT_SECRET)) {
+if (process.env.NODE_ENV !== 'production' && JWT_SECRET === DEFAULT_JWT_SECRET) {
   console.warn('Warning: Using default JWT secret. Set JWT_SECRET in the environment for better security.');
 }
 
 const authMiddleware = (req, res, next) => {
-  const envJwtSecret = process.env.JWT_SECRET;
-
   // In production, refuse to process auth requests when JWT_SECRET is absent
   // or still set to the insecure default — return 503 instead of crashing the
   // process with a module-level throw.
-  if (process.env.NODE_ENV === 'production' &&
-      (!envJwtSecret || envJwtSecret === DEFAULT_JWT_SECRET)) {
+  if (process.env.NODE_ENV === 'production' && JWT_SECRET === DEFAULT_JWT_SECRET) {
     return res.status(503).json({ error: 'Authentication is not configured on this server.' });
   }
-
-  const JWT_SECRET = envJwtSecret || DEFAULT_JWT_SECRET;
 
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
