@@ -145,37 +145,9 @@ const App = () => {
     setPlannedChipsByGW(map);
   }, [userEntryId, currentGameweek]);
 
-  // Clear active chip from state if it becomes unavailable (e.g. team changed or
-  // chip already used in FPL).  The stored value is left intact so it can be
-  // re-applied if the user switches back to a valid gameweek.
-  useEffect(() => {
-    if (activeChip && unusedChipIds && !unusedChipIds.includes(activeChip)) setActiveChip(null);
-  }, [unusedChipIds, activeChip]);
-
   // Track the last gameweek we restored a chip for, so we only do it once per
   // gameweek/entry combination and don't clobber a manual toggle on re-render.
   const restoredChipKey = useRef(null);
-
-  // Restore stored chip when loading a future gameweek for the user's own team.
-  useEffect(() => {
-    if (
-      !gameweekInfo?.isFuture ||
-      isHighestPredictedTeam ||
-      viewingOpponentId ||
-      !userEntryId
-    ) return;
-    const viewedGW = gameweekInfo.selected;
-    const key = `${userEntryId}_${viewedGW}`;
-    if (restoredChipKey.current === key) return; // already restored for this GW
-    restoredChipKey.current = key;
-    const stored = loadChip(userEntryId, viewedGW);
-    // Only restore if the chip is still available (not yet used in FPL)
-    if (stored && unusedChipIds?.includes(stored)) {
-      setActiveChip(stored);
-    } else {
-      setActiveChip(null);
-    }
-  }, [gameweekInfo, isHighestPredictedTeam, viewingOpponentId, userEntryId, unusedChipIds]);
 
   useEffect(() => {
     if (snackbar.message) setSnackbarOpen(true);
@@ -227,6 +199,34 @@ const App = () => {
     isLockedGameweek,
     viewingOpponentId,
   });
+
+  // Clear active chip from state if it becomes unavailable (e.g. team changed or
+  // chip already used in FPL).  The stored value is left intact so it can be
+  // re-applied if the user switches back to a valid gameweek.
+  useEffect(() => {
+    if (activeChip && unusedChipIds && !unusedChipIds.includes(activeChip)) setActiveChip(null);
+  }, [unusedChipIds, activeChip]);
+
+  // Restore stored chip when loading a future gameweek for the user's own team.
+  useEffect(() => {
+    if (
+      !gameweekInfo?.isFuture ||
+      isHighestPredictedTeam ||
+      viewingOpponentId ||
+      !userEntryId
+    ) return;
+    const viewedGW = gameweekInfo.selected;
+    const key = `${userEntryId}_${viewedGW}`;
+    if (restoredChipKey.current === key) return; // already restored for this GW
+    restoredChipKey.current = key;
+    const stored = loadChip(userEntryId, viewedGW);
+    // Only restore if the chip is still available (not yet used in FPL)
+    if (stored && unusedChipIds?.includes(stored)) {
+      setActiveChip(stored);
+    } else {
+      setActiveChip(null);
+    }
+  }, [gameweekInfo, isHighestPredictedTeam, viewingOpponentId, userEntryId, unusedChipIds]);
 
   // Use effective players from plan if available, otherwise fall back to raw squad.
   const effectiveActivePlayers  = planActivePlayers  ?? activePlayers;
