@@ -261,6 +261,19 @@ const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme, assisters }
               const awayEspnQueue = espnAssistersList.filter(a => a.abbr === espnMatch?.awayAbbr).flatMap(a => Array(Math.trunc(a.value)).fill(a.name));
               const homeFplQueue  = fplOnlyAssistersList.filter(a => a.abbr === espnMatch?.homeAbbr).flatMap(a => Array(Math.trunc(a.value)).fill(a.name));
               const awayFplQueue  = fplOnlyAssistersList.filter(a => a.abbr === espnMatch?.awayAbbr).flatMap(a => Array(Math.trunc(a.value)).fill(a.name));
+              // Try to match secondPlayer (ESPN's athletesInvolved[1]) against a FPL queue by name.
+              // Falls back to queue order when ESPN provides no secondary player name.
+              const normN = (n) => (n ?? '').toLowerCase().replace(/[^a-z]/g, '');
+              const shiftFplByName = (queue, hint) => {
+                if (hint) {
+                  const idx = queue.findIndex(n => {
+                    const a = normN(n), b = normN(hint);
+                    return a.includes(b) || b.includes(a);
+                  });
+                  if (idx !== -1) return queue.splice(idx, 1)[0];
+                }
+                return queue.shift();
+              };
               return espnMatch?.details
                 .filter(d => d.icon !== 'other')
                 .map((event, idx) => {
@@ -268,12 +281,11 @@ const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme, assisters }
                   if (event.icon === 'goal') {
                     const isHome = event.teamId === espnMatch.homeId;
                     if (event.ownGoal) {
-                      // Own goals can have an FPL assist (e.g. the attacker who forced it).
-                      // event.teamId is the team that benefits, and the assister is from that same team.
-                      assist = isHome ? homeFplQueue.shift() : awayFplQueue.shift();
+                      // FPL credits the attacker who forced the OG; ESPN records them as secondPlayer.
+                      assist = shiftFplByName(isHome ? homeFplQueue : awayFplQueue, event.secondPlayer);
                     } else if (event.penaltyKick) {
-                      // FPL records the penalty winner as an assist; ESPN does not
-                      assist = isHome ? homeFplQueue.shift() : awayFplQueue.shift();
+                      // FPL credits the player who won the penalty; ESPN records them as secondPlayer.
+                      assist = shiftFplByName(isHome ? homeFplQueue : awayFplQueue, event.secondPlayer);
                     } else {
                       assist = isHome ? homeEspnQueue.shift() : awayEspnQueue.shift();
                     }
