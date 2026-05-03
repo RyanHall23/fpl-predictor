@@ -27,9 +27,11 @@ function playerLabel(p) {
   return p.trend === 'rising' ? `${p.name} ▲` : `${p.name} ▼`;
 }
 
-const AssistantManagerPanel = ({ entryId, currentGameweek }) => {
+const AssistantManagerPanel = ({ entryId, currentGameweek, limit }) => {
   const theme = useTheme();
   const { hints, loading, error, retry } = useAssistantManager(entryId, currentGameweek);
+  const visibleHints = limit != null ? hints.slice(0, limit) : hints;
+  const hiddenCount = limit != null ? Math.max(0, hints.length - limit) : 0;
 
   return (
     <Box>
@@ -78,9 +80,9 @@ const AssistantManagerPanel = ({ entryId, currentGameweek }) => {
       ) }
 
       { /* Hints list */ }
-      { !loading && !error && hints.length > 0 && (
+      { !loading && !error && visibleHints.length > 0 && (
         <Box sx={ { display: 'flex', flexDirection: 'column', gap: 2 } }>
-          { hints.map((hint) => (
+          { visibleHints.map((hint) => (
             <Box
               key={ hint.id }
               sx={ {
@@ -157,6 +159,11 @@ const AssistantManagerPanel = ({ entryId, currentGameweek }) => {
               ) }
             </Box>
           )) }
+          { hiddenCount > 0 && (
+            <Typography variant='caption' color='text.secondary' sx={ { mt: 0.5 } }>
+              +{ hiddenCount } more suggestion{ hiddenCount > 1 ? 's' : '' }
+            </Typography>
+          ) }
         </Box>
       ) }
     </Box>
@@ -166,6 +173,7 @@ const AssistantManagerPanel = ({ entryId, currentGameweek }) => {
 AssistantManagerPanel.propTypes = {
   entryId: PropTypes.string,
   currentGameweek: PropTypes.number,
+  limit: PropTypes.number,
 };
 
 export default AssistantManagerPanel;

@@ -23,6 +23,7 @@ const TeamActivityPanel = ({
   allPlayers,
   voidedTransferIds,
   freeHitGWs,
+  section,
 }) => {
   const theme = useTheme();
   const [profile, setProfile] = useState(null);
@@ -80,6 +81,173 @@ const TeamActivityPanel = ({
     return <RemoveIcon sx={ { color: 'text.secondary', fontSize: 16, verticalAlign: 'middle' } } />;
   };
 
+  // When a `section` prop is provided, render only that pod.
+  if (section === 'teamstats') {
+    return (
+      <Box sx={ { width: '100%', height: '100%', overflow: 'auto' } }>
+        { entryId && profile ? (
+          <>
+            <Typography variant='h6' sx={ { mb: 2, fontWeight: 600 } }>Team Stats</Typography>
+            <Box sx={ { display: 'flex', flexDirection: 'column', gap: 1.5 } }>
+              <Box>
+                <Typography variant='caption' color='text.secondary'>Manager</Typography>
+                <Typography variant='body1' fontWeight='bold'>
+                  { profile.entry.player_first_name } { profile.entry.player_last_name }
+                </Typography>
+              </Box>
+              <Divider />
+              <Box sx={ { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 } }>
+                <Box>
+                  <Typography variant='caption' color='text.secondary'>Global Position</Typography>
+                  <Typography variant='body1' fontWeight='bold'>{ formatNumber(profile.entry.summary_overall_rank) }</Typography>
+                </Box>
+                <Box>
+                  <Typography variant='caption' color='text.secondary'>Total Points</Typography>
+                  <Typography variant='body1' fontWeight='bold'>{ formatNumber(profile.totalPoints) }</Typography>
+                </Box>
+                <Box>
+                  <Typography variant='caption' color='text.secondary'>Team Value</Typography>
+                  <Typography variant='body1' fontWeight='bold'>{ formatCurrency(profile.entry.last_deadline_value) }</Typography>
+                </Box>
+                <Box>
+                  <Typography variant='caption' color='text.secondary'>In The Bank</Typography>
+                  <Typography variant='body1' fontWeight='bold'>{ formatCurrency(profile.entry.last_deadline_bank) }</Typography>
+                </Box>
+              </Box>
+              { (myInvLeagues.length > 0 || myGenLeagues.length > 0) && (
+                <>
+                  <Divider />
+                  <Typography variant='subtitle2' fontWeight='600'>My Leagues</Typography>
+                  <Box sx={ { display: 'flex', gap: 2 } }>
+                    { myGenLeagues.length > 0 && (
+                      <Box sx={ { flex: 1, minWidth: 0 } }>
+                        <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 } }>General</Typography>
+                        <List dense disablePadding>
+                          { myGenLeagues.slice(0, 3).map(l => (
+                            <ListItem key={ l.id } disablePadding sx={ { py: 0.25 } }>
+                              <ListItemText
+                                primary={ <Typography variant='body2' noWrap>{ l.name }</Typography> }
+                                secondary={ <Typography variant='caption' color='text.secondary'>Rank: { formatNumber(l.entry_rank) }{ ' ' }{ getLeagueRankIcon(l.entry_rank, l.entry_last_rank) }</Typography> }
+                              />
+                            </ListItem>
+                          )) }
+                        </List>
+                      </Box>
+                    ) }
+                    { myInvLeagues.length > 0 && (
+                      <Box sx={ { flex: 1, minWidth: 0 } }>
+                        <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 } }>Invitational</Typography>
+                        <List dense disablePadding>
+                          { myInvLeagues.slice(0, 3).map(l => (
+                            <ListItem key={ l.id } disablePadding sx={ { py: 0.25 } }>
+                              <ListItemText
+                                primary={ <Typography variant='body2' noWrap>{ l.name }</Typography> }
+                                secondary={ <Typography variant='caption' color='text.secondary'>Rank: { formatNumber(l.entry_rank) }{ ' ' }{ getLeagueRankIcon(l.entry_rank, l.entry_last_rank) }</Typography> }
+                              />
+                            </ListItem>
+                          )) }
+                        </List>
+                      </Box>
+                    ) }
+                  </Box>
+                </>
+              ) }
+            </Box>
+          </>
+        ) : (
+          <Typography variant='body2' color='text.secondary'>No team data available.</Typography>
+        ) }
+      </Box>
+    );
+  }
+
+  if (section === 'recentperf') {
+    return (
+      <Box sx={ { width: '100%', height: '100%', overflow: 'auto' } }>
+        <Typography variant='h6' sx={ { mb: 1.5, fontWeight: 600 } }>Recent Performance</Typography>
+        { !entryId ? (
+          <Typography variant='body2' color='text.secondary'>No team data available.</Typography>
+        ) : recentHistory.length === 0 ? (
+          <Typography variant='body2' color='text.secondary'>No recent gameweeks</Typography>
+        ) : (
+          <Box>
+            <Box sx={ { display: 'grid', gridTemplateColumns: '3rem 1fr 1fr 1fr', gap: 0.5, px: 1, mb: 0.5 } }>
+              <Typography variant='caption' color='text.secondary'>GW</Typography>
+              <Typography variant='caption' color='text.secondary' sx={ { textAlign: 'right' } }>Pts</Typography>
+              <Typography variant='caption' color='text.secondary' sx={ { textAlign: 'right' } }>Rank</Typography>
+              <Typography variant='caption' color='text.secondary' sx={ { textAlign: 'right' } }>Value</Typography>
+            </Box>
+            <Divider sx={ { mb: 0.5 } } />
+            { recentHistory.map((gw) => (
+              <Box key={ gw.event } sx={ { display: 'grid', gridTemplateColumns: '3rem 1fr 1fr 1fr', gap: 0.5, px: 1, py: 0.75, borderRadius: 1, '&:hover': { backgroundColor: theme.palette.action.hover } } }>
+                <Typography variant='body2' fontWeight='600'>{ gw.event }</Typography>
+                <Typography variant='body2' fontWeight='600' sx={ { textAlign: 'right', color: gw.points >= avgPoints ? theme.palette.success.main : theme.palette.error.main } }>{ gw.points }</Typography>
+                <Typography variant='body2' sx={ { textAlign: 'right', fontSize: '0.75rem' } }>{ formatRank(gw.overall_rank) }</Typography>
+                <Typography variant='body2' sx={ { textAlign: 'right', fontSize: '0.75rem' } }>{ formatCurrency(gw.value) }</Typography>
+              </Box>
+            )) }
+          </Box>
+        ) }
+      </Box>
+    );
+  }
+
+  if (section === 'assistant') {
+    return (
+      <Box sx={ { width: '100%', height: '100%', overflow: 'auto' } }>
+        { currentGameweek ? (
+          <AssistantManagerPanel
+            entryId={ viewingOpponentId ? undefined : entryId }
+            currentGameweek={ currentGameweek }
+            limit={ 2 }
+          />
+        ) : null }
+      </Box>
+    );
+  }
+
+  if (section === 'rectransfers') {
+    return (
+      <Box sx={ { width: '100%', height: '100%', overflow: 'auto' } }>
+        { currentEntryId && !viewingOpponentId && currentGameweek ? (
+          <RecommendedTransfers
+            entryId={ currentEntryId }
+            currentGameweek={ currentGameweek }
+            compact={ true }
+            limit={ 3 }
+          />
+        ) : (
+          <Typography variant='body2' color='text.secondary'>Sign in to see transfer recommendations.</Typography>
+        ) }
+      </Box>
+    );
+  }
+
+  if (section === 'planned') {
+    return (
+      <Box sx={ { width: '100%', height: '100%', overflow: 'auto' } }>
+        { currentEntryId && !viewingOpponentId && currentGameweek && onAddPlannedTransfer ? (
+          <PlannedTransfers
+            plannedTransfers={ plannedTransfers }
+            onRemove={ onRemovePlannedTransfer }
+            onUpdateGameweek={ onUpdatePlannedTransferGameweek }
+            onAdd={ onAddPlannedTransfer }
+            team={ team }
+            allPlayers={ allPlayers }
+            currentGameweek={ currentGameweek }
+            compact={ true }
+            voidedTransferIds={ voidedTransferIds }
+            freeHitGWs={ freeHitGWs }
+            maxRows={ 4 }
+          />
+        ) : (
+          <Typography variant='body2' color='text.secondary'>Sign in to manage planned transfers.</Typography>
+        ) }
+      </Box>
+    );
+  }
+
+  // Default: render all sections
   return (
     <Box
       sx={ {
@@ -392,6 +560,7 @@ TeamActivityPanel.propTypes = {
   allPlayers: PropTypes.array,
   voidedTransferIds: PropTypes.instanceOf(Set),
   freeHitGWs: PropTypes.instanceOf(Set),
+  section: PropTypes.oneOf(['teamstats', 'recentperf', 'assistant', 'rectransfers', 'planned']),
 };
 
 export default TeamActivityPanel;

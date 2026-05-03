@@ -3,7 +3,6 @@ import axios from './api';
 import { saveChip, loadChip } from './utils/lineupStorage';
 import { computeProjectedBank, simulateFreeTransferCarryover } from './utils/freeHitSimulation';
 import NavigationBar from './components/NavigationBar/NavigationBar';
-import Container from '@mui/material/Container';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Button from '@mui/material/Button';
@@ -11,10 +10,14 @@ import Typography from '@mui/material/Typography';
 import Snackbar from '@mui/material/Snackbar';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
+import BottomNavigation from '@mui/material/BottomNavigation';
+import BottomNavigationAction from '@mui/material/BottomNavigationAction';
 import { useTheme } from '@mui/material/styles';
 import TableRowsIcon from '@mui/icons-material/TableRows';
 import GridViewIcon from '@mui/icons-material/GridView';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
+import EventIcon from '@mui/icons-material/Event';
+import BarChartIcon from '@mui/icons-material/BarChart';
 import Tooltip from '@mui/material/Tooltip';
 import TeamFormation from './components/TeamFormation/TeamFormation';
 import TeamListView from './components/TeamListView/TeamListView';
@@ -23,7 +26,6 @@ import useAllPlayers from './hooks/useAllPlayers';
 import usePlannedTransfers from './hooks/usePlannedTransfers';
 import useLiveScores from './hooks/useLiveScores';
 import RightPanel from './components/RightPanel';
-import RecommendedTransfers from './components/RecommendedTransfers';
 import TeamActivityPanel from './components/TeamActivityPanel';
 
 const TEAM_VIEW = {
@@ -51,6 +53,12 @@ const App = () => {
   // Planned chips across all future GWs: { [gw]: chipId }.  Loaded from storage
   // on mount and kept in sync whenever a chip is toggled.
   const [plannedChipsByGW, setPlannedChipsByGW] = useState({});
+  // Sidebar collapsed state — persisted in localStorage
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(
+    () => localStorage.getItem('sidebarCollapsed') !== 'false'
+  );
+  // Mobile bottom navigation tab (0=My Team, 1=Fixtures&Leagues, 2=Stats&Planning)
+  const [mobileTab, setMobileTab] = useState(0);
 
   const handleChipToggle = (chipId) => {
     const next = activeChip === chipId ? null : chipId;

@@ -319,6 +319,7 @@ const PlannedTransfers = ({
   compact = false,
   voidedTransferIds = new Set(),
   freeHitGWs = new Set(),
+  maxRows,
 }) => {
   const theme = useTheme();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -328,6 +329,8 @@ const PlannedTransfers = ({
     : Array.from({ length: 38 }, (_, i) => i + 1);
 
   const sorted = [...(plannedTransfers || [])].sort((a, b) => a.gameweek - b.gameweek);
+  const displaySorted = maxRows != null ? sorted.slice(0, maxRows) : sorted;
+  const hiddenRows = maxRows != null ? Math.max(0, sorted.length - maxRows) : 0;
   const forecastMap = useForecastData(plannedTransfers, currentGameweek);
 
   /** Build the 3-GW forecast array for a specific player code and base GW. */
@@ -365,7 +368,7 @@ const PlannedTransfers = ({
           <Typography variant='body2' color='text.secondary'>No planned transfers yet.</Typography>
         ) : (
           <Box sx={ { display: 'flex', flexDirection: 'column', gap: 1 } }>
-            { sorted.map((t, idx) => {
+            { displaySorted.map((t, idx) => {
               const isVoided = voidedTransferIds.has(t.id);
               const isFH = freeHitGWs.has(t.gameweek);
               const outForecast = buildForecast(t.playerOut.code, t.gameweek);
@@ -436,6 +439,14 @@ const PlannedTransfers = ({
                 </Box>
               );
             }) }
+            { hiddenRows > 0 && (
+              <Chip
+                label={ `+${hiddenRows} more` }
+                size='small'
+                variant='outlined'
+                sx={ { alignSelf: 'flex-start', fontSize: '0.7rem', height: 22 } }
+              />
+            ) }
           </Box>
         ) }
 
@@ -580,6 +591,7 @@ PlannedTransfers.propTypes = {
   compact: PropTypes.bool,
   voidedTransferIds: PropTypes.instanceOf(Set),
   freeHitGWs: PropTypes.instanceOf(Set),
+  maxRows: PropTypes.number,
 };
 
 export default PlannedTransfers;

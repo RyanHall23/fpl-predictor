@@ -31,7 +31,7 @@ const positionLabels = {
   ATT: 'FWD'
 };
 
-const RecommendedTransfers = ({ entryId, currentGameweek, compact = false }) => {
+const RecommendedTransfers = ({ entryId, currentGameweek, compact = false, limit }) => {
   const theme = useTheme();
   const [gameweeksAhead, setGameweeksAhead] = useState(1);
   const [similarPricingOnly, setSimilarPricingOnly] = useState(false);
@@ -180,8 +180,8 @@ const RecommendedTransfers = ({ entryId, currentGameweek, compact = false }) => 
               return true;
             });
 
-            // Limit to 3 if compact mode
-            const displayRecs = compact ? dedupedRecs.slice(0, 3) : dedupedRecs;
+            // Limit to `limit` prop (if set) or 3 if compact mode
+            const displayRecs = limit != null ? dedupedRecs.slice(0, limit) : compact ? dedupedRecs.slice(0, 3) : dedupedRecs;
 
             if (displayRecs.length === 0) return null;
 
@@ -349,6 +349,7 @@ RecommendedTransfers.propTypes = {
   entryId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
   currentGameweek: PropTypes.number,
   compact: PropTypes.bool,
+  limit: PropTypes.number,
 };
 
 export default RecommendedTransfers;

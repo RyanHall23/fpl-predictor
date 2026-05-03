@@ -21,6 +21,7 @@ const RightPanel = ({
   selectedGameweek,
   gameweekDeadline,
   liveMatches,
+  section,
 }) => {
   const theme = useTheme();
   const displayGameweek = selectedGameweek || currentGameweek;
@@ -32,7 +33,7 @@ const RightPanel = ({
   const storageKey = userEntryId ? `selectedLeagueId_${userEntryId}` : null;
 
   useEffect(() => {
-    if (!entryId) { setInvLeagues([]); setSelectedLeagueId(''); return; }
+    if (!entryId || section === 'fixtures') { setInvLeagues([]); setSelectedLeagueId(''); return; }
     axios.get(`/api/entry/${entryId}/profile`)
       .then(res => {
         const leagues = (res.data.classicLeagues || []).filter(l => l.league_type !== 's');
@@ -67,7 +68,7 @@ const RightPanel = ({
         flexDirection: 'column',
       } }
     >
-      { entryId && invLeagues.length > 0 && (
+      { section !== 'fixtures' && entryId && invLeagues.length > 0 && (
         <Box>
           <Box sx={ { display: 'flex', alignItems: 'center', gap: 1.5, mb: 1, flexWrap: 'wrap', px: 1, pt: 1 } }>
             <Typography variant='h6' sx={ { fontWeight: 600 } }>
@@ -110,9 +111,9 @@ const RightPanel = ({
         </Box>
       ) }
 
-      { displayGameweek && (
+      { section !== 'league' && displayGameweek && (
         <>
-          { entryId && invLeagues.length > 0 && <Divider sx={ { my: 1 } } /> }
+          { section !== 'fixtures' && entryId && invLeagues.length > 0 && <Divider sx={ { my: 1 } } /> }
           <Box sx={ { p: 2 } }>
             <FixturesPanel gameweek={ displayGameweek } deadline={ gameweekDeadline } liveMatches={ liveMatches } />
           </Box>
@@ -130,6 +131,7 @@ RightPanel.propTypes = {
   selectedGameweek: PropTypes.number,
   gameweekDeadline: PropTypes.string,
   liveMatches: PropTypes.array,
+  section: PropTypes.oneOf(['fixtures', 'league']),
 };
 
 export default RightPanel;
