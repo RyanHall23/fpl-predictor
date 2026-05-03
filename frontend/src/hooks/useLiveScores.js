@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 
-const ESPN_URL = 'https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/scoreboard';
+const SCOREBOARD_API = '/api/espn/scoreboard';
 export const POLL_MS = 30_000;
 
-/** Returns the ESPN scoreboard URL for a specific date (YYYYMMDD string) or today. */
+/** Returns the backend scoreboard URL for a specific date (YYYYMMDD string) or today. */
 export const espnScoreboardUrl = (yyyymmdd) =>
-  yyyymmdd ? `${ESPN_URL}?dates=${yyyymmdd}` : ESPN_URL;
+  yyyymmdd ? `${SCOREBOARD_API}?dates=${yyyymmdd}` : SCOREBOARD_API;
 
 /** Normalise a team name to lowercase alphanumeric for fuzzy matching. */
 export const normName = (s) => (s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -110,11 +110,12 @@ export default function useLiveScores({ enabled = true, onRelevantChange, squadT
       const ac = new AbortController();
       controller = ac;
       try {
-        const res    = await fetch(ESPN_URL, { signal: ac.signal });
+        const res    = await fetch(SCOREBOARD_API, { signal: ac.signal });
         const data   = await res.json();
         if (cancelled) return;
 
-        const parsed = (data.events ?? []).map(parseMatch).filter(Boolean);
+        // Backend returns already-parsed match objects
+        const parsed = Array.isArray(data) ? data : [];
         setMatches(parsed);
 
         let relevantChange = false;

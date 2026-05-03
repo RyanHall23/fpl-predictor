@@ -4,6 +4,11 @@ const path = require('path');
 const fs = require('fs');
 const fplController = require('./controllers/fplController');
 const assistantController = require('./controllers/assistantController');
+const espnController = require('./controllers/espnController');
+const authRoutes = require('./routes/auth');
+const chipsRoutes = require('./routes/chips');
+const squadRoutes = require('./routes/squad');
+const transfersRoutes = require('./routes/transfers');
 const { apiLimiter } = require('./middleware/rateLimiter');
 const app = express();
 const port = process.env.PORT || 5000;
@@ -34,6 +39,16 @@ app.post('/api/available-transfers/:playerCode', apiLimiter, fplController.getAv
 // NOTE: /general must be registered before /:entryId to avoid route shadowing
 app.get('/api/assistant/general', apiLimiter, assistantController.getAssistantHints);
 app.get('/api/assistant/:entryId', apiLimiter, assistantController.getAssistantHints);
+
+// ESPN proxy routes (backend fetches from ESPN so the browser never calls it directly)
+app.get('/api/espn/scoreboard', apiLimiter, espnController.getScoreboard);
+app.get('/api/espn/summary/:eventId', apiLimiter, espnController.getSummary);
+
+// Auth, chips, squad and transfer routes
+app.use('/api/auth', authRoutes);
+app.use('/api/chips', chipsRoutes);
+app.use('/api/squad', squadRoutes);
+app.use('/api/transfers', transfersRoutes);
 
 // Serve built Vite frontend from the same process
 const distPath = path.join(__dirname, '..', 'frontend', 'dist');
