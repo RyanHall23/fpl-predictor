@@ -2,6 +2,12 @@ const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
 const authMiddleware = require('../middleware/authMiddleware');
+const { requireJwtConfigured } = authMiddleware;
+
+// Block all auth endpoints when JWT_SECRET is absent or default in production.
+// This covers unauthenticated routes (login, register) that issue tokens as
+// well as the protected routes that verify them.
+router.use(requireJwtConfigured);
 
 // Rate limiting for registration endpoint
 const rateLimit = require('express-rate-limit');

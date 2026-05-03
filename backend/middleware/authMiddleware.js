@@ -1,23 +1,31 @@
 const jwt = require('jsonwebtoken');
 
 const DEFAULT_JWT_SECRET = 'changeme';
-const envJwtSecret = process.env.JWT_SECRET;
 
-if ((process.env.NODE_ENV === 'production') && (!envJwtSecret || envJwtSecret === DEFAULT_JWT_SECRET)) {
-  throw new Error('JWT_SECRET environment variable must be set to a secure, non-default value in production.');
-}
+/** Cached JWT secret — evaluated once at startup, shared with authController. */
+const JWT_SECRET = process.env.JWT_SECRET || DEFAULT_JWT_SECRET;
 
-if ((!envJwtSecret || envJwtSecret === DEFAULT_JWT_SECRET) && process.env.NODE_ENV !== 'production') {
-  // Warn during development/test when using the insecure default secret.
-  // Do NOT rely on this default in any production-like environment.
-   
+// Warn once at startup when using the insecure default (development only).
+if (process.env.NODE_ENV !== 'production' && JWT_SECRET === DEFAULT_JWT_SECRET) {
   console.warn('Warning: Using default JWT secret. Set JWT_SECRET in the environment for better security.');
 }
 
-const JWT_SECRET = envJwtSecret || DEFAULT_JWT_SECRET;
+/**
+ * Router-level guard: apply as `router.use(requireJwtConfigured)` at the top
+ * of the auth router so that every endpoint — including login and register —
+ * returns 503 in production rather than operating with the insecure default
+ * secret, which would enable trivial token forgery.
+ */
+const requireJwtConfigured = (req, res, next) => {
+  if (process.env.NODE_ENV === 'production' && JWT_SECRET === DEFAULT_JWT_SECRET) {
+    return res.status(503).json({ error: 'Authentication is not configured on this server.' });
+  }
+  next();
+};
+
+/** Route middleware: verifies the Bearer token and sets req.user. */
 const authMiddleware = (req, res, next) => {
   const authHeader = req.headers.authorization;
-  
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'No token provided' });
   }
@@ -34,3 +42,5 @@ const authMiddleware = (req, res, next) => {
 };
 
 module.exports = authMiddleware;
+module.exports.requireJwtConfigured = requireJwtConfigured;
+module.exports.JWT_SECRET = JWT_SECRET;

@@ -1,8 +1,7 @@
 const User = require('../models/userModel');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-
-const JWT_SECRET = process.env.JWT_SECRET || 'changeme';
+const { JWT_SECRET } = require('../middleware/authMiddleware');
 
 // Email validation helper
 const validateEmail = (email) => {
