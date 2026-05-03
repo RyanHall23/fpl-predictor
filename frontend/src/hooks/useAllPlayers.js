@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
 import axios from '../api';
 
-const buildOpponentDisplay = (player) => {
+/**
+ * Fallback opponent display formatter used when the backend does not yet
+ * include the pre-computed `opponent_display` field.  This mirrors the logic
+ * now also present in backend/controllers/fplController.js buildOpponentDisplay.
+ */
+const buildOpponentDisplayFallback = (player) => {
   if (player.opponents && player.opponents.length > 0) {
     return player.opponents.map(opp => {
       const name = opp.opponent_short || '-';
@@ -41,7 +46,9 @@ export default function useAllPlayers(gameweek) {
           position: player.element_type,
           opponent: player.opponent_short || '-',
           opponents: player.opponents || [],
-          opponentDisplay: buildOpponentDisplay(player),
+          // Use the backend-provided display string; fall back to local
+          // computation for backward compatibility (e.g. mock mode).
+          opponentDisplay: player.opponent_display ?? buildOpponentDisplayFallback(player),
           teamCode: player.team_code,
           nowCost: player.now_cost,
           photo: player.code ? `//resources.premierleague.com/premierleague25/photos/players/110x140/${player.code}.png` : undefined

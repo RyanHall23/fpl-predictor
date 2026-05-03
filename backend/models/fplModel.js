@@ -1,6 +1,7 @@
 const dataProvider = require('./dataProvider');
 const predictionEngine = require('./predictionEngine');
 const { validateSubstitution } = require('../utils/substitution');
+const { buildBreakdown } = require('../utils/statsBreakdown');
 const Player = require('../entities/Player');
 const Team   = require('../entities/Team');
 
@@ -212,10 +213,15 @@ const enrichPlayersWithGameweekStats = async (players, targetEventId) => {
     return players.map(player => {
       const stats = playerStatsMap[player.id];
       if (stats) {
+        const position = player.element_type ?? null;
+        const provisional_bonus = stats.provisional_bonus ?? null;
         return {
           ...player,
           event_points: stats.points,
-          gameweek_stats: stats
+          gameweek_stats: {
+            ...stats,
+            breakdown: buildBreakdown(stats, position, provisional_bonus),
+          },
         };
       }
       return {

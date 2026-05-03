@@ -18,9 +18,9 @@ app.use(express.json());
 
 // FPL API proxy routes
 app.get('/api/bootstrap-static', apiLimiter, fplController.getBootstrapStatic);
-app.get('/api/fixtures', apiLimiter, fplController.getFixtures);
+app.get('/api/bootstrap-static/forecast', apiLimiter, fplController.getPlayersForecast);
 app.get('/api/bootstrap-static/enriched', apiLimiter, fplController.getAllPlayersEnriched);
-app.get('/api/entry/:entryId/event/:eventId/picks', apiLimiter, fplController.getPlayerPicks);
+app.get('/api/fixtures', apiLimiter, fplController.getFixtures);
 app.get('/api/element-summary/:playerId', apiLimiter, fplController.getElementSummary);
 app.get('/api/event/:eventId/live', apiLimiter, fplController.getLiveGameweek);
 app.get('/api/predicted-team', apiLimiter, fplController.getPredictedTeam);

@@ -36,12 +36,17 @@ import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 
 const POSITION_LABELS = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD', 5: 'MAN' };
 
-// Module-level cache avoids re-fetching the same gameweek data across renders.
+// Module-level cache: avoids re-fetching forecast data for the same set of
+// gameweeks across renders.  Keys are individual GW numbers.
 const gwDataCache = {};
 
 /**
- * For every planned transfer, fetch enriched player data for the transfer GW
- * and the following two gameweeks so that the 3-GW forecast can be rendered.
+ * Fetch predicted points and fixture data for the gameweeks needed to render
+ * the 3-GW forecast for every planned transfer.
+ *
+ * Uses the aggregated /api/bootstrap-static/forecast endpoint so that all
+ * required gameweeks are requested in a single HTTP call rather than one
+ * request per gameweek.
  *
  * Returns forecastMap[gw][playerCode] = { points, opponents }
  */
@@ -82,39 +87,24 @@ function useForecastData(plannedTransfers, currentGameweek) {
 
     toFetch.forEach((gw) => fetchingRef.current.add(gw));
 
-    Promise.all(
-      toFetch.map((gw) =>
-        axios
-          .get(`/api/bootstrap-static/enriched?gameweek=${gw}`)
-          .then((res) => {
-            const byCode = {};
-            (res.data.elements || []).forEach((p) => {
-              byCode[p.code] = {
-                points: parseFloat(p.ep_next) || 0,
-                opponents:
-                  p.opponents && p.opponents.length > 0
-                    ? p.opponents
-                    : p.opponent_short
-                    ? [{ opponent_short: p.opponent_short, is_home: p.is_home }]
-                    : [],
-              };
-            });
-            gwDataCache[gw] = byCode;
-            fetchingRef.current.delete(gw);
-            return { gw, data: byCode };
-          })
-          .catch(() => {
-            fetchingRef.current.delete(gw);
-            return null;
-          })
-      )
-    ).then((results) => {
-      const updates = {};
-      results.forEach((r) => { if (r) updates[r.gw] = r.data; });
-      if (Object.keys(updates).length > 0) {
-        setForecastMap((prev) => ({ ...prev, ...updates }));
-      }
-    });
+    // Single request for all missing gameweeks using the aggregated endpoint.
+    axios
+      .get(`/api/bootstrap-static/forecast?gameweeks=${toFetch.join(',')}`)
+      .then((res) => {
+        const updates = {};
+        Object.entries(res.data).forEach(([gwStr, byCode]) => {
+          const gw = parseInt(gwStr, 10);
+          gwDataCache[gw] = byCode;
+          fetchingRef.current.delete(gw);
+          updates[gw] = byCode;
+        });
+        if (Object.keys(updates).length > 0) {
+          setForecastMap((prev) => ({ ...prev, ...updates }));
+        }
+      })
+      .catch(() => {
+        toFetch.forEach((gw) => fetchingRef.current.delete(gw));
+      });
   }, [plannedTransfers, currentGameweek]);
 
   return forecastMap;

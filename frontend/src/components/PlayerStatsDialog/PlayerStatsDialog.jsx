@@ -36,88 +36,25 @@ const STAT_LABELS = {
 };
 
 /**
- * Derive per-stat FPL points from a history entry and player position.
- * Returns rows: { identifier, value, points, provisional }
- * points=null means display-only (no direct point award).
- * provisionalBonus: override the bonus value/points as provisional (live game)
+ * Return the breakdown rows for a settled history entry.
+ *
+ * The backend now computes the full per-stat FPL points breakdown and includes
+ * it as `entry.breakdown` in the element-summary response.  The only
+ * remaining frontend concern is appending a provisional bonus row when the
+ * official bonus has not yet been settled (entry.bonus === 0) but a BPS
+ * estimate is available from the live gameweek data.
+ *
+ * @param {Object}      entry        - History entry from element-summary API.
+ * @param {number|null} provisionalBonusValue - Estimated bonus from live GW data.
  */
-const buildBreakdown = (entry, position, { provisionalBonus = null } = {}) => {
-  if (!entry) return [];
-  const rows = [];
-  const mins = entry.minutes ?? 0;
-
-  // Minutes played
-  if (mins > 0) {
-    rows.push({ identifier: 'minutes', value: mins, points: mins >= 60 ? 2 : 1 });
+const getSettledBreakdownRows = (entry, provisionalBonusValue) => {
+  const rows = entry.breakdown ?? [];
+  if (provisionalBonusValue != null && provisionalBonusValue > 0 && entry.bonus === 0) {
+    return [
+      ...rows,
+      { identifier: 'bonus', value: provisionalBonusValue, points: provisionalBonusValue, provisional: true },
+    ];
   }
-
-  // Goals (points by position: GK/DEF=6, MID=5, FWD=4)
-  if (entry.goals_scored > 0) {
-    const gPts = (position === 1 || position === 2) ? 6 : position === 3 ? 5 : 4;
-    rows.push({ identifier: 'goals_scored', value: entry.goals_scored, points: entry.goals_scored * gPts });
-  }
-
-  // Assists
-  if (entry.assists > 0) {
-    rows.push({ identifier: 'assists', value: entry.assists, points: entry.assists * 3 });
-  }
-
-  // Clean sheet (only if ≥60 min played)
-  if (entry.clean_sheets > 0 && mins >= 60) {
-    const csPts = (position === 1 || position === 2) ? 4 : position === 3 ? 1 : 0;
-    if (csPts > 0) rows.push({ identifier: 'clean_sheets', value: 1, points: csPts });
-  }
-
-  // Goals conceded (GK/DEF only; −1pt per 2 goals, only if ≥60 min)
-  if ((position === 1 || position === 2) && mins >= 60 && entry.goals_conceded >= 2) {
-    rows.push({ identifier: 'goals_conceded', value: entry.goals_conceded, points: -Math.floor(entry.goals_conceded / 2) });
-  }
-
-  // Own goals
-  if (entry.own_goals > 0) {
-    rows.push({ identifier: 'own_goals', value: entry.own_goals, points: entry.own_goals * -2 });
-  }
-
-  // Penalties saved (GK only)
-  if (position === 1 && entry.penalties_saved > 0) {
-    rows.push({ identifier: 'penalties_saved', value: entry.penalties_saved, points: entry.penalties_saved * 6 });
-  }
-
-  // Penalties missed
-  if (entry.penalties_missed > 0) {
-    rows.push({ identifier: 'penalties_missed', value: entry.penalties_missed, points: entry.penalties_missed * -2 });
-  }
-
-  // Cards
-  if (entry.yellow_cards > 0) {
-    rows.push({ identifier: 'yellow_cards', value: entry.yellow_cards, points: entry.yellow_cards * -1 });
-  }
-  if (entry.red_cards > 0) {
-    rows.push({ identifier: 'red_cards', value: entry.red_cards, points: entry.red_cards * -3 });
-  }
-
-  // Saves (GK only; 1pt per 3 saves)
-  if (position === 1 && entry.saves >= 3) {
-    rows.push({ identifier: 'saves', value: entry.saves, points: Math.floor(entry.saves / 3) });
-  }
-
-  // Defensive contribution — 2 pts when threshold reached:
-  // GK/DEF: 10+ CBI+tackles; MID/FWD: 12+ CBI+tackles+recoveries
-  if (entry.defensive_contribution > 0) {
-    const dcThreshold = (position === 1 || position === 2) ? 10 : 12;
-    const dcPts = entry.defensive_contribution >= dcThreshold ? 2 : 0;
-    rows.push({ identifier: 'defensive_contribution', value: entry.defensive_contribution, points: dcPts, provisional: false });
-  }
-
-  // Bonus — always last row; provisional if not yet officially settled
-  if (provisionalBonus != null) {
-    if (provisionalBonus.value > 0) {
-      rows.push({ identifier: 'bonus', value: provisionalBonus.value, points: provisionalBonus.value, provisional: true });
-    }
-  } else if (entry.bonus > 0) {
-    rows.push({ identifier: 'bonus', value: entry.bonus, points: entry.bonus, provisional: false });
-  }
-
   return rows;
 };
 
@@ -294,7 +231,7 @@ const PlayerStatsDialog = ({ open, onClose, player, viewedGameweek, liveMatches 
 
   if (!player) return null;
 
-  const { name, webName, teamName, opponents, position, gameweekStats } = player;
+  const { name, webName, teamName, opponents, gameweekStats } = player;
 
   const espnMatch = liveMatches?.find(m =>
     teamsMatch(teamName, m.homeName) || teamsMatch(teamName, m.awayName)
@@ -390,25 +327,22 @@ const PlayerStatsDialog = ({ open, onClose, player, viewedGameweek, liveMatches 
                   ? `vs ${matchingOpp.opponent_short} (${matchingOpp.is_home ? 'H' : 'A'})`
                   : `Fixture ${i + 1}`;
                 // If official bonus not yet settled, use provisional BPS estimate
-                const provBonus = entry.bonus === 0 && gameweekStats?.provisional_bonus != null
-                  ? { provisionalBonus: { value: gameweekStats.provisional_bonus } }
-                  : {};
+                const provisionalBonusValue = entry.bonus === 0
+                    ? (gameweekStats?.provisional_bonus ?? null)
+                    : null;
                 return (
                   <Box key={ entry.fixture ?? i } sx={ { mb: 2 } }>
                     <Typography variant='caption' color='text.secondary' fontWeight={ 600 } sx={ { textTransform: 'uppercase', letterSpacing: '0.06em' } }>
                       { label }
                     </Typography>
-                    <BreakdownTable rows={ buildBreakdown(entry, position, provBonus) } />
+                    <BreakdownTable rows={ getSettledBreakdownRows(entry, provisionalBonusValue) } />
                   </Box>
                 );
               })
             ) : (
-              <BreakdownTable rows={ buildBreakdown(
+              <BreakdownTable rows={ getSettledBreakdownRows(
                 historyEntries[0],
-                position,
-                historyEntries[0].bonus === 0 && gameweekStats?.provisional_bonus != null
-                  ? { provisionalBonus: { value: gameweekStats.provisional_bonus } }
-                  : {},
+                historyEntries[0].bonus === 0 ? (gameweekStats?.provisional_bonus ?? null) : null,
               ) } />
             ) }
           </>
@@ -426,13 +360,8 @@ const PlayerStatsDialog = ({ open, onClose, player, viewedGameweek, liveMatches 
                 sx={ { fontWeight: 700 } }
               />
             </Box>
-            <BreakdownTable
-              rows={ buildBreakdown(gameweekStats, position, {
-                provisionalBonus: {
-                  value: gameweekStats.provisional_bonus ?? gameweekStats.bonus ?? 0,
-                },
-              }) }
-            />
+            { /* Use the backend-computed breakdown from gameweekStats when available */ }
+            <BreakdownTable rows={ gameweekStats?.breakdown ?? [] } />
           </>
         ) : opponents && opponents.length > 0 && (
           <>

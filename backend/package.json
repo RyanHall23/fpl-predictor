@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
-    "test": "node --test tests/substitution.test.js",
+    "test": "node --test tests/substitution.test.js tests/statsBreakdown.test.js",
     "start": "node server.js"
   },
   "keywords": [],

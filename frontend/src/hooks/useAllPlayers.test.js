@@ -126,4 +126,16 @@ describe('useAllPlayers', () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(api.get).toHaveBeenCalledWith('/api/bootstrap-static/enriched');
   });
+
+  it('uses backend-provided opponent_display when present (no fallback computation)', async () => {
+    api.get.mockResolvedValue({
+      data: {
+        elements: [{ ...playerFixture, opponent_display: 'TOT (H)' }],
+      },
+    });
+    const { result } = renderHook(() => useAllPlayers(null));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    // Should use the server-supplied value, not recompute from opponent_short
+    expect(result.current.allPlayers[0].opponentDisplay).toBe('TOT (H)');
+  });
 });
