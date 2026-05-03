@@ -188,8 +188,8 @@ const getBootstrapStatic = async (req, res) => {
     const data = await fplModel.fetchBootstrapStatic();
     res.json(data);
   } catch (error) {
-    console.error('Error fetching bootstrap-static:', error);
-    res.status(500).json({ error: 'Error fetching bootstrap-static' });
+    console.error('Error fetching bootstrap-static:', error.message);
+    res.status(fplErrorStatus(error)).json({ error: fplErrorMessage(error, 'Error fetching bootstrap-static') });
   }
 };
 
@@ -256,8 +256,8 @@ const getFixtures = async (req, res) => {
 
     res.json(result);
   } catch (error) {
-    console.error('Error fetching fixtures:', error);
-    res.status(500).json({ error: 'Error fetching fixtures' });
+    console.error('Error fetching fixtures:', error.message);
+    res.status(fplErrorStatus(error)).json({ error: fplErrorMessage(error, 'Error fetching fixtures') });
   }
 };
 
@@ -271,8 +271,8 @@ const getPlayerPicks = async (req, res) => {
     const data = await fplModel.fetchPlayerPicks(entryId, eventId);
     res.json(data);
   } catch (error) {
-    console.error('Error fetching player picks:', error);
-    res.status(500).json({ error: 'Error fetching player picks' });
+    console.error('Error fetching player picks:', error.message);
+    res.status(fplErrorStatus(error)).json({ error: fplErrorMessage(error, 'Error fetching player picks') });
   }
 };
 
@@ -286,8 +286,8 @@ const getElementSummary = async (req, res) => {
     const data = await fplModel.fetchElementSummary(playerId);
     res.json(data);
   } catch (error) {
-    console.error('Error fetching element summary:', error);
-    res.status(500).json({ error: 'Error fetching element summary' });
+    console.error('Error fetching element summary:', error.message);
+    res.status(fplErrorStatus(error)).json({ error: fplErrorMessage(error, 'Error fetching element summary') });
   }
 };
 
@@ -301,8 +301,8 @@ const getLiveGameweek = async (req, res) => {
     const data = await fplModel.fetchLiveGameweek(eventId);
     res.json(data);
   } catch (error) {
-    console.error('Error fetching live gameweek:', error);
-    res.status(500).json({ error: 'Error fetching live gameweek' });
+    console.error('Error fetching live gameweek:', error.message);
+    res.status(fplErrorStatus(error)).json({ error: fplErrorMessage(error, 'Error fetching live gameweek') });
   }
 };
 
@@ -367,8 +367,8 @@ const getPredictedTeam = async (req, res) => {
       gameweekData: targetEventData
     });
   } catch (error) {
-    console.error('Error building predicted team:', error);
-    res.status(500).json({ error: 'Error building predicted team' });
+    console.error('Error building predicted team:', error.message);
+    res.status(fplErrorStatus(error)).json({ error: fplErrorMessage(error, 'Error building predicted team') });
   }
 };
 
@@ -413,7 +413,7 @@ const getUserTeam = async (req, res) => {
       picksData = await fplModel.fetchPlayerPicks(entryId, picksEventId);
     } catch (picksError) {
       console.error(`Error fetching picks for gameweek ${picksEventId}:`, picksError.message);
-      return res.status(500).json({ error: 'Error fetching team picks' });
+      return res.status(fplErrorStatus(picksError)).json({ error: fplErrorMessage(picksError, 'Error fetching team picks') });
     }
     
     let players = bootstrap.elements.map((p) => ({
@@ -463,8 +463,8 @@ const getUserTeam = async (req, res) => {
       gameweekData: targetEventData,
     });
   } catch (error) {
-    console.error('Error building user team:', error);
-    res.status(500).json({ error: 'Error building user team' });
+    console.error('Error building user team:', error.message);
+    res.status(fplErrorStatus(error)).json({ error: fplErrorMessage(error, 'Error building user team') });
   }
 };
 
@@ -518,7 +518,7 @@ const getUserTeamForEntry = async (req, res) => {
       picksData = await fplModel.fetchPlayerPicks(entryId, picksEventId);
     } catch (picksError) {
       console.error(`Error fetching picks for gameweek ${picksEventId}:`, picksError.message);
-      return res.status(500).json({ error: 'Error fetching team picks' });
+      return res.status(fplErrorStatus(picksError)).json({ error: fplErrorMessage(picksError, 'Error fetching team picks') });
     }
 
     // Fetch transfer history to calculate accurate selling prices.
@@ -620,8 +620,8 @@ const getUserTeamForEntry = async (req, res) => {
       bank: picksData.entry_history?.bank ?? null,
     });
   } catch (error) {
-    console.error('Error building user team:', error);
-    res.status(500).json({ error: 'Error building user team' });
+    console.error('Error building user team:', error.message);
+    res.status(fplErrorStatus(error)).json({ error: fplErrorMessage(error, 'Error building user team') });
   }
 };
 
@@ -671,8 +671,8 @@ const getUserProfile = async (req, res) => {
       chips: historyData.chips || [],
     });
   } catch (error) {
-    console.error('Error fetching user profile:', error);
-    res.status(500).json({ error: 'Error fetching user profile' });
+    console.error('Error fetching user profile:', error.message);
+    res.status(fplErrorStatus(error)).json({ error: fplErrorMessage(error, 'Error fetching user profile') });
   }
 };
 
