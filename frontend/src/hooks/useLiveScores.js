@@ -43,11 +43,12 @@ export const parseMatch = (event) => {
 
     return {
       icon,
-      minute:      d.clock?.displayValue ?? '',
-      teamId:      d.team?.id,
-      player:      d.athletesInvolved?.[0]?.shortName ?? '',
-      penaltyKick: d.penaltyKick ?? false,
-      ownGoal:     d.ownGoal ?? false,
+      minute:        d.clock?.displayValue ?? '',
+      teamId:        d.team?.id,
+      player:        d.athletesInvolved?.[0]?.shortName ?? d.athletesInvolved?.[0]?.displayName ?? '',
+      secondPlayer:  d.athletesInvolved?.[1]?.shortName ?? d.athletesInvolved?.[1]?.displayName ?? '',
+      penaltyKick:   d.penaltyKick ?? false,
+      ownGoal:       d.ownGoal ?? false,
     };
   });
 
