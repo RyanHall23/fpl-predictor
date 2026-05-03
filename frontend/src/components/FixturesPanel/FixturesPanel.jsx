@@ -265,13 +265,15 @@ const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme, assisters }
                 .filter(d => d.icon !== 'other')
                 .map((event, idx) => {
                   let assist = undefined;
-                  let isFplAssist = false;
-                  if (event.icon === 'goal' && !event.ownGoal) {
+                  if (event.icon === 'goal') {
                     const isHome = event.teamId === espnMatch.homeId;
-                    if (event.penaltyKick) {
+                    if (event.ownGoal) {
+                      // Own goals can have an FPL assist (the player who forced it).
+                      // The assist credit goes to the attacking team — the opposite side.
+                      assist = isHome ? awayFplQueue.shift() : homeFplQueue.shift();
+                    } else if (event.penaltyKick) {
                       // FPL records the penalty winner as an assist; ESPN does not
                       assist = isHome ? homeFplQueue.shift() : awayFplQueue.shift();
-                      isFplAssist = !!assist;
                     } else {
                       assist = isHome ? homeEspnQueue.shift() : awayEspnQueue.shift();
                     }
@@ -284,7 +286,6 @@ const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme, assisters }
                       homeAbbr={ espnMatch.homeAbbr }
                       awayAbbr={ espnMatch.awayAbbr }
                       assist={ assist }
-                      isFplAssist={ isFplAssist }
                     />
                   );
                 });
