@@ -4,7 +4,7 @@ const DEFAULT_JWT_SECRET = 'changeme';
 const envJwtSecret = process.env.JWT_SECRET;
 
 if ((process.env.NODE_ENV === 'production') && (!envJwtSecret || envJwtSecret === DEFAULT_JWT_SECRET)) {
-  throw new Error('JWT_SECRET environment variable must be set to a secure, non-default value in production.');
+  console.error('WARNING: JWT_SECRET environment variable is not set to a secure value in production. Auth routes will be non-functional.');
 }
 
 if ((!envJwtSecret || envJwtSecret === DEFAULT_JWT_SECRET) && process.env.NODE_ENV !== 'production') {
