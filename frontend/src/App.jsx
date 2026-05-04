@@ -3,7 +3,6 @@ import axios from './api';
 import { saveChip, loadChip } from './utils/lineupStorage';
 import { computeProjectedBank, simulateFreeTransferCarryover } from './utils/freeHitSimulation';
 import NavigationBar from './components/NavigationBar/NavigationBar';
-import Container from '@mui/material/Container';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Button from '@mui/material/Button';
@@ -11,19 +10,30 @@ import Typography from '@mui/material/Typography';
 import Snackbar from '@mui/material/Snackbar';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
+import Drawer from '@mui/material/Drawer';
+import BottomNavigation from '@mui/material/BottomNavigation';
+import BottomNavigationAction from '@mui/material/BottomNavigationAction';
 import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import TableRowsIcon from '@mui/icons-material/TableRows';
 import GridViewIcon from '@mui/icons-material/GridView';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
+import CloseIcon from '@mui/icons-material/Close';
+import EventIcon from '@mui/icons-material/Event';
+import BarChartIcon from '@mui/icons-material/BarChart';
+import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
+import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
 import Tooltip from '@mui/material/Tooltip';
+import IconButton from '@mui/material/IconButton';
 import TeamFormation from './components/TeamFormation/TeamFormation';
 import TeamListView from './components/TeamListView/TeamListView';
+import FixturesPanel from './components/FixturesPanel';
 import useTeamData from './hooks/useTeamData';
 import useAllPlayers from './hooks/useAllPlayers';
 import usePlannedTransfers from './hooks/usePlannedTransfers';
 import useLiveScores from './hooks/useLiveScores';
 import RightPanel from './components/RightPanel';
-import RecommendedTransfers from './components/RecommendedTransfers';
 import TeamActivityPanel from './components/TeamActivityPanel';
 
 const TEAM_VIEW = {
@@ -38,8 +48,26 @@ const CHIPS = [
   { id: 'wildcard',       label: 'WC', name: 'Wildcard',       description: 'All transfers are free and permanent',            color: '#6a1b9a' },
 ];
 
+const DOCK_ITEMS = [
+  { id: 'fixtures',  label: 'Fixtures & Deadline',  Icon: EventIcon },
+  { id: 'stats',     label: 'Stats',                Icon: BarChartIcon },
+  { id: 'transfers', label: 'Transfers',            Icon: SwapHorizIcon },
+  { id: 'league',    label: 'League Standings',     Icon: EmojiEventsIcon },
+  { id: 'tips',      label: 'Assistant Manager',    Icon: LightbulbOutlinedIcon },
+];
+
+const PANEL_LABELS = {
+  fixtures:  'Fixtures & Deadline',
+  stats:     'Stats',
+  transfers: 'Transfers',
+  league:    'League Standings',
+  tips:      'Assistant Manager',
+};
+
 const App = () => {
   const theme = useTheme();
+  const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
+
   const [userEntryId, setUserEntryId] = useState(() => localStorage.getItem('teamId') || '');
   const [currentEntryId, setCurrentEntryId] = useState(() => localStorage.getItem('teamId') || '');
   const [teamView, setTeamView] = useState(() => localStorage.getItem('teamId') ? TEAM_VIEW.USER : TEAM_VIEW.HIGHEST);
@@ -48,6 +76,27 @@ const App = () => {
   const [viewingOpponentId, setViewingOpponentId] = useState(null); // opponent team being viewed
   const [pitchView, setPitchView] = useState(() => localStorage.getItem('pitchView') || 'formation'); // 'formation' | 'list'
   const [activeChip, setActiveChip] = useState(null); // 'bench_boost' | 'triple_captain' | 'free_hit' | 'wildcard' | null
+
+  // Layout state
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(
+    () => localStorage.getItem('sidebarCollapsed') === 'true'
+  );
+  const [activePanel, setActivePanel] = useState(
+    () => localStorage.getItem('activePanel') || null
+  );
+
+  useEffect(() => {
+    localStorage.setItem('sidebarCollapsed', String(sidebarCollapsed));
+  }, [sidebarCollapsed]);
+
+  useEffect(() => {
+    if (activePanel) localStorage.setItem('activePanel', activePanel);
+    else localStorage.removeItem('activePanel');
+  }, [activePanel]);
+
+  const togglePanel = (panelId) => {
+    setActivePanel(prev => prev === panelId ? null : panelId);
+  };
   // Planned chips across all future GWs: { [gw]: chipId }.  Loaded from storage
   // on mount and kept in sync whenever a chip is toggled.
   const [plannedChipsByGW, setPlannedChipsByGW] = useState({});
@@ -526,258 +575,421 @@ const App = () => {
     addPlannedTransfer(playerOut, playerIn, gameweek);
   };
 
-  return (
-    <Box sx={ { minHeight: '100vh', backgroundColor: theme.palette.background.default, display: 'flex', flexDirection: 'column' } }>
-      <NavigationBar
-        teamView={ teamView }
-        onSwitchTeamView={ handleSwitchTeamView }
-        userTeamId={ userEntryId }
-        onSetTeamId={ handleSetTeamId }
-        selectedGameweek={ selectedGameweek }
-        setSelectedGameweek={ setSelectedGameweek }
-        currentGameweek={ currentGameweek }
-        mainPoints={ displayTotalPoints }
-        benchPoints={ displayBenchPoints }
-        isPast={ gameweekInfo?.isPast }
-        isActive={ gameweekInfo?.isActive }
-      />
-      <Container maxWidth={ false } sx={ { flex: 1, marginTop: '8px', display: 'flex', flexDirection: 'column', px: { xs: 1, sm: 2 } } }>
-        <Box sx={ { display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, gap: 2, flex: 1, alignItems: 'flex-start' } }>
-          { /* Left - Pitch */ }
-          <Box sx={ { flex: { xs: '1 1 auto', lg: '0 0 43%' }, width: { xs: '100%', lg: 'auto' }, display: 'flex', flexDirection: 'column' } }>
-            { /* Banner shown when viewing an opponent's team */ }
-            { viewingOpponentId && (
-              <Box sx={ { mb: 1, display: 'flex', alignItems: 'center', gap: 1 } }>
-                <Typography variant='body2' color='text.secondary'>
-                  Viewing opponent&apos;s team
-                </Typography>
-                { userEntryId && (
-                  <Button size='small' variant='outlined' onClick={ handleBackToMyTeam }>
-                    Back to My Team
+  const displayGameweek = selectedGameweek || currentGameweek;
+
+  const renderPanelContent = () => {
+    if (!activePanel) return null;
+    const commonActivityProps = {
+      entryId: viewingOpponentId || currentEntryId,
+      currentGameweek,
+      currentEntryId,
+      viewingOpponentId,
+      plannedTransfers,
+      onRemovePlannedTransfer: removePlannedTransfer,
+      onUpdatePlannedTransferGameweek: updateTransferGameweek,
+      onAddPlannedTransfer: addPlannedTransfer,
+      team: [...activePlayers, ...reservePlayers],
+      allPlayers,
+      voidedTransferIds,
+      freeHitGWs,
+    };
+    switch (activePanel) {
+      case 'fixtures':
+        return (
+          <FixturesPanel
+            gameweek={ displayGameweek }
+            deadline={ gameweekInfo?.data?.deadline_time }
+            liveMatches={ liveMatches }
+          />
+        );
+      case 'stats':
+        return <TeamActivityPanel section='stats' { ...commonActivityProps } />;
+      case 'transfers':
+        return <TeamActivityPanel section='transfers' { ...commonActivityProps } />;
+      case 'league':
+        return (
+          <RightPanel
+            section='league'
+            entryId={ viewingOpponentId || currentEntryId }
+            onViewTeam={ handleViewOpponentTeam }
+            currentGameweek={ currentGameweek }
+            selectedGameweek={ selectedGameweek }
+            userEntryId={ userEntryId }
+            gameweekDeadline={ gameweekInfo?.data?.deadline_time }
+            liveMatches={ liveMatches }
+          />
+        );
+      case 'tips':
+        return <TeamActivityPanel section='tips' { ...commonActivityProps } />;
+      default:
+        return null;
+    }
+  };
+
+  const panelHeader = activePanel ? (
+    <Box sx={ { display: 'flex', alignItems: 'center', p: 1.5, borderBottom: 1, borderColor: 'divider', flexShrink: 0 } }>
+      <Typography variant='h6' sx={ { flex: 1, fontWeight: 600 } }>
+        { PANEL_LABELS[activePanel] }
+      </Typography>
+      <IconButton size='small' onClick={ () => setActivePanel(null) }>
+        <CloseIcon />
+      </IconButton>
+    </Box>
+  ) : null;
+
+  const pitchContent = (
+    <>
+      { /* Opponent viewing banner */ }
+      { viewingOpponentId && (
+        <Box sx={ { mb: 1, display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 } }>
+          <Typography variant='body2' color='text.secondary'>
+            Viewing opponent&apos;s team
+          </Typography>
+          { userEntryId && (
+            <Button size='small' variant='outlined' onClick={ handleBackToMyTeam }>
+              Back to My Team
+            </Button>
+          ) }
+        </Box>
+      ) }
+
+      { /* Stats + controls pod */ }
+      <Paper variant='outlined' sx={ { px: 2, py: 1, flexShrink: 0 } }>
+        <Box sx={ { display: 'flex', alignItems: 'center', gap: 2 } }>
+          { /* Chips */ }
+          { !isHighestPredictedTeam && !viewingOpponentId && !isLockedGameweek && activePlayers.length > 0 && unusedChipIds.length > 0 && (
+            <Box sx={ { display: 'flex', flexDirection: 'column', gap: 0.5, alignItems: 'center' } }>
+              <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500, whiteSpace: 'nowrap' } }>
+                Chips
+              </Typography>
+              <Box sx={ { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0.5 } }>
+                { CHIPS.filter(chip => unusedChipIds.includes(chip.id)).map(chip => (
+                  <Tooltip key={ chip.id } title={ `${chip.name}: ${chip.description}` }>
+                    <Button
+                      size='small'
+                      variant={ activeChip === chip.id ? 'contained' : 'outlined' }
+                      onClick={ () => handleChipToggle(chip.id) }
+                      sx={ {
+                        minWidth: 0,
+                        px: 0.75, py: '2px',
+                        fontSize: '0.65rem',
+                        fontWeight: 700,
+                        lineHeight: 1.4,
+                        ...(activeChip === chip.id && {
+                          backgroundColor: chip.color,
+                          borderColor: chip.color,
+                          color: '#fff',
+                          '&:hover': { backgroundColor: chip.color, filter: 'brightness(1.1)' },
+                        }),
+                        ...(activeChip !== chip.id && {
+                          borderColor: chip.color,
+                          color: chip.color,
+                          '&:hover': { borderColor: chip.color, backgroundColor: `${chip.color}18` },
+                        }),
+                      } }
+                    >
+                      { chip.label }
+                    </Button>
+                  </Tooltip>
+                )) }
+              </Box>
+            </Box>
+          ) }
+
+          { /* Stats grid */ }
+          <Box sx={ { flex: 1, display: 'grid', gridTemplateColumns: displayFreeTransfers != null || displayBank != null ? `1fr 1fr${ displayFreeTransfers != null ? ' 1fr' : '' }${ displayBank != null ? ' 1fr' : '' } 1fr` : '1fr 1fr 1fr', textAlign: 'center', rowGap: 0.75 } }>
+            <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>Total Points</Typography>
+            <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>Bench Points</Typography>
+            { displayFreeTransfers != null && (
+              <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>Free Transfers</Typography>
+            ) }
+            { displayBank != null && (
+              <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>In the Bank</Typography>
+            ) }
+            <Box sx={ { display: 'flex', justifyContent: 'center' } }>
+              { !isHighestPredictedTeam && !viewingOpponentId && !isLockedGameweek && activePlayers.length > 0 ? (
+                <Tooltip title='Auto pick best XI from your squad'>
+                  <Button
+                    size='small'
+                    variant='outlined'
+                    startIcon={ <AutoFixHighIcon sx={ { fontSize: 16 } } /> }
+                    onClick={ () => autoPickLineup(effectiveActivePlayers, effectiveReservePlayers) }
+                    sx={ { py: '3px', px: 1.25, minWidth: 0, fontSize: '0.75rem', '[data-mui-color-scheme="dark"] &': { color: '#fff', borderColor: 'rgba(255,255,255,0.5)' } } }
+                  >
+                    Auto Pick
                   </Button>
+                </Tooltip>
+              ) : (
+                <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>View</Typography>
+              ) }
+            </Box>
+            <Typography variant='h6' sx={ { fontWeight: 700, lineHeight: 1.2 } }>{ displayTotalPoints }</Typography>
+            <Typography variant='h6' sx={ { fontWeight: 700, lineHeight: 1.2 } }>{ displayBenchPoints }</Typography>
+            { displayFreeTransfers != null && (
+              <Box sx={ { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' } }>
+                { displayFreeTransfers.chip ? (
+                  <Typography variant='h6' sx={ { fontWeight: 700, lineHeight: 1.2, color: displayFreeTransfers.chip === 'wildcard' ? '#6a1b9a' : '#e65100' } }>
+                    { displayFreeTransfers.chip === 'wildcard' ? 'WC' : 'FH' }
+                  </Typography>
+                ) : (
+                  <>
+                    <Typography variant='h6' sx={ { fontWeight: 700, lineHeight: 1.2 } }>{ displayFreeTransfers.remaining }</Typography>
+                    { displayFreeTransfers.cost < 0 && (
+                      <Typography variant='caption' sx={ { color: 'error.main', fontWeight: 600, lineHeight: 1 } }>
+                        { displayFreeTransfers.cost }pts
+                      </Typography>
+                    ) }
+                  </>
                 ) }
               </Box>
             ) }
-            { /* Stats + controls pod wrapping pitch/bench */ }
-            <Paper variant='outlined' sx={ { px: 2, py: 1 } }>
-              <Box sx={ { display: 'flex', alignItems: 'center', gap: 2 } }>
-                { /* Chips — left column (own team only, not shown for locked GWs) */ }
-                { !isHighestPredictedTeam && !viewingOpponentId && !isLockedGameweek && activePlayers.length > 0 && unusedChipIds.length > 0 && (
-                  <Box sx={ { display: 'flex', flexDirection: 'column', gap: 0.5, alignItems: 'center' } }>
-                    <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500, whiteSpace: 'nowrap' } }>
-                      Chips
-                    </Typography>
-                    <Box sx={ { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0.5 } }>
-                      { CHIPS.filter(chip => unusedChipIds.includes(chip.id)).map(chip => (
-                        <Tooltip key={ chip.id } title={ `${chip.name}: ${chip.description}` }>
-                          <Button
-                            size='small'
-                            variant={ activeChip === chip.id ? 'contained' : 'outlined' }
-                            onClick={ () => handleChipToggle(chip.id) }
-                            sx={ {
-                              minWidth: 0,
-                              px: 0.75, py: '2px',
-                              fontSize: '0.65rem',
-                              fontWeight: 700,
-                              lineHeight: 1.4,
-                              ...(activeChip === chip.id && {
-                                backgroundColor: chip.color,
-                                borderColor: chip.color,
-                                color: '#fff',
-                                '&:hover': { backgroundColor: chip.color, filter: 'brightness(1.1)' },
-                              }),
-                              ...(activeChip !== chip.id && {
-                                borderColor: chip.color,
-                                color: chip.color,
-                                '&:hover': { borderColor: chip.color, backgroundColor: `${chip.color}18` },
-                              }),
-                            } }
-                          >
-                            { chip.label }
-                          </Button>
-                        </Tooltip>
-                      )) }
-                    </Box>
-                  </Box>
-                ) }
-
-                { /* Stats + controls grid */ }
-                <Box sx={ { flex: 1, display: 'grid', gridTemplateColumns: displayFreeTransfers != null || displayBank != null ? `1fr 1fr${ displayFreeTransfers != null ? ' 1fr' : '' }${ displayBank != null ? ' 1fr' : '' } 1fr` : '1fr 1fr 1fr', textAlign: 'center', rowGap: 0.75 } }>
-                  { /* Row 1 — labels */ }
-                  <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>
-                    Total Points
+            { displayBank != null && (
+              <Box sx={ { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' } }>
+                <Typography variant='h6' sx={ { fontWeight: 700, lineHeight: 1.2, color: displayBank >= 0 ? 'success.main' : 'error.main' } }>
+                  £{ (displayBank / 10).toFixed(1) }m
+                </Typography>
+                { displayTransferFunds && (
+                  <Typography variant='caption' sx={ { color: 'text.secondary', fontWeight: 500, lineHeight: 1, whiteSpace: 'nowrap' } }>
+                    in £{ (displayTransferFunds.fundsIn / 10).toFixed(1) }m · out £{ (displayTransferFunds.fundsOut / 10).toFixed(1) }m
                   </Typography>
-                  <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>
-                    Bench Points
-                  </Typography>
-                  { displayFreeTransfers != null && (
-                    <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>
-                      Free Transfers
-                    </Typography>
-                  ) }
-                  { displayBank != null && (
-                    <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>
-                      In the Bank
-                    </Typography>
-                  ) }
-                  <Box sx={ { display: 'flex', justifyContent: 'center' } }>
-                    { !isHighestPredictedTeam && !viewingOpponentId && !isLockedGameweek && activePlayers.length > 0 ? (
-                      <Tooltip title='Auto pick best XI from your squad'>
-                        <Button
-                          size='small'
-                          variant='outlined'
-                          startIcon={ <AutoFixHighIcon sx={ { fontSize: 16 } } /> }
-                          onClick={ () => autoPickLineup(effectiveActivePlayers, effectiveReservePlayers) }
-                          sx={ { py: '3px', px: 1.25, minWidth: 0, fontSize: '0.75rem', '[data-mui-color-scheme="dark"] &': { color: '#fff', borderColor: 'rgba(255,255,255,0.5)' } } }
-                        >
-                          Auto Pick
-                        </Button>
-                      </Tooltip>
-                    ) : (
-                      <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>View</Typography>
-                    ) }
-                  </Box>
-                  { /* Row 2 — values / toggle */ }
-                  <Typography variant='h6' sx={ { fontWeight: 700, lineHeight: 1.2 } }>
-                    { displayTotalPoints }
-                  </Typography>
-                  <Typography variant='h6' sx={ { fontWeight: 700, lineHeight: 1.2 } }>
-                    { displayBenchPoints }
-                  </Typography>
-                  { displayFreeTransfers != null && (
-                    <Box sx={ { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' } }>
-                      { displayFreeTransfers.chip ? (
-                        <Typography variant='h6' sx={ { fontWeight: 700, lineHeight: 1.2, color: displayFreeTransfers.chip === 'wildcard' ? '#6a1b9a' : '#e65100' } }>
-                          { displayFreeTransfers.chip === 'wildcard' ? 'WC' : 'FH' }
-                        </Typography>
-                      ) : (
-                        <>
-                          <Typography variant='h6' sx={ { fontWeight: 700, lineHeight: 1.2 } }>
-                            { displayFreeTransfers.remaining }
-                          </Typography>
-                          { displayFreeTransfers.cost < 0 && (
-                            <Typography variant='caption' sx={ { color: 'error.main', fontWeight: 600, lineHeight: 1 } }>
-                              { displayFreeTransfers.cost }pts
-                            </Typography>
-                          ) }
-                        </>
-                      ) }
-                    </Box>
-                  ) }
-                  { displayBank != null && (
-                    <Box sx={ { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' } }>
-                      <Typography variant='h6' sx={ { fontWeight: 700, lineHeight: 1.2, color: displayBank >= 0 ? 'success.main' : 'error.main' } }>
-                        £{ (displayBank / 10).toFixed(1) }m
-                      </Typography>
-                      { displayTransferFunds && (
-                        <Typography variant='caption' sx={ { color: 'text.secondary', fontWeight: 500, lineHeight: 1, whiteSpace: 'nowrap' } }>
-                          in £{ (displayTransferFunds.fundsIn / 10).toFixed(1) }m · out £{ (displayTransferFunds.fundsOut / 10).toFixed(1) }m
-                        </Typography>
-                      ) }
-                    </Box>
-                  ) }
-                  <Box sx={ { display: 'flex', justifyContent: 'center', alignItems: 'center' } }>
-                    <ToggleButtonGroup
-                      value={ pitchView }
-                      exclusive
-                      onChange={ (_, val) => { if (val) { setPitchView(val); localStorage.setItem('pitchView', val); } } }
-                      size='small'
-                      sx={ { '& .MuiToggleButton-root': { padding: '4px 10px' } } }
-                    >
-                      <ToggleButton value='formation' title='Formation view'>
-                        <GridViewIcon sx={ { fontSize: 18 } } />
-                      </ToggleButton>
-                      <ToggleButton value='list' title='List view'>
-                        <TableRowsIcon sx={ { fontSize: 18 } } />
-                      </ToggleButton>
-                    </ToggleButtonGroup>
-                  </Box>
-                </Box>
-              </Box>
-              <Box sx={ { mt: 1 } }>
-                { pitchView === 'formation' ? (
-                  <TeamFormation
-                    activePlayers={ effectiveActivePlayers }
-                    reservePlayers={ effectiveReservePlayers }
-                    onPlayerClick={ (!isLockedGameweek && handlePlayerClick) ? (player, zone) => handlePlayerClick(player, zone, effectiveActivePlayers, effectiveReservePlayers) : undefined }
-                    selectedPlayer={ selectedPlayer }
-                    team={ [...effectiveActivePlayers, ...effectiveReservePlayers] }
-                    allPlayers={ allPlayers }
-                    isHighestPredictedTeam={ isHighestPredictedTeam }
-                    onSetCaptain={ (!isHighestPredictedTeam && !isLockedGameweek) ? setCaptain : undefined }
-                    currentGameweek={ currentGameweek }
-                    isFutureGameweek={ !!gameweekInfo?.isFuture }
-                    viewedGameweek={ gameweekInfo?.selected ?? currentGameweek }
-                    plannedTransfers={ !isHighestPredictedTeam ? displayPlannedTransfers : undefined }
-                    onRemovePlannedTransfer={ (!isHighestPredictedTeam && !isLockedGameweek) ? removePlannedTransfer : undefined }
-                    onTransfer={ handleTransfer }
-                  />
-                ) : (
-                  <TeamListView
-                    activePlayers={ effectiveActivePlayers }
-                    reservePlayers={ effectiveReservePlayers }
-                    onPlayerClick={ (!isLockedGameweek && handlePlayerClick) ? (player, zone) => handlePlayerClick(player, zone, effectiveActivePlayers, effectiveReservePlayers) : undefined }
-                    selectedPlayer={ selectedPlayer }
-                    team={ [...effectiveActivePlayers, ...effectiveReservePlayers] }
-                    allPlayers={ allPlayers }
-                    isHighestPredictedTeam={ isHighestPredictedTeam }
-                    onSetCaptain={ (!isHighestPredictedTeam && !isLockedGameweek) ? setCaptain : undefined }
-                    currentGameweek={ currentGameweek }
-                    isFutureGameweek={ !!gameweekInfo?.isFuture }
-                    viewedGameweek={ gameweekInfo?.selected ?? currentGameweek }
-                    plannedTransfers={ !isHighestPredictedTeam ? displayPlannedTransfers : undefined }
-                    onRemovePlannedTransfer={ (!isHighestPredictedTeam && !isLockedGameweek) ? removePlannedTransfer : undefined }
-                    onTransfer={ handleTransfer }
-                    isLive={ isLive }
-                    lastUpdated={ lastUpdated }
-                    liveMatches={ liveMatches }
-                  />
                 ) }
               </Box>
-            </Paper>
-          </Box>
-          
-          { /* Middle - Panel */ }
-          <Box sx={ { flex: { xs: '1 1 auto', lg: '0 0 28%' }, width: { xs: '100%', lg: 'auto' }, display: 'flex', flexDirection: 'column', minHeight: { xs: 'auto', lg: '600px' } } }>
-            <RightPanel
-              entryId={ viewingOpponentId || currentEntryId }
-              onViewTeam={ handleViewOpponentTeam }
-              currentGameweek={ currentGameweek }
-              selectedGameweek={ selectedGameweek }
-              viewingOpponentId={ viewingOpponentId }
-              currentEntryId={ currentEntryId }
-              userEntryId={ userEntryId }
-              gameweekDeadline={ gameweekInfo?.data?.deadline_time }
-              liveMatches={ liveMatches }
-            />
-          </Box>
-
-          { /* Right - Activity & Stats */ }
-          <Box sx={ { flex: { xs: '1 1 auto', lg: '1 1 0' }, width: { xs: '100%', lg: 'auto' }, display: 'flex', flexDirection: 'column', minHeight: { xs: 'auto', lg: '600px' } } }>
-            <TeamActivityPanel
-              entryId={ viewingOpponentId || currentEntryId }
-              currentGameweek={ currentGameweek }
-              currentEntryId={ currentEntryId }
-              viewingOpponentId={ viewingOpponentId }
-              plannedTransfers={ plannedTransfers }
-              onRemovePlannedTransfer={ removePlannedTransfer }
-              onUpdatePlannedTransferGameweek={ updateTransferGameweek }
-              onAddPlannedTransfer={ addPlannedTransfer }
-              team={ [...activePlayers, ...reservePlayers] }
-              allPlayers={ allPlayers }
-              voidedTransferIds={ voidedTransferIds }
-              freeHitGWs={ freeHitGWs }
-            />
+            ) }
+            <Box sx={ { display: 'flex', justifyContent: 'center', alignItems: 'center' } }>
+              <ToggleButtonGroup
+                value={ pitchView }
+                exclusive
+                onChange={ (_, val) => { if (val) { setPitchView(val); localStorage.setItem('pitchView', val); } } }
+                size='small'
+                sx={ { '& .MuiToggleButton-root': { padding: '4px 10px' } } }
+              >
+                <ToggleButton value='formation' title='Formation view'><GridViewIcon sx={ { fontSize: 18 } } /></ToggleButton>
+                <ToggleButton value='list' title='List view'><TableRowsIcon sx={ { fontSize: 18 } } /></ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
           </Box>
         </Box>
-        <Snackbar
-          key={ localSnackbar || snackbar.key }
-          open={ snackbarOpen }
-          autoHideDuration={ 6000 }
-          onClose={ handleSnackbarClose }
-          message={ localSnackbar || snackbar.message }
+      </Paper>
+
+      { /* Pitch / List view */ }
+      <Box sx={ { mt: 1, flexShrink: 0 } }>
+        { pitchView === 'formation' ? (
+          <TeamFormation
+            activePlayers={ effectiveActivePlayers }
+            reservePlayers={ effectiveReservePlayers }
+            onPlayerClick={ (!isLockedGameweek && handlePlayerClick) ? (player, zone) => handlePlayerClick(player, zone, effectiveActivePlayers, effectiveReservePlayers) : undefined }
+            selectedPlayer={ selectedPlayer }
+            team={ [...effectiveActivePlayers, ...effectiveReservePlayers] }
+            allPlayers={ allPlayers }
+            isHighestPredictedTeam={ isHighestPredictedTeam }
+            onSetCaptain={ (!isHighestPredictedTeam && !isLockedGameweek) ? setCaptain : undefined }
+            currentGameweek={ currentGameweek }
+            isFutureGameweek={ !!gameweekInfo?.isFuture }
+            viewedGameweek={ gameweekInfo?.selected ?? currentGameweek }
+            plannedTransfers={ !isHighestPredictedTeam ? displayPlannedTransfers : undefined }
+            onRemovePlannedTransfer={ (!isHighestPredictedTeam && !isLockedGameweek) ? removePlannedTransfer : undefined }
+            onTransfer={ handleTransfer }
+          />
+        ) : (
+          <TeamListView
+            activePlayers={ effectiveActivePlayers }
+            reservePlayers={ effectiveReservePlayers }
+            onPlayerClick={ (!isLockedGameweek && handlePlayerClick) ? (player, zone) => handlePlayerClick(player, zone, effectiveActivePlayers, effectiveReservePlayers) : undefined }
+            selectedPlayer={ selectedPlayer }
+            team={ [...effectiveActivePlayers, ...effectiveReservePlayers] }
+            allPlayers={ allPlayers }
+            isHighestPredictedTeam={ isHighestPredictedTeam }
+            onSetCaptain={ (!isHighestPredictedTeam && !isLockedGameweek) ? setCaptain : undefined }
+            currentGameweek={ currentGameweek }
+            isFutureGameweek={ !!gameweekInfo?.isFuture }
+            viewedGameweek={ gameweekInfo?.selected ?? currentGameweek }
+            plannedTransfers={ !isHighestPredictedTeam ? displayPlannedTransfers : undefined }
+            onRemovePlannedTransfer={ (!isHighestPredictedTeam && !isLockedGameweek) ? removePlannedTransfer : undefined }
+            onTransfer={ handleTransfer }
+            isLive={ isLive }
+            lastUpdated={ lastUpdated }
+            liveMatches={ liveMatches }
+          />
+        ) }
+      </Box>
+    </>
+  );
+
+  return (
+    <Box sx={ { display: 'flex', height: '100vh', overflow: 'hidden', backgroundColor: theme.palette.background.default } }>
+
+      { /* Left sidebar — desktop only */ }
+      <Box sx={ { display: { xs: 'none', lg: 'block' }, flexShrink: 0 } }>
+        <NavigationBar
+          collapsed={ sidebarCollapsed }
+          onToggleCollapse={ () => setSidebarCollapsed(p => !p) }
+          teamView={ teamView }
+          onSwitchTeamView={ handleSwitchTeamView }
+          userTeamId={ userEntryId }
+          onSetTeamId={ handleSetTeamId }
+          selectedGameweek={ selectedGameweek }
+          setSelectedGameweek={ setSelectedGameweek }
+          currentGameweek={ currentGameweek }
         />
-      </Container>
+      </Box>
+
+      { /* Main area */ }
+      <Box sx={ { flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', minWidth: 0 } }>
+
+        { /* Mobile top bar — hidden on desktop */ }
+        <Box sx={ {
+          display: { xs: 'flex', lg: 'none' },
+          alignItems: 'center',
+          gap: 1,
+          px: 1.5,
+          py: 0.75,
+          borderBottom: 1,
+          borderColor: 'divider',
+          flexShrink: 0,
+          flexWrap: 'wrap',
+        } }>
+          <Typography variant='subtitle2' sx={ { fontFamily: 'monospace', fontWeight: 700 } }>FPL Predictor</Typography>
+          <Box sx={ { display: 'flex', gap: 0.5, ml: 'auto' } }>
+            { userEntryId && (
+              <Button
+                size='small'
+                variant={ teamView === 'user' ? 'contained' : 'outlined' }
+                onClick={ () => handleSwitchTeamView('user') }
+                sx={ { fontSize: '0.7rem', px: 1 } }
+              >My Team</Button>
+            ) }
+            <Button
+              size='small'
+              variant={ teamView === 'highest' ? 'contained' : 'outlined' }
+              onClick={ () => handleSwitchTeamView('highest') }
+              sx={ { fontSize: '0.7rem', px: 1 } }
+            >Best</Button>
+          </Box>
+        </Box>
+
+        { /* Pitch + dock row */ }
+        <Box sx={ { flex: 1, display: 'flex', overflow: 'hidden', position: 'relative' } }>
+
+          { /* Pitch area */ }
+          <Box sx={ {
+            flex: 1,
+            overflow: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            p: { xs: 1, lg: 1.5 },
+            opacity: isDesktop && activePanel ? 0.7 : 1,
+            transition: 'opacity 0.2s ease',
+            minWidth: 0,
+          } }>
+            { pitchContent }
+          </Box>
+
+          { /* Right icon dock — desktop only */ }
+          <Box sx={ {
+            display: { xs: 'none', lg: 'flex' },
+            width: 48,
+            flexShrink: 0,
+            flexDirection: 'column',
+            alignItems: 'center',
+            pt: 2,
+            gap: 1,
+            borderLeft: 1,
+            borderColor: 'divider',
+          } }>
+            { DOCK_ITEMS.map(item => (
+              <Tooltip key={ item.id } title={ item.label } placement='left'>
+                <IconButton
+                  onClick={ () => togglePanel(item.id) }
+                  sx={ {
+                    backgroundColor: activePanel === item.id ? 'primary.main' : 'transparent',
+                    color: activePanel === item.id ? 'primary.contrastText' : 'text.secondary',
+                    borderRadius: 1.5,
+                    '&:hover': { backgroundColor: activePanel === item.id ? 'primary.dark' : 'action.hover' },
+                  } }
+                >
+                  <item.Icon />
+                </IconButton>
+              </Tooltip>
+            )) }
+          </Box>
+
+          { /* Slide-in overlay panel — desktop only */ }
+          <Box sx={ {
+            display: { xs: 'none', lg: 'flex' },
+            flexDirection: 'column',
+            position: 'absolute',
+            top: 0,
+            right: 48,
+            width: { lg: 360, xl: 420 },
+            height: '100%',
+            bgcolor: 'background.paper',
+            borderLeft: 1,
+            borderColor: 'divider',
+            zIndex: 10,
+            transform: activePanel ? 'translateX(0)' : 'translateX(calc(100% + 48px))',
+            transition: 'transform 0.25s ease',
+            overflow: 'hidden',
+          } }>
+            { panelHeader }
+            <Box sx={ { flex: 1, overflow: 'auto', p: 1.5 } }>
+              { renderPanelContent() }
+            </Box>
+          </Box>
+
+        </Box>
+
+        { /* Mobile bottom nav */ }
+        <BottomNavigation
+          showLabels={ false }
+          value={ DOCK_ITEMS.findIndex(d => d.id === activePanel) }
+          onChange={ (_, val) => togglePanel(DOCK_ITEMS[val].id) }
+          sx={ {
+            display: { xs: 'flex', lg: 'none' },
+            flexShrink: 0,
+            borderTop: 1,
+            borderColor: 'divider',
+          } }
+        >
+          { DOCK_ITEMS.map(item => (
+            <BottomNavigationAction
+              key={ item.id }
+              icon={ <item.Icon /> }
+              sx={ { minWidth: 0 } }
+            />
+          )) }
+        </BottomNavigation>
+
+      </Box>
+
+      { /* Mobile bottom-sheet panel */ }
+      <Drawer
+        anchor='bottom'
+        open={ !isDesktop && !!activePanel }
+        onClose={ () => setActivePanel(null) }
+        sx={ {
+          display: { xs: 'block', lg: 'none' },
+          '& .MuiDrawer-paper': {
+            height: '85vh',
+            borderTopLeftRadius: 16,
+            borderTopRightRadius: 16,
+            display: 'flex',
+            flexDirection: 'column',
+          },
+        } }
+      >
+        { panelHeader }
+        <Box sx={ { flex: 1, overflow: 'auto', p: 1.5 } }>
+          { renderPanelContent() }
+        </Box>
+      </Drawer>
+
+      <Snackbar
+        key={ localSnackbar || snackbar.key }
+        open={ snackbarOpen }
+        autoHideDuration={ 6000 }
+        onClose={ handleSnackbarClose }
+        message={ localSnackbar || snackbar.message }
+      />
     </Box>
   );
 };

@@ -1,37 +1,44 @@
 import * as React from 'react';
 import PropTypes from 'prop-types';
 import {
-  AppBar,
   Box,
-  Toolbar,
+  Drawer,
   Typography,
-  Container,
-  Button,
-  TextField,
   IconButton,
   Tooltip,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
+  Button,
+  TextField,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
+  Divider,
+  List,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Select,
+  MenuItem,
+  FormControl,
 } from '@mui/material';
+import PersonIcon from '@mui/icons-material/Person';
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import MenuIcon from '@mui/icons-material/Menu';
+import MenuOpenIcon from '@mui/icons-material/MenuOpen';
+import VpnKeyIcon from '@mui/icons-material/VpnKey';
 import { useThemeMode } from '../../theme/ThemeContext';
 import './styles.css';
 
-const TEAM_VIEW = {
-  USER: 'user',
-  HIGHEST: 'highest'
-};
+const SIDEBAR_COLLAPSED_WIDTH = 56;
+const SIDEBAR_EXPANDED_WIDTH = 220;
 
 const NavigationBar = ({
+  collapsed,
+  onToggleCollapse,
   teamView,
   onSwitchTeamView,
   userTeamId,
@@ -65,7 +72,7 @@ const NavigationBar = ({
   const handleCloseTeamIdDialog = () => setTeamIdDialogOpen(false);
 
   const handleMyTeamClick = () => {
-    onSwitchTeamView(TEAM_VIEW.USER);
+    onSwitchTeamView('user');
     setMyTeamClickCount((prev) => {
       const next = prev + 1;
       clearTimeout(myTeamClickTimerRef.current);
@@ -83,7 +90,7 @@ const NavigationBar = ({
   };
 
   const handleHighestTeamClick = () => {
-    onSwitchTeamView(TEAM_VIEW.HIGHEST);
+    onSwitchTeamView('highest');
     setHighestTeamClickCount((prev) => {
       const next = prev + 1;
       clearTimeout(highestTeamClickTimerRef.current);
@@ -112,124 +119,234 @@ const NavigationBar = ({
     setTeamIdDialogOpen(false);
   };
 
+  const drawerWidth = collapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_EXPANDED_WIDTH;
+  const displayGW = selectedGameweek || currentGameweek || '—';
+
   return (
-    <AppBar position='static'>
-      <Container maxWidth={ false } sx={ { px: { xs: 1, sm: 2 } } }>
-        <Toolbar disableGutters sx={ { flexWrap: { xs: 'wrap', md: 'nowrap' }, py: { xs: 0.5, md: 0 }, gap: { xs: 0.5, md: 0 }, minHeight: { xs: 'auto', md: '64px' } } }>
-          { /* App title — hidden on mobile */ }
+    <Drawer
+      variant='permanent'
+      sx={ {
+        width: drawerWidth,
+        flexShrink: 0,
+        '& .MuiDrawer-paper': {
+          width: drawerWidth,
+          boxSizing: 'border-box',
+          overflowX: 'hidden',
+          transition: 'width 0.2s ease',
+          display: 'flex',
+          flexDirection: 'column',
+        },
+      } }
+    >
+      { /* Logo */ }
+      <Box
+        sx={ {
+          height: 56,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: collapsed ? 'center' : 'flex-start',
+          px: collapsed ? 0 : 2,
+          flexShrink: 0,
+          overflow: 'hidden',
+        } }
+      >
+        { collapsed ? (
+          <Typography sx={ { fontSize: '1.4rem', lineHeight: 1 } }>⚽</Typography>
+        ) : (
           <Typography
-            variant='h6'
+            variant='subtitle1'
             noWrap
-            component='a'
-            sx={ {
-              flexShrink: 0,
-              display: { xs: 'none', md: 'flex' },
-              fontFamily: 'monospace',
-              fontWeight: 700,
-              letterSpacing: '.3rem',
-              color: 'inherit',
-              textDecoration: 'none',
-              mr: 2,
-            } }
+            sx={ { fontFamily: 'monospace', fontWeight: 700, letterSpacing: '.1rem' } }
           >
             FPL Predictor
           </Typography>
+        ) }
+      </Box>
 
-          { /* Right controls */ }
-          <Box sx={ { display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 }, flexShrink: 0, ml: 'auto' } }>
-            { /* Team view toggle buttons */ }
-            <Box sx={ { display: 'flex', gap: 0.5 } }>
-              { userTeamId && (
-                <Button
-                  variant={ teamView === TEAM_VIEW.USER ? 'contained' : 'outlined' }
-                  color='secondary'
-                  onClick={ handleMyTeamClick }
-                  size='small'
-                  sx={ { whiteSpace: 'nowrap', px: { xs: 1, sm: 2 }, fontSize: { xs: '0.7rem', sm: '0.875rem' } } }
-                >
-                  My Team
-                </Button>
-              ) }
-              <Button
-                variant={ teamView === TEAM_VIEW.HIGHEST ? 'contained' : 'outlined' }
-                color='secondary'
-                onClick={ handleHighestTeamClick }
+      <Divider />
+
+      { /* Team view nav items */ }
+      <List dense disablePadding>
+        { userTeamId && (
+          <Tooltip title={ collapsed ? 'My Team' : '' } placement='right'>
+            <ListItemButton
+              selected={ teamView === 'user' }
+              onClick={ handleMyTeamClick }
+              sx={ { justifyContent: collapsed ? 'center' : 'flex-start', px: collapsed ? 0 : 2, minHeight: 48 } }
+            >
+              <ListItemIcon sx={ { minWidth: collapsed ? 0 : 36, justifyContent: 'center' } }>
+                <PersonIcon />
+              </ListItemIcon>
+              { !collapsed && <ListItemText primary='My Team' /> }
+            </ListItemButton>
+          </Tooltip>
+        ) }
+        <Tooltip title={ collapsed ? 'Highest Team' : '' } placement='right'>
+          <ListItemButton
+            selected={ teamView === 'highest' }
+            onClick={ handleHighestTeamClick }
+            sx={ { justifyContent: collapsed ? 'center' : 'flex-start', px: collapsed ? 0 : 2, minHeight: 48 } }
+          >
+            <ListItemIcon sx={ { minWidth: collapsed ? 0 : 36, justifyContent: 'center' } }>
+              <EmojiEventsIcon />
+            </ListItemIcon>
+            { !collapsed && <ListItemText primary='Highest Team' /> }
+          </ListItemButton>
+        </Tooltip>
+      </List>
+
+      <Divider />
+
+      { /* GW Selector */ }
+      <Box
+        sx={ {
+          px: collapsed ? 0.5 : 1.5,
+          py: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 0.5,
+          flexShrink: 0,
+        } }
+      >
+        { collapsed ? (
+          <>
+            <Typography variant='caption' sx={ { fontWeight: 700, lineHeight: 1, fontSize: '0.6rem', color: 'text.secondary' } }>GW</Typography>
+            <Typography variant='body2' sx={ { fontWeight: 700, lineHeight: 1 } }>{ displayGW }</Typography>
+            <Box sx={ { display: 'flex', flexDirection: 'column', gap: 0 } }>
+              <IconButton
                 size='small'
-                sx={ { whiteSpace: 'nowrap', px: { xs: 1, sm: 2 }, fontSize: { xs: '0.7rem', sm: '0.875rem' } } }
+                disabled={ (selectedGameweek || currentGameweek || 1) >= 38 }
+                onClick={ () => {
+                  const cur = selectedGameweek || currentGameweek || 1;
+                  setSelectedGameweek(cur + 1 === currentGameweek ? null : cur + 1);
+                } }
+                sx={ { p: 0.25 } }
               >
-                <Box component='span' sx={ { display: { xs: 'none', sm: 'inline' } } }>Highest Team</Box>
-                <Box component='span' sx={ { display: { xs: 'inline', sm: 'none' } } }>Best</Box>
-              </Button>
+                <ChevronRightIcon sx={ { fontSize: 14, transform: 'rotate(-90deg)' } } />
+              </IconButton>
+              <IconButton
+                size='small'
+                disabled={ (selectedGameweek || currentGameweek || 1) <= 1 }
+                onClick={ () => {
+                  const cur = selectedGameweek || currentGameweek || 1;
+                  setSelectedGameweek(cur - 1 === currentGameweek ? null : cur - 1);
+                } }
+                sx={ { p: 0.25 } }
+              >
+                <ChevronRightIcon sx={ { fontSize: 14, transform: 'rotate(90deg)' } } />
+              </IconButton>
             </Box>
-
-            { /* Gameweek Selector */ }
-            <Box sx={ { display: 'flex', alignItems: 'center', gap: 0.25 } }>
-              <Tooltip title='Previous gameweek'>
-                <span>
-                  <IconButton
-                    size='small'
-                    color='inherit'
-                    disabled={ (selectedGameweek || currentGameweek || 1) <= 1 }
-                    onClick={ () => {
-                      const current = selectedGameweek || currentGameweek || 1;
-                      setSelectedGameweek(current - 1 === currentGameweek ? null : current - 1);
-                    } }
-                  >
-                    <ChevronLeftIcon />
-                  </IconButton>
-                </span>
-              </Tooltip>
-              <FormControl size='small' sx={ { minWidth: { xs: 80, sm: 120 } } }>
-                <InputLabel id='gameweek-select-label'>GW</InputLabel>
-                <Select
-                  labelId='gameweek-select-label'
-                  inputProps={ { 'aria-label': 'Gameweek' } }
-                  value={ selectedGameweek || currentGameweek || '' }
-                  label='GW'
-                  onChange={ (e) => setSelectedGameweek(e.target.value === currentGameweek ? null : e.target.value) }
-                  sx={ { 
-                    bgcolor: 'background.paper',
-                    '& .MuiSelect-select': { py: 1 }
+          </>
+        ) : (
+          <Box sx={ { display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' } }>
+            <Tooltip title='Previous gameweek'>
+              <span>
+                <IconButton
+                  size='small'
+                  disabled={ (selectedGameweek || currentGameweek || 1) <= 1 }
+                  onClick={ () => {
+                    const cur = selectedGameweek || currentGameweek || 1;
+                    setSelectedGameweek(cur - 1 === currentGameweek ? null : cur - 1);
                   } }
                 >
-                  { Array.from({ length: 38 }, (_, i) => i + 1).map((gw) => (
-                    <MenuItem key={ gw } value={ gw }>
-                      GW { gw }{ gw === currentGameweek ? ' (Current)' : '' }
-                    </MenuItem>
-                  )) }
-                </Select>
-              </FormControl>
-              <Tooltip title='Next gameweek'>
-                <span>
-                  <IconButton
-                    size='small'
-                    color='inherit'
-                    disabled={ (selectedGameweek || currentGameweek || 1) >= 38 }
-                    onClick={ () => {
-                      const current = selectedGameweek || currentGameweek || 1;
-                      setSelectedGameweek(current + 1 === currentGameweek ? null : current + 1);
-                    } }
-                  >
-                    <ChevronRightIcon />
-                  </IconButton>
-                </span>
-              </Tooltip>
-            </Box>
-
-            { /* Theme toggle + Team ID */ }
-            <Box sx={ { display: 'flex', alignItems: 'center' } }>
-              <Tooltip title={ mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode' }>
-                <IconButton onClick={ toggleTheme } color='inherit' sx={ { mr: { xs: 0, sm: 1 } } }>
-                  { mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon /> }
+                  <ChevronLeftIcon />
                 </IconButton>
-              </Tooltip>
-              <Button color='inherit' onClick={ handleOpenTeamIdDialog } size='small' sx={ { fontSize: { xs: '0.7rem', sm: '0.875rem' }, px: { xs: 0.5, sm: 1 } } }>
-                { userTeamId ? `ID: ${userTeamId}` : 'Set ID' }
-              </Button>
-            </Box>
+              </span>
+            </Tooltip>
+            <FormControl size='small' sx={ { flex: 1 } }>
+              <Select
+                value={ selectedGameweek || currentGameweek || '' }
+                onChange={ (e) => setSelectedGameweek(e.target.value === currentGameweek ? null : e.target.value) }
+                displayEmpty
+                sx={ { '& .MuiSelect-select': { py: 0.75 } } }
+              >
+                { Array.from({ length: 38 }, (_, i) => i + 1).map((gw) => (
+                  <MenuItem key={ gw } value={ gw }>
+                    GW { gw }{ gw === currentGameweek ? ' (Current)' : '' }
+                  </MenuItem>
+                )) }
+              </Select>
+            </FormControl>
+            <Tooltip title='Next gameweek'>
+              <span>
+                <IconButton
+                  size='small'
+                  disabled={ (selectedGameweek || currentGameweek || 1) >= 38 }
+                  onClick={ () => {
+                    const cur = selectedGameweek || currentGameweek || 1;
+                    setSelectedGameweek(cur + 1 === currentGameweek ? null : cur + 1);
+                  } }
+                >
+                  <ChevronRightIcon />
+                </IconButton>
+              </span>
+            </Tooltip>
           </Box>
-        </Toolbar>
-      </Container>
+        ) }
+      </Box>
+
+      <Divider />
+
+      { /* Spacer pushes bottom controls down */ }
+      <Box sx={ { flex: 1 } } />
+
+      { /* Bottom controls */ }
+      <Divider />
+      <List dense disablePadding>
+        <Tooltip title={ collapsed ? (mode === 'dark' ? 'Light mode' : 'Dark mode') : '' } placement='right'>
+          <ListItemButton
+            onClick={ toggleTheme }
+            sx={ { justifyContent: collapsed ? 'center' : 'flex-start', px: collapsed ? 0 : 2, minHeight: 48 } }
+          >
+            <ListItemIcon sx={ { minWidth: collapsed ? 0 : 36, justifyContent: 'center' } }>
+              { mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon /> }
+            </ListItemIcon>
+            { !collapsed && <ListItemText primary={ mode === 'dark' ? 'Light mode' : 'Dark mode' } /> }
+          </ListItemButton>
+        </Tooltip>
+
+        <Tooltip title={ collapsed ? (userTeamId ? `ID: ${userTeamId}` : 'Set Team ID') : '' } placement='right'>
+          <ListItemButton
+            onClick={ handleOpenTeamIdDialog }
+            sx={ { justifyContent: collapsed ? 'center' : 'flex-start', px: collapsed ? 0 : 2, minHeight: 48 } }
+          >
+            <ListItemIcon sx={ { minWidth: collapsed ? 0 : 36, justifyContent: 'center', position: 'relative' } }>
+              <VpnKeyIcon />
+              { userTeamId && (
+                <Box
+                  sx={ {
+                    position: 'absolute',
+                    top: 0,
+                    right: 0,
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    bgcolor: 'success.main',
+                    border: '1.5px solid',
+                    borderColor: 'background.paper',
+                  } }
+                />
+              ) }
+            </ListItemIcon>
+            { !collapsed && <ListItemText primary={ userTeamId ? `ID: ${userTeamId}` : 'Set ID' } /> }
+          </ListItemButton>
+        </Tooltip>
+
+        <Tooltip title={ collapsed ? 'Expand sidebar' : 'Collapse sidebar' } placement='right'>
+          <ListItemButton
+            onClick={ onToggleCollapse }
+            sx={ { justifyContent: collapsed ? 'center' : 'flex-start', px: collapsed ? 0 : 2, minHeight: 48 } }
+          >
+            <ListItemIcon sx={ { minWidth: collapsed ? 0 : 36, justifyContent: 'center' } }>
+              { collapsed ? <MenuIcon /> : <MenuOpenIcon /> }
+            </ListItemIcon>
+            { !collapsed && <ListItemText primary='Collapse' /> }
+          </ListItemButton>
+        </Tooltip>
+      </List>
+
+      { /* Team ID Dialog */ }
       <Dialog open={ teamIdDialogOpen } onClose={ handleCloseTeamIdDialog }>
         <DialogTitle>{ userTeamId ? 'Update Team ID' : 'Set Team ID' }</DialogTitle>
         <form onSubmit={ (e) => { e.preventDefault(); handleSaveTeamId(); } }>
@@ -263,11 +380,13 @@ const NavigationBar = ({
           </DialogActions>
         </form>
       </Dialog>
-    </AppBar>
+    </Drawer>
   );
 };
 
 NavigationBar.propTypes = {
+  collapsed: PropTypes.bool,
+  onToggleCollapse: PropTypes.func,
   teamView: PropTypes.string,
   onSwitchTeamView: PropTypes.func,
   userTeamId: PropTypes.string,

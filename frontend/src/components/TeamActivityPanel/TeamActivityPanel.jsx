@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { Box, Chip, Paper, Typography, Divider, List, ListItem, ListItemText } from '@mui/material';
+import { Box, Badge, Chip, Paper, Tab, Tabs, Typography, Divider, List, ListItem, ListItemText } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
@@ -11,6 +11,7 @@ import PlannedTransfers from '../PlannedTransfers';
 import AssistantManagerPanel from '../AssistantManagerPanel';
 
 const TeamActivityPanel = ({
+  section,
   entryId,
   currentGameweek,
   currentEntryId,
@@ -28,6 +29,12 @@ const TeamActivityPanel = ({
   const [profile, setProfile] = useState(null);
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [transferTab, setTransferTab] = useState(0); // 0=recommended, 1=planned
+
+  // Determine which sections to show based on section prop
+  const showStats = !section || section === 'stats';
+  const showTransfers = !section || section === 'transfers';
+  const showTips = !section || section === 'tips';
 
   useEffect(() => {
     if (!entryId) return;
@@ -92,7 +99,7 @@ const TeamActivityPanel = ({
       } }
     >
       { /* Team Stats - Top Section */ }
-      { entryId && profile && (
+      { showStats && entryId && profile && (
         <Paper
           sx={ {
             backgroundColor: theme.palette.background.paper,
@@ -208,7 +215,7 @@ const TeamActivityPanel = ({
       ) }
 
       { /* My Leagues - between Team Stats and Recent Performance */ }
-      { entryId && profile && (myInvLeagues.length > 0 || myGenLeagues.length > 0) && (
+      { showStats && entryId && profile && (myInvLeagues.length > 0 || myGenLeagues.length > 0) && (
         <Paper sx={ { backgroundColor: theme.palette.background.paper, borderRadius: 1, p: 2, flex: '0 0 auto' } }>
           <Typography variant='h6' sx={ { mb: 1.5, fontWeight: 600 } }>My Leagues</Typography>
           <Box sx={ { display: 'flex', gap: 2 } }>
@@ -255,7 +262,7 @@ const TeamActivityPanel = ({
       ) }
 
       { /* Recent Performance - Middle Section */ }
-      { entryId && (
+      { showStats && entryId && (
       <Paper
         sx={ {
           backgroundColor: theme.palette.background.paper,
@@ -316,51 +323,94 @@ const TeamActivityPanel = ({
       </Paper>
       ) }
 
-      { /* Recommended Transfers - Bottom Section */ }
-      { currentEntryId && !viewingOpponentId && currentGameweek && (
-        <Paper
-          sx={ {
-            backgroundColor: theme.palette.background.paper,
-            borderRadius: 1,
-            p: 2,
-            flex: '0 0 auto',
-          } }
-        >
-          <RecommendedTransfers
-            entryId={ currentEntryId }
-            currentGameweek={ currentGameweek }
-            compact={ true }
-          />
-        </Paper>
-      ) }
-
-      { /* Planned Transfers Section – shown for own team only */ }
-      { currentEntryId && !viewingOpponentId && currentGameweek && onAddPlannedTransfer && (
-        <Paper
-          sx={ {
-            backgroundColor: theme.palette.background.paper,
-            borderRadius: 1,
-            p: 2,
-            flex: '0 0 auto',
-          } }
-        >
-          <PlannedTransfers
-            plannedTransfers={ plannedTransfers }
-            onRemove={ onRemovePlannedTransfer }
-            onUpdateGameweek={ onUpdatePlannedTransferGameweek }
-            onAdd={ onAddPlannedTransfer }
-            team={ team }
-            allPlayers={ allPlayers }
-            currentGameweek={ currentGameweek }
-            compact={ true }
-            voidedTransferIds={ voidedTransferIds }
-            freeHitGWs={ freeHitGWs }
-          />
-        </Paper>
+      { /* Transfers Section */ }
+      { showTransfers && currentEntryId && !viewingOpponentId && currentGameweek && (
+        section === 'transfers' ? (
+          <Paper sx={ { backgroundColor: theme.palette.background.paper, borderRadius: 1, flex: '0 0 auto' } }>
+            <Tabs
+              value={ transferTab }
+              onChange={ (_, v) => setTransferTab(v) }
+              variant='fullWidth'
+              sx={ { borderBottom: 1, borderColor: 'divider' } }
+            >
+              <Tab label='Recommended' />
+              <Tab
+                label={
+                  <Badge badgeContent={ (plannedTransfers || []).length || 0 } color='primary' max={ 99 }>
+                    Planned
+                  </Badge>
+                }
+              />
+            </Tabs>
+            <Box sx={ { p: 2 } }>
+              { transferTab === 0 && (
+                <RecommendedTransfers
+                  entryId={ currentEntryId }
+                  currentGameweek={ currentGameweek }
+                  compact={ false }
+                />
+              ) }
+              { transferTab === 1 && (
+                <PlannedTransfers
+                  plannedTransfers={ plannedTransfers }
+                  onRemove={ onRemovePlannedTransfer }
+                  onUpdateGameweek={ onUpdatePlannedTransferGameweek }
+                  onAdd={ onAddPlannedTransfer }
+                  team={ team }
+                  allPlayers={ allPlayers }
+                  currentGameweek={ currentGameweek }
+                  compact={ false }
+                  voidedTransferIds={ voidedTransferIds }
+                  freeHitGWs={ freeHitGWs }
+                />
+              ) }
+            </Box>
+          </Paper>
+        ) : (
+          <>
+            <Paper
+              sx={ {
+                backgroundColor: theme.palette.background.paper,
+                borderRadius: 1,
+                p: 2,
+                flex: '0 0 auto',
+              } }
+            >
+              <RecommendedTransfers
+                entryId={ currentEntryId }
+                currentGameweek={ currentGameweek }
+                compact={ true }
+              />
+            </Paper>
+            { onAddPlannedTransfer && (
+              <Paper
+                sx={ {
+                  backgroundColor: theme.palette.background.paper,
+                  borderRadius: 1,
+                  p: 2,
+                  flex: '0 0 auto',
+                } }
+              >
+                <PlannedTransfers
+                  plannedTransfers={ plannedTransfers }
+                  onRemove={ onRemovePlannedTransfer }
+                  onUpdateGameweek={ onUpdatePlannedTransferGameweek }
+                  onAdd={ onAddPlannedTransfer }
+                  team={ team }
+                  allPlayers={ allPlayers }
+                  currentGameweek={ currentGameweek }
+                  compact={ true }
+                  voidedTransferIds={ voidedTransferIds }
+                  freeHitGWs={ freeHitGWs }
+                />
+              </Paper>
+            ) }
+          </>
+        )
       ) }
 
       { /* Assistant Manager – always shown (general hints if no entryId) */ }
-      { currentGameweek && (
+      { showTips && currentGameweek && (
         <Paper
           sx={ {
             backgroundColor: theme.palette.background.paper,
@@ -380,6 +430,7 @@ const TeamActivityPanel = ({
 };
 
 TeamActivityPanel.propTypes = {
+  section: PropTypes.oneOf(['stats', 'transfers', 'tips']),
   entryId: PropTypes.string,
   currentGameweek: PropTypes.number,
   currentEntryId: PropTypes.string,

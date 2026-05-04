@@ -14,6 +14,7 @@ import FixturesPanel from '../FixturesPanel';
 import axios from '../../api';
 
 const RightPanel = ({ 
+  section,
   entryId,
   userEntryId,
   onViewTeam,
@@ -55,6 +56,9 @@ const RightPanel = ({
 
   const selectedLeague = invLeagues.find(l => l.id === selectedLeagueId) || null;
 
+  const showLeague = !section || section === 'league';
+  const showFixtures = !section || section === 'fixtures';
+
   return (
     <Box
       sx={ {
@@ -67,7 +71,7 @@ const RightPanel = ({
         flexDirection: 'column',
       } }
     >
-      { entryId && invLeagues.length > 0 && (
+      { showLeague && entryId && invLeagues.length > 0 && (
         <Box>
           <Box sx={ { display: 'flex', alignItems: 'center', gap: 1.5, mb: 1, flexWrap: 'wrap', px: 1, pt: 1 } }>
             <Typography variant='h6' sx={ { fontWeight: 600 } }>
@@ -110,9 +114,9 @@ const RightPanel = ({
         </Box>
       ) }
 
-      { displayGameweek && (
+      { showFixtures && displayGameweek && (
         <>
-          { entryId && invLeagues.length > 0 && <Divider sx={ { my: 1 } } /> }
+          { showLeague && entryId && invLeagues.length > 0 && <Divider sx={ { my: 1 } } /> }
           <Box sx={ { p: 2 } }>
             <FixturesPanel gameweek={ displayGameweek } deadline={ gameweekDeadline } liveMatches={ liveMatches } />
           </Box>
@@ -123,6 +127,7 @@ const RightPanel = ({
 };
 
 RightPanel.propTypes = {
+  section: PropTypes.oneOf(['league', 'fixtures']),
   entryId: PropTypes.string,
   userEntryId: PropTypes.string,
   onViewTeam: PropTypes.func,

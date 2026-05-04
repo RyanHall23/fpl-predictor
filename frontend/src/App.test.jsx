@@ -54,7 +54,7 @@ beforeEach(() => {
 test('shows My Team button when teamId is stored in localStorage', () => {
   localStorage.setItem('teamId', '12345');
   render(<App />);
-  expect(screen.getByText(/My Team/i)).toBeInTheDocument();
+  expect(screen.getAllByText(/My Team/i).length).toBeGreaterThan(0);
 });
 
 test('does not show My Team button when no teamId is stored', () => {
@@ -92,15 +92,15 @@ test('no React error boundary fallback text visible', () => {
 
 // ── Navigation bar ────────────────────────────────────────────────────────────
 
-test('nav bar header element is present in the DOM', () => {
+test('nav sidebar brand text is present in the DOM', () => {
   render(<App />);
-  // MUI AppBar renders as <header> (role="banner")
-  expect(document.querySelector('header')).toBeInTheDocument();
+  // The sidebar Drawer contains the FPL Predictor brand text
+  expect(screen.getAllByText(/FPL Predictor/i).length).toBeGreaterThan(0);
 });
 
 test('"FPL Predictor" brand text is in the DOM', () => {
   render(<App />);
-  expect(screen.getByText(/FPL Predictor/i)).toBeInTheDocument();
+  expect(screen.getAllByText(/FPL Predictor/i).length).toBeGreaterThan(0);
 });
 
 test('"Set ID" affordance is present when no teamId in localStorage', () => {
@@ -113,7 +113,7 @@ test('"Set ID" affordance is present when no teamId in localStorage', () => {
 test('with teamId "0" — My Team button IS visible (passes /^\\d+$/ regex)', () => {
   localStorage.setItem('teamId', '0');
   render(<App />);
-  expect(screen.getByText(/My Team/i)).toBeInTheDocument();
+  expect(screen.getAllByText(/My Team/i).length).toBeGreaterThan(0);
 });
 
 test('with non-empty teamId "abc" — My Team button is visible (userTeamId is truthy)', () => {
@@ -121,7 +121,7 @@ test('with non-empty teamId "abc" — My Team button is visible (userTeamId is t
   // The isValidTeamId guard applies only to saving the ID, not displaying the button.
   localStorage.setItem('teamId', 'abc');
   render(<App />);
-  expect(screen.getByText(/My Team/i)).toBeInTheDocument();
+  expect(screen.getAllByText(/My Team/i).length).toBeGreaterThan(0);
 });
 
 // ── API mock behaviour ────────────────────────────────────────────────────────
