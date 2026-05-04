@@ -582,7 +582,7 @@ const App = () => {
             `,
             gridTemplateColumns: '18% 20% 20% 20% 22%',
             gridTemplateRows: '35% 35% 30%',
-            height: 'calc(100vh)',
+            height: '100vh',
             width: '100%',
             overflow: 'hidden',
             gap: 1,
@@ -651,7 +651,7 @@ const App = () => {
               <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>Total Pts</Typography>
               <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>Bench Pts</Typography>
               { displayFreeTransfers != null && (
-                <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>Free Transf.</Typography>
+                <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>Free Transfers</Typography>
               ) }
               { displayBank != null && (
                 <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>Bank</Typography>
