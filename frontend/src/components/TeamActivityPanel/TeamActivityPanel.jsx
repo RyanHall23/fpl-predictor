@@ -336,7 +336,7 @@ const TeamActivityPanel = ({
               <Tab label='Recommended' />
               <Tab
                 label={
-                  <Badge badgeContent={ (plannedTransfers || []).length || 0 } color='primary' max={ 99 }>
+                  <Badge badgeContent={ (plannedTransfers || []).length } color='primary' max={ 99 }>
                     Planned
                   </Badge>
                 }

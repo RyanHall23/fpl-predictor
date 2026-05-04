@@ -941,7 +941,7 @@ const App = () => {
         { /* Mobile bottom nav */ }
         <BottomNavigation
           showLabels={ false }
-          value={ DOCK_ITEMS.findIndex(d => d.id === activePanel) }
+          value={ activePanel ? DOCK_ITEMS.findIndex(d => d.id === activePanel) : false }
           onChange={ (_, val) => togglePanel(DOCK_ITEMS[val].id) }
           sx={ {
             display: { xs: 'flex', lg: 'none' },
