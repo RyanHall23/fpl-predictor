@@ -226,7 +226,7 @@ const ListRow = ({
           { showActions ? (
             <Box sx={ { display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '1px' } }>
 
-              { /* 1. Captain / Vice Captain */ }
+              { /* 1. Captain */ }
               { isCaptainEligible ? (
                 <Tooltip title={ isCaptain ? 'Captain' : 'Set as Captain' }>
                   <IconButton
@@ -243,35 +243,48 @@ const ListRow = ({
                         backgroundColor: '#1976d2 !important',
                         '&:hover': { backgroundColor: '#1565c0 !important' },
                       }),
-                      ...(!isCaptain && isViceCaptain && {
-                        color: '#fff !important',
-                        backgroundColor: '#c8960c !important',
-                        '&:hover': { backgroundColor: '#b5850b !important' },
-                      }),
                     } }
                   >
-                    { isCaptain ? 'C' : isViceCaptain ? 'VC' : 'C' }
+                    C
                   </IconButton>
                 </Tooltip>
-              ) : (isCaptain || isViceCaptain) ? (
-                <Tooltip title={ isCaptain ? 'Captain' : 'Vice Captain' }>
+              ) : isCaptain ? (
+                <Tooltip title='Captain'>
                   <Box
                     tabIndex={ 0 }
-                    aria-label={ isCaptain ? 'Captain' : 'Vice Captain' }
+                    aria-label='Captain'
                     sx={ {
                       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                       width: 28, height: 28, borderRadius: '4px',
-                      backgroundColor: isCaptain ? '#1976d2' : '#c8960c', color: '#fff',
-                      fontWeight: 700, fontSize: isCaptain ? '0.75rem' : '0.6rem',
+                      backgroundColor: '#1976d2', color: '#fff',
+                      fontWeight: 700, fontSize: '0.75rem',
                     } }
                   >
-                    { isCaptain ? 'C' : 'VC' }
+                    C
                   </Box>
                 </Tooltip>
-              ) : (
+              ) : !isViceCaptain ? (
                 <IconButton size='small' disabled sx={ { visibility: 'hidden' } } aria-hidden='true'>
                   <SyncIcon fontSize='small' />
                 </IconButton>
+              ) : null }
+
+              { /* 1b. Vice Captain badge (non-interactive) */ }
+              { !isCaptain && isViceCaptain && (
+                <Tooltip title='Vice Captain'>
+                  <Box
+                    tabIndex={ 0 }
+                    aria-label='Vice Captain'
+                    sx={ {
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      width: 28, height: 28, borderRadius: '4px',
+                      backgroundColor: '#c8960c', color: '#fff',
+                      fontWeight: 700, fontSize: '0.6rem',
+                    } }
+                  >
+                    VC
+                  </Box>
+                </Tooltip>
               ) }
 
               { /* 2. Substitute */ }
