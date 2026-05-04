@@ -18,6 +18,7 @@ import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import Tooltip from '@mui/material/Tooltip';
 import TeamFormation from './components/TeamFormation/TeamFormation';
 import TeamListView from './components/TeamListView/TeamListView';
+import LiveBanner from './components/LiveBanner/LiveBanner';
 import useTeamData from './hooks/useTeamData';
 import useAllPlayers from './hooks/useAllPlayers';
 import usePlannedTransfers from './hooks/usePlannedTransfers';
@@ -694,7 +695,8 @@ const App = () => {
                   </Box>
                 </Box>
               </Box>
-              <Box sx={ { mt: 1 } }>
+              <Box sx={ { mt: 1, borderRadius: 2, overflow: 'hidden', bgcolor: 'background.paper' } }>
+                <LiveBanner isLive={ isLive } lastUpdated={ lastUpdated } />
                 { pitchView === 'formation' ? (
                   <TeamFormation
                     activePlayers={ effectiveActivePlayers }
@@ -728,8 +730,6 @@ const App = () => {
                     plannedTransfers={ !isHighestPredictedTeam ? displayPlannedTransfers : undefined }
                     onRemovePlannedTransfer={ (!isHighestPredictedTeam && !isLockedGameweek) ? removePlannedTransfer : undefined }
                     onTransfer={ handleTransfer }
-                    isLive={ isLive }
-                    lastUpdated={ lastUpdated }
                     liveMatches={ liveMatches }
                   />
                 ) }

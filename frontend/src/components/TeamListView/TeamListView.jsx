@@ -1,6 +1,5 @@
 import React from 'react';
 import { Box, ButtonBase, Chip, IconButton, Paper, Table, TableBody, TableCell, TableRow, Tooltip, Typography } from '@mui/material';
-import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import SyncIcon from '@mui/icons-material/Sync';
 import RestoreIcon from '@mui/icons-material/Restore';
 import PropTypes from 'prop-types';
@@ -40,6 +39,7 @@ const formatKickoff = (kickoffTime) => {
 const ListRow = ({
   player,
   isCaptain,
+  isViceCaptain,
   teamType,
   selectedPlayer,
   activePlayers,
@@ -240,18 +240,51 @@ const ListRow = ({
                       borderRadius: '4px',
                       ...(isCaptain && {
                         color: '#fff !important',
-                        backgroundColor: '#c8960c !important',
-                        '&:hover': { backgroundColor: '#b5850b !important' },
+                        backgroundColor: '#1976d2 !important',
+                        '&:hover': { backgroundColor: '#1565c0 !important' },
                       }),
                     } }
                   >
                     C
                   </IconButton>
                 </Tooltip>
-              ) : (
+              ) : isCaptain ? (
+                <Tooltip title='Captain'>
+                  <Box
+                    tabIndex={ 0 }
+                    aria-label='Captain'
+                    sx={ {
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      width: 28, height: 28, borderRadius: '4px',
+                      backgroundColor: '#1976d2', color: '#fff',
+                      fontWeight: 700, fontSize: '0.75rem',
+                    } }
+                  >
+                    C
+                  </Box>
+                </Tooltip>
+              ) : !isViceCaptain ? (
                 <IconButton size='small' disabled sx={ { visibility: 'hidden' } } aria-hidden='true'>
                   <SyncIcon fontSize='small' />
                 </IconButton>
+              ) : null }
+
+              { /* 1b. Vice Captain badge (non-interactive) */ }
+              { !isCaptain && isViceCaptain && (
+                <Tooltip title='Vice Captain'>
+                  <Box
+                    tabIndex={ 0 }
+                    aria-label='Vice Captain'
+                    sx={ {
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      width: 28, height: 28, borderRadius: '4px',
+                      backgroundColor: '#c8960c', color: '#fff',
+                      fontWeight: 700, fontSize: '0.6rem',
+                    } }
+                  >
+                    VC
+                  </Box>
+                </Tooltip>
               ) }
 
               { /* 2. Substitute */ }
@@ -286,19 +319,19 @@ const ListRow = ({
               ) }
             </Box>
           ) : (
-            isCaptain && (
-              <Tooltip title='Captain'>
+            (isCaptain || isViceCaptain) && (
+              <Tooltip title={ isCaptain ? 'Captain' : 'Vice Captain' }>
                 <Box
                   tabIndex={ 0 }
-                  aria-label='Captain'
+                  aria-label={ isCaptain ? 'Captain' : 'Vice Captain' }
                   sx={ {
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                     width: 22, height: 22, borderRadius: '50%',
-                    backgroundColor: '#1976d2', color: '#fff',
-                    fontWeight: 700, fontSize: '0.75rem',
+                    backgroundColor: isCaptain ? '#1976d2' : '#c8960c', color: '#fff',
+                    fontWeight: 700, fontSize: isCaptain ? '0.75rem' : '0.6rem',
                   } }
                 >
-                  C
+                  { isCaptain ? 'C' : 'VC' }
                 </Box>
               </Tooltip>
             )
@@ -360,20 +393,22 @@ const TeamListView = ({
   viewedGameweek,
   plannedTransfers,
   onRemovePlannedTransfer,
-  isLive,
-  lastUpdated,
   liveMatches,
 }) => {
   const captain = activePlayers?.length ? activePlayers.find(p => p.is_captain) ?? null : null;
+  const viceCaptain = !isFutureGameweek && activePlayers?.length ? activePlayers.find(p => p.is_vice_captain) ?? null : null;
   const sortByPosition = (arr) => [...arr].sort((a, b) => (POSITION_SORT_ORDER[a.position] ?? 9) - (POSITION_SORT_ORDER[b.position] ?? 9));
   const activeList = sortByPosition(activePlayers ?? []);
   const reserveList = (() => {
     const bench = reservePlayers ?? [];
     const gk = bench.filter(p => p.position === POSITION_GK);
-    const outfield = bench.filter(p => p.position !== POSITION_GK && p.position !== POSITION_MANAGER)
-      .sort((a, b) => (parseFloat(b.predictedPoints) || 0) - (parseFloat(a.predictedPoints) || 0));
+    const outfield = bench.filter(p => p.position !== POSITION_GK && p.position !== POSITION_MANAGER);
     const manager = bench.filter(p => p.position === POSITION_MANAGER);
-    return [...manager, ...gk, ...outfield];
+    // For future GWs sort outfield bench by predicted points; otherwise preserve backend slot order.
+    const sortedOutfield = isFutureGameweek
+      ? [...outfield].sort((a, b) => (parseFloat(b.predictedPoints) || 0) - (parseFloat(a.predictedPoints) || 0))
+      : outfield;
+    return [...manager, ...gk, ...sortedOutfield];
   })();
 
   const sharedRowProps = {
@@ -385,38 +420,33 @@ const TeamListView = ({
 
   return (
     <Paper sx={ { borderRadius: 2, overflow: 'hidden', width: '100%', pb: '1px' } }>
-      { isLive && (
-        <Box sx={ {
-          display: 'flex', alignItems: 'center', gap: 0.75,
-          px: 1.5, py: 0.5,
-          bgcolor: 'success.dark',
-          borderBottom: '1px solid', borderBottomColor: 'divider',
-        } }>
-          <FiberManualRecordIcon sx={ { fontSize: 10, color: '#69f0ae', animation: 'pulse 1.5s ease-in-out infinite', '@keyframes pulse': { '0%,100%': { opacity: 1 }, '50%': { opacity: 0.3 } } } } />
-          <Typography variant='caption' fontWeight='bold' sx={ { color: '#fff', letterSpacing: '0.05em', textTransform: 'uppercase' } }>
-            Live
-          </Typography>
-          { lastUpdated && (
-            <Typography variant='caption' sx={ { color: 'rgba(255,255,255,0.7)', ml: 'auto' } }>
-              Updated { new Date(lastUpdated).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) }
-            </Typography>
-          ) }
-        </Box>
-      ) }
       <Table size='small' sx={ { tableLayout: 'auto' } }>
         <TableBody>
-          { activeList.map((player) => (
-            <ListRow
-              key={ player.code ?? player.webName }
-              player={ player }
-              isCaptain={ player === captain }
-              teamType='active'
-              activePlayers={ activePlayers }
-              reservePlayers={ reservePlayers }
-              onSetCaptain={ !isHighestPredictedTeam ? onSetCaptain : undefined }
-              { ...sharedRowProps }
-            />
-          )) }
+          { activeList.map((player, idx) => {
+            const prevPlayer = activeList[idx - 1];
+            const showGkSeparator = idx > 0 && prevPlayer?.position === POSITION_GK && player.position !== POSITION_GK;
+            return (
+              <React.Fragment key={ player.code ?? player.webName }>
+                { showGkSeparator && (
+                  <TableRow>
+                    <TableCell colSpan={ 7 } sx={ { p: 0, border: 'none' } }>
+                      <Box sx={ { borderTop: '2px solid', borderTopColor: 'divider', mx: 1 } } />
+                    </TableCell>
+                  </TableRow>
+                ) }
+                <ListRow
+                  player={ player }
+                  isCaptain={ player === captain }
+                  isViceCaptain={ player === viceCaptain }
+                  teamType='active'
+                  activePlayers={ activePlayers }
+                  reservePlayers={ reservePlayers }
+                  onSetCaptain={ !isHighestPredictedTeam ? onSetCaptain : undefined }
+                  { ...sharedRowProps }
+                />
+              </React.Fragment>
+            );
+          }) }
 
           <TableRow>
             <TableCell
@@ -487,6 +517,7 @@ ListRow.propTypes = {
     teamName: PropTypes.string,
   }).isRequired,
   isCaptain: PropTypes.bool,
+  isViceCaptain: PropTypes.bool,
   teamType: PropTypes.string,
   selectedPlayer: PropTypes.shape({ player: PropTypes.object, teamType: PropTypes.string }),
   activePlayers: PropTypes.array,
@@ -520,8 +551,6 @@ TeamListView.propTypes = {
   viewedGameweek: PropTypes.number,
   plannedTransfers: PropTypes.array,
   onRemovePlannedTransfer: PropTypes.func,
-  isLive: PropTypes.bool,
-  lastUpdated: PropTypes.number,
   liveMatches: PropTypes.array,
 };
 

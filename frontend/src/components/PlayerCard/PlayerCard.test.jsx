@@ -48,6 +48,25 @@ describe('PlayerCard', () => {
     expect(container.querySelector('.captain-badge')).toBeInTheDocument();
   });
 
+  it('does NOT show vice-captain badge when isViceCaptain={false}', () => {
+    const { container } = render(<PlayerCard player={mockPlayer} isViceCaptain={false} />);
+    expect(container.querySelector('.vice-captain-badge')).toBeNull();
+  });
+
+  it('DOES show vice-captain badge when isViceCaptain={true} and isCaptain={false}', () => {
+    const { container } = render(
+      <PlayerCard player={mockPlayer} isCaptain={false} isViceCaptain={true} />
+    );
+    expect(container.querySelector('.vice-captain-badge')).toBeInTheDocument();
+  });
+
+  it('does NOT show vice-captain badge when player is captain (isCaptain={true})', () => {
+    const { container } = render(
+      <PlayerCard player={mockPlayer} isCaptain={true} isViceCaptain={true} />
+    );
+    expect(container.querySelector('.vice-captain-badge')).toBeNull();
+  });
+
   it('does NOT show dreamteam star when inDreamteam={false}', () => {
     const { container } = render(
       <PlayerCard player={{ ...mockPlayer, inDreamteam: false }} />

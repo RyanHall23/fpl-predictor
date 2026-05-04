@@ -28,7 +28,7 @@ const STATUS_META = {
   u: { label: 'Unavailable',  color: '#9e9e9e' },
 };
 
-const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTransferButtons = true, teamType, onPlayerClick, selectedPlayer, activePlayers, reservePlayers, onSetCaptain, currentGameweek, isFutureGameweek, viewedGameweek, plannedTransfers, onRemovePlannedTransfer }) => {
+const PlayerCard = ({ player, isCaptain, isViceCaptain, team, allPlayers, onTransfer, showTransferButtons = true, teamType, onPlayerClick, selectedPlayer, activePlayers, reservePlayers, onSetCaptain, currentGameweek, isFutureGameweek, viewedGameweek, plannedTransfers, onRemovePlannedTransfer }) => {
   const [transferDialogOpen, setTransferDialogOpen] = React.useState(false);
   const [statsDialogOpen, setStatsDialogOpen] = React.useState(false);
 
@@ -204,6 +204,37 @@ const PlayerCard = ({ player, isCaptain, team, allPlayers, onTransfer, showTrans
           >
             <Typography component='span' sx={ { fontSize: 'inherit', fontWeight: 'inherit', lineHeight: 1 } }>
               C
+            </Typography>
+          </Box>
+        </Tooltip>
+      ) }
+      { !isCaptain && isViceCaptain && (
+        <Tooltip title='Vice Captain' placement='top'>
+          <Box
+            className='vice-captain-badge'
+            tabIndex={ 0 }
+            aria-label='Vice Captain'
+            sx={ {
+              position: 'absolute',
+              top: 8,
+              right: player.inDreamteam ? 36 : 8,
+              width: 22,
+              height: 22,
+              borderRadius: '50%',
+              backgroundColor: '#c8960c',
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 700,
+              fontSize: '0.6rem',
+              zIndex: 1,
+              boxShadow: 1,
+              cursor: 'default',
+            } }
+          >
+            <Typography component='span' sx={ { fontSize: 'inherit', fontWeight: 'inherit', lineHeight: 1 } }>
+              VC
             </Typography>
           </Box>
         </Tooltip>
@@ -449,6 +480,7 @@ PlayerCard.propTypes = {
     nowCost: PropTypes.number,
   }).isRequired,
   isCaptain: PropTypes.bool,
+  isViceCaptain: PropTypes.bool,
   team: PropTypes.array,
   allPlayers: PropTypes.array,
   onTransfer: PropTypes.func,
