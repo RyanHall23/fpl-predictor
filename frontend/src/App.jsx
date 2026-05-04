@@ -571,7 +571,7 @@ const App = () => {
       <Box sx={ { flex: 1, px: { xs: 1, sm: 2 }, py: 1, display: 'flex', flexDirection: 'column' } }>
         <Box sx={ { display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, gap: 2, flex: 1, alignItems: 'flex-start' } }>
           { /* Left - Pitch */ }
-          <Box sx={ { flex: { xs: '1 1 auto', lg: '0 0 43%' }, width: { xs: '100%', lg: 'auto' }, display: 'flex', flexDirection: 'column' } }>
+          <Box sx={ { flex: { xs: '1 1 auto', lg: '0 0 43%' }, width: { xs: '100%', lg: 'auto' }, display: { xs: mobileTab === 0 ? 'flex' : 'none', lg: 'flex' }, flexDirection: 'column' } }>
             { /* Banner shown when viewing an opponent's team */ }
             { viewingOpponentId && (
               <Box sx={ { mb: 1, display: 'flex', alignItems: 'center', gap: 1 } }>
@@ -765,7 +765,7 @@ const App = () => {
           </Box>
           
           { /* Middle - Panel */ }
-          <Box sx={ { flex: { xs: '1 1 auto', lg: '0 0 28%' }, width: { xs: '100%', lg: 'auto' }, display: 'flex', flexDirection: 'column', minHeight: { xs: 'auto', lg: '600px' } } }>
+          <Box sx={ { flex: { xs: '1 1 auto', lg: '0 0 28%' }, width: { xs: '100%', lg: 'auto' }, display: { xs: mobileTab === 1 ? 'flex' : 'none', lg: 'flex' }, flexDirection: 'column', minHeight: { xs: 'auto', lg: '600px' } } }>
             <RightPanel
               entryId={ viewingOpponentId || currentEntryId }
               onViewTeam={ handleViewOpponentTeam }
@@ -780,7 +780,7 @@ const App = () => {
           </Box>
 
           { /* Right - Activity & Stats */ }
-          <Box sx={ { flex: { xs: '1 1 auto', lg: '1 1 0' }, width: { xs: '100%', lg: 'auto' }, display: 'flex', flexDirection: 'column', minHeight: { xs: 'auto', lg: '600px' } } }>
+          <Box sx={ { flex: { xs: '1 1 auto', lg: '1 1 0' }, width: { xs: '100%', lg: 'auto' }, display: { xs: mobileTab === 2 ? 'flex' : 'none', lg: 'flex' }, flexDirection: 'column', minHeight: { xs: 'auto', lg: '600px' } } }>
             <TeamActivityPanel
               entryId={ viewingOpponentId || currentEntryId }
               currentGameweek={ currentGameweek }
