@@ -20,7 +20,7 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
   const captain = activePlayers && activePlayers.length
     ? activePlayers.find(p => p.is_captain) ?? null
     : null;
-  const viceCaptain = activePlayers && activePlayers.length
+  const viceCaptain = !isFutureGameweek && activePlayers && activePlayers.length
     ? activePlayers.find(p => p.is_vice_captain) ?? null
     : null;
 

@@ -253,6 +253,21 @@ const ListRow = ({
                     { isCaptain ? 'C' : isViceCaptain ? 'VC' : 'C' }
                   </IconButton>
                 </Tooltip>
+              ) : (isCaptain || isViceCaptain) ? (
+                <Tooltip title={ isCaptain ? 'Captain' : 'Vice Captain' }>
+                  <Box
+                    tabIndex={ 0 }
+                    aria-label={ isCaptain ? 'Captain' : 'Vice Captain' }
+                    sx={ {
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      width: 28, height: 28, borderRadius: '4px',
+                      backgroundColor: isCaptain ? '#1976d2' : '#c8960c', color: '#fff',
+                      fontWeight: 700, fontSize: isCaptain ? '0.75rem' : '0.6rem',
+                    } }
+                  >
+                    { isCaptain ? 'C' : 'VC' }
+                  </Box>
+                </Tooltip>
               ) : (
                 <IconButton size='small' disabled sx={ { visibility: 'hidden' } } aria-hidden='true'>
                   <SyncIcon fontSize='small' />
@@ -368,16 +383,19 @@ const TeamListView = ({
   liveMatches,
 }) => {
   const captain = activePlayers?.length ? activePlayers.find(p => p.is_captain) ?? null : null;
-  const viceCaptain = activePlayers?.length ? activePlayers.find(p => p.is_vice_captain) ?? null : null;
+  const viceCaptain = !isFutureGameweek && activePlayers?.length ? activePlayers.find(p => p.is_vice_captain) ?? null : null;
   const sortByPosition = (arr) => [...arr].sort((a, b) => (POSITION_SORT_ORDER[a.position] ?? 9) - (POSITION_SORT_ORDER[b.position] ?? 9));
   const activeList = sortByPosition(activePlayers ?? []);
   const reserveList = (() => {
     const bench = reservePlayers ?? [];
     const gk = bench.filter(p => p.position === POSITION_GK);
-    const outfield = bench.filter(p => p.position !== POSITION_GK && p.position !== POSITION_MANAGER)
-      .sort((a, b) => (parseFloat(b.predictedPoints) || 0) - (parseFloat(a.predictedPoints) || 0));
+    const outfield = bench.filter(p => p.position !== POSITION_GK && p.position !== POSITION_MANAGER);
     const manager = bench.filter(p => p.position === POSITION_MANAGER);
-    return [...manager, ...gk, ...outfield];
+    // For future GWs sort outfield bench by predicted points; otherwise preserve backend slot order.
+    const sortedOutfield = isFutureGameweek
+      ? [...outfield].sort((a, b) => (parseFloat(b.predictedPoints) || 0) - (parseFloat(a.predictedPoints) || 0))
+      : outfield;
+    return [...manager, ...gk, ...sortedOutfield];
   })();
 
   const sharedRowProps = {
@@ -391,19 +409,31 @@ const TeamListView = ({
     <Paper sx={ { borderRadius: 2, overflow: 'hidden', width: '100%', pb: '1px' } }>
       <Table size='small' sx={ { tableLayout: 'auto' } }>
         <TableBody>
-          { activeList.map((player) => (
-            <ListRow
-              key={ player.code ?? player.webName }
-              player={ player }
-              isCaptain={ player === captain }
-              isViceCaptain={ player === viceCaptain }
-              teamType='active'
-              activePlayers={ activePlayers }
-              reservePlayers={ reservePlayers }
-              onSetCaptain={ !isHighestPredictedTeam ? onSetCaptain : undefined }
-              { ...sharedRowProps }
-            />
-          )) }
+          { activeList.map((player, idx) => {
+            const prevPlayer = activeList[idx - 1];
+            const showGkSeparator = idx > 0 && prevPlayer?.position === POSITION_GK && player.position !== POSITION_GK;
+            return (
+              <React.Fragment key={ player.code ?? player.webName }>
+                { showGkSeparator && (
+                  <TableRow>
+                    <TableCell colSpan={ 7 } sx={ { p: 0, border: 'none' } }>
+                      <Box sx={ { borderTop: '2px solid', borderTopColor: 'divider', mx: 1 } } />
+                    </TableCell>
+                  </TableRow>
+                ) }
+                <ListRow
+                  player={ player }
+                  isCaptain={ player === captain }
+                  isViceCaptain={ player === viceCaptain }
+                  teamType='active'
+                  activePlayers={ activePlayers }
+                  reservePlayers={ reservePlayers }
+                  onSetCaptain={ !isHighestPredictedTeam ? onSetCaptain : undefined }
+                  { ...sharedRowProps }
+                />
+              </React.Fragment>
+            );
+          }) }
 
           <TableRow>
             <TableCell
