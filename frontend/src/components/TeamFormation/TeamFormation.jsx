@@ -20,6 +20,9 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
   const captain = activePlayers && activePlayers.length
     ? activePlayers.find(p => p.is_captain) ?? null
     : null;
+  const viceCaptain = activePlayers && activePlayers.length
+    ? activePlayers.find(p => p.is_vice_captain) ?? null
+    : null;
 
   // Manager is always first in activePlayers
   const manager = activePlayers && activePlayers[0] && activePlayers[0].position === 5 ? activePlayers[0] : null;
@@ -56,6 +59,7 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
                   <PlayerCard
                     player={ player }
                     isCaptain={ player === captain }
+                    isViceCaptain={ player === viceCaptain }
                     selectedPlayer={ selectedPlayer }
                     teamType='active'
                     team={ team }
@@ -82,6 +86,7 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
                     <PlayerCard
                       player={ manager }
                       isCaptain={ manager === captain }
+                      isViceCaptain={ manager === viceCaptain }
                       selectedPlayer={ selectedPlayer }
                       teamType='active'
                       team={ team }
@@ -109,6 +114,7 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
                   <PlayerCard
                     player={ player }
                     isCaptain={ player === captain }
+                    isViceCaptain={ player === viceCaptain }
                     selectedPlayer={ selectedPlayer }
                     teamType='active'
                     team={ team }
@@ -135,6 +141,7 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
                   <PlayerCard
                     player={ player }
                     isCaptain={ player === captain }
+                    isViceCaptain={ player === viceCaptain }
                     selectedPlayer={ selectedPlayer }
                     teamType='active'
                     team={ team }
@@ -161,6 +168,7 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
                   <PlayerCard
                     player={ player }
                     isCaptain={ player === captain }
+                    isViceCaptain={ player === viceCaptain }
                     selectedPlayer={ selectedPlayer }
                     teamType='active'
                     team={ team }
