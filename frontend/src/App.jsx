@@ -55,7 +55,7 @@ const App = () => {
   const [plannedChipsByGW, setPlannedChipsByGW] = useState({});
   // Sidebar collapsed state — persisted in localStorage
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
-    () => localStorage.getItem('sidebarCollapsed') !== 'false'
+    () => localStorage.getItem('sidebarCollapsed') === 'true'
   );
   // Mobile bottom navigation tab (0=My Team, 1=Fixtures&Leagues, 2=Stats&Planning)
   const [mobileTab, setMobileTab] = useState(0);
@@ -534,8 +534,17 @@ const App = () => {
     addPlannedTransfer(playerOut, playerIn, gameweek);
   };
 
+  const drawerWidth = sidebarCollapsed ? 56 : 220;
+
+  const handleToggleCollapse = () => {
+    const next = !sidebarCollapsed;
+    setSidebarCollapsed(next);
+    localStorage.setItem('sidebarCollapsed', String(next));
+  };
+
   return (
-    <Box sx={ { minHeight: '100vh', backgroundColor: theme.palette.background.default, display: 'flex', flexDirection: 'column' } }>
+    <Box sx={ { minHeight: '100vh', backgroundColor: theme.palette.background.default, display: 'flex', flexDirection: 'row' } }>
+      { /* Permanent sidebar — hidden on xs/sm/md, visible on lg+ */ }
       <NavigationBar
         teamView={ teamView }
         onSwitchTeamView={ handleSwitchTeamView }
@@ -544,12 +553,22 @@ const App = () => {
         selectedGameweek={ selectedGameweek }
         setSelectedGameweek={ setSelectedGameweek }
         currentGameweek={ currentGameweek }
-        mainPoints={ displayTotalPoints }
-        benchPoints={ displayBenchPoints }
-        isPast={ gameweekInfo?.isPast }
-        isActive={ gameweekInfo?.isActive }
+        collapsed={ sidebarCollapsed }
+        onToggleCollapse={ handleToggleCollapse }
       />
-      <Container maxWidth={ false } sx={ { flex: 1, marginTop: '8px', display: 'flex', flexDirection: 'column', px: { xs: 1, sm: 2 } } }>
+      { /* Main content — offset by sidebar width on lg+ */ }
+      <Box
+        component='main'
+        sx={ {
+          flex: 1,
+          minWidth: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          ml: { xs: 0, lg: `${drawerWidth}px` },
+          pb: { xs: 7, lg: 0 }, // space for BottomNavigation on mobile
+        } }
+      >
+      <Box sx={ { flex: 1, px: { xs: 1, sm: 2 }, py: 1, display: 'flex', flexDirection: 'column' } }>
         <Box sx={ { display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, gap: 2, flex: 1, alignItems: 'flex-start' } }>
           { /* Left - Pitch */ }
           <Box sx={ { flex: { xs: '1 1 auto', lg: '0 0 43%' }, width: { xs: '100%', lg: 'auto' }, display: 'flex', flexDirection: 'column' } }>
@@ -785,7 +804,30 @@ const App = () => {
           onClose={ handleSnackbarClose }
           message={ localSnackbar || snackbar.message }
         />
-      </Container>
+      </Box>
+      { /* Mobile bottom navigation — visible on xs/sm/md only */ }
+      <Box
+        sx={ {
+          display: { xs: 'flex', lg: 'none' },
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: (t) => t.zIndex.appBar,
+        } }
+      >
+        <BottomNavigation
+          value={ mobileTab }
+          onChange={ (_, val) => setMobileTab(val) }
+          sx={ { width: '100%' } }
+          showLabels
+        >
+          <BottomNavigationAction label='Team' icon={ <GridViewIcon /> } />
+          <BottomNavigationAction label='Fixtures' icon={ <EventIcon /> } />
+          <BottomNavigationAction label='Stats' icon={ <BarChartIcon /> } />
+        </BottomNavigation>
+      </Box>
+      </Box>
     </Box>
   );
 };

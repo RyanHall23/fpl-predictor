@@ -92,10 +92,10 @@ test('no React error boundary fallback text visible', () => {
 
 // ── Navigation bar ────────────────────────────────────────────────────────────
 
-test('nav bar header element is present in the DOM', () => {
+test('nav bar element is present in the DOM', () => {
   render(<App />);
-  // MUI AppBar renders as <header> (role="banner")
-  expect(document.querySelector('header')).toBeInTheDocument();
+  // MUI Drawer with PaperProps={{ component: 'nav' }} renders as <nav>
+  expect(document.querySelector('nav')).toBeInTheDocument();
 });
 
 test('"FPL Predictor" brand text is in the DOM', () => {
