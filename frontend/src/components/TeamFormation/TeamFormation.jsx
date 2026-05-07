@@ -41,7 +41,7 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
     : [];
 
   return (
-    <Grid container spacing={ 1 } justifyContent='center'>
+    <Grid container spacing={ 1 } display='flex' justifyContent='center'>
       <Grid size={ 12 }>
         <Paper className='main-paper' sx={ { position: 'relative', p: 1 } }>
           { /* Pitch markings */ }
@@ -53,7 +53,7 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
           
           <Box sx={ { position: 'relative', zIndex: 1 } }>
             { /* GK and Manager row, centered together */ }
-            <Grid container justifyContent='center' alignItems='center' spacing={ 1 }>
+            <Grid container display='flex' justifyContent='center' alignItems='center' spacing={ 1 }>
               { gks.map((player) => (
                 <Grid key={ player.code || player.name }>
                   <PlayerCard
@@ -79,7 +79,7 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
                 </Grid>
               )) }
               { manager && (
-                <Grid container justifyContent='center' alignItems='center' spacing={ 2 }>
+                <Grid container display='flex' justifyContent='center' alignItems='center' spacing={ 2 }>
                   <Box display='flex' flexDirection='column' alignItems='center'>
                     <Typography align='center' variant='subtitle1'>
                     </Typography>
@@ -108,7 +108,7 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
               ) }
             </Grid>
             { /* DEF row */ }
-            <Grid container spacing={ 1 } justifyContent='center' sx={ { mt: 1, flexWrap: { xs: 'wrap', sm: 'nowrap' } } }>
+            <Grid container display='flex' spacing={ 1 } justifyContent='center' sx={ { mt: 1, flexWrap: { xs: 'wrap', sm: 'nowrap' } } }>
               { defs.map((player) => (
                 <Grid key={ player.code || player.name }>
                   <PlayerCard
@@ -135,7 +135,7 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
               )) }
             </Grid>
             { /* MID row */ }
-            <Grid container spacing={ 1 } justifyContent='center' sx={ { mt: 1, flexWrap: { xs: 'wrap', sm: 'nowrap' } } }>
+            <Grid container display='flex' spacing={ 1 } justifyContent='center' sx={ { mt: 1, flexWrap: { xs: 'wrap', sm: 'nowrap' } } }>
               { mids.map((player) => (
                 <Grid key={ player.code || player.name }>
                   <PlayerCard
@@ -162,7 +162,7 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
               )) }
             </Grid>
             { /* ATT row */ }
-            <Grid container spacing={ 1 } justifyContent='center' sx={ { mt: 1, flexWrap: { xs: 'wrap', sm: 'nowrap' } } }>
+            <Grid container display='flex' spacing={ 1 } justifyContent='center' sx={ { mt: 1, flexWrap: { xs: 'wrap', sm: 'nowrap' } } }>
               { atts.map((player) => (
                 <Grid key={ player.code || player.name }>
                   <PlayerCard
@@ -194,7 +194,7 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
       <Grid size={ 12 }>
         <Paper className='bench-paper' sx={ { p: 1, position: 'relative' } }>
           <Box sx={ { position: 'relative', zIndex: 1 } }>
-            <Grid container spacing={ 1 } justifyContent='center'>
+            <Grid container display='flex' spacing={ 1 } justifyContent='center'>
               { /* Bench manager first */ }
               { benchManager && (
                 <Grid key={ benchManager.code || benchManager.name }>
