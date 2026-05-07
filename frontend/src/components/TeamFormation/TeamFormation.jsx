@@ -41,7 +41,7 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
     : [];
 
   return (
-    <Grid container spacing={ 1 } display='flex' justifyContent='center'>
+    <Grid container spacing={ 1 }>
       <Grid size={ 12 }>
         <Paper className='main-paper' sx={ { position: 'relative', p: 1 } }>
           { /* Pitch markings */ }
@@ -53,9 +53,9 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
           
           <Box sx={ { position: 'relative', zIndex: 1 } }>
             { /* GK and Manager row, centered together */ }
-            <Grid container display='flex' justifyContent='center' alignItems='center' spacing={ 1 }>
+            <Box sx={ { display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1 } }>
               { gks.map((player) => (
-                <Grid key={ player.code || player.name }>
+                <Box key={ player.code || player.name }>
                   <PlayerCard
                     player={ player }
                     isCaptain={ player === captain }
@@ -76,41 +76,39 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
                     plannedTransfers={ plannedTransfers }
                     onRemovePlannedTransfer={ onRemovePlannedTransfer }
                   />
-                </Grid>
+                </Box>
               )) }
               { manager && (
-                <Grid container display='flex' justifyContent='center' alignItems='center' spacing={ 2 }>
-                  <Box display='flex' flexDirection='column' alignItems='center'>
-                    <Typography align='center' variant='subtitle1'>
-                    </Typography>
-                    <PlayerCard
-                      player={ manager }
-                      isCaptain={ manager === captain }
-                      isViceCaptain={ manager === viceCaptain }
-                      selectedPlayer={ selectedPlayer }
-                      teamType='active'
-                      team={ team }
-                      allPlayers={ allPlayers }
-                      onTransfer={ onTransfer }
-                      showTransferButtons={ !isHighestPredictedTeam }
-                      onPlayerClick={ onPlayerClick }
-                      activePlayers={ activePlayers }
-                      reservePlayers={ reservePlayers }
-                      onSetCaptain={ !isHighestPredictedTeam ? onSetCaptain : undefined }
-                      currentGameweek={ currentGameweek }
-                      isFutureGameweek={ isFutureGameweek }
-                      viewedGameweek={ viewedGameweek }
-                      plannedTransfers={ plannedTransfers }
-                      onRemovePlannedTransfer={ onRemovePlannedTransfer }
-                    />
-                  </Box>
-                </Grid>
+                <Box display='flex' flexDirection='column' alignItems='center'>
+                  <Typography align='center' variant='subtitle1'>
+                  </Typography>
+                  <PlayerCard
+                    player={ manager }
+                    isCaptain={ manager === captain }
+                    isViceCaptain={ manager === viceCaptain }
+                    selectedPlayer={ selectedPlayer }
+                    teamType='active'
+                    team={ team }
+                    allPlayers={ allPlayers }
+                    onTransfer={ onTransfer }
+                    showTransferButtons={ !isHighestPredictedTeam }
+                    onPlayerClick={ onPlayerClick }
+                    activePlayers={ activePlayers }
+                    reservePlayers={ reservePlayers }
+                    onSetCaptain={ !isHighestPredictedTeam ? onSetCaptain : undefined }
+                    currentGameweek={ currentGameweek }
+                    isFutureGameweek={ isFutureGameweek }
+                    viewedGameweek={ viewedGameweek }
+                    plannedTransfers={ plannedTransfers }
+                    onRemovePlannedTransfer={ onRemovePlannedTransfer }
+                  />
+                </Box>
               ) }
-            </Grid>
+            </Box>
             { /* DEF row */ }
-            <Grid container display='flex' spacing={ 1 } justifyContent='center' sx={ { mt: 1, flexWrap: { xs: 'wrap', sm: 'nowrap' } } }>
+            <Box sx={ { display: 'flex', justifyContent: 'center', gap: 1, mt: 1, flexWrap: { xs: 'wrap', sm: 'nowrap' } } }>
               { defs.map((player) => (
-                <Grid key={ player.code || player.name }>
+                <Box key={ player.code || player.name }>
                   <PlayerCard
                     player={ player }
                     isCaptain={ player === captain }
@@ -131,13 +129,13 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
                     plannedTransfers={ plannedTransfers }
                     onRemovePlannedTransfer={ onRemovePlannedTransfer }
                   />
-                </Grid>
+                </Box>
               )) }
-            </Grid>
+            </Box>
             { /* MID row */ }
-            <Grid container display='flex' spacing={ 1 } justifyContent='center' sx={ { mt: 1, flexWrap: { xs: 'wrap', sm: 'nowrap' } } }>
+            <Box sx={ { display: 'flex', justifyContent: 'center', gap: 1, mt: 1, flexWrap: { xs: 'wrap', sm: 'nowrap' } } }>
               { mids.map((player) => (
-                <Grid key={ player.code || player.name }>
+                <Box key={ player.code || player.name }>
                   <PlayerCard
                     player={ player }
                     isCaptain={ player === captain }
@@ -158,13 +156,13 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
                     plannedTransfers={ plannedTransfers }
                     onRemovePlannedTransfer={ onRemovePlannedTransfer }
                   />
-                </Grid>
+                </Box>
               )) }
-            </Grid>
+            </Box>
             { /* ATT row */ }
-            <Grid container display='flex' spacing={ 1 } justifyContent='center' sx={ { mt: 1, flexWrap: { xs: 'wrap', sm: 'nowrap' } } }>
+            <Box sx={ { display: 'flex', justifyContent: 'center', gap: 1, mt: 1, flexWrap: { xs: 'wrap', sm: 'nowrap' } } }>
               { atts.map((player) => (
-                <Grid key={ player.code || player.name }>
+                <Box key={ player.code || player.name }>
                   <PlayerCard
                     player={ player }
                     isCaptain={ player === captain }
@@ -185,19 +183,19 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
                     plannedTransfers={ plannedTransfers }
                     onRemovePlannedTransfer={ onRemovePlannedTransfer }
                   />
-                </Grid>
+                </Box>
               )) }
-            </Grid>
+            </Box>
           </Box>
         </Paper>
       </Grid>
       <Grid size={ 12 }>
         <Paper className='bench-paper' sx={ { p: 1, position: 'relative' } }>
           <Box sx={ { position: 'relative', zIndex: 1 } }>
-            <Grid container display='flex' spacing={ 1 } justifyContent='center'>
+            <Box sx={ { display: 'flex', justifyContent: 'center', gap: 1 } }>
               { /* Bench manager first */ }
               { benchManager && (
-                <Grid key={ benchManager.code || benchManager.name }>
+                <Box key={ benchManager.code || benchManager.name }>
                   <Box display='flex' flexDirection='column' alignItems='center'>
                     <Typography align='center' variant='subtitle1' mt={ 1 }>
                       { positionLabels[benchManager.position] }
@@ -221,11 +219,11 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
                       onRemovePlannedTransfer={ onRemovePlannedTransfer }
                     />
                   </Box>
-                </Grid>
+                </Box>
               ) }
               { /* Bench GK second */ }
               { benchGK && (
-                <Grid key={ benchGK.code || benchGK.name }>
+                <Box key={ benchGK.code || benchGK.name }>
                   <Box display='flex' flexDirection='column' alignItems='center'>
                     <Typography align='center' variant='subtitle1' mt={ 1 }>
                       { positionLabels[benchGK.position] }
@@ -249,7 +247,7 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
                       onRemovePlannedTransfer={ onRemovePlannedTransfer }
                     />
                   </Box>
-                </Grid>
+                </Box>
               ) }
               { /* Vertical separator between bench GK and outfield */ }
               { benchGK && benchOutfield.length > 0 && (
@@ -257,7 +255,7 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
               ) }
               { /* Outfield bench players */ }
               { benchOutfield.map((player) => (
-                <Grid key={ player.code || player.name }>
+                <Box key={ player.code || player.name }>
                   <Box display='flex' flexDirection='column' alignItems='center'>
                     <Typography align='center' variant='subtitle1' mt={ 1 }>
                       { positionLabels[player.position] }
@@ -281,9 +279,9 @@ const TeamFormation = ({ activePlayers, reservePlayers, selectedPlayer, team, al
                       onRemovePlannedTransfer={ onRemovePlannedTransfer }
                     />
                   </Box>
-                </Grid>
+                </Box>
               )) }
-            </Grid>
+            </Box>
           </Box>
         </Paper>
       </Grid>
