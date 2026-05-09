@@ -196,7 +196,7 @@ const NavigationBar = ({
                 >
                   { Array.from({ length: 38 }, (_, i) => i + 1).map((gw) => (
                     <MenuItem key={ gw } value={ gw }>
-                      GW { gw }{ gw === currentGameweek ? ' (Current)' : '' }
+                      GW { gw }
                     </MenuItem>
                   )) }
                 </Select>

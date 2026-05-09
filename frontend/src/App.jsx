@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import axios from './api';
 import { saveChip, loadChip } from './utils/lineupStorage';
 import { computeProjectedBank, simulateFreeTransferCarryover } from './utils/freeHitSimulation';
+import { CHIPS, CHIP_ID_TO_FPL, FPL_TO_CHIP_ID } from './constants/chips';
 import NavigationBar from './components/NavigationBar/NavigationBar';
 import Container from '@mui/material/Container';
 import Box from '@mui/material/Box';
@@ -17,6 +18,7 @@ import GridViewIcon from '@mui/icons-material/GridView';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import Tooltip from '@mui/material/Tooltip';
 import TeamFormation from './components/TeamFormation/TeamFormation';
 import TeamListView from './components/TeamListView/TeamListView';
@@ -36,13 +38,6 @@ const TEAM_VIEW = {
   HIGHEST: 'highest'
 };
 
-const CHIPS = [
-  { id: 'bench_boost',    label: 'BB', name: 'Bench Boost',    description: 'Bench points are added to your total',            color: '#2e7d32' },
-  { id: 'triple_captain', label: 'TC', name: 'Triple Captain', description: '3× captain multiplier instead of 2×',             color: '#1565c0' },
-  { id: 'free_hit',       label: 'FH', name: 'Free Hit',       description: 'Unlimited free transfers — reverts next week',    color: '#e65100' },
-  { id: 'wildcard',       label: 'WC', name: 'Wildcard',       description: 'All transfers are free and permanent',            color: '#6a1b9a' },
-];
-
 const App = () => {
   const theme = useTheme();
   const [userEntryId, setUserEntryId] = useState(() => localStorage.getItem('teamId') || '');
@@ -51,6 +46,8 @@ const App = () => {
   const [selectedGameweek, setSelectedGameweek] = useState(null); // null means current gameweek
   const [currentGameweek, setCurrentGameweek] = useState(null);
   const [viewingOpponentId, setViewingOpponentId] = useState(null); // opponent team being viewed
+  const [viewingOpponentTeamName, setViewingOpponentTeamName] = useState('');
+  const [viewingOpponentPlayerName, setViewingOpponentPlayerName] = useState('');
   const [pitchView, setPitchView] = useState(() => localStorage.getItem('pitchView') || 'formation'); // 'formation' | 'list'
   const [activeChip, setActiveChip] = useState(null); // 'bench_boost' | 'triple_captain' | 'free_hit' | 'wildcard' | null
   // Planned chips across all future GWs: { [gw]: chipId }.  Loaded from storage
@@ -61,23 +58,6 @@ const App = () => {
   ));
   const userOverriddenSection = useRef(false);
   const prevGameweekRef = useRef(null);
-
-  const handleChipToggle = (chipId) => {
-    const next = activeChip === chipId ? null : chipId;
-    setActiveChip(next);
-    const viewedGW = gameweekInfo?.selected;
-    if (!isHighestPredictedTeam && !isLockedGameweek && userEntryId && viewedGW) {
-      // Persist planned chip per-gameweek so it survives page refreshes.
-      // Only stored for future GWs — locked GWs read chip state from FPL directly.
-      saveChip(userEntryId, viewedGW, next);
-      setPlannedChipsByGW(prev => {
-        const updated = { ...prev };
-        if (next) updated[viewedGW] = next;
-        else delete updated[viewedGW];
-        return updated;
-      });
-    }
-  };
 
   const {
     activePlayers,
@@ -103,6 +83,24 @@ const App = () => {
   );
 
   const { allPlayers } = useAllPlayers(selectedGameweek);
+
+  const handleChipToggle = (chipId) => {
+    const next = activeChip === chipId ? null : chipId;
+    setActiveChip(next);
+    const viewedGW = gameweekInfo?.selected;
+    const locked = !!(gameweekInfo?.isActive || gameweekInfo?.isPast);
+    if (!isHighestPredictedTeam && !locked && userEntryId && viewedGW) {
+      // Persist planned chip per-gameweek so it survives page refreshes.
+      // Only stored for future GWs — locked GWs read chip state from FPL directly.
+      saveChip(userEntryId, viewedGW, next);
+      setPlannedChipsByGW(prev => {
+        const updated = { ...prev };
+        if (next) updated[viewedGW] = next;
+        else delete updated[viewedGW];
+        return updated;
+      });
+    }
+  };
 
   // Squad team names used to filter relevant ESPN score change notifications.
   const squadTeamNames = useMemo(() => {
@@ -136,22 +134,27 @@ const App = () => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [localSnackbar, setLocalSnackbar] = useState('');
   const [usedFplChips, setUsedFplChips] = useState([]); // chip names from FPL profile e.g. ['bboost', '3xc']
-
-  // Map our chip IDs to FPL API chip names
-  const FPL_CHIP_KEY = { bench_boost: 'bboost', triple_captain: '3xc', free_hit: 'freehit', wildcard: 'wildcard' };
+  const [fplChipsHistory, setFplChipsHistory] = useState([]); // { name, event }[] – full chip records from FPL profile
 
   // Each chip can be used at most 2× (one per half-season). Unused = used < 2 times.
   const unusedChipIds = useMemo(
-    () => CHIPS.filter(c => usedFplChips.filter(n => n === FPL_CHIP_KEY[c.id]).length < 2).map(c => c.id),
+    () => CHIPS.filter(c => usedFplChips.filter(n => n === CHIP_ID_TO_FPL[c.id]).length < 2).map(c => c.id),
     [usedFplChips]
   );
 
-  // Fetch used chips from FPL profile whenever we have a real user entry
+  // Fetch used chips from FPL profile whenever we have a real user entry.
+  // Also stores the full chip objects (with event/GW number) for badge display.
+  // When viewingOpponentId is set, currentEntryId equals the opponent's ID so
+  // fplChipsHistory will contain the opponent's chip history automatically.
   useEffect(() => {
-    if (!currentEntryId || isHighestPredictedTeam) { setUsedFplChips([]); return; }
+    if (!currentEntryId || isHighestPredictedTeam) { setUsedFplChips([]); setFplChipsHistory([]); return; }
     axios.get(`/api/entry/${currentEntryId}/profile`)
-      .then(res => setUsedFplChips((res.data.chips || []).map(c => c.name)))
-      .catch(() => setUsedFplChips([]));
+      .then(res => {
+        const chips = res.data.chips || [];
+        setUsedFplChips(chips.map(c => c.name));
+        setFplChipsHistory(chips);
+      })
+      .catch(() => { setUsedFplChips([]); setFplChipsHistory([]); });
   }, [currentEntryId, isHighestPredictedTeam]);
 
   // Load all future GW planned chips from localStorage into state whenever the
@@ -183,6 +186,27 @@ const App = () => {
   useEffect(() => {
     if (activeChip && !unusedChipIds.includes(activeChip)) setActiveChip(null);
   }, [unusedChipIds, activeChip]);
+
+  // Toggle a chip for a specific future GW from the PlannedTransfers panel.
+  // Unlike handleChipToggle (which uses the currently viewed GW), this accepts
+  // the target GW explicitly so chips can be planned for any future GW at once.
+  // Guards: only persists for future GWs and chips still available to the user.
+  const handlePlannedChipToggle = useCallback((chipId, gw) => {
+    if (!gw || gw <= currentGameweek) return;
+    const current = plannedChipsByGW[gw];
+    const next = current === chipId ? null : chipId;
+    // Only allow toggling on if the chip is still unused (clearing is always OK).
+    if (next && !unusedChipIds.includes(next)) return;
+    if (userEntryId) saveChip(userEntryId, gw, next);
+    setPlannedChipsByGW(prev => {
+      const updated = { ...prev };
+      if (next) updated[gw] = next;
+      else delete updated[gw];
+      return updated;
+    });
+    // Sync transient activeChip if the toggled GW is the one currently in view.
+    if (gw === gameweekInfo?.selected) setActiveChip(next);
+  }, [plannedChipsByGW, currentGameweek, unusedChipIds, userEntryId, gameweekInfo?.selected]);
 
   // Track the last gameweek we restored a chip for, so we only do it once per
   // gameweek/entry combination and don't clobber a manual toggle on re-render.
@@ -217,6 +241,28 @@ const App = () => {
     // Prefer a planned per-gameweek chip (persisted to storage), fallback to transient `activeChip`.
     return plannedChipsByGW[viewedGW] ?? activeChip ?? null;
   }, [gameweekInfo, isHighestPredictedTeam, viewingOpponentId, plannedChipsByGW, activeChip]);
+
+  // Chip used/planned for the currently viewed GW — used to display a badge beside
+  // the Total Points figure in the stats pod across all sections (active/planned/overview).
+  // For own team future GW: reflects the planned chip.  For locked/past own GW or any
+  // opponent GW: resolved from FPL profile chip history (fplChipsHistory contains the
+  // opponent's history when viewingOpponentId is set, because currentEntryId is set to
+  // the opponent's ID which triggers a re-fetch of the profile endpoint).
+  const viewedGwChip = useMemo(() => {
+    if (isHighestPredictedTeam) return null;
+    const viewedGW = gameweekInfo?.selected ?? currentGameweek;
+    if (!viewedGW) return null;
+    // Future GW for own team: use the planned/active chip (only if still available).
+    if (!viewingOpponentId && gameweekInfo?.isFuture) {
+      return unusedChipIds.includes(effectiveActiveChip) ? effectiveActiveChip : null;
+    }
+    // Locked own GW or any opponent GW: look up from FPL chip history.
+    const played = fplChipsHistory.find(c => c.event === viewedGW);
+    return played ? (FPL_TO_CHIP_ID[played.name] ?? null) : null;
+  }, [isHighestPredictedTeam, viewingOpponentId, gameweekInfo, currentGameweek, effectiveActiveChip, unusedChipIds, fplChipsHistory]);
+
+  // Chip display metadata (label, colour, description) for the viewed GW chip.
+  const viewedGwChipData = CHIPS.find(c => c.id === viewedGwChip) ?? null;
 
   // Reset section when switching between user and highest team
   const prevIsHighestRef = useRef(isHighestPredictedTeam);
@@ -451,18 +497,22 @@ const App = () => {
       : Math.round((cap.predictedPoints ?? 0) / (cap.multiplier || 2));
   }, [effectiveActivePlayers]);
 
-  // Points displayed in the stats pod — adjusted for the effective chip for the viewed GW
+  // Points displayed in the stats pod — adjusted for the effective chip for the viewed GW.
+  // effectiveActiveChip covers future GWs; viewedGwChip also covers active/historic GWs
+  // (e.g. Bench Boost already played — bench points should be merged into total).
   const displayTotalPoints = useMemo(() => {
     const active = calculateTotalPredictedPoints(effectiveActivePlayers);
-    if (effectiveActiveChip === 'bench_boost') return active + calculateTotalPredictedPoints(effectiveReservePlayers);
-    if (effectiveActiveChip === 'triple_captain') return active + captainBasePoints; // +1× extra → 3× total
+    const chipInEffect = effectiveActiveChip ?? viewedGwChip;
+    if (chipInEffect === 'bench_boost') return active + calculateTotalPredictedPoints(effectiveReservePlayers);
+    if (chipInEffect === 'triple_captain') return active + captainBasePoints; // +1× extra → 3× total
     return active;
-  }, [effectiveActiveChip, effectiveActivePlayers, effectiveReservePlayers, calculateTotalPredictedPoints, captainBasePoints]);
+  }, [effectiveActiveChip, viewedGwChip, effectiveActivePlayers, effectiveReservePlayers, calculateTotalPredictedPoints, captainBasePoints]);
 
   const displayBenchPoints = useMemo(() => {
-    if (effectiveActiveChip === 'bench_boost') return 0; // bench points are merged into total
+    const chipInEffect = effectiveActiveChip ?? viewedGwChip;
+    if (chipInEffect === 'bench_boost') return 0; // bench points are merged into total
     return calculateTotalPredictedPoints(effectiveReservePlayers);
-  }, [effectiveActiveChip, effectiveReservePlayers, calculateTotalPredictedPoints]);
+  }, [effectiveActiveChip, viewedGwChip, effectiveReservePlayers, calculateTotalPredictedPoints]);
 
   // Free Transfers remaining for the viewed GW, after planned transfers are applied.
   // null = not applicable (highest predicted team or opponent view).
@@ -537,9 +587,22 @@ const App = () => {
   }, [userEntryId, teamView, viewingOpponentId]);
 
   // Handle clicking an opponent's team name from the league view
-  const handleViewOpponentTeam = (opponentEntryId) => {
+  const handleViewOpponentTeam = (opponentEntryId, opponentTeamName = '', opponentPlayerName = '') => {
+    const isOwnTeam = userEntryId && String(opponentEntryId) === String(userEntryId);
+    if (isOwnTeam) {
+      // Clicking own team in standings — just switch to My Team view, no banner
+      setViewingOpponentId(null);
+      setViewingOpponentTeamName('');
+      setViewingOpponentPlayerName('');
+      setCurrentEntryId(userEntryId);
+      setTeamView(TEAM_VIEW.USER);
+      if (isHighestPredictedTeam) toggleTeamView();
+      return;
+    }
     setViewingOpponentId(String(opponentEntryId));
     setCurrentEntryId(String(opponentEntryId));
+    setViewingOpponentTeamName(opponentTeamName);
+    setViewingOpponentPlayerName(opponentPlayerName);
     setTeamView(TEAM_VIEW.USER);
     if (isHighestPredictedTeam) toggleTeamView();
   };
@@ -547,6 +610,8 @@ const App = () => {
   // Return from viewing an opponent's team back to the user's own team
   const handleBackToMyTeam = () => {
     setViewingOpponentId(null);
+    setViewingOpponentTeamName('');
+    setViewingOpponentPlayerName('');
     setCurrentEntryId(userEntryId);
   };
 
@@ -624,13 +689,43 @@ const App = () => {
           <Box sx={ { flex: { xs: '1 1 auto', lg: '0 0 43%' }, width: { xs: '100%', lg: 'auto' }, display: 'flex', flexDirection: 'column' } }>
             { /* Banner shown when viewing an opponent's team */ }
             { viewingOpponentId && (
-              <Box sx={ { mb: 1, display: 'flex', alignItems: 'center', gap: 1 } }>
-                <Typography variant='body2' color='text.secondary'>
-                  Viewing opponent&apos;s team
-                </Typography>
+              <Box
+                sx={ {
+                  mb: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1.5,
+                  px: 1.5,
+                  py: 1,
+                  borderRadius: 1,
+                  borderLeft: '3px solid',
+                  borderLeftColor: 'warning.main',
+                  bgcolor: 'action.hover',
+                } }
+              >
+                <Box sx={ { flex: 1, minWidth: 0 } }>
+                  <Typography variant='caption' color='warning.main' fontWeight={ 700 } sx={ { textTransform: 'uppercase', letterSpacing: '0.06em' } }>
+                    Viewing opponent
+                  </Typography>
+                  <Typography variant='body2' fontWeight={ 600 } noWrap>
+                    { viewingOpponentTeamName || teamName || 'Opponent’s Team' }
+                  </Typography>
+                  { viewingOpponentPlayerName && (
+                    <Typography variant='caption' color='text.secondary' noWrap>
+                      { viewingOpponentPlayerName }
+                    </Typography>
+                  ) }
+                </Box>
                 { userEntryId && (
-                  <Button size='small' variant='outlined' onClick={ handleBackToMyTeam }>
-                    Back to My Team
+                  <Button
+                    size='small'
+                    variant='outlined'
+                    color='warning'
+                    startIcon={ <ArrowBackIcon fontSize='small' /> }
+                    onClick={ handleBackToMyTeam }
+                    sx={ { whiteSpace: 'nowrap', flexShrink: 0 } }
+                  >
+                    My Team
                   </Button>
                 ) }
               </Box>
@@ -723,6 +818,27 @@ const App = () => {
                       displayTotalPoints >= gameweekInfo.data.average_entry_score
                         ? <ArrowUpwardIcon sx={ { fontSize: 16, color: 'success.main' } } />
                         : <ArrowDownwardIcon sx={ { fontSize: 16, color: 'error.main' } } />
+                    ) }
+                    { viewedGwChipData && (
+                      <Tooltip title={ `${ viewingOpponentId ? 'Opponent chip — ' : '' }${ viewedGwChipData.name }: ${ viewedGwChipData.description }` }>
+                        <Box
+                          component='span'
+                          sx={ {
+                            px: 0.6, py: '1px',
+                            borderRadius: '3px',
+                            backgroundColor: viewedGwChipData.color,
+                            color: '#fff',
+                            fontSize: '0.6rem',
+                            fontWeight: 700,
+                            lineHeight: 1.6,
+                            cursor: 'default',
+                            flexShrink: 0,
+                            ml: 0.25,
+                          } }
+                        >
+                          { viewedGwChipData.label }
+                        </Box>
+                      </Tooltip>
                     ) }
                   </Box>
                   <Typography variant='h6' sx={ { fontWeight: 700, lineHeight: 1.2 } }>
@@ -837,6 +953,9 @@ const App = () => {
                       compact={ false }
                       voidedTransferIds={ voidedTransferIds }
                       freeHitGWs={ freeHitGWs }
+                      plannedChipsByGW={ plannedChipsByGW }
+                      unusedChipIds={ unusedChipIds }
+                      onChipToggle={ handlePlannedChipToggle }
                     />
                   </Paper>
                 ) }

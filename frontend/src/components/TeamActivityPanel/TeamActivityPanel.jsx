@@ -7,6 +7,7 @@ import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import RemoveIcon from '@mui/icons-material/Remove';
 import axios from '../../api';
 import AssistantManagerPanel from '../AssistantManagerPanel';
+import { FPL_CHIP_LABEL, FPL_CHIP_COLOR } from '../../constants/chips';
 
 const TeamActivityPanel = ({
   entryId,
@@ -204,50 +205,73 @@ const TeamActivityPanel = ({
                 <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 } }>
                   Recent Form
                 </Typography>
-                <Box sx={ { display: 'flex', gap: 0.75 } }>
-                  { recentHistory.map((gw) => {
-                    const prevGw = history.find(h => h.event === gw.event - 1);
-                    // Lower rank number = better. Green if rank improved (fell), red if worsened (rose).
-                    let rankColor = theme.palette.text.secondary;
-                    if (prevGw?.overall_rank != null && gw.overall_rank != null) {
-                      rankColor = gw.overall_rank < prevGw.overall_rank
-                        ? theme.palette.success.main
-                        : gw.overall_rank > prevGw.overall_rank
-                          ? theme.palette.error.main
-                          : theme.palette.text.secondary;
-                    }
-                    return (
-                    <Box
-                      key={ gw.event }
-                      sx={ {
-                        flex: 1,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: 0.25,
-                        py: 0.5,
-                        px: 0.25,
-                        borderRadius: 1,
-                        backgroundColor: theme.palette.action.hover,
-                      } }
-                    >
-                      <Typography variant='caption' color='text.secondary' sx={ { fontSize: '0.6rem', lineHeight: 1 } }>
-                        GW{ gw.event }
-                      </Typography>
-                      <Typography
-                        variant='body2'
-                        fontWeight='700'
-                        sx={ { lineHeight: 1, color: rankColor } }
-                      >
-                        { gw.points }
-                      </Typography>
-                      <Typography variant='caption' sx={ { fontSize: '0.6rem', lineHeight: 1, color: rankColor } }>
-                        { formatRank(gw.overall_rank) }
-                      </Typography>
+                { (() => {
+                  return (
+                    <Box sx={ { display: 'flex', gap: 0.75 } }>
+                      { recentHistory.map((gw) => {
+                        const prevGw = history.find(h => h.event === gw.event - 1);
+                        let rankColor = theme.palette.text.secondary;
+                        if (prevGw?.overall_rank != null && gw.overall_rank != null) {
+                          rankColor = gw.overall_rank < prevGw.overall_rank
+                            ? theme.palette.success.main
+                            : gw.overall_rank > prevGw.overall_rank
+                              ? theme.palette.error.main
+                              : theme.palette.text.secondary;
+                        }
+                        const gwChip = profile?.chips?.find(c => c.event === gw.event);
+                        const chipLabel = gwChip ? FPL_CHIP_LABEL[gwChip.name] : null;
+                        const chipColor = gwChip ? FPL_CHIP_COLOR[gwChip.name] : null;
+                        return (
+                          <Box
+                            key={ gw.event }
+                            sx={ {
+                              flex: 1,
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              gap: 0.25,
+                              py: 0.5,
+                              px: 0.25,
+                              borderRadius: 1,
+                              backgroundColor: theme.palette.action.hover,
+                            } }
+                          >
+                            <Typography variant='caption' color='text.secondary' sx={ { fontSize: '0.6rem', lineHeight: 1 } }>
+                              GW{ gw.event }
+                            </Typography>
+                            <Typography
+                              variant='body2'
+                              fontWeight='700'
+                              sx={ { lineHeight: 1, color: rankColor } }
+                            >
+                              { gw.points }
+                            </Typography>
+                            <Typography variant='caption' sx={ { fontSize: '0.6rem', lineHeight: 1, color: rankColor } }>
+                              { formatRank(gw.overall_rank) }
+                            </Typography>
+                            { chipLabel && (
+                              <Box
+                                component='span'
+                                sx={ {
+                                  px: 0.4, py: '1px',
+                                  borderRadius: '3px',
+                                  backgroundColor: chipColor,
+                                  color: '#fff',
+                                  fontSize: '0.55rem',
+                                  fontWeight: 700,
+                                  lineHeight: 1.4,
+                                  cursor: 'default',
+                                } }
+                              >
+                                { chipLabel }
+                              </Box>
+                            ) }
+                          </Box>
+                        );
+                      }) }
                     </Box>
-                    );
-                  }) }
-                </Box>
+                  );
+                })() }
               </>
             ) }
           </Box>
