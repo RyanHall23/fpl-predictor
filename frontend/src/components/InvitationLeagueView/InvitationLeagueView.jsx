@@ -94,6 +94,7 @@ const InvitationLeagueView = ({ league, onViewTeam, currentGameweek, selectedGam
               <TableRow>
                 <TableCell>Rank</TableCell>
                 <TableCell>Team</TableCell>
+                <TableCell>Manager</TableCell>
                 <TableCell align='right'>GW Pts</TableCell>
                 <TableCell align='right'>Total</TableCell>
                 { isFuture && <TableCell align='right'>Predicted</TableCell> }
@@ -133,7 +134,9 @@ const InvitationLeagueView = ({ league, onViewTeam, currentGameweek, selectedGam
                       >
                         { entry.entry_name }
                       </Button>
-                      <Typography variant='caption' display='block' color='text.secondary'>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant='body2' color='text.secondary'>
                         { entry.player_name }
                       </Typography>
                     </TableCell>
