@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import axios from './api';
 import { saveChip, loadChip } from './utils/lineupStorage';
 import { computeProjectedBank, simulateFreeTransferCarryover } from './utils/freeHitSimulation';
+import { CHIPS, CHIP_ID_TO_FPL, FPL_TO_CHIP_ID } from './constants/chips';
 import NavigationBar from './components/NavigationBar/NavigationBar';
 import Container from '@mui/material/Container';
 import Box from '@mui/material/Box';
@@ -36,13 +37,6 @@ const TEAM_VIEW = {
   USER: 'user',
   HIGHEST: 'highest'
 };
-
-const CHIPS = [
-  { id: 'bench_boost',    label: 'BB', name: 'Bench Boost',    description: 'Bench points are added to your total',            color: '#2e7d32' },
-  { id: 'triple_captain', label: 'TC', name: 'Triple Captain', description: '3× captain multiplier instead of 2×',             color: '#1565c0' },
-  { id: 'free_hit',       label: 'FH', name: 'Free Hit',       description: 'Unlimited free transfers — reverts next week',    color: '#e65100' },
-  { id: 'wildcard',       label: 'WC', name: 'Wildcard',       description: 'All transfers are free and permanent',            color: '#6a1b9a' },
-];
 
 const App = () => {
   const theme = useTheme();
@@ -108,23 +102,6 @@ const App = () => {
     }
   };
 
-  // Toggle a chip for a specific future GW from the PlannedTransfers panel.
-  // Unlike handleChipToggle (which uses the currently viewed GW), this accepts
-  // the target GW explicitly so chips can be planned for any future GW at once.
-  const handlePlannedChipToggle = useCallback((chipId, gw) => {
-    const current = plannedChipsByGW[gw];
-    const next = current === chipId ? null : chipId;
-    if (userEntryId) saveChip(userEntryId, gw, next);
-    setPlannedChipsByGW(prev => {
-      const updated = { ...prev };
-      if (next) updated[gw] = next;
-      else delete updated[gw];
-      return updated;
-    });
-    // Sync transient activeChip if the toggled GW is the one currently in view.
-    if (gw === gameweekInfo?.selected) setActiveChip(next);
-  }, [plannedChipsByGW, userEntryId, gameweekInfo?.selected]);
-
   // Squad team names used to filter relevant ESPN score change notifications.
   const squadTeamNames = useMemo(() => {
     const names = new Set();
@@ -159,13 +136,9 @@ const App = () => {
   const [usedFplChips, setUsedFplChips] = useState([]); // chip names from FPL profile e.g. ['bboost', '3xc']
   const [fplChipsHistory, setFplChipsHistory] = useState([]); // { name, event }[] – full chip records from FPL profile
 
-  // Map our chip IDs to FPL API chip names (and the reverse)
-  const FPL_CHIP_KEY = { bench_boost: 'bboost', triple_captain: '3xc', free_hit: 'freehit', wildcard: 'wildcard' };
-  const FPL_TO_CHIP_ID = { bboost: 'bench_boost', '3xc': 'triple_captain', freehit: 'free_hit', wildcard: 'wildcard' };
-
   // Each chip can be used at most 2× (one per half-season). Unused = used < 2 times.
   const unusedChipIds = useMemo(
-    () => CHIPS.filter(c => usedFplChips.filter(n => n === FPL_CHIP_KEY[c.id]).length < 2).map(c => c.id),
+    () => CHIPS.filter(c => usedFplChips.filter(n => n === CHIP_ID_TO_FPL[c.id]).length < 2).map(c => c.id),
     [usedFplChips]
   );
 
@@ -214,6 +187,27 @@ const App = () => {
     if (activeChip && !unusedChipIds.includes(activeChip)) setActiveChip(null);
   }, [unusedChipIds, activeChip]);
 
+  // Toggle a chip for a specific future GW from the PlannedTransfers panel.
+  // Unlike handleChipToggle (which uses the currently viewed GW), this accepts
+  // the target GW explicitly so chips can be planned for any future GW at once.
+  // Guards: only persists for future GWs and chips still available to the user.
+  const handlePlannedChipToggle = useCallback((chipId, gw) => {
+    if (!gw || gw <= currentGameweek) return;
+    const current = plannedChipsByGW[gw];
+    const next = current === chipId ? null : chipId;
+    // Only allow toggling on if the chip is still unused (clearing is always OK).
+    if (next && !unusedChipIds.includes(next)) return;
+    if (userEntryId) saveChip(userEntryId, gw, next);
+    setPlannedChipsByGW(prev => {
+      const updated = { ...prev };
+      if (next) updated[gw] = next;
+      else delete updated[gw];
+      return updated;
+    });
+    // Sync transient activeChip if the toggled GW is the one currently in view.
+    if (gw === gameweekInfo?.selected) setActiveChip(next);
+  }, [plannedChipsByGW, currentGameweek, unusedChipIds, userEntryId, gameweekInfo?.selected]);
+
   // Track the last gameweek we restored a chip for, so we only do it once per
   // gameweek/entry combination and don't clobber a manual toggle on re-render.
   const restoredChipKey = useRef(null);
@@ -258,12 +252,14 @@ const App = () => {
     if (isHighestPredictedTeam) return null;
     const viewedGW = gameweekInfo?.selected ?? currentGameweek;
     if (!viewedGW) return null;
-    // Future GW for own team: use the planned/active chip.
-    if (!viewingOpponentId && gameweekInfo?.isFuture) return effectiveActiveChip;
+    // Future GW for own team: use the planned/active chip (only if still available).
+    if (!viewingOpponentId && gameweekInfo?.isFuture) {
+      return unusedChipIds.includes(effectiveActiveChip) ? effectiveActiveChip : null;
+    }
     // Locked own GW or any opponent GW: look up from FPL chip history.
     const played = fplChipsHistory.find(c => c.event === viewedGW);
     return played ? (FPL_TO_CHIP_ID[played.name] ?? null) : null;
-  }, [isHighestPredictedTeam, viewingOpponentId, gameweekInfo, currentGameweek, effectiveActiveChip, fplChipsHistory]);
+  }, [isHighestPredictedTeam, viewingOpponentId, gameweekInfo, currentGameweek, effectiveActiveChip, unusedChipIds, fplChipsHistory]);
 
   // Chip display metadata (label, colour, description) for the viewed GW chip.
   const viewedGwChipData = CHIPS.find(c => c.id === viewedGwChip) ?? null;

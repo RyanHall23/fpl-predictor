@@ -34,15 +34,9 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 
-const POSITION_LABELS = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD', 5: 'MAN' };
+import { CHIPS } from '../../constants/chips';
 
-// Chip configuration — mirrors the CHIPS array in App.jsx
-const CHIPS_CONFIG = [
-  { id: 'bench_boost',    label: 'BB', name: 'Bench Boost',    color: '#2e7d32' },
-  { id: 'triple_captain', label: 'TC', name: 'Triple Captain', color: '#1565c0' },
-  { id: 'free_hit',       label: 'FH', name: 'Free Hit',       color: '#e65100' },
-  { id: 'wildcard',       label: 'WC', name: 'Wildcard',       color: '#6a1b9a' },
-];
+const POSITION_LABELS = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD', 5: 'MAN' };
 
 // Module-level cache: avoids re-fetching forecast data for the same set of
 // gameweeks across renders.  Keys are individual GW numbers.
@@ -381,16 +375,16 @@ const PlannedTransfers = ({
               return gwNums.flatMap((gw) => {
                 const gwTransfers = sorted.filter(t => t.gameweek === gw);
                 const chipId = plannedChipsByGW?.[gw];
-                const chipData = CHIPS_CONFIG.find(c => c.id === chipId);
+                const chipData = CHIPS.find(c => c.id === chipId);
                 const isFH = freeHitGWs.has(gw);
-                const availableChips = CHIPS_CONFIG.filter(c => unusedChipIds.includes(c.id) || chipId === c.id);
+                const availableChips = CHIPS.filter(c => unusedChipIds.includes(c.id) || chipId === c.id);
                 return [
                   // GW header with chip selector
                   <Box key={ `gw-hdr-${gw}` } sx={ { display: 'flex', alignItems: 'center', gap: 1, pt: 0.5 } }>
                     <Typography variant='caption' fontWeight={ 700 } color='text.secondary' sx={ { minWidth: 38 } }>
                       GW { gw }
                     </Typography>
-                    { onChipToggle && availableChips.length > 0 && (
+                    { onChipToggle && gw > currentGameweek && availableChips.length > 0 && (
                       <Box sx={ { display: 'flex', gap: 0.4 } }>
                         { availableChips.map(c => (
                           <Tooltip key={ c.id } title={ c.name }>
@@ -530,9 +524,9 @@ const PlannedTransfers = ({
                 return gwNums.flatMap((gw) => {
                   const gwTransfers = sorted.filter(t => t.gameweek === gw);
                   const chipId = plannedChipsByGW?.[gw];
-                  const chipData = CHIPS_CONFIG.find(c => c.id === chipId);
+                  const chipData = CHIPS.find(c => c.id === chipId);
                   const isFH = freeHitGWs.has(gw);
-                  const availableChips = CHIPS_CONFIG.filter(c => unusedChipIds.includes(c.id) || chipId === c.id);
+                  const availableChips = CHIPS.filter(c => unusedChipIds.includes(c.id) || chipId === c.id);
                   return [
                     // GW header row with chip selector
                     <TableRow key={ `gw-hdr-${gw}` } sx={ { backgroundColor: theme.palette.action.hover } }>
@@ -541,7 +535,7 @@ const PlannedTransfers = ({
                           <Typography variant='caption' fontWeight={ 700 } sx={ { minWidth: 40 } }>
                             GW { gw }
                           </Typography>
-                          { onChipToggle && availableChips.length > 0 && (
+                          { onChipToggle && gw > currentGameweek && availableChips.length > 0 && (
                             <Box sx={ { display: 'flex', gap: 0.4 } }>
                               { availableChips.map(c => (
                                 <Tooltip key={ c.id } title={ c.name }>

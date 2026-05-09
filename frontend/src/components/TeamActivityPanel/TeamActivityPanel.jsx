@@ -7,6 +7,7 @@ import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import RemoveIcon from '@mui/icons-material/Remove';
 import axios from '../../api';
 import AssistantManagerPanel from '../AssistantManagerPanel';
+import { FPL_CHIP_LABEL, FPL_CHIP_COLOR } from '../../constants/chips';
 
 const TeamActivityPanel = ({
   entryId,
@@ -205,8 +206,6 @@ const TeamActivityPanel = ({
                   Recent Form
                 </Typography>
                 { (() => {
-                  const CHIP_LABEL = { bboost: 'BB', '3xc': 'TC', freehit: 'FH', wildcard: 'WC' };
-                  const CHIP_COLOR = { bboost: '#2e7d32', '3xc': '#1565c0', freehit: '#e65100', wildcard: '#6a1b9a' };
                   return (
                     <Box sx={ { display: 'flex', gap: 0.75 } }>
                       { recentHistory.map((gw) => {
@@ -220,8 +219,8 @@ const TeamActivityPanel = ({
                               : theme.palette.text.secondary;
                         }
                         const gwChip = profile?.chips?.find(c => c.event === gw.event);
-                        const chipLabel = gwChip ? CHIP_LABEL[gwChip.name] : null;
-                        const chipColor = gwChip ? CHIP_COLOR[gwChip.name] : null;
+                        const chipLabel = gwChip ? FPL_CHIP_LABEL[gwChip.name] : null;
+                        const chipColor = gwChip ? FPL_CHIP_COLOR[gwChip.name] : null;
                         return (
                           <Box
                             key={ gw.event }
