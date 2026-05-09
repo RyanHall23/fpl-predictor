@@ -36,6 +36,14 @@ import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 
 const POSITION_LABELS = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD', 5: 'MAN' };
 
+// Chip configuration — mirrors the CHIPS array in App.jsx
+const CHIPS_CONFIG = [
+  { id: 'bench_boost',    label: 'BB', name: 'Bench Boost',    color: '#2e7d32' },
+  { id: 'triple_captain', label: 'TC', name: 'Triple Captain', color: '#1565c0' },
+  { id: 'free_hit',       label: 'FH', name: 'Free Hit',       color: '#e65100' },
+  { id: 'wildcard',       label: 'WC', name: 'Wildcard',       color: '#6a1b9a' },
+];
+
 // Module-level cache: avoids re-fetching forecast data for the same set of
 // gameweeks across renders.  Keys are individual GW numbers.
 const gwDataCache = {};
@@ -319,6 +327,9 @@ const PlannedTransfers = ({
   compact = false,
   voidedTransferIds = new Set(),
   freeHitGWs = new Set(),
+  plannedChipsByGW = {},
+  unusedChipIds = [],
+  onChipToggle,
 }) => {
   const theme = useTheme();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -365,77 +376,115 @@ const PlannedTransfers = ({
           <Typography variant='body2' color='text.secondary'>No planned transfers yet.</Typography>
         ) : (
           <Box sx={ { display: 'flex', flexDirection: 'column', gap: 1 } }>
-            { sorted.map((t, idx) => {
-              const isVoided = voidedTransferIds.has(t.id);
-              const isFH = freeHitGWs.has(t.gameweek);
-              const outForecast = buildForecast(t.playerOut.code, t.gameweek);
-              const inForecast  = buildForecast(t.playerIn.code,  t.gameweek);
-              const totalDiff =
-                inForecast.reduce((s, x) => s + x.points, 0) -
-                outForecast.reduce((s, x) => s + x.points, 0);
-              return (
-                <Box key={ t.id }>
-                  { idx > 0 && <Divider sx={ { mb: 1 } } /> }
-                  { isVoided && (
-                    <Typography variant='caption' color='warning.main' sx={ { display: 'block', mb: 0.25, fontStyle: 'italic' } }>
-                      Not made – transfer was not executed in FPL
+            { (() => {
+              const gwNums = [...new Set(sorted.map(t => t.gameweek))];
+              return gwNums.flatMap((gw) => {
+                const gwTransfers = sorted.filter(t => t.gameweek === gw);
+                const chipId = plannedChipsByGW?.[gw];
+                const chipData = CHIPS_CONFIG.find(c => c.id === chipId);
+                const isFH = freeHitGWs.has(gw);
+                const availableChips = CHIPS_CONFIG.filter(c => unusedChipIds.includes(c.id) || chipId === c.id);
+                return [
+                  // GW header with chip selector
+                  <Box key={ `gw-hdr-${gw}` } sx={ { display: 'flex', alignItems: 'center', gap: 1, pt: 0.5 } }>
+                    <Typography variant='caption' fontWeight={ 700 } color='text.secondary' sx={ { minWidth: 38 } }>
+                      GW { gw }
                     </Typography>
-                  ) }
-                  { isFH && !isVoided && (
-                    <Tooltip title={ `Free Hit active — this transfer reverts after GW${t.gameweek}` }>
-                      <Chip
-                        label='Free Hit'
-                        size='small'
-                        sx={ { height: 18, fontSize: '0.6rem', fontWeight: 700, bgcolor: '#e65100', color: '#fff', mb: 0.5, cursor: 'default' } }
-                      />
-                    </Tooltip>
-                  ) }
-                  <Box
-                    sx={ {
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: 0.5,
-                      flexWrap: 'wrap',
-                      opacity: isVoided ? 0.5 : 1,
-                    } }
-                  >
-                    <Box sx={ { flex: '1 1 0', minWidth: 0 } }>
-                      <Typography
-                        variant='body2'
-                        fontWeight='bold'
-                        noWrap
-                        sx={ isVoided ? { textDecoration: 'line-through' } : {} }
-                      >{ t.playerOut.name }</Typography>
-                      <PointsFixturesForecast gwData={ outForecast } pointsColor='error' />
-                    </Box>
-                    <SwapHorizIcon sx={ { fontSize: 18, color: 'text.secondary', flexShrink: 0, mt: 0.5 } } />
-                    <Box sx={ { flex: '1 1 0', minWidth: 0 } }>
-                      <Typography
-                        variant='body2'
-                        fontWeight='bold'
-                        noWrap
-                        sx={ isVoided ? { textDecoration: 'line-through' } : {} }
-                      >{ t.playerIn.name }</Typography>
-                      <PointsFixturesForecast gwData={ inForecast } pointsColor='success.main' diff={ !isVoided ? totalDiff : undefined } />
-                    </Box>
-                    <Select
-                      size='small'
-                      value={ t.gameweek }
-                      onChange={ (e) => onUpdateGameweek(t.id, e.target.value) }
-                      sx={ { fontSize: '0.7rem', height: 24, minWidth: 60 } }
-                      disabled={ isVoided }
-                    >
-                      { gwOptions.map((gw) => (
-                        <MenuItem key={ gw } value={ gw } sx={ { fontSize: '0.75rem' } }>GW { gw }</MenuItem>
-                      )) }
-                    </Select>
-                    <IconButton size='small' onClick={ () => onRemove(t.id) } sx={ { color: theme.palette.error.main, p: 0.25 } }>
-                      <DeleteIcon sx={ { fontSize: 16 } } />
-                    </IconButton>
-                  </Box>
-                </Box>
-              );
-            }) }
+                    { onChipToggle && availableChips.length > 0 && (
+                      <Box sx={ { display: 'flex', gap: 0.4 } }>
+                        { availableChips.map(c => (
+                          <Tooltip key={ c.id } title={ c.name }>
+                            <Button
+                              size='small'
+                              variant={ chipId === c.id ? 'contained' : 'outlined' }
+                              onClick={ () => onChipToggle(c.id, gw) }
+                              sx={ {
+                                minWidth: 0, px: 0.6, py: '1px', fontSize: '0.6rem', fontWeight: 700, lineHeight: 1.4,
+                                ...(chipId === c.id && { backgroundColor: c.color, borderColor: c.color, color: '#fff', '&:hover': { backgroundColor: c.color, filter: 'brightness(1.1)' } }),
+                                ...(chipId !== c.id && { borderColor: c.color, color: c.color, '&:hover': { borderColor: c.color, backgroundColor: `${c.color}18` } }),
+                              } }
+                            >{ c.label }</Button>
+                          </Tooltip>
+                        )) }
+                      </Box>
+                    ) }
+                    { chipData && !onChipToggle && (
+                      <Tooltip title={ chipData.name }>
+                        <Box component='span' sx={ { px: 0.5, py: '1px', borderRadius: '3px', backgroundColor: chipData.color, color: '#fff', fontSize: '0.6rem', fontWeight: 700, cursor: 'default' } }>
+                          { chipData.label }
+                        </Box>
+                      </Tooltip>
+                    ) }
+                    { isFH && chipId !== 'free_hit' && (
+                      <Chip label='FH' size='small' sx={ { height: 16, fontSize: '0.55rem', fontWeight: 700, bgcolor: '#e65100', color: '#fff', cursor: 'default' } } />
+                    ) }
+                  </Box>,
+                  // Transfer rows for this GW
+                  ...gwTransfers.map((t) => {
+                    const isVoided = voidedTransferIds.has(t.id);
+                    const outForecast = buildForecast(t.playerOut.code, t.gameweek);
+                    const inForecast  = buildForecast(t.playerIn.code,  t.gameweek);
+                    const totalDiff =
+                      inForecast.reduce((s, x) => s + x.points, 0) -
+                      outForecast.reduce((s, x) => s + x.points, 0);
+                    return (
+                      <Box key={ t.id } sx={ { pl: 1 } }>
+                        { isVoided && (
+                          <Typography variant='caption' color='warning.main' sx={ { display: 'block', mb: 0.25, fontStyle: 'italic' } }>
+                            Not made – transfer was not executed in FPL
+                          </Typography>
+                        ) }
+                        <Box
+                          sx={ {
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: 0.5,
+                            flexWrap: 'wrap',
+                            opacity: isVoided ? 0.5 : 1,
+                          } }
+                        >
+                          <Box sx={ { flex: '1 1 0', minWidth: 0 } }>
+                            <Typography
+                              variant='body2'
+                              fontWeight='bold'
+                              noWrap
+                              sx={ isVoided ? { textDecoration: 'line-through' } : {} }
+                            >{ t.playerOut.name }</Typography>
+                            <PointsFixturesForecast gwData={ outForecast } pointsColor='error' />
+                          </Box>
+                          <SwapHorizIcon sx={ { fontSize: 18, color: 'text.secondary', flexShrink: 0, mt: 0.5 } } />
+                          <Box sx={ { flex: '1 1 0', minWidth: 0 } }>
+                            <Typography
+                              variant='body2'
+                              fontWeight='bold'
+                              noWrap
+                              sx={ isVoided ? { textDecoration: 'line-through' } : {} }
+                            >{ t.playerIn.name }</Typography>
+                            <PointsFixturesForecast gwData={ inForecast } pointsColor='success.main' diff={ !isVoided ? totalDiff : undefined } />
+                          </Box>
+                          <Select
+                            size='small'
+                            value={ t.gameweek }
+                            onChange={ (e) => onUpdateGameweek(t.id, e.target.value) }
+                            sx={ { fontSize: '0.7rem', height: 24, minWidth: 60 } }
+                            disabled={ isVoided }
+                          >
+                            { gwOptions.map((gw) => (
+                              <MenuItem key={ gw } value={ gw } sx={ { fontSize: '0.75rem' } }>GW { gw }</MenuItem>
+                            )) }
+                          </Select>
+                          <IconButton size='small' onClick={ () => onRemove(t.id) } sx={ { color: theme.palette.error.main, p: 0.25 } }>
+                            <DeleteIcon sx={ { fontSize: 16 } } />
+                          </IconButton>
+                        </Box>
+                      </Box>
+                    );
+                  }),
+                  // Divider between GW groups (not after the last one)
+                  gw !== gwNums[gwNums.length - 1] && <Divider key={ `gw-div-${gw}` } sx={ { mt: 0.5 } } />,
+                ];
+              });
+            })() }
           </Box>
         ) }
 
@@ -476,81 +525,122 @@ const PlannedTransfers = ({
         <TableContainer component={ Paper } sx={ { backgroundColor: theme.palette.mode === 'dark' ? '#1e2127' : '#ffffff' } }>
           <Table size='small'>
             <TableBody>
-              { sorted.map((t) => {
-                const isVoided = voidedTransferIds.has(t.id);
-                const isFH = freeHitGWs.has(t.gameweek);
-                const outForecast = buildForecast(t.playerOut.code, t.gameweek);
-                const inForecast  = buildForecast(t.playerIn.code,  t.gameweek);
-                const totalDiff =
-                  inForecast.reduce((s, x) => s + x.points, 0) -
-                  outForecast.reduce((s, x) => s + x.points, 0);
-                return (
-                  <TableRow
-                    key={ t.id }
-                    sx={ {
-                      '&:hover': { backgroundColor: theme.palette.action.hover },
-                      opacity: isVoided ? 0.55 : 1,
-                    } }
-                  >
-                    { /* Player Out */ }
-                    <TableCell sx={ { borderRight: `2px solid ${theme.palette.divider}`, minWidth: 150 } }>
-                      { isVoided && (
-                        <Typography variant='caption' color='warning.main' sx={ { display: 'block', fontStyle: 'italic' } }>
-                          Not made
-                        </Typography>
-                      ) }
-                      { isFH && !isVoided && (
-                        <Tooltip title={ `Free Hit active — this transfer reverts after GW${t.gameweek}` }>
-                          <Chip
-                            label='Free Hit'
-                            size='small'
-                            sx={ { height: 18, fontSize: '0.6rem', fontWeight: 700, bgcolor: '#e65100', color: '#fff', mb: 0.5, cursor: 'default' } }
-                          />
-                        </Tooltip>
-                      ) }
-                      <Typography
-                        variant='body2'
-                        fontWeight='bold'
-                        sx={ isVoided ? { textDecoration: 'line-through' } : {} }
-                      >{ t.playerOut.name }</Typography>
-                      <PointsFixturesForecast gwData={ outForecast } pointsColor='error' />
-                    </TableCell>
-                    { /* Arrow */ }
-                    <TableCell sx={ { px: 0.5, width: 24 } }>
-                      <SwapHorizIcon sx={ { fontSize: 20, color: 'text.secondary' } } />
-                    </TableCell>
-                    { /* Player In */ }
-                    <TableCell sx={ { minWidth: 150 } }>
-                      <Typography
-                        variant='body2'
-                        fontWeight='bold'
-                        sx={ isVoided ? { textDecoration: 'line-through' } : {} }
-                      >{ t.playerIn.name }</Typography>
-                      <PointsFixturesForecast gwData={ inForecast } pointsColor='success.main' diff={ !isVoided ? totalDiff : undefined } />
-                    </TableCell>
-                    { /* Gameweek selector */ }
-                    <TableCell sx={ { width: 90 } }>
-                      <Select
-                        size='small'
-                        value={ t.gameweek }
-                        onChange={ (e) => onUpdateGameweek(t.id, e.target.value) }
-                        sx={ { fontSize: '0.75rem' } }
-                        disabled={ isVoided }
-                      >
-                        { gwOptions.map((gw) => (
-                          <MenuItem key={ gw } value={ gw } sx={ { fontSize: '0.75rem' } }>GW { gw }</MenuItem>
-                        )) }
-                      </Select>
-                    </TableCell>
-                    { /* Delete */ }
-                    <TableCell sx={ { width: 40 } }>
-                      <IconButton size='small' onClick={ () => onRemove(t.id) } sx={ { color: theme.palette.error.main } }>
-                        <DeleteIcon fontSize='small' />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                );
-              }) }
+              { (() => {
+                const gwNums = [...new Set(sorted.map(t => t.gameweek))];
+                return gwNums.flatMap((gw) => {
+                  const gwTransfers = sorted.filter(t => t.gameweek === gw);
+                  const chipId = plannedChipsByGW?.[gw];
+                  const chipData = CHIPS_CONFIG.find(c => c.id === chipId);
+                  const isFH = freeHitGWs.has(gw);
+                  const availableChips = CHIPS_CONFIG.filter(c => unusedChipIds.includes(c.id) || chipId === c.id);
+                  return [
+                    // GW header row with chip selector
+                    <TableRow key={ `gw-hdr-${gw}` } sx={ { backgroundColor: theme.palette.action.hover } }>
+                      <TableCell colSpan={ 5 } sx={ { py: 0.75, borderBottom: `2px solid ${theme.palette.divider}` } }>
+                        <Box sx={ { display: 'flex', alignItems: 'center', gap: 1 } }>
+                          <Typography variant='caption' fontWeight={ 700 } sx={ { minWidth: 40 } }>
+                            GW { gw }
+                          </Typography>
+                          { onChipToggle && availableChips.length > 0 && (
+                            <Box sx={ { display: 'flex', gap: 0.4 } }>
+                              { availableChips.map(c => (
+                                <Tooltip key={ c.id } title={ c.name }>
+                                  <Button
+                                    size='small'
+                                    variant={ chipId === c.id ? 'contained' : 'outlined' }
+                                    onClick={ () => onChipToggle(c.id, gw) }
+                                    sx={ {
+                                      minWidth: 0, px: 0.75, py: '1px', fontSize: '0.6rem', fontWeight: 700, lineHeight: 1.4,
+                                      ...(chipId === c.id && { backgroundColor: c.color, borderColor: c.color, color: '#fff', '&:hover': { backgroundColor: c.color, filter: 'brightness(1.1)' } }),
+                                      ...(chipId !== c.id && { borderColor: c.color, color: c.color, '&:hover': { borderColor: c.color, backgroundColor: `${c.color}18` } }),
+                                    } }
+                                  >{ c.label }</Button>
+                                </Tooltip>
+                              )) }
+                            </Box>
+                          ) }
+                          { chipData && !onChipToggle && (
+                            <Tooltip title={ chipData.name }>
+                              <Box component='span' sx={ { px: 0.6, py: '1px', borderRadius: '3px', backgroundColor: chipData.color, color: '#fff', fontSize: '0.6rem', fontWeight: 700, cursor: 'default' } }>
+                                { chipData.label }
+                              </Box>
+                            </Tooltip>
+                          ) }
+                          { isFH && chipId !== 'free_hit' && (
+                            <Chip label='FH active' size='small' sx={ { height: 16, fontSize: '0.55rem', fontWeight: 700, bgcolor: '#e65100', color: '#fff', cursor: 'default' } } />
+                          ) }
+                        </Box>
+                      </TableCell>
+                    </TableRow>,
+                    // Transfer rows for this GW
+                    ...gwTransfers.map((t) => {
+                      const isVoided = voidedTransferIds.has(t.id);
+                      const outForecast = buildForecast(t.playerOut.code, t.gameweek);
+                      const inForecast  = buildForecast(t.playerIn.code,  t.gameweek);
+                      const totalDiff =
+                        inForecast.reduce((s, x) => s + x.points, 0) -
+                        outForecast.reduce((s, x) => s + x.points, 0);
+                      return (
+                        <TableRow
+                          key={ t.id }
+                          sx={ {
+                            '&:hover': { backgroundColor: theme.palette.action.hover },
+                            opacity: isVoided ? 0.55 : 1,
+                          } }
+                        >
+                          { /* Player Out */ }
+                          <TableCell sx={ { borderRight: `2px solid ${theme.palette.divider}`, minWidth: 150 } }>
+                            { isVoided && (
+                              <Typography variant='caption' color='warning.main' sx={ { display: 'block', fontStyle: 'italic' } }>
+                                Not made
+                              </Typography>
+                            ) }
+                            <Typography
+                              variant='body2'
+                              fontWeight='bold'
+                              sx={ isVoided ? { textDecoration: 'line-through' } : {} }
+                            >{ t.playerOut.name }</Typography>
+                            <PointsFixturesForecast gwData={ outForecast } pointsColor='error' />
+                          </TableCell>
+                          { /* Arrow */ }
+                          <TableCell sx={ { px: 0.5, width: 24 } }>
+                            <SwapHorizIcon sx={ { fontSize: 20, color: 'text.secondary' } } />
+                          </TableCell>
+                          { /* Player In */ }
+                          <TableCell sx={ { minWidth: 150 } }>
+                            <Typography
+                              variant='body2'
+                              fontWeight='bold'
+                              sx={ isVoided ? { textDecoration: 'line-through' } : {} }
+                            >{ t.playerIn.name }</Typography>
+                            <PointsFixturesForecast gwData={ inForecast } pointsColor='success.main' diff={ !isVoided ? totalDiff : undefined } />
+                          </TableCell>
+                          { /* Gameweek selector */ }
+                          <TableCell sx={ { width: 90 } }>
+                            <Select
+                              size='small'
+                              value={ t.gameweek }
+                              onChange={ (e) => onUpdateGameweek(t.id, e.target.value) }
+                              sx={ { fontSize: '0.75rem' } }
+                              disabled={ isVoided }
+                            >
+                              { gwOptions.map((gw) => (
+                                <MenuItem key={ gw } value={ gw } sx={ { fontSize: '0.75rem' } }>GW { gw }</MenuItem>
+                              )) }
+                            </Select>
+                          </TableCell>
+                          { /* Delete */ }
+                          <TableCell sx={ { width: 40 } }>
+                            <IconButton size='small' onClick={ () => onRemove(t.id) } sx={ { color: theme.palette.error.main } }>
+                              <DeleteIcon fontSize='small' />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    }),
+                  ];
+                });
+              })() }
             </TableBody>
           </Table>
         </TableContainer>
@@ -580,6 +670,9 @@ PlannedTransfers.propTypes = {
   compact: PropTypes.bool,
   voidedTransferIds: PropTypes.instanceOf(Set),
   freeHitGWs: PropTypes.instanceOf(Set),
+  plannedChipsByGW: PropTypes.object,
+  unusedChipIds: PropTypes.arrayOf(PropTypes.string),
+  onChipToggle: PropTypes.func,
 };
 
 export default PlannedTransfers;
