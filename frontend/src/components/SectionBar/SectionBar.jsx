@@ -16,7 +16,11 @@ const HIGHEST_SECTIONS = ['active', 'next'];
 const SectionBar = ({ activeSection, onSectionChange, isLive, isHighestPredictedTeam }) => {
   const theme = useTheme();
   const sections = isHighestPredictedTeam ? HIGHEST_SECTIONS : USER_SECTIONS;
-  const value = Math.max(0, sections.indexOf(activeSection));
+  const activeIndex = sections.indexOf(activeSection);
+
+  React.useEffect(() => {
+    if (activeIndex === -1) onSectionChange(sections[0]);
+  }, [activeIndex, onSectionChange, sections]);
 
   return (
     <Box
@@ -30,7 +34,7 @@ const SectionBar = ({ activeSection, onSectionChange, isLive, isHighestPredicted
       } }
     >
       <Tabs
-        value={ value }
+        value={ activeIndex === -1 ? false : activeIndex }
         onChange={ (_, newValue) => onSectionChange(sections[newValue]) }
         centered
         sx={ {

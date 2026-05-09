@@ -165,7 +165,7 @@ const NavigationBar = ({
 
             { /* Gameweek Selector */ }
             <Box sx={ { display: 'flex', alignItems: 'center', gap: 0.25 } }>
-              <Tooltip title={ gameweekLocked ? 'Gameweek locked in Active view' : 'Previous gameweek' }>
+              <Tooltip title={ gameweekLocked ? 'Gameweek locked in Active/Next view' : 'Previous gameweek' }>
                 <span>
                   <IconButton
                     size='small'
@@ -201,7 +201,7 @@ const NavigationBar = ({
                   )) }
                 </Select>
               </FormControl>
-              <Tooltip title={ gameweekLocked ? 'Gameweek locked in Active view' : 'Next gameweek' }>
+              <Tooltip title={ gameweekLocked ? 'Gameweek locked in Active/Next view' : 'Next gameweek' }>
                 <span>
                   <IconButton
                     size='small'
@@ -277,6 +277,7 @@ NavigationBar.propTypes = {
   selectedGameweek: PropTypes.number,
   setSelectedGameweek: PropTypes.func,
   currentGameweek: PropTypes.number,
+  gameweekLocked: PropTypes.bool,
 };
 
 export default NavigationBar;

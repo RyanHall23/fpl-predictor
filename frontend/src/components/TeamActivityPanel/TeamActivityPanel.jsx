@@ -6,23 +6,12 @@ import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import RemoveIcon from '@mui/icons-material/Remove';
 import axios from '../../api';
-import RecommendedTransfers from '../RecommendedTransfers';
-import PlannedTransfers from '../PlannedTransfers';
 import AssistantManagerPanel from '../AssistantManagerPanel';
 
 const TeamActivityPanel = ({
   entryId,
   currentGameweek,
-  currentEntryId,
   viewingOpponentId,
-  plannedTransfers,
-  onRemovePlannedTransfer,
-  onUpdatePlannedTransferGameweek,
-  onAddPlannedTransfer,
-  team,
-  allPlayers,
-  voidedTransferIds,
-  freeHitGWs,
   activeSection,
   isCurrentGwActive,
 }) => {
@@ -66,8 +55,7 @@ const TeamActivityPanel = ({
   // Exclude the current GW from recent form while it's still active (scores are partial)
   const recentHistory = history
     .filter(h => !(isCurrentGwActive && h.event === currentGameweek))
-    .slice(-5)
-    .reverse();
+    .slice(-5);
 
   // Average points across all history for colour coding
   const avgPoints = history.length
@@ -217,7 +205,7 @@ const TeamActivityPanel = ({
                   Recent Form
                 </Typography>
                 <Box sx={ { display: 'flex', gap: 0.75 } }>
-                  { recentHistory.slice().reverse().map((gw) => {
+                  { recentHistory.map((gw) => {
                     const prevGw = history.find(h => h.event === gw.event - 1);
                     // Lower rank number = better. Green if rank improved (fell), red if worsened (rose).
                     let rankColor = theme.palette.text.secondary;
@@ -336,16 +324,7 @@ const TeamActivityPanel = ({
 TeamActivityPanel.propTypes = {
   entryId: PropTypes.string,
   currentGameweek: PropTypes.number,
-  currentEntryId: PropTypes.string,
   viewingOpponentId: PropTypes.string,
-  plannedTransfers: PropTypes.array,
-  onRemovePlannedTransfer: PropTypes.func,
-  onUpdatePlannedTransferGameweek: PropTypes.func,
-  onAddPlannedTransfer: PropTypes.func,
-  team: PropTypes.array,
-  allPlayers: PropTypes.array,
-  voidedTransferIds: PropTypes.instanceOf(Set),
-  freeHitGWs: PropTypes.instanceOf(Set),
   activeSection: PropTypes.string,
   isCurrentGwActive: PropTypes.bool,
 };

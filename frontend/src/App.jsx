@@ -56,7 +56,9 @@ const App = () => {
   // Planned chips across all future GWs: { [gw]: chipId }.  Loaded from storage
   // on mount and kept in sync whenever a chip is toggled.
   const [plannedChipsByGW, setPlannedChipsByGW] = useState({});
-  const [activeSection, setActiveSection] = useState('overview');
+  const [activeSection, setActiveSection] = useState(() => (
+    teamView === TEAM_VIEW.HIGHEST ? 'active' : 'overview'
+  ));
   const userOverriddenSection = useRef(false);
   const prevGameweekRef = useRef(null);
 
@@ -227,6 +229,16 @@ const App = () => {
     }
   }, [isHighestPredictedTeam]);
 
+  useEffect(() => {
+    const allowedSections = isHighestPredictedTeam
+      ? ['active', 'next']
+      : ['active', 'planning', 'overview'];
+    if (!allowedSections.includes(activeSection)) {
+      setActiveSection(allowedSections[0]);
+      userOverriddenSection.current = false;
+    }
+  }, [activeSection, isHighestPredictedTeam]);
+
   // Track whether the CURRENT (not selected) gameweek is still active.
   // This is kept independently so the Active tab dot doesn't flicker off
   // when the user switches to Planning (which loads a future GW response).
@@ -260,7 +272,7 @@ const App = () => {
     if (section === 'active') {
       setSelectedGameweek(null);
     } else if (section === 'planning' || section === 'next') {
-      setSelectedGameweek(currentGameweek ? currentGameweek + 1 : null);
+      setSelectedGameweek(currentGameweek != null && currentGameweek < 38 ? currentGameweek + 1 : null);
     } else {
       setSelectedGameweek(null);
     }
@@ -849,7 +861,6 @@ const App = () => {
                 userEntryId={ userEntryId }
                 gameweekDeadline={ gameweekInfo?.data?.deadline_time }
                 liveMatches={ liveMatches }
-                activeSection={ activeSection }
               />
             ) }
           </Box>
@@ -859,16 +870,7 @@ const App = () => {
             <TeamActivityPanel
               entryId={ viewingOpponentId || currentEntryId }
               currentGameweek={ currentGameweek }
-              currentEntryId={ currentEntryId }
               viewingOpponentId={ viewingOpponentId }
-              plannedTransfers={ plannedTransfers }
-              onRemovePlannedTransfer={ removePlannedTransfer }
-              onUpdatePlannedTransferGameweek={ updateTransferGameweek }
-              onAddPlannedTransfer={ addPlannedTransfer }
-              team={ [...activePlayers, ...reservePlayers] }
-              allPlayers={ allPlayers }
-              voidedTransferIds={ voidedTransferIds }
-              freeHitGWs={ freeHitGWs }
               activeSection={ activeSection }
               isCurrentGwActive={ currentGwIsActive }
             />

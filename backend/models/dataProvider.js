@@ -8,6 +8,21 @@ const { validateEntryId, validateGameweek, validatePlayerId, validateLeagueId } 
 // Keys are URL strings; values are { data, expiresAt }.
 // ---------------------------------------------------------------------------
 const cache = new Map();
+const MAX_CACHE_SIZE = 1000;
+
+const pruneExpiredEntries = (now = Date.now()) => {
+  for (const [key, value] of cache.entries()) {
+    if (value.expiresAt <= now) cache.delete(key);
+  }
+};
+
+const enforceCacheSize = () => {
+  while (cache.size > MAX_CACHE_SIZE) {
+    const oldestKey = cache.keys().next().value;
+    if (!oldestKey) break;
+    cache.delete(oldestKey);
+  }
+};
 
 /**
  * Fetch a URL with caching.  `ttlMs` is the time-to-live in milliseconds.
@@ -15,10 +30,20 @@ const cache = new Map();
 const cachedGet = async (url, ttlMs) => {
   const now = Date.now();
   const hit = cache.get(url);
-  if (hit && now < hit.expiresAt) return hit.data;
+  if (hit) {
+    if (now < hit.expiresAt) {
+      cache.delete(url);
+      cache.set(url, hit);
+      return hit.data;
+    }
+    cache.delete(url);
+  }
+
+  pruneExpiredEntries(now);
 
   const response = await axios.get(url);
-  cache.set(url, { data: response.data, expiresAt: now + ttlMs });
+  cache.set(url, { data: response.data, expiresAt: Date.now() + ttlMs });
+  enforceCacheSize();
   return response.data;
 };
 
