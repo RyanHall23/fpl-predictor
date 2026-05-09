@@ -39,6 +39,7 @@ const NavigationBar = ({
   selectedGameweek,
   setSelectedGameweek,
   currentGameweek,
+  gameweekLocked,
 }) => {
   const { mode, toggleTheme, toggleWin2k, toggleTeletext } = useThemeMode();
   const [teamIdDialogOpen, setTeamIdDialogOpen] = React.useState(false);
@@ -164,12 +165,12 @@ const NavigationBar = ({
 
             { /* Gameweek Selector */ }
             <Box sx={ { display: 'flex', alignItems: 'center', gap: 0.25 } }>
-              <Tooltip title='Previous gameweek'>
+              <Tooltip title={ gameweekLocked ? 'Gameweek locked in Active view' : 'Previous gameweek' }>
                 <span>
                   <IconButton
                     size='small'
                     color='inherit'
-                    disabled={ (selectedGameweek || currentGameweek || 1) <= 1 }
+                    disabled={ gameweekLocked || (selectedGameweek || currentGameweek || 1) <= 1 }
                     onClick={ () => {
                       const current = selectedGameweek || currentGameweek || 1;
                       setSelectedGameweek(current - 1 === currentGameweek ? null : current - 1);
@@ -186,6 +187,7 @@ const NavigationBar = ({
                   inputProps={ { 'aria-label': 'Gameweek' } }
                   value={ selectedGameweek || currentGameweek || '' }
                   label='GW'
+                  disabled={ gameweekLocked }
                   onChange={ (e) => setSelectedGameweek(e.target.value === currentGameweek ? null : e.target.value) }
                   sx={ { 
                     bgcolor: 'background.paper',
@@ -199,12 +201,12 @@ const NavigationBar = ({
                   )) }
                 </Select>
               </FormControl>
-              <Tooltip title='Next gameweek'>
+              <Tooltip title={ gameweekLocked ? 'Gameweek locked in Active view' : 'Next gameweek' }>
                 <span>
                   <IconButton
                     size='small'
                     color='inherit'
-                    disabled={ (selectedGameweek || currentGameweek || 1) >= 38 }
+                    disabled={ gameweekLocked || (selectedGameweek || currentGameweek || 1) >= 38 }
                     onClick={ () => {
                       const current = selectedGameweek || currentGameweek || 1;
                       setSelectedGameweek(current + 1 === currentGameweek ? null : current + 1);

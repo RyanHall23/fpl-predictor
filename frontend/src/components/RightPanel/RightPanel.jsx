@@ -21,6 +21,7 @@ const RightPanel = ({
   selectedGameweek,
   gameweekDeadline,
   liveMatches,
+  activeSection,
 }) => {
   const theme = useTheme();
   const displayGameweek = selectedGameweek || currentGameweek;
@@ -130,6 +131,7 @@ RightPanel.propTypes = {
   selectedGameweek: PropTypes.number,
   gameweekDeadline: PropTypes.string,
   liveMatches: PropTypes.array,
+  activeSection: PropTypes.string,
 };
 
 export default RightPanel;
