@@ -3,6 +3,59 @@ const fs = require('fs').promises;
 const path = require('path');
 const { validateEntryId, validateGameweek, validatePlayerId, validateLeagueId } = require('../utils/validation');
 
+// ---------------------------------------------------------------------------
+// Simple in-memory TTL cache to reduce repeated FPL API requests.
+// Keys are URL strings; values are { data, expiresAt }.
+// ---------------------------------------------------------------------------
+const cache = new Map();
+const MAX_CACHE_SIZE = 1000;
+
+const pruneExpiredEntries = (now = Date.now()) => {
+  for (const [key, value] of cache.entries()) {
+    if (value.expiresAt <= now) cache.delete(key);
+  }
+};
+
+const enforceCacheSize = () => {
+  while (cache.size > MAX_CACHE_SIZE) {
+    const oldestKey = cache.keys().next().value;
+    if (!oldestKey) break;
+    cache.delete(oldestKey);
+  }
+};
+
+/**
+ * Fetch a URL with caching.  `ttlMs` is the time-to-live in milliseconds.
+ */
+const cachedGet = async (url, ttlMs) => {
+  const now = Date.now();
+  const hit = cache.get(url);
+  if (hit) {
+    if (now < hit.expiresAt) {
+      cache.delete(url);
+      cache.set(url, hit);
+      return hit.data;
+    }
+    cache.delete(url);
+  }
+
+  pruneExpiredEntries(now);
+
+  const response = await axios.get(url);
+  cache.set(url, { data: response.data, expiresAt: Date.now() + ttlMs });
+  enforceCacheSize();
+  return response.data;
+};
+
+// TTL constants
+const TTL_BOOTSTRAP  = 5 * 60 * 1000;  // 5 min  – rarely changes
+const TTL_PROFILE    = 2 * 60 * 1000;  // 2 min  – entry/history/leagues
+const TTL_PICKS      = 60 * 1000;      // 1 min  – picks can change during active GW
+const TTL_LIVE       = 30 * 1000;      // 30 sec – live scores change often
+const TTL_FIXTURES   = 5 * 60 * 1000;  // 5 min
+const TTL_LEAGUE     = 2 * 60 * 1000;  // 2 min
+const TTL_TRANSFERS  = 2 * 60 * 1000;  // 2 min
+
 // Environment flag to control data source
 // USE_FPL_API: 'true' (default) - Use real FPL API
 // USE_FPL_API: 'false' - Use local mock data for testing
@@ -37,8 +90,7 @@ const loadMockData = async (filename) => {
 const fetchBootstrapStatic = async () => {
   if (USE_FPL_API) {
     const url = `${FPL_API_BASE}/bootstrap-static/`;
-    const response = await axios.get(url);
-    return response.data;
+    return await cachedGet(url, TTL_BOOTSTRAP);
   } else {
     console.log('[Mock Mode] Fetching bootstrap-static from local data');
     return await loadMockData('bootstrap-static.json');
@@ -58,8 +110,7 @@ const fetchPlayerPicks = async (entryId, eventId) => {
   
   if (USE_FPL_API) {
     const url = `${FPL_API_BASE}/entry/${validatedEntryId}/event/${validatedEventId}/picks/`;
-    const response = await axios.get(url);
-    return response.data;
+    return await cachedGet(url, TTL_PICKS);
   } else {
     console.log(`[Mock Mode] Fetching player picks for entry ${validatedEntryId} event ${validatedEventId} from local data`);
     return await loadMockData('player-picks.json');
@@ -77,8 +128,7 @@ const fetchElementSummary = async (playerId) => {
   
   if (USE_FPL_API) {
     const url = `${FPL_API_BASE}/element-summary/${validatedPlayerId}/`;
-    const response = await axios.get(url);
-    return response.data;
+    return await cachedGet(url, TTL_PROFILE);
   } else {
     console.log(`[Mock Mode] Fetching element summary for player ${validatedPlayerId} from local data`);
     return await loadMockData('element-summary.json');
@@ -92,8 +142,7 @@ const fetchElementSummary = async (playerId) => {
 const fetchFixtures = async () => {
   if (USE_FPL_API) {
     const url = `${FPL_API_BASE}/fixtures/`;
-    const response = await axios.get(url);
-    return response.data;
+    return await cachedGet(url, TTL_FIXTURES);
   } else {
     console.log('[Mock Mode] Fetching fixtures from local data');
     return await loadMockData('fixtures.json');
@@ -109,8 +158,7 @@ const fetchEventFixtures = async (eventId) => {
   const validatedEventId = validateGameweek(eventId);
   if (USE_FPL_API) {
     const url = `${FPL_API_BASE}/fixtures/?event=${validatedEventId}`;
-    const response = await axios.get(url);
-    return response.data;
+    return await cachedGet(url, TTL_FIXTURES);
   } else {
     console.log(`[Mock Mode] Fetching event ${validatedEventId} fixtures from local data`);
     const allFixtures = await loadMockData('fixtures.json');
@@ -129,8 +177,7 @@ const fetchLiveGameweek = async (eventId) => {
   
   if (USE_FPL_API) {
     const url = `${FPL_API_BASE}/event/${validatedEventId}/live/`;
-    const response = await axios.get(url);
-    return response.data;
+    return await cachedGet(url, TTL_LIVE);
   } else {
     console.log(`[Mock Mode] Fetching live gameweek ${validatedEventId} from local data`);
     return await loadMockData('live-gameweek.json');
@@ -148,8 +195,7 @@ const fetchEntry = async (entryId) => {
   
   if (USE_FPL_API) {
     const url = `${FPL_API_BASE}/entry/${validatedEntryId}/`;
-    const response = await axios.get(url);
-    return response.data;
+    return await cachedGet(url, TTL_PROFILE);
   } else {
     console.log(`[Mock Mode] Fetching entry ${validatedEntryId} from local data`);
     return await loadMockData('entry.json');
@@ -167,8 +213,7 @@ const fetchHistory = async (entryId) => {
   
   if (USE_FPL_API) {
     const url = `${FPL_API_BASE}/entry/${validatedEntryId}/history/`;
-    const response = await axios.get(url);
-    return response.data;
+    return await cachedGet(url, TTL_PROFILE);
   } else {
     console.log(`[Mock Mode] Fetching history for entry ${validatedEntryId} from local data`);
     return await loadMockData('history.json');
@@ -184,8 +229,7 @@ const fetchEntryTransfers = async (entryId) => {
   const validatedEntryId = validateEntryId(entryId);
   if (USE_FPL_API) {
     const url = `${FPL_API_BASE}/entry/${validatedEntryId}/transfers/`;
-    const response = await axios.get(url);
-    return response.data;
+    return await cachedGet(url, TTL_TRANSFERS);
   } else {
     console.log(`[Mock Mode] Fetching transfers for entry ${validatedEntryId} from local data`);
     return [];
@@ -204,8 +248,7 @@ const fetchLeagueStandings = async (leagueId, page = 1) => {
 
   if (USE_FPL_API) {
     const url = `${FPL_API_BASE}/leagues-classic/${validatedLeagueId}/standings/?page_standings=${page}`;
-    const response = await axios.get(url);
-    return response.data;
+    return await cachedGet(url, TTL_LEAGUE);
   } else {
     console.log(`[Mock Mode] Fetching league standings for league ${validatedLeagueId} from local data`);
     return await loadMockData('league-standings.json');

@@ -6,23 +6,14 @@ import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import RemoveIcon from '@mui/icons-material/Remove';
 import axios from '../../api';
-import RecommendedTransfers from '../RecommendedTransfers';
-import PlannedTransfers from '../PlannedTransfers';
 import AssistantManagerPanel from '../AssistantManagerPanel';
 
 const TeamActivityPanel = ({
   entryId,
   currentGameweek,
-  currentEntryId,
   viewingOpponentId,
-  plannedTransfers,
-  onRemovePlannedTransfer,
-  onUpdatePlannedTransferGameweek,
-  onAddPlannedTransfer,
-  team,
-  allPlayers,
-  voidedTransferIds,
-  freeHitGWs,
+  activeSection,
+  isCurrentGwActive,
 }) => {
   const theme = useTheme();
   const [profile, setProfile] = useState(null);
@@ -61,8 +52,10 @@ const TeamActivityPanel = ({
     return n.toString();
   };
 
-  // Get recent gameweeks (last 5)
-  const recentHistory = history.slice(-5).reverse();
+  // Exclude the current GW from recent form while it's still active (scores are partial)
+  const recentHistory = history
+    .filter(h => !(isCurrentGwActive && h.event === currentGameweek))
+    .slice(-5);
 
   // Average points across all history for colour coding
   const avgPoints = history.length
@@ -91,7 +84,7 @@ const TeamActivityPanel = ({
         overflow: 'auto',
       } }
     >
-      { /* Team Stats - Top Section */ }
+      { /* Team Stats + Recent Performance - Top Section */ }
       { entryId && profile && (
         <Paper
           sx={ {
@@ -203,12 +196,66 @@ const TeamActivityPanel = ({
                 })() }
               </Box>
             </Box>
+
+            { /* Recent Performance - condensed inline */ }
+            { recentHistory.length > 0 && (
+              <>
+                <Divider />
+                <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 } }>
+                  Recent Form
+                </Typography>
+                <Box sx={ { display: 'flex', gap: 0.75 } }>
+                  { recentHistory.map((gw) => {
+                    const prevGw = history.find(h => h.event === gw.event - 1);
+                    // Lower rank number = better. Green if rank improved (fell), red if worsened (rose).
+                    let rankColor = theme.palette.text.secondary;
+                    if (prevGw?.overall_rank != null && gw.overall_rank != null) {
+                      rankColor = gw.overall_rank < prevGw.overall_rank
+                        ? theme.palette.success.main
+                        : gw.overall_rank > prevGw.overall_rank
+                          ? theme.palette.error.main
+                          : theme.palette.text.secondary;
+                    }
+                    return (
+                    <Box
+                      key={ gw.event }
+                      sx={ {
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 0.25,
+                        py: 0.5,
+                        px: 0.25,
+                        borderRadius: 1,
+                        backgroundColor: theme.palette.action.hover,
+                      } }
+                    >
+                      <Typography variant='caption' color='text.secondary' sx={ { fontSize: '0.6rem', lineHeight: 1 } }>
+                        GW{ gw.event }
+                      </Typography>
+                      <Typography
+                        variant='body2'
+                        fontWeight='700'
+                        sx={ { lineHeight: 1, color: rankColor } }
+                      >
+                        { gw.points }
+                      </Typography>
+                      <Typography variant='caption' sx={ { fontSize: '0.6rem', lineHeight: 1, color: rankColor } }>
+                        { formatRank(gw.overall_rank) }
+                      </Typography>
+                    </Box>
+                    );
+                  }) }
+                </Box>
+              </>
+            ) }
           </Box>
         </Paper>
       ) }
 
       { /* My Leagues - between Team Stats and Recent Performance */ }
-      { entryId && profile && (myInvLeagues.length > 0 || myGenLeagues.length > 0) && (
+      { entryId && profile && activeSection === 'overview' && (myInvLeagues.length > 0 || myGenLeagues.length > 0) && (
         <Paper sx={ { backgroundColor: theme.palette.background.paper, borderRadius: 1, p: 2, flex: '0 0 auto' } }>
           <Typography variant='h6' sx={ { mb: 1.5, fontWeight: 600 } }>My Leagues</Typography>
           <Box sx={ { display: 'flex', gap: 2 } }>
@@ -254,113 +301,8 @@ const TeamActivityPanel = ({
         </Paper>
       ) }
 
-      { /* Recent Performance - Middle Section */ }
-      { entryId && (
-      <Paper
-        sx={ {
-          backgroundColor: theme.palette.background.paper,
-          borderRadius: 1,
-          p: 2,
-          flex: '0 0 auto',
-        } }
-      >
-        <Typography variant='h6' sx={ { mb: 1.5, fontWeight: 600 } }>
-          Recent Performance
-        </Typography>
-        { recentHistory.length === 0 ? (
-          <Typography variant='body2' color='text.secondary'>No recent gameweeks</Typography>
-        ) : (
-          <Box>
-            { /* Header row */ }
-            <Box sx={ { display: 'grid', gridTemplateColumns: '3rem 1fr 1fr 1fr', gap: 0.5, px: 1, mb: 0.5 } }>
-              <Typography variant='caption' color='text.secondary'>GW</Typography>
-              <Typography variant='caption' color='text.secondary' sx={ { textAlign: 'right' } }>Pts</Typography>
-              <Typography variant='caption' color='text.secondary' sx={ { textAlign: 'right' } }>Rank</Typography>
-              <Typography variant='caption' color='text.secondary' sx={ { textAlign: 'right' } }>Value</Typography>
-            </Box>
-            <Divider sx={ { mb: 0.5 } } />
-            { recentHistory.map((gw) => (
-              <Box
-                key={ gw.event }
-                sx={ {
-                  display: 'grid',
-                  gridTemplateColumns: '3rem 1fr 1fr 1fr',
-                  gap: 0.5,
-                  px: 1,
-                  py: 0.75,
-                  borderRadius: 1,
-                  '&:hover': { backgroundColor: theme.palette.action.hover },
-                } }
-              >
-                <Typography variant='body2' fontWeight='600'>{ gw.event }</Typography>
-                <Typography
-                  variant='body2'
-                  fontWeight='600'
-                  sx={ {
-                    textAlign: 'right',
-                    color: gw.points >= avgPoints ? theme.palette.success.main : theme.palette.error.main,
-                  } }
-                >
-                  { gw.points }
-                </Typography>
-                <Typography variant='body2' sx={ { textAlign: 'right', fontSize: '0.75rem' } }>
-                  { formatRank(gw.overall_rank) }
-                </Typography>
-                <Typography variant='body2' sx={ { textAlign: 'right', fontSize: '0.75rem' } }>
-                  { formatCurrency(gw.value) }
-                </Typography>
-              </Box>
-            )) }
-          </Box>
-        ) }
-      </Paper>
-      ) }
-
-      { /* Recommended Transfers - Bottom Section */ }
-      { currentEntryId && !viewingOpponentId && currentGameweek && (
-        <Paper
-          sx={ {
-            backgroundColor: theme.palette.background.paper,
-            borderRadius: 1,
-            p: 2,
-            flex: '0 0 auto',
-          } }
-        >
-          <RecommendedTransfers
-            entryId={ currentEntryId }
-            currentGameweek={ currentGameweek }
-            compact={ true }
-          />
-        </Paper>
-      ) }
-
-      { /* Planned Transfers Section – shown for own team only */ }
-      { currentEntryId && !viewingOpponentId && currentGameweek && onAddPlannedTransfer && (
-        <Paper
-          sx={ {
-            backgroundColor: theme.palette.background.paper,
-            borderRadius: 1,
-            p: 2,
-            flex: '0 0 auto',
-          } }
-        >
-          <PlannedTransfers
-            plannedTransfers={ plannedTransfers }
-            onRemove={ onRemovePlannedTransfer }
-            onUpdateGameweek={ onUpdatePlannedTransferGameweek }
-            onAdd={ onAddPlannedTransfer }
-            team={ team }
-            allPlayers={ allPlayers }
-            currentGameweek={ currentGameweek }
-            compact={ true }
-            voidedTransferIds={ voidedTransferIds }
-            freeHitGWs={ freeHitGWs }
-          />
-        </Paper>
-      ) }
-
-      { /* Assistant Manager – always shown (general hints if no entryId) */ }
-      { currentGameweek && (
+      { /* Assistant Manager – shown in Planning section */ }
+      { activeSection === 'planning' && currentGameweek && (
         <Paper
           sx={ {
             backgroundColor: theme.palette.background.paper,
@@ -382,16 +324,9 @@ const TeamActivityPanel = ({
 TeamActivityPanel.propTypes = {
   entryId: PropTypes.string,
   currentGameweek: PropTypes.number,
-  currentEntryId: PropTypes.string,
   viewingOpponentId: PropTypes.string,
-  plannedTransfers: PropTypes.array,
-  onRemovePlannedTransfer: PropTypes.func,
-  onUpdatePlannedTransferGameweek: PropTypes.func,
-  onAddPlannedTransfer: PropTypes.func,
-  team: PropTypes.array,
-  allPlayers: PropTypes.array,
-  voidedTransferIds: PropTypes.instanceOf(Set),
-  freeHitGWs: PropTypes.instanceOf(Set),
+  activeSection: PropTypes.string,
+  isCurrentGwActive: PropTypes.bool,
 };
 
 export default TeamActivityPanel;

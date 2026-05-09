@@ -326,9 +326,12 @@ const PlayerStatsDialog = ({ open, onClose, player, viewedGameweek, liveMatches 
                 const label = matchingOpp
                   ? `vs ${matchingOpp.opponent_short} (${matchingOpp.is_home ? 'H' : 'A'})`
                   : `Fixture ${i + 1}`;
-                // If official bonus not yet settled, use provisional BPS estimate
+                // If official bonus not yet settled, use the per-fixture provisional
+                // BPS estimate (not the aggregate total) to avoid showing the same
+                // bonus on every fixture that has bonus===0 in a DGW.
+                const byFixture = gameweekStats?.provisional_bonus_by_fixture;
                 const provisionalBonusValue = entry.bonus === 0
-                    ? (gameweekStats?.provisional_bonus ?? null)
+                    ? (byFixture ? (byFixture[entry.fixture] ?? null) : (gameweekStats?.provisional_bonus ?? null))
                     : null;
                 return (
                   <Box key={ entry.fixture ?? i } sx={ { mb: 2 } }>

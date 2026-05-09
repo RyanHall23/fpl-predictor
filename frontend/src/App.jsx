@@ -15,6 +15,8 @@ import { useTheme } from '@mui/material/styles';
 import TableRowsIcon from '@mui/icons-material/TableRows';
 import GridViewIcon from '@mui/icons-material/GridView';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import Tooltip from '@mui/material/Tooltip';
 import TeamFormation from './components/TeamFormation/TeamFormation';
 import TeamListView from './components/TeamListView/TeamListView';
@@ -26,6 +28,8 @@ import useLiveScores from './hooks/useLiveScores';
 import RightPanel from './components/RightPanel';
 import RecommendedTransfers from './components/RecommendedTransfers';
 import TeamActivityPanel from './components/TeamActivityPanel';
+import PlannedTransfers from './components/PlannedTransfers';
+import SectionBar from './components/SectionBar';
 
 const TEAM_VIEW = {
   USER: 'user',
@@ -52,6 +56,11 @@ const App = () => {
   // Planned chips across all future GWs: { [gw]: chipId }.  Loaded from storage
   // on mount and kept in sync whenever a chip is toggled.
   const [plannedChipsByGW, setPlannedChipsByGW] = useState({});
+  const [activeSection, setActiveSection] = useState(() => (
+    teamView === TEAM_VIEW.HIGHEST ? 'active' : 'overview'
+  ));
+  const userOverriddenSection = useRef(false);
+  const prevGameweekRef = useRef(null);
 
   const handleChipToggle = (chipId) => {
     const next = activeChip === chipId ? null : chipId;
@@ -208,6 +217,66 @@ const App = () => {
     // Prefer a planned per-gameweek chip (persisted to storage), fallback to transient `activeChip`.
     return plannedChipsByGW[viewedGW] ?? activeChip ?? null;
   }, [gameweekInfo, isHighestPredictedTeam, viewingOpponentId, plannedChipsByGW, activeChip]);
+
+  // Reset section when switching between user and highest team
+  const prevIsHighestRef = useRef(isHighestPredictedTeam);
+  useEffect(() => {
+    if (prevIsHighestRef.current !== isHighestPredictedTeam) {
+      prevIsHighestRef.current = isHighestPredictedTeam;
+      setActiveSection('active');
+      setSelectedGameweek(null);
+      userOverriddenSection.current = false;
+    }
+  }, [isHighestPredictedTeam]);
+
+  useEffect(() => {
+    const allowedSections = isHighestPredictedTeam
+      ? ['active', 'next']
+      : ['active', 'planning', 'overview'];
+    if (!allowedSections.includes(activeSection)) {
+      setActiveSection(allowedSections[0]);
+      userOverriddenSection.current = false;
+    }
+  }, [activeSection, isHighestPredictedTeam]);
+
+  // Track whether the CURRENT (not selected) gameweek is still active.
+  // This is kept independently so the Active tab dot doesn't flicker off
+  // when the user switches to Planning (which loads a future GW response).
+  const [currentGwIsActive, setCurrentGwIsActive] = useState(false);
+  useEffect(() => {
+    // Only update when viewing the actual current GW (selectedGameweek is null
+    // or matches currentGameweek) so future-GW responses don't overwrite it.
+    if (!selectedGameweek || selectedGameweek === currentGameweek) {
+      setCurrentGwIsActive(!!isLive);
+    }
+  }, [isLive, selectedGameweek, currentGameweek]);
+
+  // Auto-switch to Active section when a gameweek goes live, unless the user
+  // has manually selected a section. Reset the override flag on GW change.
+  useEffect(() => {
+    if (isLive && !userOverriddenSection.current) {
+      setActiveSection('active');
+    }
+  }, [isLive]);
+
+  useEffect(() => {
+    if (currentGameweek && currentGameweek !== prevGameweekRef.current) {
+      prevGameweekRef.current = currentGameweek;
+      userOverriddenSection.current = false;
+    }
+  }, [currentGameweek]);
+
+  const handleSectionChange = (section) => {
+    setActiveSection(section);
+    userOverriddenSection.current = true;
+    if (section === 'active') {
+      setSelectedGameweek(null);
+    } else if (section === 'planning' || section === 'next') {
+      setSelectedGameweek(currentGameweek != null && currentGameweek < 38 ? currentGameweek + 1 : null);
+    } else {
+      setSelectedGameweek(null);
+    }
+  };
 
   useEffect(() => {
     if (snackbar.message) setSnackbarOpen(true);
@@ -541,6 +610,13 @@ const App = () => {
         benchPoints={ displayBenchPoints }
         isPast={ gameweekInfo?.isPast }
         isActive={ gameweekInfo?.isActive }
+        gameweekLocked={ activeSection === 'active' || activeSection === 'next' }
+      />
+      <SectionBar
+        activeSection={ activeSection }
+        onSectionChange={ handleSectionChange }
+        isLive={ currentGwIsActive }
+        isHighestPredictedTeam={ isHighestPredictedTeam }
       />
       <Container maxWidth={ false } sx={ { flex: 1, marginTop: '8px', display: 'flex', flexDirection: 'column', px: { xs: 1, sm: 2 } } }>
         <Box sx={ { display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, gap: 2, flex: 1, alignItems: 'flex-start' } }>
@@ -639,9 +715,16 @@ const App = () => {
                     ) }
                   </Box>
                   { /* Row 2 — values / toggle */ }
-                  <Typography variant='h6' sx={ { fontWeight: 700, lineHeight: 1.2 } }>
-                    { displayTotalPoints }
-                  </Typography>
+                  <Box sx={ { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.25 } }>
+                    <Typography variant='h6' sx={ { fontWeight: 700, lineHeight: 1.2 } }>
+                      { displayTotalPoints }
+                    </Typography>
+                    { gameweekInfo?.isActive && gameweekInfo?.data?.average_entry_score != null && (
+                      displayTotalPoints >= gameweekInfo.data.average_entry_score
+                        ? <ArrowUpwardIcon sx={ { fontSize: 16, color: 'success.main' } } />
+                        : <ArrowDownwardIcon sx={ { fontSize: 16, color: 'error.main' } } />
+                    ) }
+                  </Box>
                   <Typography variant='h6' sx={ { fontWeight: 700, lineHeight: 1.2 } }>
                     { displayBenchPoints }
                   </Typography>
@@ -696,7 +779,7 @@ const App = () => {
                 </Box>
               </Box>
               <Box sx={ { mt: 1, borderRadius: 2, overflow: 'hidden', bgcolor: 'background.paper' } }>
-                <LiveBanner isLive={ isLive } lastUpdated={ lastUpdated } />
+                { activeSection === 'active' && <LiveBanner isLive={ isLive } lastUpdated={ lastUpdated } /> }
                 { pitchView === 'formation' ? (
                   <TeamFormation
                     activePlayers={ effectiveActivePlayers }
@@ -738,18 +821,48 @@ const App = () => {
           </Box>
           
           { /* Middle - Panel */ }
-          <Box sx={ { flex: { xs: '1 1 auto', lg: '0 0 28%' }, width: { xs: '100%', lg: 'auto' }, display: 'flex', flexDirection: 'column', minHeight: { xs: 'auto', lg: '600px' } } }>
-            <RightPanel
-              entryId={ viewingOpponentId || currentEntryId }
-              onViewTeam={ handleViewOpponentTeam }
-              currentGameweek={ currentGameweek }
-              selectedGameweek={ selectedGameweek }
-              viewingOpponentId={ viewingOpponentId }
-              currentEntryId={ currentEntryId }
-              userEntryId={ userEntryId }
-              gameweekDeadline={ gameweekInfo?.data?.deadline_time }
-              liveMatches={ liveMatches }
-            />
+          <Box sx={ { flex: { xs: '1 1 auto', lg: '0 0 28%' }, width: { xs: '100%', lg: 'auto' }, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: { xs: 'auto', lg: '600px' } } }>
+            { activeSection === 'planning' ? (
+              <Box sx={ { display: 'flex', flexDirection: 'column', gap: 2, width: '100%' } }>
+                { currentEntryId && !viewingOpponentId && currentGameweek && (
+                  <Paper sx={ { backgroundColor: theme.palette.background.paper, borderRadius: 1, p: 2 } }>
+                    <PlannedTransfers
+                      plannedTransfers={ plannedTransfers }
+                      onRemove={ removePlannedTransfer }
+                      onUpdateGameweek={ updateTransferGameweek }
+                      onAdd={ addPlannedTransfer }
+                      team={ [...activePlayers, ...reservePlayers] }
+                      allPlayers={ allPlayers }
+                      currentGameweek={ currentGameweek }
+                      compact={ false }
+                      voidedTransferIds={ voidedTransferIds }
+                      freeHitGWs={ freeHitGWs }
+                    />
+                  </Paper>
+                ) }
+                { currentEntryId && !viewingOpponentId && currentGameweek && (
+                  <Paper sx={ { backgroundColor: theme.palette.background.paper, borderRadius: 1, p: 2 } }>
+                    <RecommendedTransfers
+                      entryId={ currentEntryId }
+                      currentGameweek={ currentGameweek }
+                      compact={ false }
+                    />
+                  </Paper>
+                ) }
+              </Box>
+            ) : (
+              <RightPanel
+                entryId={ viewingOpponentId || currentEntryId }
+                onViewTeam={ handleViewOpponentTeam }
+                currentGameweek={ currentGameweek }
+                selectedGameweek={ selectedGameweek }
+                viewingOpponentId={ viewingOpponentId }
+                currentEntryId={ currentEntryId }
+                userEntryId={ userEntryId }
+                gameweekDeadline={ gameweekInfo?.data?.deadline_time }
+                liveMatches={ liveMatches }
+              />
+            ) }
           </Box>
 
           { /* Right - Activity & Stats */ }
@@ -757,16 +870,9 @@ const App = () => {
             <TeamActivityPanel
               entryId={ viewingOpponentId || currentEntryId }
               currentGameweek={ currentGameweek }
-              currentEntryId={ currentEntryId }
               viewingOpponentId={ viewingOpponentId }
-              plannedTransfers={ plannedTransfers }
-              onRemovePlannedTransfer={ removePlannedTransfer }
-              onUpdatePlannedTransferGameweek={ updateTransferGameweek }
-              onAddPlannedTransfer={ addPlannedTransfer }
-              team={ [...activePlayers, ...reservePlayers] }
-              allPlayers={ allPlayers }
-              voidedTransferIds={ voidedTransferIds }
-              freeHitGWs={ freeHitGWs }
+              activeSection={ activeSection }
+              isCurrentGwActive={ currentGwIsActive }
             />
           </Box>
         </Box>
