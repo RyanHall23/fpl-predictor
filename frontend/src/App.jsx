@@ -15,6 +15,8 @@ import { useTheme } from '@mui/material/styles';
 import TableRowsIcon from '@mui/icons-material/TableRows';
 import GridViewIcon from '@mui/icons-material/GridView';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import Tooltip from '@mui/material/Tooltip';
 import TeamFormation from './components/TeamFormation/TeamFormation';
 import TeamListView from './components/TeamListView/TeamListView';
@@ -701,9 +703,16 @@ const App = () => {
                     ) }
                   </Box>
                   { /* Row 2 — values / toggle */ }
-                  <Typography variant='h6' sx={ { fontWeight: 700, lineHeight: 1.2 } }>
-                    { displayTotalPoints }
-                  </Typography>
+                  <Box sx={ { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.25 } }>
+                    <Typography variant='h6' sx={ { fontWeight: 700, lineHeight: 1.2 } }>
+                      { displayTotalPoints }
+                    </Typography>
+                    { gameweekInfo?.isActive && gameweekInfo?.data?.average_entry_score != null && (
+                      displayTotalPoints >= gameweekInfo.data.average_entry_score
+                        ? <ArrowUpwardIcon sx={ { fontSize: 16, color: 'success.main' } } />
+                        : <ArrowDownwardIcon sx={ { fontSize: 16, color: 'error.main' } } />
+                    ) }
+                  </Box>
                   <Typography variant='h6' sx={ { fontWeight: 700, lineHeight: 1.2 } }>
                     { displayBenchPoints }
                   </Typography>
