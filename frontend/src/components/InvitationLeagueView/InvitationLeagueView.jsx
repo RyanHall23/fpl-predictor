@@ -120,7 +120,7 @@ const InvitationLeagueView = ({ league, onViewTeam, currentGameweek, selectedGam
                       <Button
                         size='small'
                         variant='text'
-                        onClick={ () => onViewTeam(entry.entry, entry.entry_name) }
+                        onClick={ () => onViewTeam(entry.entry, entry.entry_name, entry.player_name) }
                         sx={ {
                           p: 0,
                           minWidth: 0,

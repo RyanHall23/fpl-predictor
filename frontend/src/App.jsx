@@ -17,6 +17,7 @@ import GridViewIcon from '@mui/icons-material/GridView';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import Tooltip from '@mui/material/Tooltip';
 import TeamFormation from './components/TeamFormation/TeamFormation';
 import TeamListView from './components/TeamListView/TeamListView';
@@ -51,6 +52,8 @@ const App = () => {
   const [selectedGameweek, setSelectedGameweek] = useState(null); // null means current gameweek
   const [currentGameweek, setCurrentGameweek] = useState(null);
   const [viewingOpponentId, setViewingOpponentId] = useState(null); // opponent team being viewed
+  const [viewingOpponentTeamName, setViewingOpponentTeamName] = useState('');
+  const [viewingOpponentPlayerName, setViewingOpponentPlayerName] = useState('');
   const [pitchView, setPitchView] = useState(() => localStorage.getItem('pitchView') || 'formation'); // 'formation' | 'list'
   const [activeChip, setActiveChip] = useState(null); // 'bench_boost' | 'triple_captain' | 'free_hit' | 'wildcard' | null
   // Planned chips across all future GWs: { [gw]: chipId }.  Loaded from storage
@@ -537,9 +540,22 @@ const App = () => {
   }, [userEntryId, teamView, viewingOpponentId]);
 
   // Handle clicking an opponent's team name from the league view
-  const handleViewOpponentTeam = (opponentEntryId) => {
+  const handleViewOpponentTeam = (opponentEntryId, opponentTeamName = '', opponentPlayerName = '') => {
+    const isOwnTeam = userEntryId && String(opponentEntryId) === String(userEntryId);
+    if (isOwnTeam) {
+      // Clicking own team in standings — just switch to My Team view, no banner
+      setViewingOpponentId(null);
+      setViewingOpponentTeamName('');
+      setViewingOpponentPlayerName('');
+      setCurrentEntryId(userEntryId);
+      setTeamView(TEAM_VIEW.USER);
+      if (isHighestPredictedTeam) toggleTeamView();
+      return;
+    }
     setViewingOpponentId(String(opponentEntryId));
     setCurrentEntryId(String(opponentEntryId));
+    setViewingOpponentTeamName(opponentTeamName);
+    setViewingOpponentPlayerName(opponentPlayerName);
     setTeamView(TEAM_VIEW.USER);
     if (isHighestPredictedTeam) toggleTeamView();
   };
@@ -547,6 +563,8 @@ const App = () => {
   // Return from viewing an opponent's team back to the user's own team
   const handleBackToMyTeam = () => {
     setViewingOpponentId(null);
+    setViewingOpponentTeamName('');
+    setViewingOpponentPlayerName('');
     setCurrentEntryId(userEntryId);
   };
 
@@ -624,13 +642,43 @@ const App = () => {
           <Box sx={ { flex: { xs: '1 1 auto', lg: '0 0 43%' }, width: { xs: '100%', lg: 'auto' }, display: 'flex', flexDirection: 'column' } }>
             { /* Banner shown when viewing an opponent's team */ }
             { viewingOpponentId && (
-              <Box sx={ { mb: 1, display: 'flex', alignItems: 'center', gap: 1 } }>
-                <Typography variant='body2' color='text.secondary'>
-                  Viewing opponent&apos;s team
-                </Typography>
+              <Box
+                sx={ {
+                  mb: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1.5,
+                  px: 1.5,
+                  py: 1,
+                  borderRadius: 1,
+                  borderLeft: '3px solid',
+                  borderLeftColor: 'warning.main',
+                  bgcolor: 'action.hover',
+                } }
+              >
+                <Box sx={ { flex: 1, minWidth: 0 } }>
+                  <Typography variant='caption' color='warning.main' fontWeight={ 700 } sx={ { textTransform: 'uppercase', letterSpacing: '0.06em' } }>
+                    Viewing opponent
+                  </Typography>
+                  <Typography variant='body2' fontWeight={ 600 } noWrap>
+                    { viewingOpponentTeamName || teamName || 'Opponent’s Team' }
+                  </Typography>
+                  { viewingOpponentPlayerName && (
+                    <Typography variant='caption' color='text.secondary' noWrap>
+                      { viewingOpponentPlayerName }
+                    </Typography>
+                  ) }
+                </Box>
                 { userEntryId && (
-                  <Button size='small' variant='outlined' onClick={ handleBackToMyTeam }>
-                    Back to My Team
+                  <Button
+                    size='small'
+                    variant='outlined'
+                    color='warning'
+                    startIcon={ <ArrowBackIcon fontSize='small' /> }
+                    onClick={ handleBackToMyTeam }
+                    sx={ { whiteSpace: 'nowrap', flexShrink: 0 } }
+                  >
+                    My Team
                   </Button>
                 ) }
               </Box>
