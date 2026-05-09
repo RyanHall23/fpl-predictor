@@ -92,7 +92,7 @@ const TeamActivityPanel = ({
         overflow: 'auto',
       } }
     >
-      { /* Team Stats - Top Section */ }
+      { /* Team Stats + Recent Performance - Top Section */ }
       { entryId && profile && (
         <Paper
           sx={ {
@@ -204,6 +204,51 @@ const TeamActivityPanel = ({
                 })() }
               </Box>
             </Box>
+
+            { /* Recent Performance - condensed inline */ }
+            { recentHistory.length > 0 && (
+              <>
+                <Divider />
+                <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 } }>
+                  Recent Form
+                </Typography>
+                <Box sx={ { display: 'flex', gap: 0.75 } }>
+                  { recentHistory.slice().reverse().map((gw) => (
+                    <Box
+                      key={ gw.event }
+                      sx={ {
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 0.25,
+                        py: 0.5,
+                        px: 0.25,
+                        borderRadius: 1,
+                        backgroundColor: theme.palette.action.hover,
+                      } }
+                    >
+                      <Typography variant='caption' color='text.secondary' sx={ { fontSize: '0.6rem', lineHeight: 1 } }>
+                        GW{ gw.event }
+                      </Typography>
+                      <Typography
+                        variant='body2'
+                        fontWeight='700'
+                        sx={ {
+                          lineHeight: 1,
+                          color: gw.points >= avgPoints ? theme.palette.success.main : theme.palette.error.main,
+                        } }
+                      >
+                        { gw.points }
+                      </Typography>
+                      <Typography variant='caption' color='text.secondary' sx={ { fontSize: '0.6rem', lineHeight: 1 } }>
+                        { formatRank(gw.overall_rank) }
+                      </Typography>
+                    </Box>
+                  )) }
+                </Box>
+              </>
+            ) }
           </Box>
         </Paper>
       ) }
@@ -253,68 +298,6 @@ const TeamActivityPanel = ({
             ) }
           </Box>
         </Paper>
-      ) }
-
-      { /* Recent Performance - Middle Section */ }
-      { entryId && (
-      <Paper
-        sx={ {
-          backgroundColor: theme.palette.background.paper,
-          borderRadius: 1,
-          p: 2,
-          flex: '0 0 auto',
-        } }
-      >
-        <Typography variant='h6' sx={ { mb: 1.5, fontWeight: 600 } }>
-          Recent Performance
-        </Typography>
-        { recentHistory.length === 0 ? (
-          <Typography variant='body2' color='text.secondary'>No recent gameweeks</Typography>
-        ) : (
-          <Box>
-            { /* Header row */ }
-            <Box sx={ { display: 'grid', gridTemplateColumns: '3rem 1fr 1fr 1fr', gap: 0.5, px: 1, mb: 0.5 } }>
-              <Typography variant='caption' color='text.secondary'>GW</Typography>
-              <Typography variant='caption' color='text.secondary' sx={ { textAlign: 'right' } }>Pts</Typography>
-              <Typography variant='caption' color='text.secondary' sx={ { textAlign: 'right' } }>Rank</Typography>
-              <Typography variant='caption' color='text.secondary' sx={ { textAlign: 'right' } }>Value</Typography>
-            </Box>
-            <Divider sx={ { mb: 0.5 } } />
-            { recentHistory.map((gw) => (
-              <Box
-                key={ gw.event }
-                sx={ {
-                  display: 'grid',
-                  gridTemplateColumns: '3rem 1fr 1fr 1fr',
-                  gap: 0.5,
-                  px: 1,
-                  py: 0.75,
-                  borderRadius: 1,
-                  '&:hover': { backgroundColor: theme.palette.action.hover },
-                } }
-              >
-                <Typography variant='body2' fontWeight='600'>{ gw.event }</Typography>
-                <Typography
-                  variant='body2'
-                  fontWeight='600'
-                  sx={ {
-                    textAlign: 'right',
-                    color: gw.points >= avgPoints ? theme.palette.success.main : theme.palette.error.main,
-                  } }
-                >
-                  { gw.points }
-                </Typography>
-                <Typography variant='body2' sx={ { textAlign: 'right', fontSize: '0.75rem' } }>
-                  { formatRank(gw.overall_rank) }
-                </Typography>
-                <Typography variant='body2' sx={ { textAlign: 'right', fontSize: '0.75rem' } }>
-                  { formatCurrency(gw.value) }
-                </Typography>
-              </Box>
-            )) }
-          </Box>
-        ) }
-      </Paper>
       ) }
 
       { /* Assistant Manager – shown in Planning section */ }
