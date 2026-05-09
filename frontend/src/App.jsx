@@ -800,9 +800,9 @@ const App = () => {
           </Box>
           
           { /* Middle - Panel */ }
-          <Box sx={ { flex: { xs: '1 1 auto', lg: '0 0 28%' }, width: { xs: '100%', lg: 'auto' }, display: 'flex', flexDirection: 'column', minHeight: { xs: 'auto', lg: '600px' } } }>
+          <Box sx={ { flex: { xs: '1 1 auto', lg: '0 0 28%' }, width: { xs: '100%', lg: 'auto' }, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: { xs: 'auto', lg: '600px' } } }>
             { activeSection === 'planning' ? (
-              <Box sx={ { display: 'flex', flexDirection: 'column', gap: 2 } }>
+              <Box sx={ { display: 'flex', flexDirection: 'column', gap: 2, width: '100%' } }>
                 { currentEntryId && !viewingOpponentId && currentGameweek && (
                   <Paper sx={ { backgroundColor: theme.palette.background.paper, borderRadius: 1, p: 2 } }>
                     <PlannedTransfers
