@@ -861,6 +861,7 @@ const App = () => {
               voidedTransferIds={ voidedTransferIds }
               freeHitGWs={ freeHitGWs }
               activeSection={ activeSection }
+              isCurrentGwActive={ currentGwIsActive }
             />
           </Box>
         </Box>

@@ -24,6 +24,7 @@ const TeamActivityPanel = ({
   voidedTransferIds,
   freeHitGWs,
   activeSection,
+  isCurrentGwActive,
 }) => {
   const theme = useTheme();
   const [profile, setProfile] = useState(null);
@@ -62,8 +63,11 @@ const TeamActivityPanel = ({
     return n.toString();
   };
 
-  // Get recent gameweeks (last 5)
-  const recentHistory = history.slice(-5).reverse();
+  // Exclude the current GW from recent form while it's still active (scores are partial)
+  const recentHistory = history
+    .filter(h => !(isCurrentGwActive && h.event === currentGameweek))
+    .slice(-5)
+    .reverse();
 
   // Average points across all history for colour coding
   const avgPoints = history.length
@@ -213,7 +217,18 @@ const TeamActivityPanel = ({
                   Recent Form
                 </Typography>
                 <Box sx={ { display: 'flex', gap: 0.75 } }>
-                  { recentHistory.slice().reverse().map((gw) => (
+                  { recentHistory.slice().reverse().map((gw) => {
+                    const prevGw = history.find(h => h.event === gw.event - 1);
+                    // Lower rank number = better. Green if rank improved (fell), red if worsened (rose).
+                    let rankColor = theme.palette.text.secondary;
+                    if (prevGw?.overall_rank != null && gw.overall_rank != null) {
+                      rankColor = gw.overall_rank < prevGw.overall_rank
+                        ? theme.palette.success.main
+                        : gw.overall_rank > prevGw.overall_rank
+                          ? theme.palette.error.main
+                          : theme.palette.text.secondary;
+                    }
+                    return (
                     <Box
                       key={ gw.event }
                       sx={ {
@@ -234,18 +249,16 @@ const TeamActivityPanel = ({
                       <Typography
                         variant='body2'
                         fontWeight='700'
-                        sx={ {
-                          lineHeight: 1,
-                          color: gw.points >= avgPoints ? theme.palette.success.main : theme.palette.error.main,
-                        } }
+                        sx={ { lineHeight: 1, color: rankColor } }
                       >
                         { gw.points }
                       </Typography>
-                      <Typography variant='caption' color='text.secondary' sx={ { fontSize: '0.6rem', lineHeight: 1 } }>
+                      <Typography variant='caption' sx={ { fontSize: '0.6rem', lineHeight: 1, color: rankColor } }>
                         { formatRank(gw.overall_rank) }
                       </Typography>
                     </Box>
-                  )) }
+                    );
+                  }) }
                 </Box>
               </>
             ) }
@@ -334,6 +347,7 @@ TeamActivityPanel.propTypes = {
   voidedTransferIds: PropTypes.instanceOf(Set),
   freeHitGWs: PropTypes.instanceOf(Set),
   activeSection: PropTypes.string,
+  isCurrentGwActive: PropTypes.bool,
 };
 
 export default TeamActivityPanel;
