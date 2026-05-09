@@ -169,16 +169,22 @@ const enrichPlayersWithGameweekStats = async (players, targetEventId) => {
     // pipeline run assigns it, so we estimate for any started fixture where
     // bonus hasn't been assigned yet (finished_provisional covers the window
     // between the final whistle and the official freeze).
+    //
+    // We store { total, byFixture: { [fixtureId]: bonus } } per element so that
+    // DGW per-fixture breakdowns can show the correct fixture's bonus rather
+    // than duplicating the aggregate across every fixture with bonus===0.
     const provisionalBonusMap = {};
     for (const fixture of eventFixtures) {
       const bonusNotSettled = fixture.started && fixture.stats?.length &&
         !fixture.stats.find(s => s.identifier === 'bonus' && (s.h.length > 0 || s.a.length > 0));
       if (bonusNotSettled) {
         const bonuses = estimateBonusFromBPS(fixture.stats);
-        // Accumulate (sum) bonus per element to correctly handle DGWs where a
-        // player may appear in more than one in-progress fixture.
         for (const [elementId, bonus] of Object.entries(bonuses)) {
-          provisionalBonusMap[elementId] = (provisionalBonusMap[elementId] ?? 0) + bonus;
+          if (!provisionalBonusMap[elementId]) {
+            provisionalBonusMap[elementId] = { total: 0, byFixture: {} };
+          }
+          provisionalBonusMap[elementId].total += bonus;
+          provisionalBonusMap[elementId].byFixture[fixture.id] = bonus;
         }
       }
     }
@@ -203,7 +209,10 @@ const enrichPlayersWithGameweekStats = async (players, targetEventId) => {
         bonus: element.stats.bonus,
         bps: element.stats.bps,
         provisional_bonus: element.id in provisionalBonusMap
-          ? provisionalBonusMap[element.id]
+          ? provisionalBonusMap[element.id].total
+          : null,
+        provisional_bonus_by_fixture: element.id in provisionalBonusMap
+          ? provisionalBonusMap[element.id].byFixture
           : null,
         explain: element.explain ?? [],
       };
