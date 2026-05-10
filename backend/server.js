@@ -29,6 +29,7 @@ app.get('/api/entry/:entryId/event/:eventId/team', apiLimiter, fplController.get
 app.get('/api/entry/:entryId/profile', apiLimiter, fplController.getUserProfile);
 app.get('/api/leagues-classic/:leagueId/standings', apiLimiter, fplController.getLeagueStandings);
 app.get('/api/entry/:entryId/event/:eventId/recommended-transfers', apiLimiter, fplController.getRecommendedTransfers);
+app.get('/api/entry/:entryId/transfers', apiLimiter, fplController.getEntryTransfers);
 app.post('/api/validate-swap', apiLimiter, fplController.validateSwap);
 app.post('/api/available-transfers/:playerCode', apiLimiter, fplController.getAvailableTransfers);
 
