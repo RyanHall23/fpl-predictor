@@ -10,8 +10,8 @@ import { useTheme } from '@mui/material/styles';
 import axios from '../../api';
 
 /**
- * Custom hook — fetches GW transfers for an entry and resolves actual points
- * from the allPlayers list.  Returns { transfers, loading, playerMap }.
+ * Custom hook — fetches GW transfers for an entry.
+ * Returns { transfers, meta, loading }.
  */
 export function useGWTransfers(entryId, gameweek) {
   const [transfers, setTransfers] = useState([]);
@@ -161,14 +161,14 @@ const GWTransfersPanel = ({ expanded, transfers, allPlayers, meta }) => {
                   Net: { netPoints > 0 ? `+${netPoints}` : netPoints }pts
                 </Typography>
               </Box>
-              { transferCost < 0 && (
+              { transferCost > 0 && (
                 <Box sx={ { display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 0.75 } }>
                   <Typography variant='caption' color='text.secondary'>
                     { transfers.length } transfer{ transfers.length !== 1 ? 's' : '' } made
                   </Typography>
                   <Typography variant='caption' color='text.disabled'>·</Typography>
                   <Typography variant='caption' sx={ { fontWeight: 700, color: 'error.main' } }>
-                    { transferCost }pt{ Math.abs(transferCost) !== 1 ? 's' : '' } deduction
+                    -{ transferCost }pt{ transferCost !== 1 ? 's' : '' } deduction
                   </Typography>
                 </Box>
               ) }

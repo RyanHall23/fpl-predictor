@@ -1346,7 +1346,11 @@ const getPlayersForecast = async (req, res) => {
  * transfers if no gameweek is supplied).  Player names are resolved from
  * bootstrap-static so the frontend never needs to look them up separately.
  *
- * Response shape: Array of { playerIn, playerOut, event, time }
+ * Response shape:
+ * {
+ *   transfers: Array<{ playerIn, playerOut, event, time }>,
+ *   meta: { eventTransfers, transferCost } | null
+ * }
  * where playerIn/Out = { id, name, webName, cost }
  */
 const getEntryTransfers = async (req, res) => {

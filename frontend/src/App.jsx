@@ -8,6 +8,7 @@ import Container from '@mui/material/Container';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Button from '@mui/material/Button';
+import ButtonBase from '@mui/material/ButtonBase';
 import Typography from '@mui/material/Typography';
 import Snackbar from '@mui/material/Snackbar';
 import ToggleButton from '@mui/material/ToggleButton';
@@ -94,23 +95,26 @@ const App = () => {
   const gwTransfersGW = showGWTransfers ? (gameweekInfo?.selected ?? currentGameweek) : null;
   const { transfers: gwTransfers, meta: gwTransfersMeta, loading: gwTransfersLoading } = useGWTransfers(gwTransfersEntryId, gwTransfersGW);
   const [gwTransfersExpanded, setGwTransfersExpanded] = useState(false);
+  const hasGwTransfers = gwTransfers.length > 0;
 
   // Aggregate in/out/net points across all GW transfers (uses allPlayers for basePoints)
   const gwTransferPoints = useMemo(() => {
     if (!gwTransfers.length || !allPlayers.length) return null;
     const pMap = {};
     allPlayers.forEach(p => { pMap[p.id] = p; });
-    let inTotal = 0, outTotal = 0, resolved = true;
+    let inTotal = 0, outTotal = 0;
     for (const t of gwTransfers) {
       const pIn  = pMap[t.playerIn.id];
       const pOut = pMap[t.playerOut.id];
-      const inPts  = pIn  ? Math.round(pIn.basePoints  ?? pIn.predictedPoints  ?? pIn.event_points  ?? 0) : null;
-      const outPts = pOut ? Math.round(pOut.basePoints ?? pOut.predictedPoints ?? pOut.event_points ?? 0) : null;
-      if (inPts == null || outPts == null) { resolved = false; break; }
+      const inRaw = pIn ? (pIn.basePoints ?? pIn.predictedPoints ?? pIn.event_points) : null;
+      const outRaw = pOut ? (pOut.basePoints ?? pOut.predictedPoints ?? pOut.event_points) : null;
+      if (inRaw == null || outRaw == null) return null;
+      const inPts = Math.round(inRaw);
+      const outPts = Math.round(outRaw);
       inTotal  += inPts;
       outTotal += outPts;
     }
-    return resolved ? { in: inTotal, out: outTotal, net: inTotal - outTotal } : null;
+    return { in: inTotal, out: outTotal, net: inTotal - outTotal };
   }, [gwTransfers, allPlayers]);
 
   const handleChipToggle = (chipId) => {
@@ -823,18 +827,29 @@ const App = () => {
                     </Typography>
                   ) }
                   { showGWTransfers && (
-                    <Box
-                      onClick={ gwTransfers.length > 0 ? () => setGwTransfersExpanded(e => !e) : undefined }
-                      sx={ { display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 0.25, cursor: gwTransfers.length > 0 ? 'pointer' : 'default', userSelect: 'none' } }
-                    >
-                      <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>
-                        Transfers Made
-                      </Typography>
-                      { gwTransfers.length > 0 && (gwTransfersExpanded
-                        ? <ExpandLessIcon sx={ { fontSize: 12, color: 'text.secondary' } } />
-                        : <ExpandMoreIcon sx={ { fontSize: 12, color: 'text.secondary' } } />
-                      ) }
-                    </Box>
+                    hasGwTransfers ? (
+                      <ButtonBase
+                        onClick={ () => setGwTransfersExpanded(e => !e) }
+                        aria-expanded={ gwTransfersExpanded }
+                        aria-controls='gw-transfers-panel'
+                        aria-label='Toggle transfers made details'
+                        sx={ { display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 0.25, userSelect: 'none', borderRadius: 0.5 } }
+                      >
+                        <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>
+                          Transfers Made
+                        </Typography>
+                        { gwTransfersExpanded
+                          ? <ExpandLessIcon sx={ { fontSize: 12, color: 'text.secondary' } } />
+                          : <ExpandMoreIcon sx={ { fontSize: 12, color: 'text.secondary' } } />
+                        }
+                      </ButtonBase>
+                    ) : (
+                      <Box sx={ { display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 0.25, userSelect: 'none' } }>
+                        <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 500 } }>
+                          Transfers Made
+                        </Typography>
+                      </Box>
+                    )
                   ) }
                   <Box sx={ { display: 'flex', justifyContent: 'center' } }>
                     { !isHighestPredictedTeam && !viewingOpponentId && !isLockedGameweek && activePlayers.length > 0 ? (
@@ -921,20 +936,32 @@ const App = () => {
                     </Box>
                   ) }
                   { showGWTransfers && (
-                    <Box
-                      onClick={ gwTransfers.length > 0 ? () => setGwTransfersExpanded(e => !e) : undefined }
-                      sx={ { display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', cursor: gwTransfers.length > 0 ? 'pointer' : 'default', userSelect: 'none' } }
-                    >
-                      { gwTransfersLoading
-                        ? <CircularProgress size={ 16 } />
-                        : <Typography variant='h6' sx={ { fontWeight: 700, lineHeight: 1.2 } }>{ gwTransfers.length }</Typography>
-                      }
-                      { gwTransferPoints != null && (
-                        <Typography variant='caption' sx={ { fontWeight: 700, lineHeight: 1, fontSize: '0.65rem', color: gwTransferPoints.net > 0 ? 'success.main' : gwTransferPoints.net < 0 ? 'error.main' : 'text.secondary' } }>
-                          { gwTransferPoints.net > 0 ? `+${gwTransferPoints.net}` : gwTransferPoints.net }pts
-                        </Typography>
-                      ) }
-                    </Box>
+                    hasGwTransfers ? (
+                      <ButtonBase
+                        onClick={ () => setGwTransfersExpanded(e => !e) }
+                        aria-expanded={ gwTransfersExpanded }
+                        aria-controls='gw-transfers-panel'
+                        aria-label='Toggle transfer impact details'
+                        sx={ { display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', userSelect: 'none', borderRadius: 0.5 } }
+                      >
+                        { gwTransfersLoading
+                          ? <CircularProgress size={ 16 } />
+                          : <Typography variant='h6' sx={ { fontWeight: 700, lineHeight: 1.2 } }>{ gwTransfers.length }</Typography>
+                        }
+                        { gwTransferPoints != null && (
+                          <Typography variant='caption' sx={ { fontWeight: 700, lineHeight: 1, fontSize: '0.65rem', color: gwTransferPoints.net > 0 ? 'success.main' : gwTransferPoints.net < 0 ? 'error.main' : 'text.secondary' } }>
+                            { gwTransferPoints.net > 0 ? `+${gwTransferPoints.net}` : gwTransferPoints.net }pts
+                          </Typography>
+                        ) }
+                      </ButtonBase>
+                    ) : (
+                      <Box sx={ { display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', userSelect: 'none' } }>
+                        { gwTransfersLoading
+                          ? <CircularProgress size={ 16 } />
+                          : <Typography variant='h6' sx={ { fontWeight: 700, lineHeight: 1.2 } }>{ gwTransfers.length }</Typography>
+                        }
+                      </Box>
+                    )
                   ) }
                   <Box sx={ { display: 'flex', justifyContent: 'center', alignItems: 'center' } }>
                     <ToggleButtonGroup
@@ -954,7 +981,7 @@ const App = () => {
                   </Box>
                   { /* Row 3 — GW transfers collapse (spans all columns) */ }
                   { showGWTransfers && gwTransfers.length > 0 && (
-                    <Box sx={ { gridColumn: '1 / -1', textAlign: 'left' } }>
+                    <Box id='gw-transfers-panel' sx={ { gridColumn: '1 / -1', textAlign: 'left' } }>
                       <GWTransfersPanel
                         expanded={ gwTransfersExpanded }
                         transfers={ gwTransfers }
