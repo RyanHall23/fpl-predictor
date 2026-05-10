@@ -44,7 +44,7 @@ const NavigationBar = ({
   activeSection,
 }) => {
   const isPlanning = activeSection === 'planning';
-  const minSelectableGw = isPlanning && currentGameweek ? Math.min(currentGameweek + 1, MAX_GAMEWEEK) : 1;
+  const minSelectableGw = isPlanning && currentGameweek ? currentGameweek + 1 : 1;
   const selectableGwCount = Math.max(0, MAX_GAMEWEEK - minSelectableGw + 1);
   const { mode, toggleTheme, toggleWin2k, toggleTeletext } = useThemeMode();
   const [teamIdDialogOpen, setTeamIdDialogOpen] = React.useState(false);

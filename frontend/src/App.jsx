@@ -95,26 +95,28 @@ const App = () => {
   const gwTransfersGW = showGWTransfers ? (gameweekInfo?.selected ?? currentGameweek) : null;
   const { transfers: gwTransfers, meta: gwTransfersMeta, loading: gwTransfersLoading } = useGWTransfers(gwTransfersEntryId, gwTransfersGW);
   const [gwTransfersExpanded, setGwTransfersExpanded] = useState(false);
-  const hasGwTransfers = gwTransfers.length > 0;
+  const hasTransfersToDisplay = gwTransfers.length > 0;
 
   // Aggregate in/out/net points across all GW transfers (uses allPlayers for basePoints)
   const gwTransferPoints = useMemo(() => {
     if (!gwTransfers.length || !allPlayers.length) return null;
     const pMap = {};
     allPlayers.forEach(p => { pMap[p.id] = p; });
-    let inTotal = 0, outTotal = 0;
+    let totalIncomingPoints = 0;
+    let totalOutgoingPoints = 0;
     for (const t of gwTransfers) {
       const pIn  = pMap[t.playerIn.id];
       const pOut = pMap[t.playerOut.id];
       const inRaw = pIn ? (pIn.basePoints ?? pIn.predictedPoints ?? pIn.event_points) : null;
       const outRaw = pOut ? (pOut.basePoints ?? pOut.predictedPoints ?? pOut.event_points) : null;
+      // Mirror GWTransfersPanel: hide aggregate net unless every transfer has resolvable points.
       if (inRaw == null || outRaw == null) return null;
       const inPts = Math.round(inRaw);
       const outPts = Math.round(outRaw);
-      inTotal  += inPts;
-      outTotal += outPts;
+      totalIncomingPoints += inPts;
+      totalOutgoingPoints += outPts;
     }
-    return { in: inTotal, out: outTotal, net: inTotal - outTotal };
+    return { in: totalIncomingPoints, out: totalOutgoingPoints, net: totalIncomingPoints - totalOutgoingPoints };
   }, [gwTransfers, allPlayers]);
 
   const handleChipToggle = (chipId) => {
@@ -827,7 +829,7 @@ const App = () => {
                     </Typography>
                   ) }
                   { showGWTransfers && (
-                    hasGwTransfers ? (
+                    hasTransfersToDisplay ? (
                       <ButtonBase
                         onClick={ () => setGwTransfersExpanded(e => !e) }
                         aria-expanded={ gwTransfersExpanded }
@@ -936,7 +938,7 @@ const App = () => {
                     </Box>
                   ) }
                   { showGWTransfers && (
-                    hasGwTransfers ? (
+                    hasTransfersToDisplay ? (
                       <ButtonBase
                         onClick={ () => setGwTransfersExpanded(e => !e) }
                         aria-expanded={ gwTransfersExpanded }
