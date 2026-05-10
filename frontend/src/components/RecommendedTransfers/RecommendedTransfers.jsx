@@ -38,15 +38,34 @@ const RecommendedTransfers = ({ entryId, currentGameweek, compact = false }) => 
   const [recommendations, setRecommendations] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const maxGameweeksAhead = Math.max(0, Math.min(5, 38 - currentGameweek));
+  const forecastPeriodOptions = Array.from({ length: maxGameweeksAhead }, (_, i) => i + 1);
+  const normalizedGameweeksAhead = maxGameweeksAhead === 0
+    ? ''
+    : Math.min(Math.max(gameweeksAhead, 1), maxGameweeksAhead);
+
+  useEffect(() => {
+    if (maxGameweeksAhead === 0) {
+      if (gameweeksAhead !== 0) setGameweeksAhead(0);
+      return;
+    }
+
+    if (gameweeksAhead < 1 || gameweeksAhead > maxGameweeksAhead) {
+      setGameweeksAhead(maxGameweeksAhead);
+    }
+  }, [gameweeksAhead, maxGameweeksAhead]);
 
   const fetchRecommendations = useCallback(async () => {
-    if (!entryId || !currentGameweek) return;
+    if (!entryId || !currentGameweek || maxGameweeksAhead === 0 || normalizedGameweeksAhead === '') {
+      setRecommendations(null);
+      return;
+    }
     
     setLoading(true);
     setError(null);
     try {
       const response = await axios.get(
-        `/api/entry/${entryId}/event/${currentGameweek}/recommended-transfers?gameweeksAhead=${gameweeksAhead}`
+        `/api/entry/${entryId}/event/${currentGameweek}/recommended-transfers?gameweeksAhead=${normalizedGameweeksAhead}`
       );
       setRecommendations(response.data);
     } catch (err) {
@@ -55,14 +74,14 @@ const RecommendedTransfers = ({ entryId, currentGameweek, compact = false }) => 
     } finally {
       setLoading(false);
     }
-  }, [entryId, currentGameweek, gameweeksAhead]);
+  }, [entryId, currentGameweek, maxGameweeksAhead, normalizedGameweeksAhead]);
 
   useEffect(() => {
     fetchRecommendations();
   }, [fetchRecommendations]);
 
   const handleGameweekChange = (event) => {
-    setGameweeksAhead(event.target.value);
+    setGameweeksAhead(Number(event.target.value));
   };
 
   const handleSimilarPricingToggle = (event) => {
@@ -95,22 +114,28 @@ const RecommendedTransfers = ({ entryId, currentGameweek, compact = false }) => 
           <Typography variant='h6' fontWeight='bold'>
             Recommended Transfers
           </Typography>
-          <FormControl size='small' sx={ { minWidth: 0, flex: '1 1 auto', maxWidth: 180 } }>
-            <InputLabel>Period</InputLabel>
-            <Select
-              value={ gameweeksAhead }
-              onChange={ handleGameweekChange }
-              label='Period'
-            >
-              { Array.from({ length: Math.min(5, 38 - currentGameweek) }, (_, i) => i + 1).map(n => (
-                <MenuItem key={ n } value={ n }>
-                  { n === 1
-                    ? `GW${ currentGameweek + 1 }`
-                    : `GW${ currentGameweek + 1 }-${ currentGameweek + n }` }
-                </MenuItem>
-              )) }
-            </Select>
-          </FormControl>
+          { maxGameweeksAhead > 0 ? (
+            <FormControl size='small' sx={ { minWidth: 0, flex: '1 1 auto', maxWidth: 180 } }>
+              <InputLabel>Period</InputLabel>
+              <Select
+                value={ normalizedGameweeksAhead }
+                onChange={ handleGameweekChange }
+                label='Period'
+              >
+                { forecastPeriodOptions.map(n => (
+                  <MenuItem key={ n } value={ n }>
+                    { n === 1
+                      ? `GW ${ currentGameweek + 1 }`
+                      : `GW ${ currentGameweek + 1 }-${ currentGameweek + n }` }
+                  </MenuItem>
+                )) }
+              </Select>
+            </FormControl>
+          ) : (
+            <Typography variant='body2' color='text.secondary'>
+              No future gameweeks
+            </Typography>
+          ) }
         </Box>
       ) : (
         <Box sx={ { display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 2 } }>
@@ -128,22 +153,28 @@ const RecommendedTransfers = ({ entryId, currentGameweek, compact = false }) => 
               }
               label='Similar Pricing'
             />
-            <FormControl size='small' sx={ { minWidth: 200 } }>
-              <InputLabel>Forecast Period</InputLabel>
-              <Select
-                value={ gameweeksAhead }
-                onChange={ handleGameweekChange }
-                label='Forecast Period'
-              >
-                { Array.from({ length: Math.min(5, 38 - currentGameweek) }, (_, i) => i + 1).map(n => (
-                  <MenuItem key={ n } value={ n }>
-                    { n === 1
-                      ? `GW${ currentGameweek + 1 }`
-                      : `GW${ currentGameweek + 1 }-${ currentGameweek + n }` }
-                  </MenuItem>
-                )) }
-              </Select>
-            </FormControl>
+            { maxGameweeksAhead > 0 ? (
+              <FormControl size='small' sx={ { minWidth: 200 } }>
+                <InputLabel>Forecast Period</InputLabel>
+                <Select
+                  value={ normalizedGameweeksAhead }
+                  onChange={ handleGameweekChange }
+                  label='Forecast Period'
+                >
+                  { forecastPeriodOptions.map(n => (
+                    <MenuItem key={ n } value={ n }>
+                      { n === 1
+                        ? `GW ${ currentGameweek + 1 }`
+                        : `GW ${ currentGameweek + 1 }-${ currentGameweek + n }` }
+                    </MenuItem>
+                  )) }
+                </Select>
+              </FormControl>
+            ) : (
+              <Typography variant='body2' color='text.secondary'>
+                No future gameweeks
+              </Typography>
+            ) }
           </Box>
         </Box>
       ) }
