@@ -30,6 +30,7 @@ const positionLabels = {
   MID: 'MID',
   ATT: 'FWD'
 };
+const TOTAL_GAMEWEEKS = 38;
 
 const RecommendedTransfers = ({ entryId, currentGameweek, compact = false }) => {
   const theme = useTheme();
@@ -38,25 +39,16 @@ const RecommendedTransfers = ({ entryId, currentGameweek, compact = false }) => 
   const [recommendations, setRecommendations] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const maxGameweeksAhead = Math.max(0, Math.min(5, 38 - currentGameweek));
-  const forecastPeriodOptions = Array.from({ length: maxGameweeksAhead }, (_, i) => i + 1);
+  const maxGameweeksAhead = Math.max(0, Math.min(5, TOTAL_GAMEWEEKS - currentGameweek));
+  const forecastPeriodOptions = maxGameweeksAhead > 0
+    ? Array.from({ length: maxGameweeksAhead }, (_, i) => i + 1)
+    : [];
   const normalizedGameweeksAhead = maxGameweeksAhead === 0
-    ? ''
+    ? 0
     : Math.min(Math.max(gameweeksAhead, 1), maxGameweeksAhead);
 
-  useEffect(() => {
-    if (maxGameweeksAhead === 0) {
-      if (gameweeksAhead !== 0) setGameweeksAhead(0);
-      return;
-    }
-
-    if (gameweeksAhead < 1 || gameweeksAhead > maxGameweeksAhead) {
-      setGameweeksAhead(maxGameweeksAhead);
-    }
-  }, [gameweeksAhead, maxGameweeksAhead]);
-
   const fetchRecommendations = useCallback(async () => {
-    if (!entryId || !currentGameweek || maxGameweeksAhead === 0 || normalizedGameweeksAhead === '') {
+    if (!entryId || !currentGameweek || maxGameweeksAhead === 0 || normalizedGameweeksAhead === 0) {
       setRecommendations(null);
       return;
     }
@@ -81,7 +73,10 @@ const RecommendedTransfers = ({ entryId, currentGameweek, compact = false }) => 
   }, [fetchRecommendations]);
 
   const handleGameweekChange = (event) => {
-    setGameweeksAhead(Number(event.target.value));
+    const nextValue = Number(event.target.value);
+    if (Number.isFinite(nextValue) && nextValue >= 1 && nextValue <= maxGameweeksAhead) {
+      setGameweeksAhead(nextValue);
+    }
   };
 
   const handleSimilarPricingToggle = (event) => {
