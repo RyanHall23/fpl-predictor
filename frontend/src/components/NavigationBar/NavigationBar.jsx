@@ -30,6 +30,7 @@ const TEAM_VIEW = {
   USER: 'user',
   HIGHEST: 'highest'
 };
+const MAX_GAMEWEEK = 38;
 
 const NavigationBar = ({
   teamView,
@@ -43,8 +44,8 @@ const NavigationBar = ({
   activeSection,
 }) => {
   const isPlanning = activeSection === 'planning';
-  const minSelectableGw = isPlanning && currentGameweek ? Math.min(currentGameweek + 1, 38) : 1;
-  const selectableGwCount = Math.max(0, 38 - minSelectableGw + 1);
+  const minSelectableGw = isPlanning && currentGameweek ? Math.min(currentGameweek + 1, MAX_GAMEWEEK) : 1;
+  const selectableGwCount = Math.max(0, MAX_GAMEWEEK - minSelectableGw + 1);
   const { mode, toggleTheme, toggleWin2k, toggleTeletext } = useThemeMode();
   const [teamIdDialogOpen, setTeamIdDialogOpen] = React.useState(false);
   const [teamIdInput, setTeamIdInput] = React.useState('');
@@ -210,7 +211,7 @@ const NavigationBar = ({
                   <IconButton
                     size='small'
                     color='inherit'
-                    disabled={ gameweekLocked || (selectedGameweek || currentGameweek || 1) >= 38 }
+                    disabled={ gameweekLocked || (selectedGameweek || currentGameweek || 1) >= MAX_GAMEWEEK }
                     onClick={ () => {
                       const current = selectedGameweek || currentGameweek || 1;
                       setSelectedGameweek(current + 1 === currentGameweek ? null : current + 1);
