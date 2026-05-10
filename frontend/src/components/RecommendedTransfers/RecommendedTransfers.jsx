@@ -105,8 +105,8 @@ const RecommendedTransfers = ({ entryId, currentGameweek, compact = false }) => 
               { Array.from({ length: Math.min(5, 38 - currentGameweek) }, (_, i) => i + 1).map(n => (
                 <MenuItem key={ n } value={ n }>
                   { n === 1
-                    ? `Next Gameweek ${ currentGameweek + 1 }`
-                    : `Next Gameweek ${ currentGameweek + 1 }-${ currentGameweek + n }` }
+                    ? `GW${ currentGameweek + 1 }`
+                    : `GW${ currentGameweek + 1 }-${ currentGameweek + n }` }
                 </MenuItem>
               )) }
             </Select>
@@ -138,8 +138,8 @@ const RecommendedTransfers = ({ entryId, currentGameweek, compact = false }) => 
                 { Array.from({ length: Math.min(5, 38 - currentGameweek) }, (_, i) => i + 1).map(n => (
                   <MenuItem key={ n } value={ n }>
                     { n === 1
-                      ? `Next Gameweek ${ currentGameweek + 1 }`
-                      : `Next Gameweek ${ currentGameweek + 1 }-${ currentGameweek + n }` }
+                      ? `GW${ currentGameweek + 1 }`
+                      : `GW${ currentGameweek + 1 }-${ currentGameweek + n }` }
                   </MenuItem>
                 )) }
               </Select>
