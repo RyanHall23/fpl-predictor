@@ -729,13 +729,22 @@ const getAllPlayersEnriched = async (req, res) => {
       ...p,
       ep_next: parseFloat(p.ep_next) || 0,
     }));
+
+    // For past or active gameweeks, enrich with actual points from the live endpoint
+    // so that event_points reflects the correct GW score for every player.
+    const targetEventData = data.events.find(e => e.id === targetEvent);
+    const isPastOrActive = !!(targetEventData && (targetEventData.finished || targetEventData.is_current));
+    if (isPastOrActive) {
+      players = await fplModel.enrichPlayersWithGameweekStats(players, targetEvent);
+    }
     
     // Enrich players with opponent display data for the target gameweek
     players = fplModel.enrichPlayersWithOpponents(players, fixtures, data.teams, targetEvent);
     
-    // Apply the advanced prediction engine for the target gameweek so that
-    // blank-GW teams correctly receive 0 predicted points in the transfer UI.
-    players = fplModel.applyAdvancedPredictions(players, fixtures, data.teams, targetEvent);
+    // Apply the advanced prediction engine for future gameweeks only.
+    if (!isPastOrActive) {
+      players = fplModel.applyAdvancedPredictions(players, fixtures, data.teams, targetEvent);
+    }
 
     // Add a pre-formatted opponent display string so the frontend does not need
     // to duplicate the formatting logic for single vs DGW fixtures.
@@ -1330,6 +1339,90 @@ const getPlayersForecast = async (req, res) => {
   }
 };
 
+/**
+ * GET /api/entry/:entryId/transfers?gameweek=N
+ *
+ * Returns the FPL transfers made by an entry for the given gameweek (or all
+ * transfers if no gameweek is supplied).  Player names are resolved from
+ * bootstrap-static so the frontend never needs to look them up separately.
+ *
+ * Response shape: Array of { playerIn, playerOut, event, time }
+ * where playerIn/Out = { id, name, webName, cost }
+ */
+const getEntryTransfers = async (req, res) => {
+  const { entryId } = req.params;
+  const { gameweek } = req.query;
+
+  if (!/^\d+$/.test(entryId)) {
+    return res.status(400).json({ error: 'Invalid entryId' });
+  }
+
+  let filterGW;
+  if (gameweek !== undefined) {
+    if (!/^\d+$/.test(gameweek)) {
+      return res.status(400).json({ error: 'Invalid gameweek' });
+    }
+    filterGW = parseInt(gameweek, 10);
+    if (filterGW < 1 || filterGW > 38) {
+      return res.status(400).json({ error: 'Gameweek must be between 1 and 38' });
+    }
+  }
+
+  try {
+    const fetches = [
+      fplModel.fetchBootstrapStatic(),
+      dataProvider.fetchEntryTransfers(entryId),
+    ];
+    // Fetch picks for the specific GW so we can surface the transfer cost
+    if (filterGW !== undefined) {
+      fetches.push(dataProvider.fetchPlayerPicks(entryId, filterGW).catch(() => null));
+    }
+    const [bootstrap, allTransfers, picksData] = await Promise.all(fetches);
+
+    const playerMap = {};
+    for (const p of bootstrap.elements) {
+      playerMap[p.id] = p;
+    }
+
+    const filtered = filterGW !== undefined
+      ? allTransfers.filter(t => t.event === filterGW)
+      : allTransfers;
+
+    const transfers = filtered.map(t => {
+      const pIn  = playerMap[t.element_in];
+      const pOut = playerMap[t.element_out];
+      return {
+        event: t.event,
+        time: t.time,
+        playerIn: {
+          id: t.element_in,
+          name: pIn  ? `${pIn.first_name} ${pIn.second_name}`   : 'Unknown',
+          webName: pIn  ? pIn.web_name  : 'Unknown',
+          cost: t.element_in_cost,
+        },
+        playerOut: {
+          id: t.element_out,
+          name: pOut ? `${pOut.first_name} ${pOut.second_name}` : 'Unknown',
+          webName: pOut ? pOut.web_name : 'Unknown',
+          cost: t.element_out_cost,
+        },
+      };
+    });
+
+    // Include transfer cost metadata from picks entry_history when available
+    const entryHistory = picksData?.entry_history ?? null;
+    const meta = entryHistory ? {
+      eventTransfers: entryHistory.event_transfers ?? transfers.length,
+      transferCost: entryHistory.event_transfers_cost ?? 0,
+    } : null;
+
+    res.json({ transfers, meta });
+  } catch (error) {
+    console.error('Error fetching entry transfers:', error.message);
+    res.status(500).json({ error: 'Error fetching entry transfers' });
+  }
+};
+
 module.exports = {
   getBootstrapStatic,
   getFixtures,
@@ -1346,4 +1439,5 @@ module.exports = {
   getRecommendedTransfers,
   getLeagueStandings,
   getPlayersForecast,
+  getEntryTransfers,
 };

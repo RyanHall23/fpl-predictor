@@ -40,7 +40,10 @@ const NavigationBar = ({
   setSelectedGameweek,
   currentGameweek,
   gameweekLocked,
+  activeSection,
 }) => {
+  const isPlanning = activeSection === 'planning';
+  const minSelectableGw = isPlanning && currentGameweek ? currentGameweek + 1 : 1;
   const { mode, toggleTheme, toggleWin2k, toggleTeletext } = useThemeMode();
   const [teamIdDialogOpen, setTeamIdDialogOpen] = React.useState(false);
   const [teamIdInput, setTeamIdInput] = React.useState('');
@@ -170,7 +173,7 @@ const NavigationBar = ({
                   <IconButton
                     size='small'
                     color='inherit'
-                    disabled={ gameweekLocked || (selectedGameweek || currentGameweek || 1) <= 1 }
+                    disabled={ gameweekLocked || (selectedGameweek || currentGameweek || 1) <= minSelectableGw }
                     onClick={ () => {
                       const current = selectedGameweek || currentGameweek || 1;
                       setSelectedGameweek(current - 1 === currentGameweek ? null : current - 1);
@@ -194,7 +197,7 @@ const NavigationBar = ({
                     '& .MuiSelect-select': { py: 1 }
                   } }
                 >
-                  { Array.from({ length: 38 }, (_, i) => i + 1).map((gw) => (
+                  { Array.from({ length: 38 - minSelectableGw + 1 }, (_, i) => minSelectableGw + i).map((gw) => (
                     <MenuItem key={ gw } value={ gw }>
                       GW { gw }
                     </MenuItem>
@@ -278,6 +281,7 @@ NavigationBar.propTypes = {
   setSelectedGameweek: PropTypes.func,
   currentGameweek: PropTypes.number,
   gameweekLocked: PropTypes.bool,
+  activeSection: PropTypes.string,
 };
 
 export default NavigationBar;
