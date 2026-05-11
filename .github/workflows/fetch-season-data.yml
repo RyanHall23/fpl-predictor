@@ -1,0 +1,56 @@
+name: Refresh FPL Season Data
+
+# Runs automatically twice daily and before every push to main.
+# Fetches the FPL API endpoints that are shared across all users
+# (bootstrap-static, fixtures, and completed-GW live scores) and
+# commits the JSON files to backend/seasonData/.
+#
+# The app reads these files when CACHE_STATIC=true (set in Vercel env vars),
+# so the FPL API is never called for static data in production — zero storage
+# cost, zero rate-limit risk.
+
+on:
+  schedule:
+    # 06:00 and 18:00 UTC every day — covers pre-deadline and post-results
+    - cron: '0 6,18 * * *'
+  push:
+    branches: [main, master]
+  workflow_dispatch:     # allow manual trigger from GitHub UI
+
+permissions:
+  contents: write        # needed to commit the updated JSON files
+
+jobs:
+  fetch-and-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Fetch FPL static data
+        run: node .github/scripts/fetch-season-data.js
+        env:
+          FPL_API_BASE: https://fantasy.premierleague.com/api
+
+      - name: Commit updated data files
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add backend/seasonData/
+          # Only commit if there are actual changes
+          if git diff --staged --quiet; then
+            echo "No changes to season data — skipping commit."
+          else
+            CHANGED=$(git diff --staged --name-only | wc -l | tr -d ' ')
+            git commit -m "chore: refresh FPL season data (${CHANGED} files) [skip ci]"
+            git push
+          fi

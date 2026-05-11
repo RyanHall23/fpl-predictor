@@ -3,7 +3,13 @@
   "builds": [
     {
       "src": "backend/server.js",
-      "use": "@vercel/node"
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "backend/seasonData/**",
+          "backend/mockData/**"
+        ]
+      }
     },
     {
       "src": "frontend/package.json",
@@ -22,5 +28,15 @@
       "src": "/(.*)",
       "dest": "frontend/$1"
     }
-  ]
+  ],
+  "functions": {
+    "backend/server.js": {
+      "memory": 1024,
+      "maxDuration": 30
+    }
+  },
+  "env": {
+    "CACHE_STATIC": "true",
+    "USE_FPL_API": "true"
+  }
 }

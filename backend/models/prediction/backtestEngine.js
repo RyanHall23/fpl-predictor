@@ -153,6 +153,7 @@ const runBacktestAndCalibrate = async (players, fixtures, teams, currentGwId) =>
   console.log(`[Backtest] Running against GW(s): ${gwsToTest.join(', ')}`);
 
   // Build position lookup: playerId → element_type
+  // (built from current players; updated per-GW below if a snapshot exists)
   const positionMap = new Map(players.map((p) => [p.id, p.element_type]));
 
   // Accumulate error stats per position
@@ -170,15 +171,35 @@ const runBacktestAndCalibrate = async (players, fixtures, teams, currentGwId) =>
     const gw     = gwsToTest[i];
     const weight = GW_WEIGHTS[i] ?? 0.10;
 
+    // Use a per-GW player snapshot if one was captured by the daily fetch
+    // workflow.  This eliminates the forward-looking bias that arises from
+    // using today's stats (form, price, ICT) to predict past GW outcomes.
+    // Falls back to the current bootstrap players when no snapshot exists.
+    let gwPlayers = players;
+    let gwTeams   = teams;
+    try {
+      const snapshot = await dataProvider.fetchGwPlayerSnapshot(gw);
+      if (snapshot && Array.isArray(snapshot.elements) && snapshot.elements.length > 0) {
+        gwPlayers = snapshot.elements;
+        if (Array.isArray(snapshot.teams) && snapshot.teams.length > 0) {
+          gwTeams = snapshot.teams;
+        }
+        console.log(`[Backtest] GW${gw}: using historical player snapshot (${gwPlayers.length} players).`);
+      }
+    } catch (_) {
+      // Snapshot unavailable — fall through to current stats
+    }
+
     // Run predictions for this GW in RAW mode (calibration disabled)
     const predictions = predictionEngine.computePredictions(
-      players, fixtures, teams, gw, { skipCalibration: true },
+      gwPlayers, fixtures, gwTeams, gw, { skipCalibration: true },
     );
 
     // Build prediction lookup
     const predMap = new Map(predictions.map((p) => [p.id, p.predicted_points ?? 0]));
 
-    // Fetch actual results
+    // Fetch actual results — always uses current positionMap for position
+    // lookup since positions rarely change and snapshots may not have new players
     const actuals = await fetchActualResults(gw, positionMap);
 
     let included = 0;
