@@ -23,13 +23,16 @@
 const fs   = require('fs');
 const path = require('path');
 
-// On Vercel the filesystem outside /tmp is read-only, so write calibration to
-// /tmp when running as a serverless function. Local dev keeps it next to the
-// backend root so it survives server restarts.
+// Path is configurable for deployments where the code directory is read-only.
+// Defaults:
+// - Vercel/serverless: /tmp/calibration.json
+// - Local/dev:         backend/calibration.json
 const IS_VERCEL        = Boolean(process.env.VERCEL || process.env.NOW_REGION);
-const CALIBRATION_FILE = IS_VERCEL
-  ? path.join('/tmp', 'calibration.json')
-  : path.join(__dirname, '..', '..', 'calibration.json');
+const CALIBRATION_DIR  = process.env.CALIBRATION_DATA_DIR || (IS_VERCEL
+  ? '/tmp'
+  : path.join(__dirname, '..', '..'));
+const CALIBRATION_FILE = process.env.CALIBRATION_FILE_PATH ||
+  path.join(CALIBRATION_DIR, 'calibration.json');
 
 // Default calibration (no adjustment) — one multiplier per FPL position (1–4)
 const DEFAULT_MULTIPLIERS = { 1: 1.0, 2: 1.0, 3: 1.0, 4: 1.0 };
@@ -89,6 +92,7 @@ const load = () => {
 const save = () => {
   try {
     const payload = { ..._multipliers, meta: _meta };
+    fs.mkdirSync(path.dirname(CALIBRATION_FILE), { recursive: true });
     fs.writeFileSync(CALIBRATION_FILE, JSON.stringify(payload, null, 2));
   } catch (err) {
     console.warn('[CalibrationStore] Could not save calibration:', err.message);

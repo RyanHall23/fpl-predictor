@@ -233,7 +233,10 @@ const computePredictions = (players, fixtures, teams, targetEventId, options = {
 
   // ── 2. Build team form ratings from completed fixtures ────────────────────
   //    These modulate the ELO lambdas using each team's last 5 results.
-  const teamFormRatings = teamFormModel.buildTeamFormRatings(fixtures);
+  const completedFixturesBeforeTarget = fixtures.filter(
+    (f) => f.event != null && f.event < targetEventId && f.finished === true,
+  );
+  const teamFormRatings = teamFormModel.buildTeamFormRatings(completedFixturesBeforeTarget);
 
   // ── 3. Build team → players map ───────────────────────────────────────────
   const teamPlayerMap = buildTeamPlayerMap(players);
@@ -334,6 +337,10 @@ const computePredictions = (players, fixtures, teams, targetEventId, options = {
   });
 
   // ── 8. Compute per-player predictions ─────────────────────────────────────
+  const { meta: calibMeta } = calibrationStore.getState();
+  const calibTested = calibMeta.gwsTested && calibMeta.gwsTested.length > 0;
+  const calibQuality = calibTested ? 0.10 : 0;
+
   return formEnhancedPlayers.map((player) => {
     const playerFixtures = teamFixtureMap[player.team] || [];
 
@@ -401,10 +408,6 @@ const computePredictions = (players, fixtures, teams, targetEventId, options = {
     const hasMins       = (player.minutes || 0) > 45;
     const hasChance     = player.chance_of_playing_next_round != null;
     const hasForm       = (player._form_factor || 0) !== 0;
-    const calibMeta     = calibrationStore.getState().meta;
-    const calibTested   = calibMeta.gwsTested && calibMeta.gwsTested.length > 0;
-    const calibQuality  = calibTested ? 0.10 : 0;
-
     const confidence =
       0.25 +
       (hasXG     ? 0.25 : 0) +

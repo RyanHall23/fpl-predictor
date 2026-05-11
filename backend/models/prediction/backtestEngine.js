@@ -53,6 +53,8 @@ const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
 let _cacheKey       = null;  // "<gwId>:<players.length>"
 let _cacheResult    = null;
 let _cacheExpiresAt = 0;
+let _inFlightKey    = null;
+let _inFlightRun    = null;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -143,112 +145,131 @@ const runBacktestAndCalibrate = async (players, fixtures, teams, currentGwId) =>
     return _cacheResult;
   }
 
-  const gwsToTest = getRecentCompletedGws(fixtures, currentGwId, N_BACKTEST_GWS);
-
-  if (gwsToTest.length === 0) {
-    console.log('[Backtest] No completed GWs available — skipping calibration.');
-    return { gwsTested: [], summary: {} };
+  if (_inFlightRun && _inFlightKey === cacheKey) {
+    console.log('[Backtest] Awaiting in-flight calibration run.');
+    return _inFlightRun;
   }
 
-  console.log(`[Backtest] Running against GW(s): ${gwsToTest.join(', ')}`);
+  const runPromise = (async () => {
+    const gwsToTest = getRecentCompletedGws(fixtures, currentGwId, N_BACKTEST_GWS);
 
-  // Build position lookup: playerId → element_type
-  // (built from current players; updated per-GW below if a snapshot exists)
-  const positionMap = new Map(players.map((p) => [p.id, p.element_type]));
-
-  // Accumulate error stats per position
-  const posStats = {
-    1: { sumPredicted: 0, sumActual: 0, sumSquaredError: 0, count: 0 },
-    2: { sumPredicted: 0, sumActual: 0, sumSquaredError: 0, count: 0 },
-    3: { sumPredicted: 0, sumActual: 0, sumSquaredError: 0, count: 0 },
-    4: { sumPredicted: 0, sumActual: 0, sumSquaredError: 0, count: 0 },
-  };
-
-  // Require lazily to avoid the circular dep chain at module-load time
-  const predictionEngine = require('../predictionEngine');
-
-  for (let i = 0; i < gwsToTest.length; i++) {
-    const gw     = gwsToTest[i];
-    const weight = GW_WEIGHTS[i] ?? 0.10;
-
-    // Use a per-GW player snapshot if one was captured by the daily fetch
-    // workflow.  This eliminates the forward-looking bias that arises from
-    // using today's stats (form, price, ICT) to predict past GW outcomes.
-    // Falls back to the current bootstrap players when no snapshot exists.
-    let gwPlayers = players;
-    let gwTeams   = teams;
-    try {
-      const snapshot = await dataProvider.fetchGwPlayerSnapshot(gw);
-      if (snapshot && Array.isArray(snapshot.elements) && snapshot.elements.length > 0) {
-        gwPlayers = snapshot.elements;
-        if (Array.isArray(snapshot.teams) && snapshot.teams.length > 0) {
-          gwTeams = snapshot.teams;
-        }
-        console.log(`[Backtest] GW${gw}: using historical player snapshot (${gwPlayers.length} players).`);
-      }
-    } catch (_) {
-      // Snapshot unavailable — fall through to current stats
+    if (gwsToTest.length === 0) {
+      console.log('[Backtest] No completed GWs available — skipping calibration.');
+      return { gwsTested: [], summary: {} };
     }
 
-    // Run predictions for this GW in RAW mode (calibration disabled)
-    const predictions = predictionEngine.computePredictions(
-      gwPlayers, fixtures, gwTeams, gw, { skipCalibration: true },
-    );
+    console.log(`[Backtest] Running against GW(s): ${gwsToTest.join(', ')}`);
 
-    // Build prediction lookup
-    const predMap = new Map(predictions.map((p) => [p.id, p.predicted_points ?? 0]));
+    // Build position lookup: playerId → element_type
+    // (built from current players; updated per-GW below if a snapshot exists)
+    const positionMap = new Map(players.map((p) => [p.id, p.element_type]));
 
-    // Fetch actual results — always uses current positionMap for position
-    // lookup since positions rarely change and snapshots may not have new players
-    const actuals = await fetchActualResults(gw, positionMap);
+    // Accumulate error stats per position
+    const posStats = {
+      1: { sumPredicted: 0, sumActual: 0, sumSquaredError: 0, count: 0 },
+      2: { sumPredicted: 0, sumActual: 0, sumSquaredError: 0, count: 0 },
+      3: { sumPredicted: 0, sumActual: 0, sumSquaredError: 0, count: 0 },
+      4: { sumPredicted: 0, sumActual: 0, sumSquaredError: 0, count: 0 },
+    };
 
-    let included = 0;
+    // Require lazily to avoid the circular dep chain at module-load time
+    const predictionEngine = require('../predictionEngine');
 
-    actuals.forEach((result, playerId) => {
-      if (result.minutes < MIN_MINUTES) return;
-      const pos  = result.position;
-      if (!posStats[pos]) return;
+    for (let i = 0; i < gwsToTest.length; i++) {
+      const gw     = gwsToTest[i];
+      const weight = GW_WEIGHTS[i] ?? 0.10;
 
-      const predicted = predMap.get(playerId) ?? 0;
-      const actual    = result.totalPoints;
+      // Use a per-GW player snapshot if one was captured by the daily fetch
+      // workflow.  This eliminates the forward-looking bias that arises from
+      // using today's stats (form, price, ICT) to predict past GW outcomes.
+      // Falls back to the current bootstrap players when no snapshot exists.
+      let gwPlayers = players;
+      let gwTeams   = teams;
+      try {
+        const snapshot = await dataProvider.fetchGwPlayerSnapshot(gw);
+        if (snapshot && Array.isArray(snapshot.elements) && snapshot.elements.length > 0) {
+          gwPlayers = snapshot.elements;
+          if (Array.isArray(snapshot.teams) && snapshot.teams.length > 0) {
+            gwTeams = snapshot.teams;
+          }
+          console.log(`[Backtest] GW${gw}: using historical player snapshot (${gwPlayers.length} players).`);
+        }
+      } catch (_) {
+        // Snapshot unavailable — fall through to current stats
+      }
 
-      posStats[pos].sumPredicted    += predicted * weight;
-      posStats[pos].sumActual       += actual    * weight;
-      posStats[pos].sumSquaredError += Math.pow(predicted - actual, 2) * weight;
-      posStats[pos].count           += weight;
-      included++;
+      // Run predictions for this GW in RAW mode (calibration disabled)
+      const predictions = predictionEngine.computePredictions(
+        gwPlayers, fixtures, gwTeams, gw, { skipCalibration: true },
+      );
+
+      // Build prediction lookup
+      const predMap = new Map(predictions.map((p) => [p.id, p.predicted_points ?? 0]));
+
+      // Fetch actual results — always uses current positionMap for position
+      // lookup since positions rarely change and snapshots may not have new players
+      const actuals = await fetchActualResults(gw, positionMap);
+
+      let included = 0;
+
+      actuals.forEach((result, playerId) => {
+        if (result.minutes < MIN_MINUTES) return;
+        const pos  = result.position;
+        if (!posStats[pos]) return;
+
+        const predicted = predMap.get(playerId) ?? 0;
+        const actual    = result.totalPoints;
+
+        posStats[pos].sumPredicted    += predicted * weight;
+        posStats[pos].sumActual       += actual    * weight;
+        posStats[pos].sumSquaredError += Math.pow(predicted - actual, 2) * weight;
+        posStats[pos].count           += weight;
+        included++;
+      });
+
+      console.log(`[Backtest] GW${gw}: ${included} qualifying players (weight ${weight})`);
+    }
+
+    // Update calibration store from aggregated stats
+    calibrationStore.update(posStats, gwsToTest);
+
+    // Build human-readable summary
+    const summary = {};
+    [1, 2, 3, 4].forEach((pos) => {
+      const s = posStats[pos];
+      if (s.count < 3) return;
+      summary[pos] = {
+        multiplier:   calibrationStore.getMultiplier(pos),
+        avgPredicted: s.count > 0 ? s.sumPredicted / s.count : 0,
+        avgActual:    s.count > 0 ? s.sumActual    / s.count : 0,
+        rmse:         s.count > 0 ? Math.sqrt(s.sumSquaredError / s.count) : null,
+        n:            Math.round(s.count),
+      };
     });
 
-    console.log(`[Backtest] GW${gw}: ${included} qualifying players (weight ${weight})`);
+    console.log('[Backtest] Calibration summary:', summary);
+
+    const result = { gwsTested: gwsToTest, summary };
+
+    // Cache the result
+    _cacheKey       = cacheKey;
+    _cacheResult    = result;
+    _cacheExpiresAt = Date.now() + CACHE_TTL_MS;
+
+    return result;
+  })();
+
+  _inFlightKey = cacheKey;
+  _inFlightRun = runPromise;
+
+  try {
+    return await runPromise;
+  } finally {
+    if (_inFlightRun === runPromise) {
+      _inFlightKey = null;
+      _inFlightRun = null;
+    }
   }
-
-  // Update calibration store from aggregated stats
-  calibrationStore.update(posStats, gwsToTest);
-
-  // Build human-readable summary
-  const summary = {};
-  [1, 2, 3, 4].forEach((pos) => {
-    const s = posStats[pos];
-    if (s.count < 3) return;
-    summary[pos] = {
-      multiplier:   calibrationStore.getMultiplier(pos),
-      avgPredicted: s.count > 0 ? s.sumPredicted / s.count : 0,
-      avgActual:    s.count > 0 ? s.sumActual    / s.count : 0,
-      rmse:         s.count > 0 ? Math.sqrt(s.sumSquaredError / s.count) : null,
-      n:            Math.round(s.count),
-    };
-  });
-
-  console.log('[Backtest] Calibration summary:', summary);
-
-  const result = { gwsTested: gwsToTest, summary };
-
-  // Cache the result
-  _cacheKey       = cacheKey;
-  _cacheResult    = result;
-  _cacheExpiresAt = Date.now() + CACHE_TTL_MS;
-
-  return result;
 };
 
 /**

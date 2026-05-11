@@ -116,16 +116,21 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
   // ── 3. Completed-GW live scores ──────────────────────────────────────────
   // Determine which GWs are fully finished
-  const finishedGws = new Set(
-    fixtures
-      .filter((f) => f.finished === true && f.event != null)
-      .map((f) => f.event),
-  );
+  const fixturesByEvent = fixtures.reduce((acc, fixture) => {
+    if (fixture.event == null) return acc;
+    if (!acc[fixture.event]) acc[fixture.event] = [];
+    acc[fixture.event].push(fixture);
+    return acc;
+  }, {});
 
   // Cross-reference with events to confirm all fixtures in the GW are done
   const events = (bootstrap.events || []);
   const completedGws = events
-    .filter((ev) => ev.finished === true || finishedGws.has(ev.id))
+    .filter((ev) => {
+      if (ev.finished === true) return true;
+      const gwFixtures = fixturesByEvent[ev.id] || [];
+      return gwFixtures.length > 0 && gwFixtures.every((f) => f.finished === true);
+    })
     .map((ev) => ev.id)
     .sort((a, b) => a - b);
 
