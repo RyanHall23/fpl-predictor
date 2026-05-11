@@ -8,7 +8,9 @@
         "includeFiles": [
           "backend/seasonData/**",
           "backend/mockData/**"
-        ]
+        ],
+        "memory": 1024,
+        "maxDuration": 30
       }
     },
     {
@@ -29,12 +31,6 @@
       "dest": "frontend/$1"
     }
   ],
-  "functions": {
-    "backend/server.js": {
-      "memory": 1024,
-      "maxDuration": 30
-    }
-  },
   "env": {
     "CACHE_STATIC": "true",
     "USE_FPL_API": "true"
