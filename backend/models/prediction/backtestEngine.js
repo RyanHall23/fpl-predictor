@@ -8,18 +8,18 @@
  * calibration multipliers.
  *
  * Flow:
- *   1. Identify the last N_BACKTEST_GWS fully-completed gameweeks
+ *   1. Identify ALL fully-completed gameweeks before the target GW
  *   2. For each, call computePredictions() in RAW mode (no calibration applied)
+ *      using the per-GW player snapshot if one was committed by the workflow,
+ *      falling back to current bootstrap data for GWs without a snapshot.
  *   3. Fetch the actual player points from event/{gw}/live/
- *   4. Aggregate prediction errors per position (with recency weighting)
+ *   4. Aggregate prediction errors per position using exponential decay weights
+ *      so recent GWs dominate but all available history shapes the calibration.
  *   5. Hand the aggregate stats to calibrationStore.update()
  *
- * The backtest is intentionally run with the *current* season stats as the
- * player baseline.  This introduces a small forward-looking bias, but:
- *   - The calibration is detecting *systematic positional bias* not individual
- *     player variance — the bias correction is still valid and useful.
- *   - Players whose stats changed significantly in the last 3 GWs benefit
- *     from that change being reflected in the form model anyway.
+ * Using all available GWs (rather than just the last 3) gives the calibration
+ * store enough data to detect stable systematic positional biases while the
+ * exponential decay ensures the multipliers react quickly to recent trends.
  *
  * Results are cached for CACHE_TTL_MS to avoid redundant API calls.
  */
@@ -30,9 +30,6 @@ const calibrationStore = require('./calibrationStore');
 // Imported lazily (via require inside the function) to avoid circular dep
 // with predictionEngine which requires this module indirectly.
 
-/** Number of recent completed GWs to include in each backtest run */
-const N_BACKTEST_GWS = 3;
-
 /**
  * Minimum actual minutes for a player to be included in calibration.
  * Excluding sub appearances and DNPs keeps the comparison fair.
@@ -40,10 +37,21 @@ const N_BACKTEST_GWS = 3;
 const MIN_MINUTES = 45;
 
 /**
- * Recency weights for the three tested GWs (most recent first).
- * Must sum to 1.0.
+ * Exponential decay factor for per-GW recency weighting.
+ * A value of 0.82 gives the most-recent GW roughly 3× the weight of a GW
+ * 6 weeks ago, while still letting older history meaningfully contribute.
+ *
+ * Weights are normalised to sum to 1.0 across however many GWs are tested,
+ * so adding more history never dilutes the total contribution.
  */
-const GW_WEIGHTS = [0.50, 0.35, 0.15];
+const DECAY = 0.82;
+
+/** Compute normalised exponential-decay weights for n GWs (index 0 = most recent). */
+const buildGwWeights = (n) => {
+  const raw = Array.from({ length: n }, (_, i) => Math.pow(DECAY, i));
+  const sum = raw.reduce((a, b) => a + b, 0);
+  return raw.map((w) => w / sum);
+};
 
 /** How long to cache a completed backtest run (ms). */
 const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
@@ -69,7 +77,7 @@ let _inFlightRun    = null;
  * @param {number} n          - Number of GWs to return
  * @returns {number[]} GW IDs, most recent first
  */
-const getRecentCompletedGws = (fixtures, targetGwId, n) => {
+const getRecentCompletedGws = (fixtures, targetGwId) => {
   // Group fixtures by event
   const byEvent = {};
   fixtures.forEach((f) => {
@@ -85,8 +93,7 @@ const getRecentCompletedGws = (fixtures, targetGwId, n) => {
       return fxs.every((f) => f.finished === true);
     })
     .map(([event]) => Number(event))
-    .sort((a, b) => b - a) // most recent first
-    .slice(0, n);
+    .sort((a, b) => b - a); // most recent first
 };
 
 /**
@@ -151,14 +158,15 @@ const runBacktestAndCalibrate = async (players, fixtures, teams, currentGwId) =>
   }
 
   const runPromise = (async () => {
-    const gwsToTest = getRecentCompletedGws(fixtures, currentGwId, N_BACKTEST_GWS);
+    const gwsToTest = getRecentCompletedGws(fixtures, currentGwId);
 
     if (gwsToTest.length === 0) {
       console.log('[Backtest] No completed GWs available — skipping calibration.');
       return { gwsTested: [], summary: {} };
     }
 
-    console.log(`[Backtest] Running against GW(s): ${gwsToTest.join(', ')}`);
+    const gwWeights = buildGwWeights(gwsToTest.length);
+    console.log(`[Backtest] Running against ${gwsToTest.length} GW(s): ${gwsToTest.join(', ')}`);
 
     // Build position lookup: playerId → element_type
     // (built from current players; updated per-GW below if a snapshot exists)
@@ -177,7 +185,7 @@ const runBacktestAndCalibrate = async (players, fixtures, teams, currentGwId) =>
 
     for (let i = 0; i < gwsToTest.length; i++) {
       const gw     = gwsToTest[i];
-      const weight = GW_WEIGHTS[i] ?? 0.10;
+      const weight = gwWeights[i];
 
       // Use a per-GW player snapshot if one was captured by the daily fetch
       // workflow.  This eliminates the forward-looking bias that arises from
