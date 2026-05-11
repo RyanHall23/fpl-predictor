@@ -1134,7 +1134,7 @@ const getRecommendedTransfers = async (req, res) => {
  * @param {number} gameweeksAhead - Number of gameweeks ahead to sum (1-5)
  * @returns {Object} Map of playerId -> cumulative predicted points
  */
-function buildPlayerPointsMap(allPlayers, fixtures, teams, currentEventId, gameweeksAhead) {
+async function buildPlayerPointsMap(allPlayers, fixtures, teams, currentEventId, gameweeksAhead) {
   const startEvent = currentEventId + 1;
   const endEvent = currentEventId + gameweeksAhead;
   const playerPointsMap = {};
@@ -1198,7 +1198,7 @@ const getLeagueStandings = async (req, res) => {
     }));
 
     // Pre-compute per-player cumulative predicted points map (future GWs)
-    const playerPointsMap = buildPlayerPointsMap(
+    const playerPointsMap = await buildPlayerPointsMap(
       allPlayers, fixtures, bootstrap.teams, currentEvent.id, gameweeksAhead
     );
 
