@@ -1,5 +1,6 @@
 const dataProvider = require('./dataProvider');
-const predictionEngine = require('./predictionEngine');
+const predictionEngine  = require('./predictionEngine');
+const backtestEngine    = require('./prediction/backtestEngine');
 const { validateSubstitution } = require('../utils/substitution');
 const { buildBreakdown } = require('../utils/statsBreakdown');
 const Player = require('../entities/Player');
@@ -276,17 +277,24 @@ const recalculatePointsForGameweek = (players, targetEventId, currentEventId, fi
 /**
  * Apply the advanced prediction engine to all players for a given gameweek.
  *
- * This is the primary entry point for computing FPL predictions.  Call this
- * for any non-past gameweek (current or future) after fetching bootstrap data
- * and fixtures.
+ * Async: runs the backtest-and-calibrate pipeline first (results are cached
+ * for 30 min), then computes predictions using the up-to-date calibration
+ * multipliers.
  *
  * @param {Array}  players       - Player array from bootstrap-static
  * @param {Array}  fixtures      - All fixtures
  * @param {Array}  teams         - Teams from bootstrap-static
  * @param {number} targetEventId - Gameweek to predict
- * @returns {Array} Players enriched with prediction fields
+ * @returns {Promise<Array>} Players enriched with prediction fields
  */
-const applyAdvancedPredictions = (players, fixtures, teams, targetEventId) => {
+const applyAdvancedPredictions = async (players, fixtures, teams, targetEventId) => {
+  // Refresh calibration from the last 3 completed GWs (cached, non-blocking on cache hit)
+  try {
+    await backtestEngine.runBacktestAndCalibrate(players, fixtures, teams, targetEventId);
+  } catch (err) {
+    // Calibration is best-effort — fall through using whatever's on disk
+    console.warn('[fplModel] Calibration refresh failed, using existing:', err.message);
+  }
   return predictionEngine.computePredictions(players, fixtures, teams, targetEventId);
 };
 

@@ -376,7 +376,7 @@ const getPredictedTeam = async (req, res) => {
     // ELO team strength, Poisson distributions, Monte Carlo simulation, and the
     // full FPL scoring rules to compute statistically grounded predictions.
     if (!isPastGameweek && !isActiveGameweek) {
-      players = fplModel.applyAdvancedPredictions(players, fixtures, data.teams, targetEvent);
+      players = await fplModel.applyAdvancedPredictions(players, fixtures, data.teams, targetEvent);
     }
     
     // Build team based on actual points (past/active) or predictions (current/future)
@@ -461,7 +461,7 @@ const getUserTeam = async (req, res) => {
     
     // For non-past/non-active gameweeks, apply the advanced prediction engine
     if (!isPastGameweek && !isActiveGameweek) {
-      players = fplModel.applyAdvancedPredictions(players, fixtures, bootstrap.teams, targetEvent);
+      players = await fplModel.applyAdvancedPredictions(players, fixtures, bootstrap.teams, targetEvent);
     }
     
     const team = fplModel.buildUserTeam(players, picksData.picks, isPastGameweek || isActiveGameweek, isFutureGameweek);
@@ -591,7 +591,7 @@ const getUserTeamForEntry = async (req, res) => {
     players = fplModel.enrichPlayersWithOpponents(players, fixtures, bootstrap.teams, targetEvent);
 
     if (!isPastGameweek && !isActiveGameweek) {
-      players = fplModel.applyAdvancedPredictions(players, fixtures, bootstrap.teams, targetEvent);
+      players = await fplModel.applyAdvancedPredictions(players, fixtures, bootstrap.teams, targetEvent);
     }
 
     const team = fplModel.buildUserTeam(players, picksData.picks, isPastGameweek || isActiveGameweek, isFutureGameweek);
@@ -743,7 +743,7 @@ const getAllPlayersEnriched = async (req, res) => {
     
     // Apply the advanced prediction engine for future gameweeks only.
     if (!isPastOrActive) {
-      players = fplModel.applyAdvancedPredictions(players, fixtures, data.teams, targetEvent);
+      players = await fplModel.applyAdvancedPredictions(players, fixtures, data.teams, targetEvent);
     }
 
     // Add a pre-formatted opponent display string so the frontend does not need
@@ -909,7 +909,7 @@ const getRecommendedTransfers = async (req, res) => {
       
       let gwPlayers = allPlayers.map(p => ({ ...p }));
       gwPlayers = fplModel.enrichPlayersWithOpponents(gwPlayers, fixtures, bootstrap.teams, gw);
-      gwPlayers = fplModel.applyAdvancedPredictions(gwPlayers, fixtures, bootstrap.teams, gw);
+      gwPlayers = await fplModel.applyAdvancedPredictions(gwPlayers, fixtures, bootstrap.teams, gw);
       
       gwPlayers.forEach(p => {
         if (!playerCumulativePoints[p.id]) {
@@ -1134,7 +1134,7 @@ const getRecommendedTransfers = async (req, res) => {
  * @param {number} gameweeksAhead - Number of gameweeks ahead to sum (1-5)
  * @returns {Object} Map of playerId -> cumulative predicted points
  */
-function buildPlayerPointsMap(allPlayers, fixtures, teams, currentEventId, gameweeksAhead) {
+async function buildPlayerPointsMap(allPlayers, fixtures, teams, currentEventId, gameweeksAhead) {
   const startEvent = currentEventId + 1;
   const endEvent = currentEventId + gameweeksAhead;
   const playerPointsMap = {};
@@ -1142,7 +1142,7 @@ function buildPlayerPointsMap(allPlayers, fixtures, teams, currentEventId, gamew
   for (let gw = startEvent; gw <= Math.min(endEvent, 38); gw++) {
     let gwPlayers = allPlayers.map(p => ({ ...p }));
     gwPlayers = fplModel.enrichPlayersWithOpponents(gwPlayers, fixtures, teams, gw);
-    gwPlayers = fplModel.applyAdvancedPredictions(gwPlayers, fixtures, teams, gw);
+    gwPlayers = await fplModel.applyAdvancedPredictions(gwPlayers, fixtures, teams, gw);
     gwPlayers.forEach(p => {
       playerPointsMap[p.id] = (playerPointsMap[p.id] || 0) + (parseFloat(p.ep_next) || 0);
     });
@@ -1198,7 +1198,7 @@ const getLeagueStandings = async (req, res) => {
     }));
 
     // Pre-compute per-player cumulative predicted points map (future GWs)
-    const playerPointsMap = buildPlayerPointsMap(
+    const playerPointsMap = await buildPlayerPointsMap(
       allPlayers, fixtures, bootstrap.teams, currentEvent.id, gameweeksAhead
     );
 
@@ -1319,7 +1319,7 @@ const getPlayersForecast = async (req, res) => {
     for (const gw of gwList) {
       let players = bootstrap.elements.map(p => ({ ...p }));
       players = fplModel.enrichPlayersWithOpponents(players, fixtures, bootstrap.teams, gw);
-      players = fplModel.applyAdvancedPredictions(players, fixtures, bootstrap.teams, gw);
+      players = await fplModel.applyAdvancedPredictions(players, fixtures, bootstrap.teams, gw);
 
       const byCode = {};
       players.forEach(p => {

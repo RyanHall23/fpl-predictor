@@ -25,7 +25,57 @@ const enforceCacheSize = () => {
 };
 
 /**
- * Fetch a URL with caching.  `ttlMs` is the time-to-live in milliseconds.
+ * Fetch a URL with exponential-backoff retry.
+ *
+ * Retries on:
+ *   - HTTP 429 Too Many Requests  (FPL rate limit)
+ *   - HTTP 5xx Server errors      (transient FPL outage)
+ *   - Network/timeout errors      (ECONNRESET, ETIMEDOUT, etc.)
+ *
+ * Respects the `Retry-After` header when present (FPL sends this on 429).
+ *
+ * @param {string} url
+ * @param {number} ttlMs
+ */
+const MAX_RETRIES   = 4;
+const BASE_DELAY_MS = 500; // doubles each attempt: 500 → 1000 → 2000 → 4000
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+const fetchWithRetry = async (url, attempt = 1) => {
+  try {
+    const response = await axios.get(url, {
+      timeout: 15_000, // 15-second socket timeout per request
+      headers: { 'User-Agent': 'fpl-predictor/1.0' },
+    });
+    return response;
+  } catch (err) {
+    const status = err.response?.status;
+    const isRateLimit    = status === 429;
+    const isServerError  = status >= 500;
+    const isNetworkError = !status; // ECONNRESET, ETIMEDOUT, etc.
+
+    if ((isRateLimit || isServerError || isNetworkError) && attempt <= MAX_RETRIES) {
+      // Honour Retry-After header if present (value is seconds)
+      const retryAfterSec = parseInt(err.response?.headers?.['retry-after'] ?? '0', 10);
+      const backoff = retryAfterSec > 0
+        ? retryAfterSec * 1000
+        : BASE_DELAY_MS * Math.pow(2, attempt - 1);
+
+      console.warn(
+        `[dataProvider] ${status ?? 'Network error'} on ${url} — retry ${attempt}/${MAX_RETRIES} in ${backoff}ms`,
+      );
+      await sleep(backoff);
+      return fetchWithRetry(url, attempt + 1);
+    }
+
+    throw err;
+  }
+};
+
+/**
+ * Fetch a URL with in-memory TTL caching and automatic retry.
+ * Cache is checked first; on miss the request goes through fetchWithRetry.
  */
 const cachedGet = async (url, ttlMs) => {
   const now = Date.now();
@@ -41,7 +91,7 @@ const cachedGet = async (url, ttlMs) => {
 
   pruneExpiredEntries(now);
 
-  const response = await axios.get(url);
+  const response = await fetchWithRetry(url);
   cache.set(url, { data: response.data, expiresAt: Date.now() + ttlMs });
   enforceCacheSize();
   return response.data;
@@ -56,30 +106,86 @@ const TTL_FIXTURES   = 5 * 60 * 1000;  // 5 min
 const TTL_LEAGUE     = 2 * 60 * 1000;  // 2 min
 const TTL_TRANSFERS  = 2 * 60 * 1000;  // 2 min
 
-// Environment flag to control data source
-// USE_FPL_API: 'true' (default) - Use real FPL API
-// USE_FPL_API: 'false' - Use local mock data for testing
-const USE_FPL_API = (process.env.USE_FPL_API ?? 'true') === 'true';
+// ---------------------------------------------------------------------------
+// Data source configuration
+// ---------------------------------------------------------------------------
+//
+// Three modes, set via environment variables:
+//
+//   USE_FPL_API=true  (default)
+//     All data fetched live from fantasy.premierleague.com.
+//     Use in local development when you have direct internet access.
+//
+//   USE_FPL_API=false
+//     All data loaded from mockData/ JSON files.
+//     Use in unit tests / CI.
+//
+//   CACHE_STATIC=true  (recommended for Vercel)
+//     Static, shared season data (bootstrap-static, fixtures, completed-GW
+//     live scores) is loaded from committed seasonData/ JSON files — no API
+//     call needed, no storage cost, no rate-limit risk.
+//     User-specific endpoints (entry, picks, history, transfers, leagues,
+//     element-summary) still call the FPL API because they're personal.
+//
+//     Populate seasonData/ by running the GitHub Actions workflow
+//     `.github/workflows/fetch-season-data.yml` (runs automatically daily).
+//
+// ---------------------------------------------------------------------------
+
+const USE_FPL_API    = (process.env.USE_FPL_API    ?? 'true') === 'true';
+const CACHE_STATIC   = (process.env.CACHE_STATIC   ?? 'false') === 'true';
 
 // Whitelist of allowed FPL API endpoints
 const FPL_API_BASE = 'https://fantasy.premierleague.com/api';
 
-// Mock data is in backend/mockData, one level up from models directory
-const MOCK_DATA_DIR = path.join(__dirname, '..', 'mockData');
+// Legacy mock data directory (test / CI use)
+const MOCK_DATA_DIR   = path.join(__dirname, '..', 'mockData');
+
+// Committed season-data directory (Vercel / CACHE_STATIC use)
+const SEASON_DATA_DIR = path.join(__dirname, '..', 'seasonData');
 
 /**
- * Load mock data from a JSON file
- * @param {string} filename - Name of the mock data file
- * @returns {Promise<any>} - Parsed JSON data
+ * Load a JSON file from a data directory.
+ * @param {string} dir      - Absolute path to directory
+ * @param {string} filename - Filename inside that directory
+ * @returns {Promise<any>}
+ */
+const loadJsonFile = async (dir, filename) => {
+  const filePath = path.join(dir, filename);
+  const fileContent = await fs.readFile(filePath, 'utf8');
+  return JSON.parse(fileContent);
+};
+
+/**
+ * Load data from the legacy mockData directory (test mode).
  */
 const loadMockData = async (filename) => {
   try {
-    const filePath = path.join(MOCK_DATA_DIR, filename);
-    const fileContent = await fs.readFile(filePath, 'utf8');
-    return JSON.parse(fileContent);
+    return await loadJsonFile(MOCK_DATA_DIR, filename);
   } catch (error) {
     console.error(`Error loading mock data from ${filename}:`, error.message);
     throw new Error(`Failed to load mock data: ${filename}`);
+  }
+};
+
+/**
+ * Load static season data from the committed seasonData directory.
+ * Falls back to the FPL API if the file is missing (e.g. first deploy before
+ * the Actions workflow has run).
+ *
+ * @param {string} filename    - Filename inside seasonData/
+ * @param {string} fallbackUrl - FPL API URL to use as fallback
+ * @param {number} ttlMs       - TTL for the API fallback cache entry
+ * @returns {Promise<any>}
+ */
+const loadStaticOrFetch = async (filename, fallbackUrl, ttlMs) => {
+  try {
+    const data = await loadJsonFile(SEASON_DATA_DIR, filename);
+    return data;
+  } catch (_) {
+    // File not yet populated — fall back to live API
+    console.warn(`[SeasonData] ${filename} not found, fetching from FPL API as fallback.`);
+    return await cachedGet(fallbackUrl, ttlMs);
   }
 };
 
@@ -88,13 +194,17 @@ const loadMockData = async (filename) => {
  * @returns {Promise<any>} - Bootstrap static data
  */
 const fetchBootstrapStatic = async () => {
-  if (USE_FPL_API) {
-    const url = `${FPL_API_BASE}/bootstrap-static/`;
-    return await cachedGet(url, TTL_BOOTSTRAP);
-  } else {
-    console.log('[Mock Mode] Fetching bootstrap-static from local data');
+  if (!USE_FPL_API) {
     return await loadMockData('bootstrap-static.json');
   }
+  if (CACHE_STATIC) {
+    return await loadStaticOrFetch(
+      'bootstrap-static.json',
+      `${FPL_API_BASE}/bootstrap-static/`,
+      TTL_BOOTSTRAP,
+    );
+  }
+  return await cachedGet(`${FPL_API_BASE}/bootstrap-static/`, TTL_BOOTSTRAP);
 };
 
 /**
@@ -140,13 +250,17 @@ const fetchElementSummary = async (playerId) => {
  * @returns {Promise<any>} - Fixtures data
  */
 const fetchFixtures = async () => {
-  if (USE_FPL_API) {
-    const url = `${FPL_API_BASE}/fixtures/`;
-    return await cachedGet(url, TTL_FIXTURES);
-  } else {
-    console.log('[Mock Mode] Fetching fixtures from local data');
+  if (!USE_FPL_API) {
     return await loadMockData('fixtures.json');
   }
+  if (CACHE_STATIC) {
+    return await loadStaticOrFetch(
+      'fixtures.json',
+      `${FPL_API_BASE}/fixtures/`,
+      TTL_FIXTURES,
+    );
+  }
+  return await cachedGet(`${FPL_API_BASE}/fixtures/`, TTL_FIXTURES);
 };
 
 /**
@@ -156,32 +270,80 @@ const fetchFixtures = async () => {
  */
 const fetchEventFixtures = async (eventId) => {
   const validatedEventId = validateGameweek(eventId);
-  if (USE_FPL_API) {
-    const url = `${FPL_API_BASE}/fixtures/?event=${validatedEventId}`;
-    return await cachedGet(url, TTL_FIXTURES);
-  } else {
-    console.log(`[Mock Mode] Fetching event ${validatedEventId} fixtures from local data`);
-    const allFixtures = await loadMockData('fixtures.json');
-    return allFixtures.filter(f => f.event === validatedEventId);
-  }
+  const allFixtures = await fetchFixtures();
+  // In all modes we derive GW fixtures from the full list; avoids a second
+  // API call and keeps CACHE_STATIC consistent.
+  return allFixtures.filter((f) => f.event === validatedEventId);
 };
 
 /**
- * Fetch live gameweek data
+ * Fetch live gameweek data.
+ *
+ * In CACHE_STATIC mode, completed-GW live scores are stored as individual
+ * files: seasonData/live/gw-{n}.json  (written by the GitHub Actions workflow).
+ * The current (active) gameweek is still fetched live from the API so scores
+ * update in real time during a gameweek.
+ *
  * @param {number|string} eventId - Gameweek ID
  * @returns {Promise<any>} - Live gameweek data
  */
 const fetchLiveGameweek = async (eventId) => {
-  // Validate input to prevent SSRF
   const validatedEventId = validateGameweek(eventId);
-  
-  if (USE_FPL_API) {
-    const url = `${FPL_API_BASE}/event/${validatedEventId}/live/`;
-    return await cachedGet(url, TTL_LIVE);
-  } else {
-    console.log(`[Mock Mode] Fetching live gameweek ${validatedEventId} from local data`);
+
+  if (!USE_FPL_API) {
     return await loadMockData('live-gameweek.json');
   }
+
+  if (CACHE_STATIC) {
+    // Try the committed per-GW file first
+    try {
+      return await loadJsonFile(
+        path.join(SEASON_DATA_DIR, 'live'),
+        `gw-${validatedEventId}.json`,
+      );
+    } catch (_) {
+      // Not yet committed (current / future GW) — fetch live
+    }
+  }
+
+  return await cachedGet(`${FPL_API_BASE}/event/${validatedEventId}/live/`, TTL_LIVE);
+};
+
+/**
+ * Fetch a per-GW player + team snapshot.
+ *
+ * These snapshots are written by the GitHub Actions workflow to
+ * seasonData/players/gw-{n}.json and capture the state of all player and
+ * team data at the time of the daily fetch for that gameweek.
+ *
+ * Returns an object shaped as { elements: [...], teams: [...] }, or null if
+ * no snapshot exists for the requested GW (backtest engine falls back to
+ * current bootstrap data when null is returned).
+ *
+ * @param {number|string} gwId - Gameweek ID
+ * @returns {Promise<{elements: Array, teams: Array}|null>}
+ */
+const fetchGwPlayerSnapshot = async (gwId) => {
+  const validatedGwId = validateGameweek(gwId);
+
+  if (!USE_FPL_API) {
+    // In mock mode just return null — backtest uses current bootstrap
+    return null;
+  }
+
+  if (CACHE_STATIC) {
+    try {
+      return await loadJsonFile(
+        path.join(SEASON_DATA_DIR, 'players'),
+        `gw-${validatedGwId}.json`,
+      );
+    } catch (_) {
+      return null; // Snapshot not yet committed for this GW
+    }
+  }
+
+  // Live mode: no historical snapshots available via the FPL API
+  return null;
 };
 
 /**
@@ -262,9 +424,11 @@ module.exports = {
   fetchFixtures,
   fetchEventFixtures,
   fetchLiveGameweek,
+  fetchGwPlayerSnapshot,
   fetchEntry,
   fetchHistory,
   fetchEntryTransfers,
   fetchLeagueStandings,
-  USE_FPL_API
+  USE_FPL_API,
+  CACHE_STATIC,
 };
