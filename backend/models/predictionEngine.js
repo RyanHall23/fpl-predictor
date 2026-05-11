@@ -104,20 +104,37 @@ const buildSimulatorPlayers = (teamPlayers) => {
     0,
   );
 
+  // Compute separate assist-involvement scores (weighted toward xA players)
+  const assistInvolvementScore = (p) => {
+    const xA  = parseFloat(p._form_xa ?? p.expected_assists ?? 0) || 0;
+    const xG  = parseFloat(p._form_xg ?? p.expected_goals   ?? 0) || 0;
+    // Base off raw involvement but tilt toward xA relative to xG
+    const base = playerContribution.attackingInvolvementScore(p);
+    // Boost players whose primary contribution is assists
+    const xaRatio = (xA + 0.01) / (xG + xA + 0.02);
+    return base * (0.5 + xaRatio);
+  };
+
+  const totalAssistInvolvement = outfieldPlayers.reduce(
+    (s, p) => s + assistInvolvementScore(p),
+    0,
+  );
+
   return teamPlayers.map((p) => {
     if (p.element_type === 1) {
       // GK: participates in the simulation for clean-sheet tracking only
       return { ...p, goalShare: 0, assistShare: 0 };
     }
-    const inv   = playerContribution.attackingInvolvementScore(p);
-    const share = totalInvolvement > 0 ? inv / totalInvolvement : 1 / Math.max(1, outfieldPlayers.length);
+    const inv        = playerContribution.attackingInvolvementScore(p);
+    const goalShare  = totalInvolvement > 0 ? inv / totalInvolvement : 1 / Math.max(1, outfieldPlayers.length);
+
+    const assInv     = assistInvolvementScore(p);
+    const assistShare = totalAssistInvolvement > 0 ? assInv / totalAssistInvolvement : goalShare * 0.85;
+
     return {
       ...p,
-      goalShare:   Math.max(0, share),
-      // Assist share is slightly lower than goal share: assists are more diffuse
-      // (build-up play can involve multiple players), while goals are more concentrated
-      // in the highest-xG player.  The 0.85 factor reflects this spreading effect.
-      assistShare: Math.max(0, share * 0.85),
+      goalShare:   Math.max(0, goalShare),
+      assistShare: Math.max(0, assistShare),
     };
   });
 };
@@ -164,7 +181,10 @@ const computeFixturePrediction = (player, fixtureCtx, teamPlayers, simResults, s
   const defContrib  = defensiveModel.computeDefensiveContribution(player, minutesFrac);
 
   // ── Discipline ────────────────────────────────────────────────────────────
-  const discipline  = disciplineModel.computeDisciplineRisk(player, minutesFrac);
+  const discipline  = disciplineModel.computeDisciplineRisk(player, minutesFrac, {
+    homeElo: fixtureCtx.homeElo ?? null,
+    awayElo: fixtureCtx.awayElo ?? null,
+  });
 
   // ── Bonus ─────────────────────────────────────────────────────────────────
   const bonusResult = bonusModel.estimateBPS(player, {
@@ -228,17 +248,26 @@ const computeFixturePrediction = (player, fixtureCtx, teamPlayers, simResults, s
 const computePredictions = (players, fixtures, teams, targetEventId, options = {}) => {
   const { skipCalibration = false } = options;
 
-  // ── 1. Build team ELO ratings ─────────────────────────────────────────────
-  const teamRatings   = eloModel.buildTeamRatings(teams);
-
-  // ── 2. Build team form ratings from completed fixtures ────────────────────
-  //    These modulate the ELO lambdas using each team's last 5 results.
+  // ── 1. Build completed-fixture filter (shared by ELO, form, and team-context) ─
   const completedFixturesBeforeTarget = fixtures.filter(
     (f) => f.event != null && f.event < targetEventId && f.finished === true,
   );
+
+  // ── 2. Build team ELO ratings ─────────────────────────────────────────────
+  const teamRatings   = eloModel.buildTeamRatings(teams);
+
+  // ── 2b. Build dynamic (result-based) ELO ratings ─────────────────────────
+  //    Replays completed fixtures to compute live-season Elo per team.
+  //    Blended 40% into lambda computation below alongside static ratings.
+  const dynamicTeamRatings = eloModel.buildDynamicTeamRatings(
+    completedFixturesBeforeTarget, teams,
+  );
+
+  // ── 3. Build team form ratings from completed fixtures ────────────────────
+  //    These modulate the ELO lambdas using each team's last 5 results.
   const teamFormRatings = teamFormModel.buildTeamFormRatings(completedFixturesBeforeTarget);
 
-  // ── 3. Build team → players map ───────────────────────────────────────────
+  // ── 4. Build team → players map ───────────────────────────────────────────
   const teamPlayerMap = buildTeamPlayerMap(players);
 
   // ── 4. Compute season games played ───────────────────────────────────────
@@ -265,8 +294,10 @@ const computePredictions = (players, fixtures, teams, targetEventId, options = {
   });
 
   // ── 5. Enhance all players with form-adjusted stats ───────────────────────
-  //    Injects _form_xg, _form_xa, _form_factor onto each player object.
+  //    Recalibrate ICT→xG constants from current bootstrap data first, then
+  //    inject _form_xg, _form_xa, _form_factor onto each player object.
   //    playerContributionModel and the simulator use these preferentially.
+  formModel.calibrateIctConstants(players);
   const formEnhancedPlayers = players.map((p) =>
     formModel.enhancePlayerWithForm(p, teamGamesPlayedMap[p.team] || seasonGamesPlayed),
   );
@@ -302,11 +333,12 @@ const computePredictions = (players, fixtures, teams, targetEventId, options = {
   const teamFixtureMap    = {};
 
   gwFixtures.forEach((fixture) => {
-    // ELO-based expected goals
-    const { homeLambda: eloHome, awayLambda: eloAway } = eloModel.computeExpectedGoals(
+    // Blended static + dynamic ELO expected goals
+    const { homeLambda: eloHome, awayLambda: eloAway } = eloModel.computeExpectedGoalsWithDynamic(
       fixture.team_h,
       fixture.team_a,
       teamRatings,
+      dynamicTeamRatings,
     );
 
     // Blend ELO with recent team form (70% ELO, 30% form)
@@ -321,6 +353,8 @@ const computePredictions = (players, fixtures, teams, targetEventId, options = {
         isHome:     teamId === fixture.team_h,
         homeLambda,
         awayLambda,
+        homeElo: dynamicTeamRatings[fixture.team_h]?.eloRating ?? null,
+        awayElo: dynamicTeamRatings[fixture.team_a]?.eloRating ?? null,
       });
     });
 
@@ -400,7 +434,7 @@ const computePredictions = (players, fixtures, teams, targetEventId, options = {
     const position = player.element_type;
     const calibratedPts = skipCalibration
       ? totalPts
-      : calibrationStore.applyCalibration(totalPts, position);
+      : calibrationStore.applyCalibrationForPlayer(totalPts, player);
 
     // ── 10. Confidence score ───────────────────────────────────────────────
     //    Enhanced: incorporates calibration quality, form data, and data richness.

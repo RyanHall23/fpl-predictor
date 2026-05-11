@@ -18,7 +18,7 @@ const { samplePoisson } = require('./poissonModel');
 const { ASSISTED_FRACTION } = require('./playerContributionModel');
 
 /** Number of simulations to run per fixture. Higher = more accurate but slower. */
-const N_SIMULATIONS = 750;
+const N_SIMULATIONS = 2000;
 
 /**
  * Perform a weighted random draw from an array of items.

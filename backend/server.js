@@ -1,7 +1,9 @@
 const express = require('express');
+const compression = require('compression');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 const fplController = require('./controllers/fplController');
 const assistantController = require('./controllers/assistantController');
 const espnController = require('./controllers/espnController');
@@ -14,16 +16,38 @@ const corsOptions = {
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
 };
 app.use(cors(corsOptions));
+app.use(compression());
 app.use(express.json());
 
+// ── ETag + Cache-Control middleware for JSON API responses ────────────────────
+// Applied selectively to GET routes that return stable-ish JSON blobs.
+// Clients that send If-None-Match get 304 Not Modified when content hasn't changed.
+const withCacheHeaders = (maxAgeSec, swr = 0) => (req, res, next) => {
+  const originalJson = res.json.bind(res);
+  res.json = (body) => {
+    const raw  = JSON.stringify(body);
+    const etag = '"' + crypto.createHash('sha1').update(raw).digest('hex').slice(0, 16) + '"';
+    res.setHeader('ETag', etag);
+    const directive = swr > 0
+      ? `public, max-age=${maxAgeSec}, stale-while-revalidate=${swr}`
+      : `public, max-age=${maxAgeSec}`;
+    res.setHeader('Cache-Control', directive);
+    if (req.headers['if-none-match'] === etag) {
+      return res.status(304).end();
+    }
+    return originalJson(body);
+  };
+  next();
+};
+
 // FPL API proxy routes
-app.get('/api/bootstrap-static', apiLimiter, fplController.getBootstrapStatic);
-app.get('/api/bootstrap-static/forecast', apiLimiter, fplController.getPlayersForecast);
-app.get('/api/bootstrap-static/enriched', apiLimiter, fplController.getAllPlayersEnriched);
-app.get('/api/fixtures', apiLimiter, fplController.getFixtures);
-app.get('/api/element-summary/:playerId', apiLimiter, fplController.getElementSummary);
+app.get('/api/bootstrap-static', apiLimiter, withCacheHeaders(300, 60), fplController.getBootstrapStatic);
+app.get('/api/bootstrap-static/forecast', apiLimiter, withCacheHeaders(300, 60), fplController.getPlayersForecast);
+app.get('/api/bootstrap-static/enriched', apiLimiter, withCacheHeaders(300, 60), fplController.getAllPlayersEnriched);
+app.get('/api/fixtures', apiLimiter, withCacheHeaders(600, 120), fplController.getFixtures);
+app.get('/api/element-summary/:playerId', apiLimiter, withCacheHeaders(120), fplController.getElementSummary);
 app.get('/api/event/:eventId/live', apiLimiter, fplController.getLiveGameweek);
-app.get('/api/predicted-team', apiLimiter, fplController.getPredictedTeam);
+app.get('/api/predicted-team', apiLimiter, withCacheHeaders(300, 60), fplController.getPredictedTeam);
 app.get('/api/entry/:entryId/team', apiLimiter, fplController.getUserTeamForEntry);
 app.get('/api/entry/:entryId/event/:eventId/team', apiLimiter, fplController.getUserTeam);
 app.get('/api/entry/:entryId/profile', apiLimiter, fplController.getUserProfile);

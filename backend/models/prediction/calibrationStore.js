@@ -35,7 +35,31 @@ const CALIBRATION_FILE = process.env.CALIBRATION_FILE_PATH ||
   path.join(CALIBRATION_DIR, 'calibration.json');
 
 // Default calibration (no adjustment) — one multiplier per FPL position (1–4)
+// plus sub-position buckets for attacking vs defensive variants.
+//
+// Sub-position keys: "<pos>_att" for attacking players, "<pos>_def" for defensive.
+// A player is classified as "attacking" when their season expected_goals +
+// expected_assists > a position-specific threshold.
 const DEFAULT_MULTIPLIERS = { 1: 1.0, 2: 1.0, 3: 1.0, 4: 1.0 };
+const DEFAULT_SUB_MULTIPLIERS = {
+  '2_att': 1.0, '2_def': 1.0,  // attacking vs defensive defenders
+  '3_att': 1.0, '3_def': 1.0,  // attacking vs defensive midfielders
+};
+
+/**
+ * Classify a player into a sub-position key.
+ * Returns null for GKs and FWDs (no sub-position split needed).
+ */
+const subPositionKey = (player) => {
+  const pos = player.element_type;
+  if (pos === 1 || pos === 4) return null;
+  const xg = parseFloat(player.expected_goals  ?? 0) || 0;
+  const xa = parseFloat(player.expected_assists ?? 0) || 0;
+  const total = xg + xa;
+  // Attacking threshold: DEF > 1.5, MID > 3.0 goal+assist contributions per season
+  const threshold = pos === 2 ? 1.5 : 3.0;
+  return total >= threshold ? `${pos}_att` : `${pos}_def`;
+};
 
 /** Blend weight for new calibration data vs existing values */
 const BLEND_NEW = 0.80;
@@ -51,6 +75,7 @@ const MIN_SAMPLE_WEIGHT = 5.0;
 // ── Module-level state ────────────────────────────────────────────────────────
 
 let _multipliers = { ...DEFAULT_MULTIPLIERS };
+let _subMultipliers = { ...DEFAULT_SUB_MULTIPLIERS };
 let _meta = {
   updatedAt:   null,
   gwsTested:   [],
@@ -76,13 +101,23 @@ const load = () => {
         3: typeof data[3] === 'number' ? data[3] : 1.0,
         4: typeof data[4] === 'number' ? data[4] : 1.0,
       };
+      _subMultipliers = {
+        ...DEFAULT_SUB_MULTIPLIERS,
+        ...Object.fromEntries(
+          Object.keys(DEFAULT_SUB_MULTIPLIERS).map((k) => [
+            k,
+            typeof data.sub?.[k] === 'number' ? data.sub[k] : 1.0,
+          ])
+        ),
+      };
       _meta = data.meta || _meta;
 
-      console.log('[CalibrationStore] Loaded from disk:', _multipliers);
+      console.log('[CalibrationStore] Loaded from disk:', _multipliers, 'sub:', _subMultipliers);
     }
   } catch (err) {
     console.warn('[CalibrationStore] Could not load calibration file, using defaults:', err.message);
-    _multipliers = { ...DEFAULT_MULTIPLIERS };
+    _multipliers    = { ...DEFAULT_MULTIPLIERS };
+    _subMultipliers = { ...DEFAULT_SUB_MULTIPLIERS };
   }
 };
 
@@ -91,7 +126,7 @@ const load = () => {
  */
 const save = () => {
   try {
-    const payload = { ..._multipliers, meta: _meta };
+    const payload = { ..._multipliers, sub: { ..._subMultipliers }, meta: _meta };
     fs.mkdirSync(path.dirname(CALIBRATION_FILE), { recursive: true });
     fs.writeFileSync(CALIBRATION_FILE, JSON.stringify(payload, null, 2));
   } catch (err) {
@@ -106,6 +141,7 @@ const save = () => {
  *
  * @param {Object} positionStats - Per-position aggregated stats:
  *   { [position]: { sumPredicted, sumActual, sumSquaredError, count } }
+ *   May also include sub-position keys like '2_att', '3_def'.
  * @param {number[]} gwsTested - GW IDs that were included in the backtest
  */
 const update = (positionStats, gwsTested) => {
@@ -132,6 +168,17 @@ const update = (positionStats, gwsTested) => {
       : null;
   });
 
+  // Update sub-position multipliers where enough data exists
+  Object.keys(DEFAULT_SUB_MULTIPLIERS).forEach((subKey) => {
+    const res = positionStats[subKey];
+    if (!res || res.count < MIN_SAMPLE_WEIGHT || res.sumPredicted <= 0) return;
+    const raw     = res.sumActual / res.sumPredicted;
+    const clamped = Math.min(MULTIPLIER_MAX, Math.max(MULTIPLIER_MIN, raw));
+    _subMultipliers[subKey] = BLEND_NEW * clamped + BLEND_OLD * (_subMultipliers[subKey] || 1.0);
+    sampleSizes[subKey] = Math.round(res.count);
+    rmse[subKey]        = res.count > 0 ? Math.sqrt(res.sumSquaredError / res.count) : null;
+  });
+
   _meta = {
     updatedAt:   new Date().toISOString(),
     gwsTested:   gwsTested || [],
@@ -141,7 +188,7 @@ const update = (positionStats, gwsTested) => {
 
   save();
 
-  console.log('[CalibrationStore] Updated multipliers:', _multipliers, '| RMSE:', rmse);
+  console.log('[CalibrationStore] Updated multipliers:', _multipliers, 'sub:', _subMultipliers, '| RMSE:', rmse);
 };
 
 // ── Read ──────────────────────────────────────────────────────────────────────
@@ -163,6 +210,30 @@ const applyCalibration = (rawPoints, position) =>
   Math.max(0, rawPoints * getMultiplier(position));
 
 /**
+ * Apply the most granular available calibration for a player.
+ * Uses the sub-position multiplier when the player has enough data for
+ * classification and the sub-position has been sufficiently calibrated;
+ * otherwise falls back to the position-level multiplier.
+ *
+ * @param {number} rawPoints - Uncalibrated model output
+ * @param {Object} player    - FPL element (needs element_type, expected_goals, expected_assists)
+ * @returns {number} Calibrated prediction
+ */
+const applyCalibrationForPlayer = (rawPoints, player) => {
+  const pos    = player.element_type;
+  const subKey = subPositionKey(player);
+  if (subKey && _subMultipliers[subKey] != null) {
+    // Use sub-position multiplier blended 50/50 with position multiplier
+    // to avoid over-fitting when sub-position sample sizes are small.
+    const subMult = _subMultipliers[subKey];
+    const posMult = _multipliers[pos] ?? 1.0;
+    const blended = subMult * 0.60 + posMult * 0.40;
+    return Math.max(0, rawPoints * blended);
+  }
+  return applyCalibration(rawPoints, pos);
+};
+
+/**
  * Return the full calibration state (for debugging / API endpoint).
  */
 const getState = () => ({
@@ -179,5 +250,7 @@ module.exports = {
   update,
   getMultiplier,
   applyCalibration,
+  applyCalibrationForPlayer,
+  subPositionKey,
   getState,
 };

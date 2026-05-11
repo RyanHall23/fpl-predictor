@@ -10,7 +10,13 @@ const { validateEntryId, validateGameweek, validatePlayerId, validateLeagueId } 
 const cache = new Map();
 const MAX_CACHE_SIZE = 1000;
 
+/** Rate-limited prune: only scan for expired entries at most once per minute. */
+let _lastPrune = 0;
+const PRUNE_INTERVAL_MS = 60_000;
+
 const pruneExpiredEntries = (now = Date.now()) => {
+  if (now - _lastPrune < PRUNE_INTERVAL_MS) return;
+  _lastPrune = now;
   for (const [key, value] of cache.entries()) {
     if (value.expiresAt <= now) cache.delete(key);
   }
@@ -23,6 +29,13 @@ const enforceCacheSize = () => {
     cache.delete(oldestKey);
   }
 };
+
+/**
+ * In-flight request deduplication.
+ * Maps URL → Promise so concurrent cache misses on the same URL all await
+ * the same underlying request instead of each firing a separate fetch.
+ */
+const _inFlight = new Map();
 
 /**
  * Fetch a URL with exponential-backoff retry.
@@ -74,14 +87,17 @@ const fetchWithRetry = async (url, attempt = 1) => {
 };
 
 /**
- * Fetch a URL with in-memory TTL caching and automatic retry.
- * Cache is checked first; on miss the request goes through fetchWithRetry.
+ * Fetch a URL with in-memory TTL caching, request deduplication, and automatic retry.
+ *
+ * Concurrent callers hitting the same URL while a fetch is in-flight all
+ * await the same Promise rather than each firing a separate request.
  */
 const cachedGet = async (url, ttlMs) => {
   const now = Date.now();
   const hit = cache.get(url);
   if (hit) {
     if (now < hit.expiresAt) {
+      // LRU: re-insert to mark as recently used
       cache.delete(url);
       cache.set(url, hit);
       return hit.data;
@@ -91,20 +107,66 @@ const cachedGet = async (url, ttlMs) => {
 
   pruneExpiredEntries(now);
 
-  const response = await fetchWithRetry(url);
-  cache.set(url, { data: response.data, expiresAt: Date.now() + ttlMs });
-  enforceCacheSize();
-  return response.data;
+  // Return in-flight promise for this URL if one already exists
+  if (_inFlight.has(url)) {
+    return _inFlight.get(url);
+  }
+
+  const fetchPromise = fetchWithRetry(url).then((response) => {
+    cache.set(url, { data: response.data, expiresAt: Date.now() + ttlMs });
+    enforceCacheSize();
+    _inFlight.delete(url);
+    return response.data;
+  }).catch((err) => {
+    _inFlight.delete(url);
+    throw err;
+  });
+
+  _inFlight.set(url, fetchPromise);
+  return fetchPromise;
 };
 
-// TTL constants
-const TTL_BOOTSTRAP  = 5 * 60 * 1000;  // 5 min  – rarely changes
-const TTL_PROFILE    = 2 * 60 * 1000;  // 2 min  – entry/history/leagues
-const TTL_PICKS      = 60 * 1000;      // 1 min  – picks can change during active GW
-const TTL_LIVE       = 30 * 1000;      // 30 sec – live scores change often
-const TTL_FIXTURES   = 5 * 60 * 1000;  // 5 min
-const TTL_LEAGUE     = 2 * 60 * 1000;  // 2 min
-const TTL_TRANSFERS  = 2 * 60 * 1000;  // 2 min
+// ---------------------------------------------------------------------------
+// Adaptive TTL constants.
+//
+// Bootstrap and fixtures data changes very infrequently — only during/after
+// a gameweek deadline.  Using a long TTL outside deadline windows avoids
+// hammering the FPL API on every cold start while keeping data fresh when
+// it actually matters.
+//
+// Three zones detected from wall-clock time (UTC, EPL season typically
+// Fri–Tue for GW deadlines):
+//   LIVE      — active scoring window (short TTLs)
+//   DEADLINE  — within 2 h of a typical FPL deadline (short TTLs)
+//   QUIET     — rest of the week (long TTLs)
+// ---------------------------------------------------------------------------
+
+const _ttlBootstrap = () => {
+  const h = new Date().getUTCHours();
+  const d = new Date().getUTCDay(); // 0=Sun … 6=Sat
+  // Typical EPL GW deadlines are Sat 11:30 and Tue 18:30 UTC.
+  // Use short TTL on Sat 09:30–13:30 and Tue 16:30–20:30 windows.
+  const nearDeadline =
+    (d === 6 && h >= 9  && h <= 13) || // Saturday
+    (d === 2 && h >= 16 && h <= 20);   // Tuesday
+  // Live scoring windows: Sat/Sun/Mon afternoons and Tuesday evenings
+  const liveWindow =
+    (d === 6 && h >= 14) || // Sat afternoon/evening
+    (d === 0)              || // Sunday all day
+    (d === 1)              || // Monday all day
+    (d === 2 && h <= 23);    // Tuesday
+  if (nearDeadline) return 2 * 60 * 1000;   // 2 min near deadline
+  if (liveWindow)   return 5 * 60 * 1000;   // 5 min during live GW
+  return 30 * 60 * 1000;                    // 30 min quiet period
+};
+
+const TTL_BOOTSTRAP  = _ttlBootstrap();    // adaptive — see above
+const TTL_PROFILE    = 2 * 60 * 1000;     // 2 min  – entry/history/leagues
+const TTL_PICKS      = 60 * 1000;         // 1 min  – picks can change during active GW
+const TTL_LIVE       = 30 * 1000;         // 30 sec – live scores change often
+const TTL_FIXTURES   = 10 * 60 * 1000;   // 10 min – fixture list rarely changes
+const TTL_LEAGUE     = 2 * 60 * 1000;    // 2 min
+const TTL_TRANSFERS  = 2 * 60 * 1000;    // 2 min
 
 // ---------------------------------------------------------------------------
 // Data source configuration

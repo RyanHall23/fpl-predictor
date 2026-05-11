@@ -124,11 +124,28 @@ const buildTeamFormRatings = (fixtures) => {
     const avgScored   = sorted.reduce((s, g, i) => s + g.scored   * weights[i], 0);
     const avgConceded = sorted.reduce((s, g, i) => s + g.conceded * weights[i], 0);
 
+    // xG regression: regress recent raw goals toward the team's own longer-run
+    // mean to dampen variance from lucky/unlucky short streaks.
+    // We use the full (unsliced) sample as the longer-run anchor.
+    const allGames = games; // all completed fixtures for this team
+    const fullAvgScored   = allGames.length >= RECENT_N
+      ? allGames.reduce((s, g) => s + g.scored,   0) / allGames.length
+      : avgScored;
+    const fullAvgConceded = allGames.length >= RECENT_N
+      ? allGames.reduce((s, g) => s + g.conceded, 0) / allGames.length
+      : avgConceded;
+
+    // Regression weight: how much to pull toward the longer-run mean.
+    // Higher when the recent sample is small (more uncertain).
+    const regressionWeight = Math.max(0, Math.min(0.25, 1 - n / (RECENT_N * 2)));
+    const regressedScored   = avgScored   * (1 - regressionWeight) + fullAvgScored   * regressionWeight;
+    const regressedConceded = avgConceded * (1 - regressionWeight) + fullAvgConceded * regressionWeight;
+
     result[teamId] = {
-      attackMultiplier:  Math.min(MULTIPLIER_MAX, Math.max(MULTIPLIER_MIN, avgScored   / EPL_AVERAGE_GOALS)),
-      defenseMultiplier: Math.min(MULTIPLIER_MAX, Math.max(MULTIPLIER_MIN, avgConceded / EPL_AVERAGE_GOALS)),
-      recentAvgScored:   avgScored,
-      recentAvgConceded: avgConceded,
+      attackMultiplier:  Math.min(MULTIPLIER_MAX, Math.max(MULTIPLIER_MIN, regressedScored   / EPL_AVERAGE_GOALS)),
+      defenseMultiplier: Math.min(MULTIPLIER_MAX, Math.max(MULTIPLIER_MIN, regressedConceded / EPL_AVERAGE_GOALS)),
+      recentAvgScored:   regressedScored,
+      recentAvgConceded: regressedConceded,
       gamesAnalyzed: n,
     };
   });

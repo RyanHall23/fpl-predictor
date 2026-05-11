@@ -34,9 +34,49 @@ const ICT_ROLLING_WINDOW = 5;
  * EPL forwards average ~0.3 xG/game and ~25 threat/game → ~83 threat per xG.
  * Using 80 as a round calibration constant gives:
  *   threatPerGame / 80 ≈ xG per game
+ *
+ * These constants can be dynamically recalibrated from bootstrap data via
+ * `calibrateIctConstants(players)` — call once per request cycle.
  */
-const THREAT_PER_XG        = 80;
-const CREATIVITY_PER_XA    = 100;
+let THREAT_PER_XG        = 80;
+let CREATIVITY_PER_XA    = 100;
+
+/**
+ * Recalibrate ICT conversion constants from the current season's player data.
+ *
+ * Computes the season-aggregate ratio of (total threat / total xG) and
+ * (total creativity / total xA) across all players with sufficient data,
+ * then blends 70% season-derived with 30% prior to avoid over-fitting to
+ * early-season noise.
+ *
+ * Should be called once per request cycle (fplModel.applyAdvancedPredictions)
+ * after bootstrap data is loaded.
+ *
+ * @param {Array} players - FPL bootstrap-static players array
+ */
+const calibrateIctConstants = (players) => {
+  let sumThreat = 0, sumXg = 0;
+  let sumCreativity = 0, sumXa = 0;
+
+  players.forEach((p) => {
+    const xg = num(p.expected_goals);
+    const xa = num(p.expected_assists);
+    const threat     = num(p.threat);
+    const creativity = num(p.creativity);
+    // Only include players with meaningful data to avoid noise
+    if (xg >= 0.5 && threat > 0)     { sumThreat     += threat;     sumXg += xg; }
+    if (xa >= 0.5 && creativity > 0) { sumCreativity += creativity; sumXa += xa; }
+  });
+
+  if (sumXg > 5) {
+    const derived = sumThreat / sumXg;
+    THREAT_PER_XG = 0.70 * derived + 0.30 * THREAT_PER_XG;
+  }
+  if (sumXa > 5) {
+    const derived = sumCreativity / sumXa;
+    CREATIVITY_PER_XA = 0.70 * derived + 0.30 * CREATIVITY_PER_XA;
+  }
+};
 
 /**
  * Blend weights: season stats vs form signals.
@@ -237,6 +277,7 @@ const enhancePlayerWithForm = (player, seasonGamesPlayed) => {
 module.exports = {
   computeFormStats,
   enhancePlayerWithForm,
+  calibrateIctConstants,
   FORM_WEIGHT,
   SEASON_WEIGHT,
 };

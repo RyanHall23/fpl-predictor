@@ -27,9 +27,6 @@
 const dataProvider    = require('../dataProvider');
 const calibrationStore = require('./calibrationStore');
 
-// Imported lazily (via require inside the function) to avoid circular dep
-// with predictionEngine which requires this module indirectly.
-
 /**
  * Minimum actual minutes for a player to be included in calibration.
  * Excluding sub appearances and DNPs keeps the comparison fair.
@@ -145,7 +142,7 @@ const fetchActualResults = async (gwId, positionMap) => {
  */
 const runBacktestAndCalibrate = async (players, fixtures, teams, currentGwId) => {
   // ── Cache check ─────────────────────────────────────────────────────────
-  const cacheKey = `${currentGwId}:${players.length}`;
+  const cacheKey = `${currentGwId}:${players.length}:${fixtures.length}`;
   if (cacheKey === _cacheKey && Date.now() < _cacheExpiresAt && _cacheResult) {
     console.log('[Backtest] Returning cached calibration result.');
     return _cacheResult;
@@ -167,16 +164,16 @@ const runBacktestAndCalibrate = async (players, fixtures, teams, currentGwId) =>
     const gwWeights = buildGwWeights(gwsToTest.length);
     console.log(`[Backtest] Running against ${gwsToTest.length} GW(s): ${gwsToTest.join(', ')}`);
 
-    // Build position lookup: playerId → element_type
-    // (built from current players; updated per-GW below if a snapshot exists)
+    // Build position and player lookups: playerId → element_type / player object
     const positionMap = new Map(players.map((p) => [p.id, p.element_type]));
+    const playerMap   = new Map(players.map((p) => [p.id, p]));
 
-    // Accumulate error stats per position
+    // Accumulate error stats per position and sub-position
+    const emptyBucket = () => ({ sumPredicted: 0, sumActual: 0, sumSquaredError: 0, count: 0 });
     const posStats = {
-      1: { sumPredicted: 0, sumActual: 0, sumSquaredError: 0, count: 0 },
-      2: { sumPredicted: 0, sumActual: 0, sumSquaredError: 0, count: 0 },
-      3: { sumPredicted: 0, sumActual: 0, sumSquaredError: 0, count: 0 },
-      4: { sumPredicted: 0, sumActual: 0, sumSquaredError: 0, count: 0 },
+      1: emptyBucket(), 2: emptyBucket(), 3: emptyBucket(), 4: emptyBucket(),
+      '2_att': emptyBucket(), '2_def': emptyBucket(),
+      '3_att': emptyBucket(), '3_def': emptyBucket(),
     };
 
     // Require lazily to avoid the circular dep chain at module-load time
@@ -231,6 +228,19 @@ const runBacktestAndCalibrate = async (players, fixtures, teams, currentGwId) =>
         posStats[pos].sumActual       += actual    * weight;
         posStats[pos].sumSquaredError += Math.pow(predicted - actual, 2) * weight;
         posStats[pos].count           += weight;
+
+        // Sub-position accumulation
+        const playerObj = playerMap.get(playerId);
+        if (playerObj) {
+          const subKey = calibrationStore.subPositionKey(playerObj);
+          if (subKey && posStats[subKey]) {
+            posStats[subKey].sumPredicted    += predicted * weight;
+            posStats[subKey].sumActual       += actual    * weight;
+            posStats[subKey].sumSquaredError += Math.pow(predicted - actual, 2) * weight;
+            posStats[subKey].count           += weight;
+          }
+        }
+
         included++;
       });
 
