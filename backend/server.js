@@ -36,7 +36,7 @@ const matchesEtag = (ifNoneMatch, etag) => {
 const withCacheHeaders = (maxAgeSec, swr = 0) => (req, res, next) => {
   const originalJson = res.json.bind(res);
   res.json = (body) => {
-    // Serialise once — reuse the string both for the ETag hash and the response body.
+    // Serialize once — reuse the string both for the ETag hash and the response body.
     const raw  = JSON.stringify(body);
     const etag = '"' + crypto.createHash('sha1').update(raw).digest('hex').slice(0, 16) + '"';
     res.setHeader('ETag', etag);

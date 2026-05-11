@@ -20,7 +20,7 @@ const { ASSISTED_FRACTION } = require('./playerContributionModel');
 /** Number of simulations to run per fixture. Configurable via N_SIMULATIONS env var.
  *  Higher = more accurate but slower.  Default is 750 for a balance of speed and
  *  accuracy; increase for offline/backtest scenarios where latency is less critical. */
-const N_SIMULATIONS = Math.max(100, parseInt(process.env.N_SIMULATIONS ?? '750', 10) || 750);
+const N_SIMULATIONS = parseInt(process.env.N_SIMULATIONS, 10) || 750;
 
 /**
  * Perform a weighted random draw from an array of items.
