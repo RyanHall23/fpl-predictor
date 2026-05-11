@@ -347,6 +347,33 @@ const fetchGwPlayerSnapshot = async (gwId) => {
 };
 
 /**
+ * Fetch pre-computed predictions for a GW written by the GitHub Actions
+ * workflow.  Returns an object shaped as:
+ *
+ *   { gwId, computedAt, playerCount, players: { [playerId]: { predicted_points, ... } } }
+ *
+ * Returns null when no stored prediction exists (caller falls back to live
+ * computation).
+ *
+ * @param {number|string} gwId - Gameweek ID
+ * @returns {Promise<Object|null>}
+ */
+const fetchStoredPredictions = async (gwId) => {
+  const validatedGwId = validateGameweek(gwId);
+
+  if (!CACHE_STATIC) return null; // Only used in static-cache mode
+
+  try {
+    return await loadJsonFile(
+      path.join(SEASON_DATA_DIR, 'predictions'),
+      `gw-${validatedGwId}.json`,
+    );
+  } catch (_) {
+    return null; // Not yet generated for this GW
+  }
+};
+
+/**
  * Fetch entry (user profile) data
  * @param {number|string} entryId - FPL entry/team ID
  * @returns {Promise<any>} - Entry data
@@ -425,6 +452,7 @@ module.exports = {
   fetchEventFixtures,
   fetchLiveGameweek,
   fetchGwPlayerSnapshot,
+  fetchStoredPredictions,
   fetchEntry,
   fetchHistory,
   fetchEntryTransfers,

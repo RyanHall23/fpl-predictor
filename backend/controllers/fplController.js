@@ -743,7 +743,36 @@ const getAllPlayersEnriched = async (req, res) => {
     
     // Apply the advanced prediction engine for future gameweeks only.
     if (!isPastOrActive) {
-      players = await fplModel.applyAdvancedPredictions(players, fixtures, data.teams, targetEvent);
+      // Try to serve pre-computed predictions written by the daily Actions workflow.
+      // This avoids the full backtest + engine run on every cold start.
+      //
+      // Staleness guard: reject files older than 13 h (just over one Actions
+      // interval).  This ensures a fixture postponement or reschedule is picked
+      // up within at most one Actions cycle rather than serving indefinitely
+      // stale predictions.
+      const MAX_PREDICTION_AGE_MS = 13 * 60 * 60 * 1000;
+      const stored = await dataProvider.fetchStoredPredictions(targetEvent);
+      const storedAge = stored?.computedAt
+        ? Date.now() - new Date(stored.computedAt).getTime()
+        : Infinity;
+      const storedValid =
+        stored &&
+        stored.players &&
+        Object.keys(stored.players).length > 0 &&
+        storedAge < MAX_PREDICTION_AGE_MS;
+
+      if (storedValid) {
+        console.log(`[enriched] Serving stored predictions for GW${targetEvent} (computed ${stored.computedAt})`);
+        players = players.map((p) => {
+          const pred = stored.players[p.id];
+          return pred ? { ...p, ...pred } : p;
+        });
+      } else {
+        if (stored && storedAge >= MAX_PREDICTION_AGE_MS) {
+          console.warn(`[enriched] Stored predictions for GW${targetEvent} are stale (${Math.round(storedAge / 3600000)}h old) — recomputing.`);
+        }
+        players = await fplModel.applyAdvancedPredictions(players, fixtures, data.teams, targetEvent);
+      }
     }
 
     // Add a pre-formatted opponent display string so the frontend does not need
