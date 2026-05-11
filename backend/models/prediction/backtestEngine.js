@@ -164,9 +164,9 @@ const runBacktestAndCalibrate = async (players, fixtures, teams, currentGwId) =>
     const gwWeights = buildGwWeights(gwsToTest.length);
     console.log(`[Backtest] Running against ${gwsToTest.length} GW(s): ${gwsToTest.join(', ')}`);
 
-    // Build position and player lookups: playerId → element_type / player object
+    // Build position lookup from current players (positions rarely change, and
+    // historical snapshots may not include newly-promoted players).
     const positionMap = new Map(players.map((p) => [p.id, p.element_type]));
-    const playerMap   = new Map(players.map((p) => [p.id, p]));
 
     // Accumulate error stats per position and sub-position
     const emptyBucket = () => ({ sumPredicted: 0, sumActual: 0, sumSquaredError: 0, count: 0 });
@@ -210,6 +210,11 @@ const runBacktestAndCalibrate = async (players, fixtures, teams, currentGwId) =>
       // Build prediction lookup
       const predMap = new Map(predictions.map((p) => [p.id, p.predicted_points ?? 0]));
 
+      // Build per-GW player lookup from the snapshot so sub-position
+      // classification uses the same season stats as the predictions, avoiding
+      // forward-looking bias when xG/xA totals change later in the season.
+      const gwPlayerMap = new Map(gwPlayers.map((p) => [p.id, p]));
+
       // Fetch actual results — always uses current positionMap for position
       // lookup since positions rarely change and snapshots may not have new players
       const actuals = await fetchActualResults(gw, positionMap);
@@ -229,8 +234,9 @@ const runBacktestAndCalibrate = async (players, fixtures, teams, currentGwId) =>
         posStats[pos].sumSquaredError += Math.pow(predicted - actual, 2) * weight;
         posStats[pos].count           += weight;
 
-        // Sub-position accumulation
-        const playerObj = playerMap.get(playerId);
+        // Sub-position accumulation — use gwPlayerMap so classification is
+        // based on the historical snapshot stats, not current-season totals.
+        const playerObj = gwPlayerMap.get(playerId);
         if (playerObj) {
           const subKey = calibrationStore.subPositionKey(playerObj);
           if (subKey && posStats[subKey]) {

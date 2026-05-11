@@ -160,7 +160,8 @@ const _ttlBootstrap = () => {
   return 30 * 60 * 1000;                    // 30 min quiet period
 };
 
-const TTL_BOOTSTRAP  = _ttlBootstrap();    // adaptive — see above
+// TTL_BOOTSTRAP is intentionally NOT a constant — call _ttlBootstrap() at the
+// point of each fetch so the adaptive window is re-evaluated on every request.
 const TTL_PROFILE    = 2 * 60 * 1000;     // 2 min  – entry/history/leagues
 const TTL_PICKS      = 60 * 1000;         // 1 min  – picks can change during active GW
 const TTL_LIVE       = 30 * 1000;         // 30 sec – live scores change often
@@ -263,10 +264,10 @@ const fetchBootstrapStatic = async () => {
     return await loadStaticOrFetch(
       'bootstrap-static.json',
       `${FPL_API_BASE}/bootstrap-static/`,
-      TTL_BOOTSTRAP,
+      _ttlBootstrap(),
     );
   }
-  return await cachedGet(`${FPL_API_BASE}/bootstrap-static/`, TTL_BOOTSTRAP);
+  return await cachedGet(`${FPL_API_BASE}/bootstrap-static/`, _ttlBootstrap());
 };
 
 /**

@@ -22,9 +22,21 @@ app.use(express.json());
 // ── ETag + Cache-Control middleware for JSON API responses ────────────────────
 // Applied selectively to GET routes that return stable-ish JSON blobs.
 // Clients that send If-None-Match get 304 Not Modified when content hasn't changed.
+//
+// RFC 7232 §3.2: If-None-Match may contain a comma-separated list of ETags or
+// a wildcard "*".  We check each token after stripping optional W/ prefix so
+// both strong and weak ETags are matched correctly.
+const matchesEtag = (ifNoneMatch, etag) => {
+  if (!ifNoneMatch) return false;
+  if (ifNoneMatch.trim() === '*') return true;
+  // Strip W/ prefix from the request tag(s), then compare to our strong tag.
+  return ifNoneMatch.split(',').some((t) => t.trim().replace(/^W\//, '') === etag);
+};
+
 const withCacheHeaders = (maxAgeSec, swr = 0) => (req, res, next) => {
   const originalJson = res.json.bind(res);
   res.json = (body) => {
+    // Serialise once — reuse the string both for the ETag hash and the response body.
     const raw  = JSON.stringify(body);
     const etag = '"' + crypto.createHash('sha1').update(raw).digest('hex').slice(0, 16) + '"';
     res.setHeader('ETag', etag);
@@ -32,10 +44,12 @@ const withCacheHeaders = (maxAgeSec, swr = 0) => (req, res, next) => {
       ? `public, max-age=${maxAgeSec}, stale-while-revalidate=${swr}`
       : `public, max-age=${maxAgeSec}`;
     res.setHeader('Cache-Control', directive);
-    if (req.headers['if-none-match'] === etag) {
+    if (matchesEtag(req.headers['if-none-match'], etag)) {
       return res.status(304).end();
     }
-    return originalJson(body);
+    // Send the already-serialised string to avoid a second JSON.stringify call.
+    res.setHeader('Content-Type', 'application/json');
+    return res.end(raw);
   };
   next();
 };

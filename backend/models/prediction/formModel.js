@@ -37,9 +37,16 @@ const ICT_ROLLING_WINDOW = 5;
  *
  * These constants can be dynamically recalibrated from bootstrap data via
  * `calibrateIctConstants(players)` — call once per request cycle.
+ *
+ * Fixed priors are kept separately so that the 30% blend in
+ * `calibrateIctConstants` always pulls toward the original domain knowledge
+ * rather than the previously-derived value, preventing cumulative drift across
+ * repeated calls.
  */
-let THREAT_PER_XG        = 80;
-let CREATIVITY_PER_XA    = 100;
+const THREAT_PER_XG_PRIOR     = 80;
+const CREATIVITY_PER_XA_PRIOR = 100;
+let THREAT_PER_XG        = THREAT_PER_XG_PRIOR;
+let CREATIVITY_PER_XA    = CREATIVITY_PER_XA_PRIOR;
 
 /**
  * Recalibrate ICT conversion constants from the current season's player data.
@@ -70,11 +77,11 @@ const calibrateIctConstants = (players) => {
 
   if (sumXg > 5) {
     const derived = sumThreat / sumXg;
-    THREAT_PER_XG = 0.70 * derived + 0.30 * THREAT_PER_XG;
+    THREAT_PER_XG = 0.70 * derived + 0.30 * THREAT_PER_XG_PRIOR;
   }
   if (sumXa > 5) {
     const derived = sumCreativity / sumXa;
-    CREATIVITY_PER_XA = 0.70 * derived + 0.30 * CREATIVITY_PER_XA;
+    CREATIVITY_PER_XA = 0.70 * derived + 0.30 * CREATIVITY_PER_XA_PRIOR;
   }
 };
 

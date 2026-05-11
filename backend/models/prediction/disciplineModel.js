@@ -46,12 +46,13 @@ const BASE_RED_CARD_RATE = 0.005;
  * more physical and card-heavy.  A large Elo gap (dominant team vs minnow)
  * produces fewer cards as the contest is more one-sided.
  *
- * The multiplier is clamped to [0.80, 1.30] so it modulates rather than
- * dominates the player-level signal.
+ * The multiplier ranges linearly from 1.20 (gap = 0, evenly matched) down to
+ * 0.85 (gap ≥ 300 Elo points, one-sided contest).  No separate clamp is
+ * needed because the formula is fully bounded by construction.
  *
  * @param {number|null} homeElo - Home team Elo (from dynamicTeamRatings), or null
  * @param {number|null} awayElo - Away team Elo, or null
- * @returns {number} Multiplier to apply to base card rates
+ * @returns {number} Multiplier in [0.85, 1.20] to apply to base card rates
  */
 const fixtureTensionMultiplier = (homeElo, awayElo) => {
   if (homeElo == null || awayElo == null) return 1.0;

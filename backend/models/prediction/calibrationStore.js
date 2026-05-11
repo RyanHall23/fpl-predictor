@@ -222,9 +222,13 @@ const applyCalibration = (rawPoints, position) =>
 const applyCalibrationForPlayer = (rawPoints, player) => {
   const pos    = player.element_type;
   const subKey = subPositionKey(player);
-  if (subKey && _subMultipliers[subKey] != null) {
-    // Use sub-position multiplier blended 50/50 with position multiplier
-    // to avoid over-fitting when sub-position sample sizes are small.
+  // Only apply the sub-position blend when the sub-position has been
+  // sufficiently calibrated (enough weighted samples).  If the sub-position
+  // is still at its default value (1.0 from initialisation with no real data)
+  // the blend would dilute a well-calibrated position multiplier for nothing.
+  if (subKey && (_meta.sampleSizes[subKey] ?? 0) >= MIN_SAMPLE_WEIGHT) {
+    // Blend 60 % sub-position + 40 % position to avoid over-fitting when
+    // sub-position sample sizes are smaller than the full position bucket.
     const subMult = _subMultipliers[subKey];
     const posMult = _multipliers[pos] ?? 1.0;
     const blended = subMult * 0.60 + posMult * 0.40;
