@@ -156,7 +156,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     if (fs.existsSync(filePath)) {
       try {
         const existing = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-        const coveredFixtures = existing._fixture_count ?? Infinity; // legacy files treated as complete
+        const coveredFixtures = existing._fixture_count ?? 0; // legacy files treated as unknown — force re-fetch to backfill _fixture_count
         if (coveredFixtures >= expectedFixtureCount) {
           process.stdout.write(`  GW${gw}: cached ✓\n`);
           continue;

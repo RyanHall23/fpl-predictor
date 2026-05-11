@@ -67,15 +67,14 @@ let _inFlightRun    = null;
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /**
- * Find the N most recent fully-completed gameweeks before targetGwId.
+ * Find all fully-completed gameweeks before targetGwId.
  *
  * A GW is "fully completed" when every fixture in that event has
  * `finished === true`.
  *
  * @param {Array}  fixtures   - Full fixtures array
  * @param {number} targetGwId - GW we are predicting (excluded from backtest)
- * @param {number} n          - Number of GWs to return
- * @returns {number[]} GW IDs, most recent first
+ * @returns {number[]} All completed GW IDs before targetGwId, most recent first
  */
 const getRecentCompletedGws = (fixtures, targetGwId) => {
   // Group fixtures by event
