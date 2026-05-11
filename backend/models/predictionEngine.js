@@ -1,32 +1,45 @@
 'use strict';
 
 /**
- * Advanced FPL Prediction Engine — Main Orchestrator
+ * Advanced FPL Prediction Engine — Main Orchestrator  (v2 — re-engineered)
  *
  * Produces expected FPL points for every player in an upcoming gameweek by
- * composing ten specialist models:
+ * composing twelve specialist models:
  *
- *   1. ELO team-strength model      → per-fixture expected goals (lambdas)
- *   2. Monte Carlo match simulator  → goal/assist distributions per player
- *   3. Minutes model                → P(start), P(sub), P(60+ mins)
- *   4. Player contribution model    → goal/assist shares
- *   5. Goalkeeper save model        → expected saves & save points
- *   6. Defensive contribution model → P(reaching action threshold)
- *   7. Discipline model             → P(yellow/red card)
- *   8. Bonus model                  → expected BPS & bonus points
- *   9. FPL scorer                   → applies official scoring rules
- *  10. Floor / ceiling projection   → variance-based range
+ *   1.  ELO team-strength model      → per-fixture expected goals (lambdas)
+ *   2.  Team form model              → recent-results lambda adjustment (new)
+ *   3.  Player form model            → form-weighted xG/xA per player (new)
+ *   4.  Monte Carlo match simulator  → goal/assist distributions per player
+ *   5.  Minutes model                → P(start), P(sub), P(60+ mins)
+ *   6.  Player contribution model    → goal/assist shares (form-aware)
+ *   7.  Goalkeeper save model        → expected saves & save points
+ *   8.  Defensive contribution model → P(reaching action threshold)
+ *   9.  Discipline model             → P(yellow/red card)
+ *  10.  Bonus model                  → expected BPS & bonus points
+ *  11.  FPL scorer                   → applies official scoring rules
+ *  12.  Calibration store            → per-position learned bias correction (new)
+ *
+ * Additional accuracy improvements over v1:
+ *   - Form-adjusted xG/xA blend ICT threat/creativity with season stats
+ *   - Team recent results (last 5 games) modulate fixture lambdas
+ *   - xG differential regression corrects lucky/unlucky conversion rates
+ *   - Transfer market sentiment provides a market-wisdom signal
+ *   - Confidence score reflects calibration quality and data richness
+ *   - Floor/ceiling use calibrated points for tighter, truer ranges
+ *   - Backtesting against last 3 completed GWs drives calibration multipliers
+ *
+ * Backtesting & calibration lifecycle:
+ *   - `computePredictions(...)` is synchronous and always fast
+ *   - Calibration is loaded from disk at startup (calibration.json)
+ *   - Call `calibrate(players, fixtures, teams, currentGwId)` (async) once
+ *     per request cycle to refresh calibration — handled by fplModel
  *
  * Supports Double Gameweeks (DGW): points from each fixture are summed.
- *
- * Output per player includes all fields required by the API:
- *   predicted_points, expected_goals, expected_assists,
- *   clean_sheet_probability, expected_minutes, expected_saves,
- *   yellow_card_probability, red_card_probability,
- *   bonus_probability, confidence_score, floor_points, ceiling_points
  */
 
 const eloModel              = require('./prediction/eloModel');
+const teamFormModel         = require('./prediction/teamFormModel');
+const formModel             = require('./prediction/formModel');
 const matchSimulator        = require('./prediction/matchSimulator');
 const minutesModel          = require('./prediction/minutesModel');
 const playerContribution    = require('./prediction/playerContributionModel');
@@ -35,6 +48,7 @@ const defensiveModel        = require('./prediction/defensiveModel');
 const disciplineModel       = require('./prediction/disciplineModel');
 const bonusModel            = require('./prediction/bonusModel');
 const fplScorer             = require('./prediction/fplScorer');
+const calibrationStore      = require('./prediction/calibrationStore');
 const { cleanSheetProbability } = require('./prediction/poissonModel');
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -201,65 +215,67 @@ const computeFixturePrediction = (player, fixtureCtx, teamPlayers, simResults, s
 /**
  * Compute advanced FPL predictions for all players for a specific gameweek.
  *
- * @param {Array}  players       - All FPL elements from bootstrap-static
- * @param {Array}  fixtures      - All fixtures
- * @param {Array}  teams         - All teams from bootstrap-static
- * @param {number} targetEventId - Gameweek number to predict
+ * @param {Array}  players        - All FPL elements from bootstrap-static
+ * @param {Array}  fixtures       - All fixtures
+ * @param {Array}  teams          - All teams from bootstrap-static
+ * @param {number} targetEventId  - Gameweek number to predict
+ * @param {Object} [options]      - Optional flags
+ *   @param {boolean} [options.skipCalibration=false]
+ *       When true, calibration multipliers are NOT applied.  Used by the
+ *       backtest engine so raw predictions can be compared against actuals.
  * @returns {Array} Copy of players array with prediction fields added / updated
  */
-const computePredictions = (players, fixtures, teams, targetEventId) => {
+const computePredictions = (players, fixtures, teams, targetEventId, options = {}) => {
+  const { skipCalibration = false } = options;
+
   // ── 1. Build team ELO ratings ─────────────────────────────────────────────
   const teamRatings   = eloModel.buildTeamRatings(teams);
 
-  // ── 2. Build team → players map ───────────────────────────────────────────
+  // ── 2. Build team form ratings from completed fixtures ────────────────────
+  //    These modulate the ELO lambdas using each team's last 5 results.
+  const teamFormRatings = teamFormModel.buildTeamFormRatings(fixtures);
+
+  // ── 3. Build team → players map ───────────────────────────────────────────
   const teamPlayerMap = buildTeamPlayerMap(players);
 
-  // ── 3. Compute season games played ───────────────────────────────────────
-  // Count distinct completed gameweeks (events) from the fixtures array.
-  // We accept fixtures where finished === true, OR where the finished field
-  // is absent (null/undefined) — the latter handles mock/test data that omits
-  // the field.  In both cases, event < targetEventId is the primary guard so
-  // we only count past gameweeks.
+  // ── 4. Compute season games played ───────────────────────────────────────
   const completedEvents = new Set(
     fixtures
       .filter((f) => f.event != null && f.event < targetEventId && f.finished !== false)
       .map((f) => f.event),
   );
-  // Fall back to targetEventId - 1 if the fixtures data carries no finished flags.
   const seasonGamesPlayed = completedEvents.size > 0
     ? completedEvents.size
     : Math.max(1, targetEventId - 1);
 
-  // ── 3b. Per-team games played ─────────────────────────────────────────────
-  // Some teams have played fewer PL matches than the global completed-GW count
-  // due to postponements, FA Cup blank rounds, etc.  Using the global count as
-  // the denominator for starts/gamesPlayed would understate pStart for players
-  // on those teams (e.g. an Arsenal defender with 24 starts in 26 team matches
-  // would have pStart = 24/29 ≈ 0.83 instead of the correct 24/26 ≈ 0.92).
-  //
-  // Proxy: the maximum 'starts' value among all players on a team closely
-  // approximates how many PL matches that team has played — the most-used
-  // outfield player (or first-choice goalkeeper) will have starts ≈ team games.
+  // ── 4b. Per-team games played ─────────────────────────────────────────────
   const teamGamesPlayedMap = {};
   players.forEach((p) => {
     const tid = p.team;
-    const s = parseFloat(p.starts) || 0;  // starts is an integer in FPL data
+    const s = parseFloat(p.starts) || 0;
     if (s > (teamGamesPlayedMap[tid] || 0)) {
       teamGamesPlayedMap[tid] = s;
     }
   });
-  // Fallback for teams with no players who have starts data (e.g. brand-new teams
-  // in test fixtures or mid-season transfers with no recorded appearances yet)
   Object.keys(teamPlayerMap).forEach((tid) => {
     if (teamGamesPlayedMap[tid] === undefined) teamGamesPlayedMap[tid] = seasonGamesPlayed;
   });
 
-  // ── 4. Identify gameweek fixtures ─────────────────────────────────────────
+  // ── 5. Enhance all players with form-adjusted stats ───────────────────────
+  //    Injects _form_xg, _form_xa, _form_factor onto each player object.
+  //    playerContributionModel and the simulator use these preferentially.
+  const formEnhancedPlayers = players.map((p) =>
+    formModel.enhancePlayerWithForm(p, teamGamesPlayedMap[p.team] || seasonGamesPlayed),
+  );
+
+  // Rebuild team-player map with form-enhanced players
+  const formTeamPlayerMap = buildTeamPlayerMap(formEnhancedPlayers);
+
+  // ── 6. Identify gameweek fixtures ─────────────────────────────────────────
   const gwFixtures = fixtures.filter((f) => f.event === targetEventId);
 
   if (gwFixtures.length === 0) {
-    // Blank gameweek for all — return zeros
-    return players.map((p) => ({
+    return formEnhancedPlayers.map((p) => ({
       ...p,
       ep_next:                   0,
       predicted_points:          0,
@@ -278,18 +294,23 @@ const computePredictions = (players, fixtures, teams, targetEventId) => {
     }));
   }
 
-  // ── 4. Compute expected goals per fixture & run simulations ───────────────
+  // ── 7. Compute per-fixture lambdas, blend with team form, run simulations ─
   const fixtureSimResults = {};
-  const teamFixtureMap    = {};  // team_id → [{ fixtureId, isHome, homeLambda, awayLambda }]
+  const teamFixtureMap    = {};
 
   gwFixtures.forEach((fixture) => {
-    const { homeLambda, awayLambda } = eloModel.computeExpectedGoals(
+    // ELO-based expected goals
+    const { homeLambda: eloHome, awayLambda: eloAway } = eloModel.computeExpectedGoals(
       fixture.team_h,
       fixture.team_a,
       teamRatings,
     );
 
-    // Map teams to fixtures
+    // Blend ELO with recent team form (70% ELO, 30% form)
+    const { homeLambda, awayLambda } = teamFormModel.blendLambdas(
+      eloHome, eloAway, fixture.team_h, fixture.team_a, teamFormRatings,
+    );
+
     [fixture.team_h, fixture.team_a].forEach((teamId) => {
       if (!teamFixtureMap[teamId]) teamFixtureMap[teamId] = [];
       teamFixtureMap[teamId].push({
@@ -300,9 +321,9 @@ const computePredictions = (players, fixtures, teams, targetEventId) => {
       });
     });
 
-    // Build simulation player arrays
-    const homeSimPlayers = buildSimulatorPlayers(teamPlayerMap[fixture.team_h] || []);
-    const awaySimPlayers = buildSimulatorPlayers(teamPlayerMap[fixture.team_a] || []);
+    // Run Monte Carlo simulation using form-enhanced player arrays
+    const homeSimPlayers = buildSimulatorPlayers(formTeamPlayerMap[fixture.team_h] || []);
+    const awaySimPlayers = buildSimulatorPlayers(formTeamPlayerMap[fixture.team_a] || []);
 
     fixtureSimResults[fixture.id] = matchSimulator.runSimulations(
       homeLambda,
@@ -312,12 +333,11 @@ const computePredictions = (players, fixtures, teams, targetEventId) => {
     );
   });
 
-  // ── 5. Compute per-player predictions ─────────────────────────────────────
-  return players.map((player) => {
+  // ── 8. Compute per-player predictions ─────────────────────────────────────
+  return formEnhancedPlayers.map((player) => {
     const playerFixtures = teamFixtureMap[player.team] || [];
 
     if (playerFixtures.length === 0) {
-      // Blank gameweek for this player's team
       return {
         ...player,
         ep_next:                   0,
@@ -337,52 +357,69 @@ const computePredictions = (players, fixtures, teams, targetEventId) => {
       };
     }
 
-    const teamPlayers = teamPlayerMap[player.team] || [];
-
-    // Sum contributions across all fixtures (DGW support)
-    let totalPts       = 0;
-    let totalGoals     = 0;
-    let totalAssists   = 0;
-    let totalMins      = 0;
-    let totalSaves     = 0;
-    // For probabilities, take the maximum across fixtures (or union probability)
-    let maxCS          = 0;
-    let maxYellow      = 0;
-    let maxRed         = 0;
-    let maxBonus       = 0;
-
+    const teamPlayers     = formTeamPlayerMap[player.team] || [];
     const teamGamesPlayed = teamGamesPlayedMap[player.team] || seasonGamesPlayed;
+
+    // Accumulate across fixtures (DGW support)
+    let totalPts     = 0;
+    let totalGoals   = 0;
+    let totalAssists = 0;
+    let totalMins    = 0;
+    let totalSaves   = 0;
+    let maxCS        = 0;
+    let maxYellow    = 0;
+    let maxRed       = 0;
+    let maxBonus     = 0;
 
     playerFixtures.forEach((fc) => {
       const simResults = fixtureSimResults[fc.fixtureId] || {};
-      const pred       = computeFixturePrediction(player, fc, teamPlayers, simResults, teamGamesPlayed);
+      const pred       = computeFixturePrediction(
+        player, fc, teamPlayers, simResults, teamGamesPlayed,
+      );
 
       totalPts     += pred.predictedPoints;
       totalGoals   += pred.expectedGoals;
       totalAssists += pred.expectedAssists;
       totalMins    += pred.expectedMinutes;
       totalSaves   += pred.expectedSaves;
-      // Union probability: P(event in ≥1 fixture) = 1 − ∏(1−P(event in fixture_i))
+      // Union probability across fixtures
       maxCS     = 1 - (1 - maxCS)     * (1 - pred.cleanSheetProbability);
       maxYellow = 1 - (1 - maxYellow) * (1 - pred.yellowCardProbability);
       maxRed    = 1 - (1 - maxRed)    * (1 - pred.redCardProbability);
       maxBonus  = 1 - (1 - maxBonus)  * (1 - pred.bonusProbability);
     });
 
-    // ── 6. Confidence score ────────────────────────────────────────────────
-    // Based on data richness: xG availability, minutes history, injury info.
-    const hasXG      = player.expected_goals != null && parseFloat(player.expected_goals) >= 0;
-    const hasMins    = (player.minutes || 0) > 45;
-    const hasChance  = player.chance_of_playing_next_round != null;
-    const confidence = 0.35 + (hasXG ? 0.30 : 0) + (hasMins ? 0.25 : 0) + (hasChance ? 0.10 : 0);
+    // ── 9. Apply per-position calibration (unless in backtest mode) ────────
+    const position = player.element_type;
+    const calibratedPts = skipCalibration
+      ? totalPts
+      : calibrationStore.applyCalibration(totalPts, position);
 
-    // ── 7. Floor / ceiling ─────────────────────────────────────────────────
-    const { floor, ceiling } = floorCeiling(totalPts);
+    // ── 10. Confidence score ───────────────────────────────────────────────
+    //    Enhanced: incorporates calibration quality, form data, and data richness.
+    const hasXG         = player.expected_goals != null && parseFloat(player.expected_goals) >= 0;
+    const hasMins       = (player.minutes || 0) > 45;
+    const hasChance     = player.chance_of_playing_next_round != null;
+    const hasForm       = (player._form_factor || 0) !== 0;
+    const calibMeta     = calibrationStore.getState().meta;
+    const calibTested   = calibMeta.gwsTested && calibMeta.gwsTested.length > 0;
+    const calibQuality  = calibTested ? 0.10 : 0;
+
+    const confidence =
+      0.25 +
+      (hasXG     ? 0.25 : 0) +
+      (hasMins   ? 0.20 : 0) +
+      (hasChance ? 0.10 : 0) +
+      (hasForm   ? 0.10 : 0) +
+      calibQuality;
+
+    // ── 11. Floor / ceiling (based on calibrated points) ──────────────────
+    const { floor, ceiling } = floorCeiling(calibratedPts);
 
     return {
       ...player,
-      ep_next:                   round2(totalPts),   // Overwrite FPL's ep_next
-      predicted_points:          round2(totalPts),
+      ep_next:                   round2(calibratedPts),
+      predicted_points:          round2(calibratedPts),
       expected_goals:            round2(totalGoals),
       expected_assists:          round2(totalAssists),
       clean_sheet_probability:   round2(Math.min(1, maxCS)),
@@ -391,10 +428,13 @@ const computePredictions = (players, fixtures, teams, targetEventId) => {
       yellow_card_probability:   round2(Math.min(1, maxYellow)),
       red_card_probability:      round2(Math.min(1, maxRed)),
       bonus_probability:         round2(Math.min(1, maxBonus)),
-      confidence_score:          round2(confidence),
+      confidence_score:          round2(Math.min(1, confidence)),
       floor_points:              floor,
       ceiling_points:            ceiling,
       fixture_count:             playerFixtures.length,
+      // Form metadata — useful for debugging / UI display
+      form_factor:               round2(player._form_factor || 1.0),
+      calibration_applied:       !skipCalibration,
     };
   });
 };

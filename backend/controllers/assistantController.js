@@ -48,7 +48,7 @@ const getAssistantHints = async (req, res) => {
       ep_next: parseFloat(p.ep_next) || 0,
     }));
     allPlayers = fplModel.enrichPlayersWithOpponents(allPlayers, fixtures, bootstrap.teams, targetGW);
-    allPlayers = fplModel.applyAdvancedPredictions(allPlayers, fixtures, bootstrap.teams, targetGW);
+    allPlayers = await fplModel.applyAdvancedPredictions(allPlayers, fixtures, bootstrap.teams, targetGW);
 
     // ── Build fixture run for next FIXTURE_LOOKAHEAD GWs ─────────────────────
     // keyed by player id: [{ gameweek, difficulty, hasFixture, opponent }]

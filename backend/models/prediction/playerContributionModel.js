@@ -37,19 +37,24 @@ const POSITION_PRIOR_WEIGHT = {
 
 /**
  * Compute a player's raw attacking-involvement score from season stats.
- * Higher → more likely to contribute to team goals.
+ * Prefers form-adjusted xG/xA values (_form_xg / _form_xa) when they have
+ * been injected by the form model pre-processing step.  Falls back to raw
+ * season totals when the form layer is absent.
  *
- * @param {Object} player - FPL element
+ * Higher score → more likely to contribute to team goals.
+ *
+ * @param {Object} player - FPL element (optionally form-enhanced)
  * @returns {number} Non-negative involvement score
  */
 const attackingInvolvementScore = (player) => {
-  const xG     = num(player.expected_goals);
-  const xA     = num(player.expected_assists);
+  // Prefer form-adjusted values if available (injected by formModel)
+  const xG     = num(player._form_xg     ?? player.expected_goals);
+  const xA     = num(player._form_xa     ?? player.expected_assists);
   const goals  = num(player.goals_scored);
   const assists = num(player.assists);
 
   // xG contributes most for goal share; xA for assist share.
-  // Actual goals/assists are blended in as smoothing.
+  // Actual goals/assists are blended in lightly for smoothing.
   const score = xG * W_XG + xA * W_XA + goals * W_GOALS + assists * W_ASSISTS;
 
   // Fall back to position prior if no data available
@@ -81,8 +86,9 @@ const computePlayerShares = (player, teamPlayers) => {
 
   // Slightly de-weight assist share vs goal share for prolific scorers,
   // and slightly up-weight it for high-xA players.
-  const xG = num(player.expected_goals);
-  const xA = num(player.expected_assists);
+  // Use form-adjusted values if available, else season totals.
+  const xG = num(player._form_xg ?? player.expected_goals);
+  const xA = num(player._form_xa ?? player.expected_assists);
   const involvementTotal = xG + xA + 0.01;
   const goalBias   = (xG / involvementTotal + 0.5) / 1.5;
   const assistBias = (xA / involvementTotal + 0.5) / 1.5;
