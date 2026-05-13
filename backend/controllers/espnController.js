@@ -14,6 +14,12 @@ const dataProvider = require('../models/dataProvider');
 
 const ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1';
 
+// TTLs for ESPN responses.  Scoreboard changes every ~30 s during a live match;
+// completed-day scoreboards are stable.  Match summaries are fully static once
+// the game finishes; use a short TTL while it may still be live.
+const TTL_ESPN_SCOREBOARD = 30 * 1000;   // 30 s
+const TTL_ESPN_SUMMARY    = 60 * 1000;   // 60 s
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /**
@@ -94,8 +100,8 @@ const getScoreboard = async (req, res) => {
       ? `${ESPN_BASE}/scoreboard?dates=${dates}`
       : `${ESPN_BASE}/scoreboard`;
 
-    const response = await axios.get(url, { timeout: 10000 });
-    const parsed   = (response.data.events ?? []).map(parseMatch).filter(Boolean);
+    const data = await dataProvider.cachedGet(url, TTL_ESPN_SCOREBOARD);
+    const parsed = (data.events ?? []).map(parseMatch).filter(Boolean);
     res.json(parsed);
   } catch (error) {
     console.error('[ESPN] getScoreboard error:', error.message);
@@ -152,9 +158,8 @@ const getSummary = async (req, res) => {
       });
     }
 
-    const url      = `${ESPN_BASE}/summary?event=${eventId}`;
-    const response = await axios.get(url, { timeout: 10000 });
-    const data     = response.data;
+    const url  = `${ESPN_BASE}/summary?event=${eventId}`;
+    const data = await dataProvider.cachedGet(url, TTL_ESPN_SUMMARY);
 
     // ── Extract espnAssisters from roster stats ──────────────────────────────
     const espnAssisters = [];

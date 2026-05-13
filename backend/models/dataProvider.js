@@ -522,4 +522,5 @@ module.exports = {
   fetchLeagueStandings,
   USE_FPL_API,
   CACHE_STATIC,
+  cachedGet,
 };
