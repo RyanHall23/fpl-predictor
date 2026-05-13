@@ -1,7 +1,11 @@
 const fplModel = require('../models/fplModel');
+const dataProvider = require('../models/dataProvider');
 const { RULES } = require('../utils/assistantRules');
 
 const FIXTURE_LOOKAHEAD = 3;
+
+// Stored-prediction freshness threshold — mirrors the value in fplController.
+const MAX_PREDICTION_AGE_MS = 25 * 60 * 60 * 1000;
 
 /**
  * GET /api/assistant/general   – general hints only (no squad)
@@ -48,7 +52,29 @@ const getAssistantHints = async (req, res) => {
       ep_next: parseFloat(p.ep_next) || 0,
     }));
     allPlayers = fplModel.enrichPlayersWithOpponents(allPlayers, fixtures, bootstrap.teams, targetGW);
-    allPlayers = await fplModel.applyAdvancedPredictions(allPlayers, fixtures, bootstrap.teams, targetGW);
+
+    // Use stored predictions when available to avoid a full engine run on every request.
+    const stored = await dataProvider.fetchStoredPredictions(targetGW);
+    const storedAge = stored?.computedAt
+      ? Date.now() - new Date(stored.computedAt).getTime()
+      : Infinity;
+    const storedValid =
+      stored?.players &&
+      Object.keys(stored.players).length > 0 &&
+      storedAge < MAX_PREDICTION_AGE_MS;
+
+    if (storedValid) {
+      console.log(`[assistant] Serving stored predictions for GW${targetGW} (computed ${stored.computedAt})`);
+      allPlayers = allPlayers.map((p) => {
+        const pred = stored.players[p.id];
+        return pred ? { ...p, ...pred } : p;
+      });
+    } else {
+      if (stored && storedAge >= MAX_PREDICTION_AGE_MS) {
+        console.warn(`[assistant] Stored predictions for GW${targetGW} are stale (${Math.round(storedAge / 3600000)}h old) — recomputing.`);
+      }
+      allPlayers = await fplModel.applyAdvancedPredictions(allPlayers, fixtures, bootstrap.teams, targetGW);
+    }
 
     // ── Build fixture run for next FIXTURE_LOOKAHEAD GWs ─────────────────────
     // keyed by player id: [{ gameweek, difficulty, hasFixture, opponent }]
