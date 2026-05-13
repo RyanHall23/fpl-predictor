@@ -11,10 +11,8 @@ name: Refresh FPL Season Data
 
 on:
   schedule:
-    # 06:00 and 18:00 UTC every day — covers pre-deadline and post-results
-    - cron: '0 6,18 * * *'
-  push:
-    branches: [main, master]
+    # 08:00 UTC every day — covers post-results overnight and pre-peak morning
+    - cron: '0 8 * * *'
   workflow_dispatch:     # allow manual trigger from GitHub UI
 
 permissions:
