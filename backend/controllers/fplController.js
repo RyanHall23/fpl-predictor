@@ -48,38 +48,23 @@ async function calculatePurchasePricesFromPicks(entryId, currentPlayerIds, curre
   try {
     console.log(`[calculatePurchasePricesFromPicks] Starting for entry ${entryId}, GW1-${currentGameweek}, ${currentPlayerIds.length} players`);
     
-    // Fetch picks for all gameweeks in parallel with batching to avoid overwhelming API
-    const batchSize = 10; // Process 10 gameweeks at a time
+    // Fetch picks for all gameweeks in parallel — dataProvider's in-flight
+    // deduplication ensures the same URL is never fetched more than once
+    // concurrently, so we can fire all GWs at once safely.
+    const allGWs = Array.from({ length: currentGameweek }, (_, i) => i + 1);
+    const batchResults = await Promise.allSettled(
+      allGWs.map(gw => dataProvider.fetchPlayerPicks(entryId, gw))
+    );
+
     const picksHistory = {};
-    
-    for (let startGW = 1; startGW <= currentGameweek; startGW += batchSize) {
-      const endGW = Math.min(startGW + batchSize - 1, currentGameweek);
-      const gwRange = [];
-      
-      for (let gw = startGW; gw <= endGW; gw++) {
-        gwRange.push(gw);
+    allGWs.forEach((gw, index) => {
+      const result = batchResults[index];
+      if (result.status === 'fulfilled' && result.value && result.value.picks) {
+        picksHistory[gw] = result.value.picks.map(p => p.element);
+      } else if (result.status === 'rejected') {
+        console.warn(`Could not fetch picks for GW${gw}:`, result.reason?.message || 'Unknown error');
       }
-      
-      // Fetch this batch in parallel
-      const batchResults = await Promise.allSettled(
-        gwRange.map(gw => dataProvider.fetchPlayerPicks(entryId, gw))
-      );
-      
-      // Process results
-      gwRange.forEach((gw, index) => {
-        const result = batchResults[index];
-        if (result.status === 'fulfilled' && result.value && result.value.picks) {
-          picksHistory[gw] = result.value.picks.map(p => p.element);
-        } else if (result.status === 'rejected') {
-          console.warn(`Could not fetch picks for GW${gw}:`, result.reason?.message || 'Unknown error');
-        }
-      });
-      
-      // Small delay between batches to be respectful to API
-      if (dataProvider.USE_FPL_API && endGW < currentGameweek) {
-        await new Promise(resolve => setTimeout(resolve, 200));
-      }
-    }
+    });
     
     console.log(`[calculatePurchasePricesFromPicks] Fetched picks for ${Object.keys(picksHistory).length} gameweeks`);
     
@@ -341,8 +326,10 @@ const getLiveGameweek = async (req, res) => {
 const getPredictedTeam = async (req, res) => {
   try {
     const { gameweek } = req.query;
-    const data = await fplModel.fetchBootstrapStatic();
-    const fixtures = await fplModel.fetchFixtures();
+    const [data, fixtures] = await Promise.all([
+      fplModel.fetchBootstrapStatic(),
+      fplModel.fetchFixtures(),
+    ]);
     const currentEvent = data.events.find(e => e.is_current) || data.events[0];
 
     let targetEvent;
@@ -414,7 +401,10 @@ const getUserTeam = async (req, res) => {
   }
   
   try {
-    const bootstrap = await fplModel.fetchBootstrapStatic();
+    const [bootstrap, fixtures] = await Promise.all([
+      fplModel.fetchBootstrapStatic(),
+      fplModel.fetchFixtures(),
+    ]);
 
     let targetEvent;
     if (typeof gameweek !== 'undefined') {
@@ -432,7 +422,6 @@ const getUserTeam = async (req, res) => {
       return res.status(400).json({ error: 'Gameweek must be between 1 and 38' });
     }
     
-    const fixtures = await fplModel.fetchFixtures();
     const currentEvent = bootstrap.events.find(e => e.is_current) || bootstrap.events[0];
     const targetEventData = bootstrap.events.find(e => e.id === targetEvent);
     
@@ -538,28 +527,35 @@ const getUserTeamForEntry = async (req, res) => {
       return res.status(400).json({ error: 'Gameweek must be between 1 and 38' });
     }
 
-    const fixtures = await fplModel.fetchFixtures();
     const targetEventData = bootstrap.events.find(e => e.id === targetEvent);
     const isFutureGameweek = targetEvent > currentEvent.id;
 
     // For future GWs use current picks (future picks don't exist in the FPL API)
     const picksEventId = isFutureGameweek ? currentEvent.id : targetEvent;
 
-    let picksData;
-    try {
-      picksData = await fplModel.fetchPlayerPicks(entryId, picksEventId);
-    } catch (picksError) {
-      console.error(`Error fetching picks for gameweek ${picksEventId}:`, picksError.message);
+    // Fetch fixtures, picks, transfers, and entry history in parallel — none depend on each other.
+    const [fixturesResult, picksResult, transfersResult, historyResult] = await Promise.allSettled([
+      fplModel.fetchFixtures(),
+      fplModel.fetchPlayerPicks(entryId, picksEventId),
+      dataProvider.fetchEntryTransfers(entryId),
+      dataProvider.fetchHistory(entryId),
+    ]);
+
+    const fixtures = fixturesResult.status === 'fulfilled' ? fixturesResult.value : [];
+
+    if (picksResult.status === 'rejected') {
+      console.error(`Error fetching picks for gameweek ${picksEventId}:`, picksResult.reason?.message);
       return res.status(500).json({ error: 'Error fetching team picks' });
     }
+    const picksData = picksResult.value;
 
     // Fetch transfer history to calculate accurate selling prices.
     // FPL rule: selling_price = purchase_price + floor((now_cost - purchase_price) / 2)
     // If price dropped below purchase: selling_price = now_cost (full loss, no profit share).
     // For original squad members (never transferred): purchase_price = now_cost - cost_change_start.
     let purchasePriceMap = {};
-    try {
-      const transfers = await dataProvider.fetchEntryTransfers(entryId);
+    if (transfersResult.status === 'fulfilled') {
+      const transfers = transfersResult.value;
       // Sort ascending by event so later transfers overwrite earlier ones —
       // handles sell-and-rebuy: the most recent transfer-in cost wins.
       const sorted = [...transfers].sort((a, b) => {
@@ -569,9 +565,8 @@ const getUserTeamForEntry = async (req, res) => {
       for (const t of sorted) {
         purchasePriceMap[t.element_in] = t.element_in_cost;
       }
-    } catch {
-      // Non-fatal — will fall back to start-of-season price for all players
     }
+    // Non-fatal if transfers failed — will fall back to start-of-season price for all players
 
     let players = bootstrap.elements.map((p) => {
       // Determine purchase price: transfer record takes priority; otherwise use
@@ -617,26 +612,26 @@ const getUserTeamForEntry = async (req, res) => {
     // Rule: start with 1 FT; each GW ft = min(2, max(0, ft - transfers_made) + 1)
     // Chip exceptions: Free Hit treats transfers as 0 (squad reverts); Wildcard resets next GW to 1.
     let freeTransfers = 1;
-    try {
-      const historyData = await dataProvider.fetchHistory(entryId);
-      const gwHistory = (historyData.current || []).sort((a, b) => a.event - b.event);
-      let ft = 1;
-      for (const gw of gwHistory) {
-        if (gw.event >= targetEvent) break;
-        if (gw.event_chip === 'freehit') {
-          // Free Hit squad reverts — treat as 0 transfers consumed for FT carry-over
-          ft = Math.min(2, ft + 1);
-        } else if (gw.event_chip === 'wildcard') {
-          // Wildcard: all transfers free/permanent; resets next GW's FT count to 1
-          ft = 1;
-        } else {
-          const remaining = Math.max(0, ft - (gw.event_transfers || 0));
-          ft = Math.min(2, remaining + 1);
+    if (historyResult.status === 'fulfilled') {
+      try {
+        const historyData = historyResult.value;
+        const gwHistory = (historyData.current || []).sort((a, b) => a.event - b.event);
+        let ft = 1;
+        for (const gw of gwHistory) {
+          if (gw.event >= targetEvent) break;
+          if (gw.event_chip === 'freehit') {
+            ft = Math.min(2, ft + 1);
+          } else if (gw.event_chip === 'wildcard') {
+            ft = 1;
+          } else {
+            const remaining = Math.max(0, ft - (gw.event_transfers || 0));
+            ft = Math.min(2, remaining + 1);
+          }
         }
+        freeTransfers = ft;
+      } catch {
+        freeTransfers = 1;
       }
-      freeTransfers = ft;
-    } catch {
-      freeTransfers = 1;
     }
 
     res.json({
