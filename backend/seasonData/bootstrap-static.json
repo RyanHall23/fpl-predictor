@@ -2951,7 +2951,7 @@
       "pulse_id": 38
     }
   ],
-  "total_players": 13095609,
+  "total_players": 13095627,
   "element_stats": [
     {
       "label": "Minutes played",
@@ -56482,7 +56482,7 @@
       "red_cards": 0,
       "saves": 0,
       "bonus": 9,
-      "bps": 218,
+      "bps": 217,
       "influence": "184.6",
       "creativity": "184.3",
       "threat": "70.0",
@@ -57777,8 +57777,8 @@
       "defensive_contribution": 148,
       "starts": 22,
       "expected_goals": "6.03",
-      "expected_assists": "4.42",
-      "expected_goal_involvements": "10.45",
+      "expected_assists": "4.43",
+      "expected_goal_involvements": "10.46",
       "expected_goals_conceded": "24.24",
       "corners_and_indirect_freekicks_order": 5,
       "corners_and_indirect_freekicks_text": "",
