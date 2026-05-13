@@ -185,43 +185,8 @@ async function calculatePurchasePricesFromPicks(entryId, currentPlayerIds, curre
 }
 
 
-/**
- * Apply predictions for a future gameweek using stored predictions where
- * available, falling back to live engine computation when none exist or they
- * are too stale.  Centralises the stored-predictions pattern used by several
- * endpoints so it only needs to be maintained in one place.
- *
- * @param {Array}  players       - Players array (from bootstrap-static)
- * @param {Array}  fixtures      - Fixtures array
- * @param {Array}  teams         - Teams array from bootstrap-static
- * @param {number} targetEvent   - Gameweek to predict
- * @param {string} [label]       - Log-prefix for diagnostics
- * @returns {Promise<Array>} Players enriched with prediction fields
- */
-const applyPredictionsWithCache = async (players, fixtures, teams, targetEvent, label = 'predictions') => {
-  const stored = await dataProvider.fetchStoredPredictions(targetEvent);
-  const storedAge = stored?.computedAt
-    ? Date.now() - new Date(stored.computedAt).getTime()
-    : Infinity;
-  const storedValid =
-    stored?.players &&
-    Object.keys(stored.players).length > 0 &&
-    storedAge < MAX_PREDICTION_AGE_MS;
-
-  if (storedValid) {
-    console.log(`[${label}] Serving stored predictions for GW${targetEvent} (computed ${stored.computedAt})`);
-    return players.map((p) => {
-      const pred = stored.players[p.id];
-      return pred ? { ...p, ...pred } : p;
-    });
-  }
-
-  if (stored && storedAge >= MAX_PREDICTION_AGE_MS) {
-    console.warn(`[${label}] Stored predictions for GW${targetEvent} are stale (${Math.round(storedAge / 3600000)}h old) — recomputing.`);
-  }
-
-  return fplModel.applyAdvancedPredictions(players, fixtures, teams, targetEvent);
-};
+// applyPredictionsWithCache is exported from fplModel and used throughout this module.
+const applyPredictionsWithCache = fplModel.applyPredictionsWithCache;
 
 const getBootstrapStatic = async (req, res) => {
   try {
