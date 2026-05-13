@@ -48,23 +48,24 @@ async function calculatePurchasePricesFromPicks(entryId, currentPlayerIds, curre
   try {
     console.log(`[calculatePurchasePricesFromPicks] Starting for entry ${entryId}, GW1-${currentGameweek}, ${currentPlayerIds.length} players`);
     
-    // Fetch picks for all gameweeks in parallel — dataProvider's in-flight
-    // deduplication ensures the same URL is never fetched more than once
-    // concurrently, so we can fire all GWs at once safely.
-    const allGWs = Array.from({ length: currentGameweek }, (_, i) => i + 1);
-    const batchResults = await Promise.allSettled(
-      allGWs.map(gw => dataProvider.fetchPlayerPicks(entryId, gw))
-    );
-
     const picksHistory = {};
-    allGWs.forEach((gw, index) => {
-      const result = batchResults[index];
-      if (result.status === 'fulfilled' && result.value && result.value.picks) {
-        picksHistory[gw] = result.value.picks.map(p => p.element);
-      } else if (result.status === 'rejected') {
-        console.warn(`Could not fetch picks for GW${gw}:`, result.reason?.message || 'Unknown error');
-      }
-    });
+    const batchSize = 10;
+    for (let startGW = 1; startGW <= currentGameweek; startGW += batchSize) {
+      const endGW = Math.min(startGW + batchSize - 1, currentGameweek);
+      const gwRange = Array.from({ length: endGW - startGW + 1 }, (_, i) => startGW + i);
+      const batchResults = await Promise.allSettled(
+        gwRange.map(gw => dataProvider.fetchPlayerPicks(entryId, gw))
+      );
+
+      gwRange.forEach((gw, index) => {
+        const result = batchResults[index];
+        if (result.status === 'fulfilled' && result.value && result.value.picks) {
+          picksHistory[gw] = result.value.picks.map(p => p.element);
+        } else if (result.status === 'rejected') {
+          console.warn(`Could not fetch picks for GW${gw}:`, result.reason?.message || 'Unknown error');
+        }
+      });
+    }
     
     console.log(`[calculatePurchasePricesFromPicks] Fetched picks for ${Object.keys(picksHistory).length} gameweeks`);
     
@@ -541,7 +542,11 @@ const getUserTeamForEntry = async (req, res) => {
       dataProvider.fetchHistory(entryId),
     ]);
 
-    const fixtures = fixturesResult.status === 'fulfilled' ? fixturesResult.value : [];
+    if (fixturesResult.status === 'rejected') {
+      console.error('Error fetching fixtures:', fixturesResult.reason?.message);
+      return res.status(500).json({ error: 'Error fetching fixtures' });
+    }
+    const fixtures = fixturesResult.value;
 
     if (picksResult.status === 'rejected') {
       console.error(`Error fetching picks for gameweek ${picksEventId}:`, picksResult.reason?.message);
