@@ -2,17 +2,10 @@ const fplModel = require('../models/fplModel');
 const dataProvider = require('../models/dataProvider');
 const { buildBreakdown } = require('../utils/statsBreakdown');
 
-// Stored-prediction freshness threshold.  The daily workflow runs at 08:00 UTC
-// (24 h cycle), so we allow up to 25 h before treating a file as stale.  This
-// gives a 1-hour grace period beyond the scheduled cycle and ensures that
-// fixture changes (e.g. postponements) are detected within 25 h of the
-// workflow run.
-const MAX_PREDICTION_AGE_MS = 25 * 60 * 60 * 1000;
-// Bound gameweek picks fan-out so a single request does not trigger up to
-// 38 simultaneous FPL calls (max gameweeks in a Premier League season).
-const PICKS_HISTORY_BATCH_SIZE = 10;
+// Stored-prediction freshness threshold — imported from fplModel so the same
+// staleness rule is applied everywhere without duplication.
+const { MAX_PREDICTION_AGE_MS } = fplModel;
 
-/**
  * Format a player's opponent(s) as a human-readable display string.
  * E.g. "MCI (H)" or "LIV (A) ARS (H)" for a DGW.
  *
@@ -35,154 +28,6 @@ const buildOpponentDisplay = (player) => {
   if (opp === '-' || player.is_home === null || player.is_home === undefined) return opp;
   return player.is_home ? `${opp} (H)` : `${opp} (A)`;
 };
-
-
-/**
- * Calculate purchase prices for current squad by analyzing FPL picks history
- * Handles in/out/in scenarios by finding when each player was most recently added
- * @param {number} entryId - FPL entry/team ID
- * @param {Array<number>} currentPlayerIds - Array of player IDs currently in the squad
- * @param {number} currentGameweek - Current gameweek number
- * @returns {Promise<Object>} - Map of playerId to {purchasePrice, currentPrice, gameweekAdded}
- */
-async function calculatePurchasePricesFromPicks(entryId, currentPlayerIds, currentGameweek) {
-  const purchasePriceMap = {};
-  
-  try {
-    console.log(`[calculatePurchasePricesFromPicks] Starting for entry ${entryId}, GW1-${currentGameweek}, ${currentPlayerIds.length} players`);
-    
-    const picksHistory = {};
-    for (let startGW = 1; startGW <= currentGameweek; startGW += PICKS_HISTORY_BATCH_SIZE) {
-      const endGW = Math.min(startGW + PICKS_HISTORY_BATCH_SIZE - 1, currentGameweek);
-      const gwRange = Array.from({ length: endGW - startGW + 1 }, (_, i) => startGW + i);
-      const batchResults = await Promise.allSettled(
-        gwRange.map(gw => dataProvider.fetchPlayerPicks(entryId, gw))
-      );
-
-      gwRange.forEach((gw, index) => {
-        const result = batchResults[index];
-        if (result.status === 'fulfilled' && result.value && result.value.picks) {
-          picksHistory[gw] = result.value.picks.map(p => p.element);
-        } else if (result.status === 'rejected') {
-          console.warn(`Could not fetch picks for GW${gw}:`, result.reason?.message || 'Unknown error');
-        }
-      });
-    }
-    
-    console.log(`[calculatePurchasePricesFromPicks] Fetched picks for ${Object.keys(picksHistory).length} gameweeks`);
-    
-    if (Object.keys(picksHistory).length === 0) {
-      console.warn('[calculatePurchasePricesFromPicks] No picks history fetched - cannot calculate purchase prices');
-      return {};
-    }
-    
-    // For each current player, find when they were most recently added
-    for (const playerId of currentPlayerIds) {
-      try {
-        let gameweekAdded = null;
-        let wasInPreviousGW = false;
-        
-        // Walk through gameweeks chronologically
-        for (let gw = 1; gw <= currentGameweek; gw++) {
-          if (!picksHistory[gw]) continue;
-          
-          const isInCurrentGW = picksHistory[gw].includes(playerId);
-          
-          if (isInCurrentGW && !wasInPreviousGW) {
-            // Player was added in this gameweek (either first time or re-added)
-            gameweekAdded = gw;
-          }
-          
-          wasInPreviousGW = isInCurrentGW;
-        }
-        
-        // Store gameweek for batch fetching
-        if (gameweekAdded) {
-          purchasePriceMap[playerId] = { gameweekAdded };
-        } else {
-          console.warn(`Player ${playerId}: Could not determine when they were added`);
-        }
-      } catch (playerError) {
-        console.warn(`Error processing player ${playerId}:`, playerError.message);
-      }
-    }
-    
-    // Now fetch element summaries in parallel for all players
-    const playerIdsToFetch = Object.keys(purchasePriceMap).map(id => parseInt(id));
-    
-    console.log(`[calculatePurchasePricesFromPicks] Found gameweek added for ${playerIdsToFetch.length}/${currentPlayerIds.length} players`);
-    
-    if (playerIdsToFetch.length > 0) {
-      console.log(`[calculatePurchasePricesFromPicks] Fetching element summaries for ${playerIdsToFetch.length} players`);
-      
-      const elementResults = await Promise.allSettled(
-        playerIdsToFetch.map(playerId => dataProvider.fetchElementSummary(playerId))
-      );
-      
-      // Process element summary results
-      playerIdsToFetch.forEach((playerId, index) => {
-        const result = elementResults[index];
-        const gameweekAdded = purchasePriceMap[playerId].gameweekAdded;
-        
-        if (result.status === 'fulfilled' && result.value && result.value.history) {
-          const elementSummary = result.value;
-          
-          // Find the price at the START of the gameweek they were added
-          // The history entry shows the price at the END of each gameweek
-          // So we need to use the price from the PREVIOUS gameweek (or start price for GW1)
-          let purchasePrice = null;
-          
-          if (gameweekAdded === 1) {
-            // For GW1, check if there's a history entry, otherwise use bootstrap start price
-            const gw1Entry = elementSummary.history.find(h => h.round === 1);
-            if (gw1Entry) {
-              purchasePrice = gw1Entry.value;
-            }
-          } else {
-            // For other gameweeks, use the price from the PREVIOUS gameweek
-            // This is the price at the time of transfer
-            const previousGwEntry = elementSummary.history.find(h => h.round === gameweekAdded - 1);
-            if (previousGwEntry) {
-              purchasePrice = previousGwEntry.value;
-            } else {
-              // Fallback: if previous GW not found, use the entry for the added GW
-              const historyEntry = elementSummary.history.find(h => h.round === gameweekAdded);
-              if (historyEntry) {
-                purchasePrice = historyEntry.value;
-              }
-            }
-          }
-          
-          if (purchasePrice !== null) {
-            // Get current price from latest history entry
-            const latestHistory = elementSummary.history[elementSummary.history.length - 1];
-            const currentPrice = latestHistory ? latestHistory.value : purchasePrice;
-            
-            purchasePriceMap[playerId] = {
-              purchasePrice,
-              currentPrice,
-              gameweekAdded
-            };
-            
-            console.log(`[calculatePurchasePricesFromPicks] Player ${playerId}: Added in GW${gameweekAdded}, Purchase: £${purchasePrice / 10}m, Current: £${currentPrice / 10}m`);
-          } else {
-            console.warn(`[calculatePurchasePricesFromPicks] Player ${playerId}: No history entry found for GW${gameweekAdded} or previous GW`);
-            delete purchasePriceMap[playerId];
-          }
-        } else if (result.status === 'rejected') {
-          console.warn(`[calculatePurchasePricesFromPicks] Player ${playerId}: Could not fetch element summary:`, result.reason?.message || 'Unknown error');
-          delete purchasePriceMap[playerId];
-        }
-      });
-    }
-    
-    console.log(`[calculatePurchasePricesFromPicks] Successfully calculated prices for ${Object.keys(purchasePriceMap).length} players`);
-    return purchasePriceMap;
-  } catch (error) {
-    console.error('Error calculating purchase prices from picks:', error);
-    return {};
-  }
-}
 
 
 // applyPredictionsWithCache is exported from fplModel and used throughout this module.
@@ -858,15 +703,15 @@ const getRecommendedTransfers = async (req, res) => {
     return res.status(400).json({ error: 'Invalid entryId or eventId' });
   }
   
-  // Validate gameweeksAhead (0-5, default 1)
+  // Validate gameweeksAhead (1-5, default 1)
   let lookahead = 1;
   if (gameweeksAhead !== undefined) {
     if (!/^\d+$/.test(gameweeksAhead)) {
       return res.status(400).json({ error: 'Invalid gameweeksAhead parameter' });
     }
     lookahead = parseInt(gameweeksAhead, 10);
-    if (lookahead < 0 || lookahead > MAX_GAMEWEEKS_AHEAD) {
-      return res.status(400).json({ error: `gameweeksAhead must be between 0 and ${MAX_GAMEWEEKS_AHEAD}` });
+    if (lookahead < 1 || lookahead > MAX_GAMEWEEKS_AHEAD) {
+      return res.status(400).json({ error: `gameweeksAhead must be between 1 and ${MAX_GAMEWEEKS_AHEAD}` });
     }
   }
   
@@ -900,7 +745,8 @@ const getRecommendedTransfers = async (req, res) => {
         purchasePriceMap[t.element_in] = t.element_in_cost;
       }
     } catch {
-      // Non-fatal: purchase/selling prices will fall back to current price
+      // Non-fatal: transfer history unavailable; squad members will have their
+      // season-start price (now_cost - cost_change_start) filled in below.
     }
 
     // Fill in season-start prices for players not found in transfer history

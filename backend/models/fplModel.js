@@ -894,4 +894,6 @@ module.exports = {
   // export toggles for external visibility if needed
   USE_COMPUTED_EP,
   INCLUDE_MANAGERS_GLOBAL,
+  // export freshness threshold so controllers share the same staleness rule
+  MAX_PREDICTION_AGE_MS,
 };

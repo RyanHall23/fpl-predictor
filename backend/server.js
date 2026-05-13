@@ -36,20 +36,30 @@ const matchesEtag = (ifNoneMatch, etag) => {
 const withCacheHeaders = (maxAgeSec, swr = 0) => (req, res, next) => {
   const originalJson = res.json.bind(res);
   res.json = (body) => {
-    // Serialize once — reuse the string both for the ETag hash and the response body.
-    const raw  = JSON.stringify(body);
-    const etag = '"' + crypto.createHash('sha1').update(raw).digest('hex').slice(0, 16) + '"';
-    res.setHeader('ETag', etag);
-    const directive = swr > 0
-      ? `public, max-age=${maxAgeSec}, stale-while-revalidate=${swr}`
-      : `public, max-age=${maxAgeSec}`;
-    res.setHeader('Cache-Control', directive);
-    if (matchesEtag(req.headers['if-none-match'], etag)) {
-      return res.status(304).end();
+    // Only apply public caching for successful responses (2xx status codes).
+    // Error responses (4xx / 5xx) must never be cached by a shared proxy or
+    // the browser, otherwise a transient failure could be served stale for
+    // the full max-age window.
+    const status = res.statusCode ?? 200;
+    if (status >= 200 && status < 300) {
+      // Serialize once — reuse the string both for the ETag hash and the response body.
+      const raw  = JSON.stringify(body);
+      const etag = '"' + crypto.createHash('sha1').update(raw).digest('hex').slice(0, 16) + '"';
+      res.setHeader('ETag', etag);
+      const directive = swr > 0
+        ? `public, max-age=${maxAgeSec}, stale-while-revalidate=${swr}`
+        : `public, max-age=${maxAgeSec}`;
+      res.setHeader('Cache-Control', directive);
+      if (matchesEtag(req.headers['if-none-match'], etag)) {
+        return res.status(304).end();
+      }
+      // Send the already-serialised string to avoid a second JSON.stringify call.
+      res.setHeader('Content-Type', 'application/json');
+      return res.end(raw);
     }
-    // Send the already-serialised string to avoid a second JSON.stringify call.
-    res.setHeader('Content-Type', 'application/json');
-    return res.end(raw);
+    // Error response — suppress public caching.
+    res.setHeader('Cache-Control', 'no-store');
+    return originalJson(body);
   };
   next();
 };
