@@ -1156,6 +1156,13 @@ const getRecommendedTransfers = async (req, res) => {
 
 /**
  * Calculate cumulative predicted points for a set of player IDs across one or more gameweeks.
+ *
+ * For GW+1 (the most common case), we read the predictions file produced by
+ * the daily CI job (.github/workflows/fetch-season-data.yml, runs at 08:00 UTC).
+ * This avoids running the full Monte Carlo engine on every request.
+ * For additional GWs beyond that file, or when the file is absent, we fall
+ * back to live computation.
+ *
  * @param {Array} allPlayers - Enriched player list
  * @param {Array} fixtures - Fixture list
  * @param {Array} teams - Team list
@@ -1164,11 +1171,22 @@ const getRecommendedTransfers = async (req, res) => {
  * @returns {Object} Map of playerId -> cumulative predicted points
  */
 async function buildPlayerPointsMap(allPlayers, fixtures, teams, currentEventId, gameweeksAhead) {
-  const startEvent = currentEventId + 1;
-  const endEvent = currentEventId + gameweeksAhead;
   const playerPointsMap = {};
+  const startEvent = currentEventId + 1;
+  const endEvent = Math.min(currentEventId + gameweeksAhead, 38);
 
-  for (let gw = startEvent; gw <= Math.min(endEvent, 38); gw++) {
+  for (let gw = startEvent; gw <= endEvent; gw++) {
+    // Try stored predictions for this GW first (written by CI at 08:00 UTC)
+    const stored = await dataProvider.fetchStoredPredictions(gw);
+    if (stored?.players) {
+      Object.entries(stored.players).forEach(([id, pred]) => {
+        const pts = parseFloat(pred.predicted_points ?? pred.ep_next) || 0;
+        playerPointsMap[id] = (playerPointsMap[id] || 0) + pts;
+      });
+      continue;
+    }
+
+    // Fall back to live computation when no stored file exists
     let gwPlayers = allPlayers.map(p => ({ ...p }));
     gwPlayers = fplModel.enrichPlayersWithOpponents(gwPlayers, fixtures, teams, gw);
     gwPlayers = await fplModel.applyAdvancedPredictions(gwPlayers, fixtures, teams, gw);
