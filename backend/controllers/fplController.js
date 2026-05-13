@@ -2,6 +2,13 @@ const fplModel = require('../models/fplModel');
 const dataProvider = require('../models/dataProvider');
 const { buildBreakdown } = require('../utils/statsBreakdown');
 
+// Stored-prediction freshness threshold.  The daily workflow runs at 08:00 UTC
+// (24 h cycle), so we allow up to 25 h before treating a file as stale.  This
+// gives a 1-hour grace period beyond the scheduled cycle and ensures that
+// fixture changes (e.g. postponements) are detected within 25 h of the
+// workflow run.
+const MAX_PREDICTION_AGE_MS = 25 * 60 * 60 * 1000;
+
 /**
  * Format a player's opponent(s) as a human-readable display string.
  * E.g. "MCI (H)" or "LIV (A) ARS (H)" for a DGW.
@@ -745,12 +752,7 @@ const getAllPlayersEnriched = async (req, res) => {
     if (!isPastOrActive) {
       // Try to serve pre-computed predictions written by the daily Actions workflow.
       // This avoids the full backtest + engine run on every cold start.
-      //
-      // Staleness guard: reject files older than 13 h (just over one Actions
-      // interval).  This ensures a fixture postponement or reschedule is picked
-      // up within at most one Actions cycle rather than serving indefinitely
-      // stale predictions.
-      const MAX_PREDICTION_AGE_MS = 13 * 60 * 60 * 1000;
+      // See MAX_PREDICTION_AGE_MS at the top of this module for the staleness threshold.
       const stored = await dataProvider.fetchStoredPredictions(targetEvent);
       const storedAge = stored?.computedAt
         ? Date.now() - new Date(stored.computedAt).getTime()
@@ -1175,18 +1177,34 @@ async function buildPlayerPointsMap(allPlayers, fixtures, teams, currentEventId,
   const startEvent = currentEventId + 1;
   const endEvent = Math.min(currentEventId + gameweeksAhead, 38);
 
+  const playerIdSet = new Set(allPlayers.map(p => String(p.id)));
+
   for (let gw = startEvent; gw <= endEvent; gw++) {
     // Try stored predictions for this GW first (written by CI at 08:00 UTC)
     const stored = await dataProvider.fetchStoredPredictions(gw);
-    if (stored?.players) {
+    const storedAge = stored?.computedAt
+      ? Date.now() - new Date(stored.computedAt).getTime()
+      : Infinity;
+    const storedValid =
+      stored?.players &&
+      Object.keys(stored.players).length > 0 &&
+      storedAge < MAX_PREDICTION_AGE_MS;
+
+    if (storedValid) {
+      console.log(`[transfers] Serving stored predictions for GW${gw} (computed ${stored.computedAt})`);
       Object.entries(stored.players).forEach(([id, pred]) => {
+        if (!playerIdSet.has(String(id))) return;
         const pts = parseFloat(pred.predicted_points ?? pred.ep_next) || 0;
         playerPointsMap[id] = (playerPointsMap[id] || 0) + pts;
       });
       continue;
     }
 
-    // Fall back to live computation when no stored file exists
+    if (stored && storedAge >= MAX_PREDICTION_AGE_MS) {
+      console.warn(`[transfers] Stored predictions for GW${gw} are stale (${Math.round(storedAge / 3600000)}h old) — recomputing.`);
+    }
+
+    // Fall back to live computation when no stored file exists or file is stale
     let gwPlayers = allPlayers.map(p => ({ ...p }));
     gwPlayers = fplModel.enrichPlayersWithOpponents(gwPlayers, fixtures, teams, gw);
     gwPlayers = await fplModel.applyAdvancedPredictions(gwPlayers, fixtures, teams, gw);
