@@ -8,6 +8,9 @@ const { buildBreakdown } = require('../utils/statsBreakdown');
 // fixture changes (e.g. postponements) are detected within 25 h of the
 // workflow run.
 const MAX_PREDICTION_AGE_MS = 25 * 60 * 60 * 1000;
+// Bound gameweek picks fan-out so a single request does not trigger up to
+// 38 simultaneous FPL calls (max gameweeks in a Premier League season).
+const PICKS_HISTORY_BATCH_SIZE = 10;
 
 /**
  * Format a player's opponent(s) as a human-readable display string.
@@ -49,9 +52,8 @@ async function calculatePurchasePricesFromPicks(entryId, currentPlayerIds, curre
     console.log(`[calculatePurchasePricesFromPicks] Starting for entry ${entryId}, GW1-${currentGameweek}, ${currentPlayerIds.length} players`);
     
     const picksHistory = {};
-    const batchSize = 10;
-    for (let startGW = 1; startGW <= currentGameweek; startGW += batchSize) {
-      const endGW = Math.min(startGW + batchSize - 1, currentGameweek);
+    for (let startGW = 1; startGW <= currentGameweek; startGW += PICKS_HISTORY_BATCH_SIZE) {
+      const endGW = Math.min(startGW + PICKS_HISTORY_BATCH_SIZE - 1, currentGameweek);
       const gwRange = Array.from({ length: endGW - startGW + 1 }, (_, i) => startGW + i);
       const batchResults = await Promise.allSettled(
         gwRange.map(gw => dataProvider.fetchPlayerPicks(entryId, gw))
@@ -543,8 +545,11 @@ const getUserTeamForEntry = async (req, res) => {
     ]);
 
     if (fixturesResult.status === 'rejected') {
-      console.error('Error fetching fixtures:', fixturesResult.reason?.message);
-      return res.status(500).json({ error: 'Error fetching fixtures' });
+      console.error(
+        `Error fetching fixtures for entry ${entryId}, GW${targetEvent}:`,
+        fixturesResult.reason?.message || 'Unknown error'
+      );
+      return res.status(500).json({ error: `Failed to fetch fixture data for GW${targetEvent}` });
     }
     const fixtures = fixturesResult.value;
 
