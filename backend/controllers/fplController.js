@@ -6,6 +6,7 @@ const { buildBreakdown } = require('../utils/statsBreakdown');
 // staleness rule is applied everywhere without duplication.
 const { MAX_PREDICTION_AGE_MS } = fplModel;
 
+/**
  * Format a player's opponent(s) as a human-readable display string.
  * E.g. "MCI (H)" or "LIV (A) ARS (H)" for a DGW.
  *
