@@ -43,7 +43,7 @@
     "baseline-browser-mapping": "^2.10.31",
     "gh-pages": "^6.3.0",
     "jsdom": "^29.1.1",
-    "vite": "^8.0.12",
+    "vite": "^8.0.13",
     "vitest": "^4.1.7"
   },
   "overrides": {
