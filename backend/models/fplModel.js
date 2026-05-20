@@ -298,8 +298,49 @@ const applyAdvancedPredictions = async (players, fixtures, teams, targetEventId)
   return predictionEngine.computePredictions(players, fixtures, teams, targetEventId);
 };
 
+// Stored-prediction freshness threshold. The daily workflow runs at 08:00 UTC
+// (24 h cycle), so we allow up to 25 h before treating a file as stale.
+const MAX_PREDICTION_AGE_MS = 25 * 60 * 60 * 1000;
+
 /**
- * Enrich players with opponent data from fixtures.
+ * Apply predictions for a future gameweek using stored predictions where
+ * available, falling back to live engine computation when none exist or they
+ * are too stale.  Centralises the stored-predictions pattern used by multiple
+ * controllers so the logic is maintained in one place.
+ *
+ * @param {Array}  players       - Players array (from bootstrap-static)
+ * @param {Array}  fixtures      - Fixtures array
+ * @param {Array}  teams         - Teams array from bootstrap-static
+ * @param {number} targetEvent   - Gameweek to predict
+ * @param {string} [label]       - Log-prefix for diagnostics
+ * @returns {Promise<Array>} Players enriched with prediction fields
+ */
+const applyPredictionsWithCache = async (players, fixtures, teams, targetEvent, label = 'predictions') => {
+  const stored = await dataProvider.fetchStoredPredictions(targetEvent);
+  const storedAge = stored?.computedAt
+    ? Date.now() - new Date(stored.computedAt).getTime()
+    : Infinity;
+  const storedValid =
+    stored?.players &&
+    Object.keys(stored.players).length > 0 &&
+    storedAge < MAX_PREDICTION_AGE_MS;
+
+  if (storedValid) {
+    console.log(`[${label}] Serving stored predictions for GW${targetEvent} (computed ${stored.computedAt})`);
+    return players.map((p) => {
+      const pred = stored.players[p.id];
+      return pred ? { ...p, ...pred } : p;
+    });
+  }
+
+  if (stored && storedAge >= MAX_PREDICTION_AGE_MS) {
+    console.warn(`[${label}] Stored predictions for GW${targetEvent} are stale (${Math.round(storedAge / 3600000)}h old) — recomputing.`);
+  }
+
+  return applyAdvancedPredictions(players, fixtures, teams, targetEvent);
+};
+
+/**
  * Adds 'opponents' array with all fixtures for the gameweek (supports DGW).
  * Also adds legacy 'opponent' and 'opponent_short' fields for backwards compatibility (first fixture only).
  * If targetEventId is provided, uses fixtures from that specific gameweek.
@@ -845,6 +886,7 @@ module.exports = {
   enrichPlayersWithGameweekStats,
   recalculatePointsForGameweek,
   applyAdvancedPredictions,
+  applyPredictionsWithCache,
   buildHighestPredictedTeam,
   buildUserTeam,
   validateSwap,
@@ -852,4 +894,6 @@ module.exports = {
   // export toggles for external visibility if needed
   USE_COMPUTED_EP,
   INCLUDE_MANAGERS_GLOBAL,
+  // export freshness threshold so controllers share the same staleness rule
+  MAX_PREDICTION_AGE_MS,
 };

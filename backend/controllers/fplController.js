@@ -2,16 +2,6 @@ const fplModel = require('../models/fplModel');
 const dataProvider = require('../models/dataProvider');
 const { buildBreakdown } = require('../utils/statsBreakdown');
 
-// Stored-prediction freshness threshold.  The daily workflow runs at 08:00 UTC
-// (24 h cycle), so we allow up to 25 h before treating a file as stale.  This
-// gives a 1-hour grace period beyond the scheduled cycle and ensures that
-// fixture changes (e.g. postponements) are detected within 25 h of the
-// workflow run.
-const MAX_PREDICTION_AGE_MS = 25 * 60 * 60 * 1000;
-// Bound gameweek picks fan-out so a single request does not trigger up to
-// 38 simultaneous FPL calls (max gameweeks in a Premier League season).
-const PICKS_HISTORY_BATCH_SIZE = 10;
-
 /**
  * Format a player's opponent(s) as a human-readable display string.
  * E.g. "MCI (H)" or "LIV (A) ARS (H)" for a DGW.
@@ -37,153 +27,8 @@ const buildOpponentDisplay = (player) => {
 };
 
 
-/**
- * Calculate purchase prices for current squad by analyzing FPL picks history
- * Handles in/out/in scenarios by finding when each player was most recently added
- * @param {number} entryId - FPL entry/team ID
- * @param {Array<number>} currentPlayerIds - Array of player IDs currently in the squad
- * @param {number} currentGameweek - Current gameweek number
- * @returns {Promise<Object>} - Map of playerId to {purchasePrice, currentPrice, gameweekAdded}
- */
-async function calculatePurchasePricesFromPicks(entryId, currentPlayerIds, currentGameweek) {
-  const purchasePriceMap = {};
-  
-  try {
-    console.log(`[calculatePurchasePricesFromPicks] Starting for entry ${entryId}, GW1-${currentGameweek}, ${currentPlayerIds.length} players`);
-    
-    const picksHistory = {};
-    for (let startGW = 1; startGW <= currentGameweek; startGW += PICKS_HISTORY_BATCH_SIZE) {
-      const endGW = Math.min(startGW + PICKS_HISTORY_BATCH_SIZE - 1, currentGameweek);
-      const gwRange = Array.from({ length: endGW - startGW + 1 }, (_, i) => startGW + i);
-      const batchResults = await Promise.allSettled(
-        gwRange.map(gw => dataProvider.fetchPlayerPicks(entryId, gw))
-      );
-
-      gwRange.forEach((gw, index) => {
-        const result = batchResults[index];
-        if (result.status === 'fulfilled' && result.value && result.value.picks) {
-          picksHistory[gw] = result.value.picks.map(p => p.element);
-        } else if (result.status === 'rejected') {
-          console.warn(`Could not fetch picks for GW${gw}:`, result.reason?.message || 'Unknown error');
-        }
-      });
-    }
-    
-    console.log(`[calculatePurchasePricesFromPicks] Fetched picks for ${Object.keys(picksHistory).length} gameweeks`);
-    
-    if (Object.keys(picksHistory).length === 0) {
-      console.warn('[calculatePurchasePricesFromPicks] No picks history fetched - cannot calculate purchase prices');
-      return {};
-    }
-    
-    // For each current player, find when they were most recently added
-    for (const playerId of currentPlayerIds) {
-      try {
-        let gameweekAdded = null;
-        let wasInPreviousGW = false;
-        
-        // Walk through gameweeks chronologically
-        for (let gw = 1; gw <= currentGameweek; gw++) {
-          if (!picksHistory[gw]) continue;
-          
-          const isInCurrentGW = picksHistory[gw].includes(playerId);
-          
-          if (isInCurrentGW && !wasInPreviousGW) {
-            // Player was added in this gameweek (either first time or re-added)
-            gameweekAdded = gw;
-          }
-          
-          wasInPreviousGW = isInCurrentGW;
-        }
-        
-        // Store gameweek for batch fetching
-        if (gameweekAdded) {
-          purchasePriceMap[playerId] = { gameweekAdded };
-        } else {
-          console.warn(`Player ${playerId}: Could not determine when they were added`);
-        }
-      } catch (playerError) {
-        console.warn(`Error processing player ${playerId}:`, playerError.message);
-      }
-    }
-    
-    // Now fetch element summaries in parallel for all players
-    const playerIdsToFetch = Object.keys(purchasePriceMap).map(id => parseInt(id));
-    
-    console.log(`[calculatePurchasePricesFromPicks] Found gameweek added for ${playerIdsToFetch.length}/${currentPlayerIds.length} players`);
-    
-    if (playerIdsToFetch.length > 0) {
-      console.log(`[calculatePurchasePricesFromPicks] Fetching element summaries for ${playerIdsToFetch.length} players`);
-      
-      const elementResults = await Promise.allSettled(
-        playerIdsToFetch.map(playerId => dataProvider.fetchElementSummary(playerId))
-      );
-      
-      // Process element summary results
-      playerIdsToFetch.forEach((playerId, index) => {
-        const result = elementResults[index];
-        const gameweekAdded = purchasePriceMap[playerId].gameweekAdded;
-        
-        if (result.status === 'fulfilled' && result.value && result.value.history) {
-          const elementSummary = result.value;
-          
-          // Find the price at the START of the gameweek they were added
-          // The history entry shows the price at the END of each gameweek
-          // So we need to use the price from the PREVIOUS gameweek (or start price for GW1)
-          let purchasePrice = null;
-          
-          if (gameweekAdded === 1) {
-            // For GW1, check if there's a history entry, otherwise use bootstrap start price
-            const gw1Entry = elementSummary.history.find(h => h.round === 1);
-            if (gw1Entry) {
-              purchasePrice = gw1Entry.value;
-            }
-          } else {
-            // For other gameweeks, use the price from the PREVIOUS gameweek
-            // This is the price at the time of transfer
-            const previousGwEntry = elementSummary.history.find(h => h.round === gameweekAdded - 1);
-            if (previousGwEntry) {
-              purchasePrice = previousGwEntry.value;
-            } else {
-              // Fallback: if previous GW not found, use the entry for the added GW
-              const historyEntry = elementSummary.history.find(h => h.round === gameweekAdded);
-              if (historyEntry) {
-                purchasePrice = historyEntry.value;
-              }
-            }
-          }
-          
-          if (purchasePrice !== null) {
-            // Get current price from latest history entry
-            const latestHistory = elementSummary.history[elementSummary.history.length - 1];
-            const currentPrice = latestHistory ? latestHistory.value : purchasePrice;
-            
-            purchasePriceMap[playerId] = {
-              purchasePrice,
-              currentPrice,
-              gameweekAdded
-            };
-            
-            console.log(`[calculatePurchasePricesFromPicks] Player ${playerId}: Added in GW${gameweekAdded}, Purchase: £${purchasePrice / 10}m, Current: £${currentPrice / 10}m`);
-          } else {
-            console.warn(`[calculatePurchasePricesFromPicks] Player ${playerId}: No history entry found for GW${gameweekAdded} or previous GW`);
-            delete purchasePriceMap[playerId];
-          }
-        } else if (result.status === 'rejected') {
-          console.warn(`[calculatePurchasePricesFromPicks] Player ${playerId}: Could not fetch element summary:`, result.reason?.message || 'Unknown error');
-          delete purchasePriceMap[playerId];
-        }
-      });
-    }
-    
-    console.log(`[calculatePurchasePricesFromPicks] Successfully calculated prices for ${Object.keys(purchasePriceMap).length} players`);
-    return purchasePriceMap;
-  } catch (error) {
-    console.error('Error calculating purchase prices from picks:', error);
-    return {};
-  }
-}
-
+// applyPredictionsWithCache is exported from fplModel and used throughout this module.
+const applyPredictionsWithCache = fplModel.applyPredictionsWithCache;
 
 const getBootstrapStatic = async (req, res) => {
   try {
@@ -369,11 +214,10 @@ const getPredictedTeam = async (req, res) => {
     // Enrich players with opponent display data (opponent name, home/away, DGW support)
     players = fplModel.enrichPlayersWithOpponents(players, fixtures, data.teams, targetEvent);
     
-    // For non-past/non-active gameweeks, apply the advanced prediction engine which uses
-    // ELO team strength, Poisson distributions, Monte Carlo simulation, and the
-    // full FPL scoring rules to compute statistically grounded predictions.
+    // For non-past/non-active gameweeks, use stored predictions first, then fall
+    // back to the full prediction engine.
     if (!isPastGameweek && !isActiveGameweek) {
-      players = await fplModel.applyAdvancedPredictions(players, fixtures, data.teams, targetEvent);
+      players = await applyPredictionsWithCache(players, fixtures, data.teams, targetEvent, 'predicted-team');
     }
     
     // Build team based on actual points (past/active) or predictions (current/future)
@@ -458,9 +302,10 @@ const getUserTeam = async (req, res) => {
     // Enrich players with opponent display data for the target gameweek
     players = fplModel.enrichPlayersWithOpponents(players, fixtures, bootstrap.teams, targetEvent);
     
-    // For non-past/non-active gameweeks, apply the advanced prediction engine
+    // For non-past/non-active gameweeks, use stored predictions first, then fall
+    // back to the full prediction engine.
     if (!isPastGameweek && !isActiveGameweek) {
-      players = await fplModel.applyAdvancedPredictions(players, fixtures, bootstrap.teams, targetEvent);
+      players = await applyPredictionsWithCache(players, fixtures, bootstrap.teams, targetEvent, 'user-team');
     }
     
     const team = fplModel.buildUserTeam(players, picksData.picks, isPastGameweek || isActiveGameweek, isFutureGameweek);
@@ -603,7 +448,7 @@ const getUserTeamForEntry = async (req, res) => {
     players = fplModel.enrichPlayersWithOpponents(players, fixtures, bootstrap.teams, targetEvent);
 
     if (!isPastGameweek && !isActiveGameweek) {
-      players = await fplModel.applyAdvancedPredictions(players, fixtures, bootstrap.teams, targetEvent);
+      players = await applyPredictionsWithCache(players, fixtures, bootstrap.teams, targetEvent, 'user-team-entry');
     }
 
     const team = fplModel.buildUserTeam(players, picksData.picks, isPastGameweek || isActiveGameweek, isFutureGameweek);
@@ -755,31 +600,7 @@ const getAllPlayersEnriched = async (req, res) => {
     
     // Apply the advanced prediction engine for future gameweeks only.
     if (!isPastOrActive) {
-      // Try to serve pre-computed predictions written by the daily Actions workflow.
-      // This avoids the full backtest + engine run on every cold start.
-      // See MAX_PREDICTION_AGE_MS at the top of this module for the staleness threshold.
-      const stored = await dataProvider.fetchStoredPredictions(targetEvent);
-      const storedAge = stored?.computedAt
-        ? Date.now() - new Date(stored.computedAt).getTime()
-        : Infinity;
-      const storedValid =
-        stored &&
-        stored.players &&
-        Object.keys(stored.players).length > 0 &&
-        storedAge < MAX_PREDICTION_AGE_MS;
-
-      if (storedValid) {
-        console.log(`[enriched] Serving stored predictions for GW${targetEvent} (computed ${stored.computedAt})`);
-        players = players.map((p) => {
-          const pred = stored.players[p.id];
-          return pred ? { ...p, ...pred } : p;
-        });
-      } else {
-        if (stored && storedAge >= MAX_PREDICTION_AGE_MS) {
-          console.warn(`[enriched] Stored predictions for GW${targetEvent} are stale (${Math.round(storedAge / 3600000)}h old) — recomputing.`);
-        }
-        players = await fplModel.applyAdvancedPredictions(players, fixtures, data.teams, targetEvent);
-      }
+      players = await applyPredictionsWithCache(players, fixtures, data.teams, targetEvent, 'enriched');
     }
 
     // Add a pre-formatted opponent display string so the frontend does not need
@@ -852,7 +673,7 @@ const MAX_GAMEWEEKS_AHEAD = 5;
  * @route GET /api/entry/:entryId/event/:eventId/recommended-transfers
  * @param {string} entryId - FPL entry/team ID
  * @param {string} eventId - Current gameweek ID
- * @param {string} gameweeksAhead - Number of gameweeks to forecast (0-5, default 1)
+ * @param {string} gameweeksAhead - Number of gameweeks to forecast (1-5, default 1)
  * 
  * @returns {Object} recommendations - Transfer recommendations by position
  * @returns {Object} recommendations.GK - Goalkeeper recommendations
@@ -879,15 +700,15 @@ const getRecommendedTransfers = async (req, res) => {
     return res.status(400).json({ error: 'Invalid entryId or eventId' });
   }
   
-  // Validate gameweeksAhead (0-5, default 1)
+  // Validate gameweeksAhead (1-5, default 1)
   let lookahead = 1;
   if (gameweeksAhead !== undefined) {
     if (!/^\d+$/.test(gameweeksAhead)) {
       return res.status(400).json({ error: 'Invalid gameweeksAhead parameter' });
     }
     lookahead = parseInt(gameweeksAhead, 10);
-    if (lookahead < 0 || lookahead > MAX_GAMEWEEKS_AHEAD) {
-      return res.status(400).json({ error: `gameweeksAhead must be between 0 and ${MAX_GAMEWEEKS_AHEAD}` });
+    if (lookahead < 1 || lookahead > MAX_GAMEWEEKS_AHEAD) {
+      return res.status(400).json({ error: `gameweeksAhead must be between 1 and ${MAX_GAMEWEEKS_AHEAD}` });
     }
   }
   
@@ -905,74 +726,57 @@ const getRecommendedTransfers = async (req, res) => {
     
     // Get user's current team
     const picksData = await fplModel.fetchPlayerPicks(entryId, eventId);
-    
+
+    // Build purchase-price map from transfer history (single cached API call).
+    // For each player transferred in, the cost at transfer time is stored directly.
+    // Original squad members (never transferred) use the season-start price derived
+    // from now_cost - cost_change_start, mirroring the logic in getUserTeamForEntry.
     let purchasePriceMap = {};
-    const currentPlayerIds = picksData.picks.map(p => p.element);
-    
-    // Calculate purchase prices from FPL picks history
     try {
-      purchasePriceMap = await calculatePurchasePricesFromPicks(entryId, currentPlayerIds, currentEvent.id);
-    } catch (picksError) {
-      console.warn('[getRecommendedTransfers] Could not calculate purchase prices from FPL picks:', picksError.message);
+      const transfers = await dataProvider.fetchEntryTransfers(entryId);
+      const sorted = [...transfers].sort((a, b) => {
+        if (a.event !== b.event) return a.event - b.event;
+        return (a.time ?? '').localeCompare(b.time ?? '');
+      });
+      for (const t of sorted) {
+        purchasePriceMap[t.element_in] = t.element_in_cost;
+      }
+    } catch {
+      // Non-fatal: transfer history unavailable; squad members will have their
+      // season-start price (now_cost - cost_change_start) filled in below.
     }
-    
-    // Fallback: use current price for any players without calculated prices
-    if (Object.keys(purchasePriceMap).length === 0) {
-      currentPlayerIds.forEach(playerId => {
+
+    // Fill in season-start prices for players not found in transfer history
+    const currentPlayerIds = picksData.picks.map(p => p.element);
+    currentPlayerIds.forEach(playerId => {
+      if (!(playerId in purchasePriceMap)) {
         const playerData = bootstrap.elements.find(p => p.id === playerId);
         if (playerData) {
-          purchasePriceMap[playerId] = {
-            purchasePrice: playerData.now_cost,
-            currentPrice: playerData.now_cost,
-            gameweekAdded: null
-          };
+          purchasePriceMap[playerId] = playerData.now_cost - (playerData.cost_change_start ?? 0);
         }
-      });
-    }
-    
-    // Calculate cumulative predicted points across multiple gameweeks
-    // For each player, sum predicted points from startEvent to endEvent
+      }
+    });
+
+    // Build base player list
     let allPlayers = bootstrap.elements.map((p) => ({
       ...p,
       ep_next: parseFloat(p.ep_next) || 0,
     }));
-    
-    // Calculate cumulative points for each gameweek in the range
-    const playerCumulativePoints = {};
-    
-    for (let gw = startEvent; gw <= endEvent; gw++) {
-      if (gw > 38) break;
-      
-      let gwPlayers = allPlayers.map(p => ({ ...p }));
-      gwPlayers = fplModel.enrichPlayersWithOpponents(gwPlayers, fixtures, bootstrap.teams, gw);
-      gwPlayers = await fplModel.applyAdvancedPredictions(gwPlayers, fixtures, bootstrap.teams, gw);
-      
-      gwPlayers.forEach(p => {
-        if (!playerCumulativePoints[p.id]) {
-          playerCumulativePoints[p.id] = {
-            player: p,
-            cumulativePoints: 0,
-            gameweeks: []
-          };
-        }
-        const points = parseFloat(p.ep_next) || 0;
-        playerCumulativePoints[p.id].cumulativePoints += points;
-        playerCumulativePoints[p.id].gameweeks.push({
-          gameweek: gw,
-          points: points,
-          opponent: p.opponent_short || '-',
-          is_home: p.is_home
-        });
-      });
-    }
-    
-    // Update allPlayers with cumulative points
-    allPlayers = Object.values(playerCumulativePoints).map(data => ({
-      ...data.player,
-      ep_next: data.cumulativePoints,
-      cumulative_points: data.cumulativePoints,
-      gameweek_breakdown: data.gameweeks
-    }));
+
+    // Compute cumulative predicted points for each player across the GW range using
+    // stored predictions where available (avoids re-running the full engine per GW).
+    const playerPointsMap = await buildPlayerPointsMap(
+      allPlayers, fixtures, bootstrap.teams, currentEvent.id, lookahead
+    );
+
+    // Apply cumulative points and enrich with opponent data for the first upcoming GW
+    allPlayers = fplModel.enrichPlayersWithOpponents(
+      allPlayers.map(p => ({
+        ...p,
+        ep_next: playerPointsMap[p.id] ?? parseFloat(p.ep_next) ?? 0,
+      })),
+      fixtures, bootstrap.teams, startEvent
+    );
     
     // Build user's team to get full player objects
     const userTeamIds = new Set(picksData.picks.map(p => p.element));
@@ -1080,38 +884,14 @@ const getRecommendedTransfers = async (req, res) => {
         uniqueAlternatives.forEach(alt => alreadyRecommended.add(alt.id));
 
         if (uniqueAlternatives.length > 0) {
-          // Calculate selling price for playerOut
-          const purchaseInfo = purchasePriceMap[weakPlayer.id];
-          let purchasePrice = null;
-          let sellingPrice = null;
-
-          if (purchaseInfo) {
-            purchasePrice = purchaseInfo.purchasePrice;
-            const currentPrice = weakPlayer.now_cost;
-
-            // Calculate selling price using FPL rules:
-            // - If price dropped: selling price = current price (you lose the full amount)
-            // - If price increased: selling price = purchase price + floor(profit / 2)
-            if (currentPrice <= purchasePrice) {
-              sellingPrice = currentPrice;
-            } else {
-              const profit = currentPrice - purchasePrice;
-              const profitToKeep = Math.floor(profit / 2);
-              sellingPrice = purchasePrice + profitToKeep;
-            }
-
-            // Add console logging for price info
-            // Price info logging removed - can be enabled for debugging
-            // console.log(`Player: ${weakPlayer.first_name} ${weakPlayer.second_name} (ID: ${weakPlayer.id})`);
-            // console.log(`  Purchase Price: ${purchasePrice}`);
-            // console.log(`  Current Price: ${currentPrice}`);
-            // console.log(`  Selling Price: ${sellingPrice}`);
-          } else {
-            // Purchase info not found - player uses current price as both purchase and selling price
-            purchasePrice = weakPlayer.now_cost;
-            sellingPrice = weakPlayer.now_cost;
-            console.warn(`Player ${weakPlayer.id}: Using current price (${weakPlayer.now_cost}) as fallback for purchase/selling price`);
-          }
+          // Calculate selling price using FPL rules.
+          // purchasePriceMap now stores the raw purchase price as a number.
+          const rawPurchasePrice = purchasePriceMap[weakPlayer.id] ?? null;
+          const purchasePrice = rawPurchasePrice ?? weakPlayer.now_cost;
+          const currentPrice = weakPlayer.now_cost;
+          const sellingPrice = currentPrice <= purchasePrice
+            ? currentPrice
+            : purchasePrice + Math.floor((currentPrice - purchasePrice) / 2);
 
           posRecommendations.push({
             playerOut: {
@@ -1182,39 +962,17 @@ async function buildPlayerPointsMap(allPlayers, fixtures, teams, currentEventId,
   const startEvent = currentEventId + 1;
   const endEvent = Math.min(currentEventId + gameweeksAhead, 38);
 
-  const playerIdSet = new Set(allPlayers.map(p => String(p.id)));
-
   for (let gw = startEvent; gw <= endEvent; gw++) {
-    // Try stored predictions for this GW first (written by CI at 08:00 UTC)
-    const stored = await dataProvider.fetchStoredPredictions(gw);
-    const storedAge = stored?.computedAt
-      ? Date.now() - new Date(stored.computedAt).getTime()
-      : Infinity;
-    const storedValid =
-      stored?.players &&
-      Object.keys(stored.players).length > 0 &&
-      storedAge < MAX_PREDICTION_AGE_MS;
-
-    if (storedValid) {
-      console.log(`[transfers] Serving stored predictions for GW${gw} (computed ${stored.computedAt})`);
-      Object.entries(stored.players).forEach(([id, pred]) => {
-        if (!playerIdSet.has(String(id))) return;
-        const pts = parseFloat(pred.predicted_points ?? pred.ep_next) || 0;
-        playerPointsMap[id] = (playerPointsMap[id] || 0) + pts;
-      });
-      continue;
-    }
-
-    if (stored && storedAge >= MAX_PREDICTION_AGE_MS) {
-      console.warn(`[transfers] Stored predictions for GW${gw} are stale (${Math.round(storedAge / 3600000)}h old) — recomputing.`);
-    }
-
-    // Fall back to live computation when no stored file exists or file is stale
-    let gwPlayers = allPlayers.map(p => ({ ...p }));
-    gwPlayers = fplModel.enrichPlayersWithOpponents(gwPlayers, fixtures, teams, gw);
-    gwPlayers = await fplModel.applyAdvancedPredictions(gwPlayers, fixtures, teams, gw);
+    // Enrich with opponent data for this GW, then apply predictions via the
+    // shared helper (stored cache → live engine fallback) so the caching and
+    // staleness rules stay in one place.
+    let gwPlayers = fplModel.enrichPlayersWithOpponents(
+      allPlayers.map(p => ({ ...p })), fixtures, teams, gw
+    );
+    gwPlayers = await fplModel.applyPredictionsWithCache(gwPlayers, fixtures, teams, gw, 'transfers');
     gwPlayers.forEach(p => {
-      playerPointsMap[p.id] = (playerPointsMap[p.id] || 0) + (parseFloat(p.ep_next) || 0);
+      const pts = parseFloat(p.predicted_points ?? p.ep_next) || 0;
+      playerPointsMap[p.id] = (playerPointsMap[p.id] || 0) + pts;
     });
   }
 
