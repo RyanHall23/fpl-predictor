@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import {
   Paper,
-  Typography,
   Table,
   TableBody,
   TableCell,
@@ -13,6 +12,8 @@ import {
   CircularProgress,
   Alert,
   Box,
+  Switch,
+  FormControlLabel,
 } from '@mui/material';
 import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
@@ -36,6 +37,7 @@ const InvitationLeagueView = ({ league, onViewTeam, currentGameweek, selectedGam
   const [standings, setStandings] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showManager, setShowManager] = useState(false);
 
   // Derive display mode from selected vs current gameweek
   const effectiveGW = selectedGameweek || currentGameweek;
@@ -93,10 +95,25 @@ const InvitationLeagueView = ({ league, onViewTeam, currentGameweek, selectedGam
             <TableHead>
               <TableRow>
                 <TableCell>Rank</TableCell>
-                <TableCell>Team</TableCell>
-                <TableCell>Manager</TableCell>
-                <TableCell align='right'>GW Pts</TableCell>
-                <TableCell align='right'>Total</TableCell>
+                <TableCell>
+                  <Box sx={ { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, minWidth: 140 } }>
+                    <span>{ showManager ? 'Manager' : 'Team' }</span>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          size='small'
+                          checked={ showManager }
+                          onChange={ (e) => setShowManager(e.target.checked) }
+                          color='primary'
+                        />
+                      }
+                      label=''
+                      sx={ { m: 0 } }
+                    />
+                  </Box>
+                </TableCell>
+                <TableCell align='right'>GW Net</TableCell>
+                <TableCell align='right'>Total Points</TableCell>
                 { isFuture && <TableCell align='right'>Predicted</TableCell> }
               </TableRow>
             </TableHead>
@@ -132,13 +149,8 @@ const InvitationLeagueView = ({ league, onViewTeam, currentGameweek, selectedGam
                           '&:hover': { textDecoration: 'underline', background: 'none' },
                         } }
                       >
-                        { entry.entry_name }
+                        { showManager ? entry.player_name : entry.entry_name }
                       </Button>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant='body2' color='text.secondary'>
-                        { entry.player_name }
-                      </Typography>
                     </TableCell>
                     <TableCell align='right'>{ gwPts }</TableCell>
                     <TableCell align='right'>{ entry.total }</TableCell>
