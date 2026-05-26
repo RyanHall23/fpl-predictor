@@ -8,6 +8,8 @@ import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import Chip from '@mui/material/Chip';
+import Switch from '@mui/material/Switch';
+import FormControlLabel from '@mui/material/FormControlLabel';
 import { useTheme } from '@mui/material/styles';
 import InvitationLeagueView from '../InvitationLeagueView/InvitationLeagueView';
 import FixturesPanel from '../FixturesPanel';
@@ -28,6 +30,7 @@ const RightPanel = ({
   const [invLeagues, setInvLeagues] = useState([]);
   const [selectedLeagueId, setSelectedLeagueId] = useState('');
   const [gwMode, setGwMode] = useState(null); // { label, color, isFuture }
+  const [showManager, setShowManager] = useState(false);
 
   const storageKey = userEntryId ? `selectedLeagueId_${userEntryId}` : null;
 
@@ -82,6 +85,23 @@ const RightPanel = ({
               />
             ) }
             <Box sx={ { flex: 1 } } />
+            <FormControlLabel
+              control={
+                <Switch
+                  size='small'
+                  checked={ showManager }
+                  onChange={ (e) => setShowManager(e.target.checked) }
+                  color='primary'
+                />
+              }
+              label={
+                <Typography variant='caption' sx={ { userSelect: 'none' } }>
+                  { showManager ? 'Manager' : 'Team' }
+                </Typography>
+              }
+              labelPlacement='start'
+              sx={ { m: 0, gap: 0.5 } }
+            />
             { invLeagues.length > 1 && (
               <FormControl size='small' sx={ { minWidth: 160 } }>
                 <InputLabel>League</InputLabel>
@@ -105,6 +125,7 @@ const RightPanel = ({
               selectedGameweek={ selectedGameweek }
               onModeChange={ setGwMode }
               userEntryId={ userEntryId }
+              showManager={ showManager }
             />
           ) }
         </Box>

@@ -12,8 +12,6 @@ import {
   CircularProgress,
   Alert,
   Box,
-  Switch,
-  FormControlLabel,
 } from '@mui/material';
 import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
@@ -32,12 +30,11 @@ const getRankChangeIcon = (current, last, theme) => {
   return <RemoveIcon sx={ { color: 'text.secondary', fontSize: 18, verticalAlign: 'middle' } } />;
 };
 
-const InvitationLeagueView = ({ league, onViewTeam, currentGameweek, selectedGameweek, onModeChange, userEntryId }) => {
+const InvitationLeagueView = ({ league, onViewTeam, currentGameweek, selectedGameweek, onModeChange, userEntryId, showManager }) => {
   const theme = useTheme();
   const [standings, setStandings] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showManager, setShowManager] = useState(false);
 
   // Derive display mode from selected vs current gameweek
   const effectiveGW = selectedGameweek || currentGameweek;
@@ -94,24 +91,8 @@ const InvitationLeagueView = ({ league, onViewTeam, currentGameweek, selectedGam
           <Table size='small' stickyHeader>
             <TableHead>
               <TableRow>
-                <TableCell>Rank</TableCell>
-                <TableCell>
-                  <Box sx={ { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, minWidth: 140 } }>
-                    <span>{ showManager ? 'Manager' : 'Team' }</span>
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          size='small'
-                          checked={ showManager }
-                          onChange={ (e) => setShowManager(e.target.checked) }
-                          color='primary'
-                        />
-                      }
-                      label=''
-                      sx={ { m: 0 } }
-                    />
-                  </Box>
-                </TableCell>
+                <TableCell sx={ { whiteSpace: 'nowrap' } }>Rank</TableCell>
+                <TableCell>{ showManager ? 'Manager' : 'Team' }</TableCell>
                 <TableCell align='right'>GW Net</TableCell>
                 <TableCell align='right'>Total Points</TableCell>
                 { isFuture && <TableCell align='right'>Predicted</TableCell> }
@@ -129,7 +110,7 @@ const InvitationLeagueView = ({ league, onViewTeam, currentGameweek, selectedGam
                     hover
                     className={ isMe ? 'league-row-me' : '' }
                   >
-                    <TableCell>
+                    <TableCell sx={ { whiteSpace: 'nowrap' } }>
                       { entry.rank }{ ' ' }
                       { getRankChangeIcon(entry.rank, entry.last_rank, theme) }
                     </TableCell>
@@ -180,6 +161,7 @@ InvitationLeagueView.propTypes = {
   selectedGameweek: PropTypes.number,
   onModeChange: PropTypes.func,
   userEntryId: PropTypes.string,
+  showManager: PropTypes.bool,
 };
 
 export default InvitationLeagueView;
