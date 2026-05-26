@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import {
   Paper,
-  Typography,
   Table,
   TableBody,
   TableCell,
@@ -31,7 +30,7 @@ const getRankChangeIcon = (current, last, theme) => {
   return <RemoveIcon sx={ { color: 'text.secondary', fontSize: 18, verticalAlign: 'middle' } } />;
 };
 
-const InvitationLeagueView = ({ league, onViewTeam, currentGameweek, selectedGameweek, onModeChange, userEntryId }) => {
+const InvitationLeagueView = ({ league, onViewTeam, currentGameweek, selectedGameweek, onModeChange, userEntryId, showManager }) => {
   const theme = useTheme();
   const [standings, setStandings] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -92,11 +91,10 @@ const InvitationLeagueView = ({ league, onViewTeam, currentGameweek, selectedGam
           <Table size='small' stickyHeader>
             <TableHead>
               <TableRow>
-                <TableCell>Rank</TableCell>
-                <TableCell>Team</TableCell>
-                <TableCell>Manager</TableCell>
-                <TableCell align='right'>GW Pts</TableCell>
-                <TableCell align='right'>Total</TableCell>
+                <TableCell sx={ { whiteSpace: 'nowrap' } }>Rank</TableCell>
+                <TableCell>{ showManager ? 'Manager' : 'Team' }</TableCell>
+                <TableCell align='right'>GW Net</TableCell>
+                <TableCell align='right'>Total Points</TableCell>
                 { isFuture && <TableCell align='right'>Predicted</TableCell> }
               </TableRow>
             </TableHead>
@@ -112,7 +110,7 @@ const InvitationLeagueView = ({ league, onViewTeam, currentGameweek, selectedGam
                     hover
                     className={ isMe ? 'league-row-me' : '' }
                   >
-                    <TableCell>
+                    <TableCell sx={ { whiteSpace: 'nowrap' } }>
                       { entry.rank }{ ' ' }
                       { getRankChangeIcon(entry.rank, entry.last_rank, theme) }
                     </TableCell>
@@ -132,13 +130,8 @@ const InvitationLeagueView = ({ league, onViewTeam, currentGameweek, selectedGam
                           '&:hover': { textDecoration: 'underline', background: 'none' },
                         } }
                       >
-                        { entry.entry_name }
+                        { showManager ? entry.player_name : entry.entry_name }
                       </Button>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant='body2' color='text.secondary'>
-                        { entry.player_name }
-                      </Typography>
                     </TableCell>
                     <TableCell align='right'>{ gwPts }</TableCell>
                     <TableCell align='right'>{ entry.total }</TableCell>
@@ -168,6 +161,7 @@ InvitationLeagueView.propTypes = {
   selectedGameweek: PropTypes.number,
   onModeChange: PropTypes.func,
   userEntryId: PropTypes.string,
+  showManager: PropTypes.bool,
 };
 
 export default InvitationLeagueView;
