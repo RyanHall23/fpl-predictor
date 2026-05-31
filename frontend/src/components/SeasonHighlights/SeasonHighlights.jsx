@@ -335,7 +335,6 @@ const GWRow = ({ gw, chips }) => {
 
 GWRow.propTypes = {
   gw:    PropTypes.object.isRequired,
-  label: PropTypes.string,
   chips: PropTypes.array.isRequired,
 };
 
@@ -679,8 +678,11 @@ const SeasonHighlights = ({ entryId }) => {
     const totalCost     = history.reduce((s, h) => s + (h.event_transfers_cost || 0), 0);
     const totalBench    = history.reduce((s, h) => s + (h.points_on_bench || 0), 0);
     const avgPoints     = totalPoints / history.length;
-    const peakRank      = Math.min(...history.filter(h => h.overall_rank > 0).map(h => h.overall_rank));
     const finalRank     = history[history.length - 1]?.overall_rank;
+    const positiveRanks = history.filter(h => h.overall_rank > 0).map(h => h.overall_rank);
+    const peakRank      = positiveRanks.length
+      ? Math.min(...positiveRanks)
+      : (finalRank > 0 ? finalRank : null);
     const finalValue    = history[history.length - 1]?.value;  // in tenths
 
     // Best 5-GW streak (rolling average)
@@ -792,7 +794,7 @@ const SeasonHighlights = ({ entryId }) => {
         <StatCard
           label='Final Rank'
           value={ formatRank(finalRank) }
-          sub={ peakRank < finalRank ? `Peak: ${formatRank(peakRank)}` : 'Season peak' }
+          sub={ peakRank != null && finalRank != null && peakRank < finalRank ? `Peak: ${formatRank(peakRank)}` : 'Season peak' }
           icon={ <TrendingUpIcon /> }
           color={ theme.palette.primary.main }
         />

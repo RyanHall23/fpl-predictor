@@ -1315,33 +1315,23 @@ const getTransferInsights = async (req, res) => {
       a.event !== b.event ? a.event - b.event : new Date(a.time) - new Date(b.time)
     );
 
-    // For each player_in, find the GW they were later transferred out (if any).
-    // This gives us the real ownership window: transferIn GW → (transferOut GW - 1) or 38.
-    const nextSaleGW = {};
-    for (const t of sortedTransfers) {
-      // When this player appears as element_out in a later transfer, record that GW.
-      if (nextSaleGW[t.element_in] === undefined) {
-        nextSaleGW[t.element_in] = null; // held to end by default
-      }
-      if (nextSaleGW[t.element_out] === undefined) {
-        nextSaleGW[t.element_out] = null;
-      }
-    }
-    // Second pass: fill in the GW each element_out was sold, tracking earliest sale only
-    for (const t of sortedTransfers) {
-      // Only record the first (earliest) time a player is sold after being bought
-      if (nextSaleGW[t.element_out] === null) {
-        nextSaleGW[t.element_out] = t.event;
-      }
+    // Track the next transfer where each player is sold (element_out) for each transfer-in row.
+    // Reverse scan means the map always points to the nearest future sale.
+    const nextSaleTransferByPlayer = {};
+    const nextSaleByTransferIndex = new Array(sortedTransfers.length).fill(null);
+    for (let i = sortedTransfers.length - 1; i >= 0; i--) {
+      const t = sortedTransfers[i];
+      nextSaleByTransferIndex[i] = nextSaleTransferByPlayer[t.element_in] ?? null;
+      nextSaleTransferByPlayer[t.element_out] = t;
     }
 
-    const insights = allTransfers.map(t => {
+    const insights = sortedTransfers.map((t, i) => {
       const pIn  = playerMap[t.element_in];
       const pOut = playerMap[t.element_out];
 
       // Ownership window: from transfer GW until the player was sold (exclusive), or GW38.
-      const soldGW = nextSaleGW[t.element_in]; // null means held to GW38
-      const windowEnd = soldGW !== null ? soldGW - 1 : 38;
+      const soldTransfer = nextSaleByTransferIndex[i]; // null means held to GW38
+      const windowEnd = soldTransfer ? soldTransfer.event - 1 : 38;
       const windowEnd38 = Math.min(Math.max(windowEnd, t.event), 38);
 
       let inPts = 0, outPts = 0;
