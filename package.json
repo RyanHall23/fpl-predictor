@@ -18,5 +18,11 @@
     "concurrently": "^10.0.0",
     "eslint": "^10.4.0",
     "eslint-plugin-react": "^7.37.5"
+  },
+  "overrides": {
+    "yaml": "^2.8.3",
+    "cosmiconfig": {
+      "yaml": "1.10.3"
+    }
   }
 }
