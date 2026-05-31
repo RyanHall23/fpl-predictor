@@ -31,8 +31,10 @@ app.get('/api/entry/:entryId/team', apiLimiter, fplController.getUserTeamForEntr
 app.get('/api/entry/:entryId/event/:eventId/team', apiLimiter, fplController.getUserTeam);
 app.get('/api/entry/:entryId/profile', apiLimiter, fplController.getUserProfile);
 app.get('/api/leagues-classic/:leagueId/standings', apiLimiter, withCacheHeaders(60, 30), fplController.getLeagueStandings);
+app.get('/api/leagues-classic/:leagueId/race', apiLimiter, withCacheHeaders(300, 60), fplController.getLeagueRace);
 app.get('/api/entry/:entryId/event/:eventId/recommended-transfers', apiLimiter, withCacheHeaders(120, 60), fplController.getRecommendedTransfers);
 app.get('/api/entry/:entryId/transfers', apiLimiter, fplController.getEntryTransfers);
+app.get('/api/entry/:entryId/transfer-insights', apiLimiter, fplController.getTransferInsights);
 app.post('/api/validate-swap', apiLimiter, fplController.validateSwap);
 app.post('/api/available-transfers/:playerCode', apiLimiter, fplController.getAvailableTransfers);
 

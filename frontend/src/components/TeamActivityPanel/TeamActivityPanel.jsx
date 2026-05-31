@@ -326,7 +326,7 @@ const TeamActivityPanel = ({
       ) }
 
       { /* Assistant Manager – shown in Planning section */ }
-      { activeSection === 'planning' && currentGameweek && (
+      { activeSection === 'planning' && currentGameweek && currentGameweek < 38 && (
         <Paper
           sx={ {
             backgroundColor: theme.palette.background.paper,

@@ -1255,6 +1255,164 @@ const getEntryTransfers = async (req, res) => {
   }
 };
 
+/**
+ * GET /api/entry/:entryId/transfer-insights
+ *
+ * For each transfer the manager made this season, computes how many points
+ * the transferred-in player scored from that gameweek to GW38, versus how
+ * many points the transferred-out player scored over the same window.
+ * Returns: { insights: [{ event, playerIn, playerOut, net }] }
+ */
+const getTransferInsights = async (req, res) => {
+  const { entryId } = req.params;
+  if (!/^\d+$/.test(entryId)) {
+    return res.status(400).json({ error: 'Invalid entryId' });
+  }
+
+  try {
+    const [bootstrap, allTransfers] = await Promise.all([
+      fplModel.fetchBootstrapStatic(),
+      dataProvider.fetchEntryTransfers(entryId),
+    ]);
+
+    if (!allTransfers.length) {
+      return res.json({ insights: [] });
+    }
+
+    const playerMap = {};
+    for (const p of bootstrap.elements) playerMap[p.id] = p;
+
+    const playerIds = new Set();
+    for (const t of allTransfers) {
+      playerIds.add(t.element_in);
+      playerIds.add(t.element_out);
+    }
+
+    const minGW = Math.min(...allTransfers.map(t => t.event));
+
+    // Load all live GW files from minGW → 38 in parallel (local static files)
+    const gwResults = await Promise.all(
+      Array.from({ length: 38 - minGW + 1 }, (_, i) => minGW + i).map(gw =>
+        dataProvider.fetchLiveGameweek(gw)
+          .then(data => ({ gw, data }))
+          .catch(() => ({ gw, data: null }))
+      )
+    );
+
+    // playerPoints[id][gw] = points scored in that GW
+    const playerPoints = {};
+    for (const { gw, data } of gwResults) {
+      if (!data?.elements) continue;
+      for (const el of data.elements) {
+        if (!playerIds.has(el.id)) continue;
+        if (!playerPoints[el.id]) playerPoints[el.id] = {};
+        playerPoints[el.id][gw] = el.stats?.total_points ?? 0;
+      }
+    }
+
+    // Sort all transfers chronologically so we can derive ownership windows.
+    const sortedTransfers = [...allTransfers].sort((a, b) =>
+      a.event !== b.event ? a.event - b.event : new Date(a.time) - new Date(b.time)
+    );
+
+    // Track the next transfer where each player is sold (element_out) for each transfer-in row.
+    // Reverse scan means the map always points to the nearest future sale.
+    const nextSaleTransferByPlayer = {};
+    const nextSaleByTransferIndex = new Array(sortedTransfers.length).fill(null);
+    for (let i = sortedTransfers.length - 1; i >= 0; i--) {
+      const t = sortedTransfers[i];
+      nextSaleByTransferIndex[i] = nextSaleTransferByPlayer[t.element_in] ?? null;
+      nextSaleTransferByPlayer[t.element_out] = t;
+    }
+
+    const insights = sortedTransfers.map((t, i) => {
+      const pIn  = playerMap[t.element_in];
+      const pOut = playerMap[t.element_out];
+
+      // Ownership window: from transfer GW until the player was sold (exclusive), or GW38.
+      const soldTransfer = nextSaleByTransferIndex[i]; // null means held to GW38
+      const windowEnd = soldTransfer ? soldTransfer.event - 1 : 38;
+      const windowEnd38 = Math.min(Math.max(windowEnd, t.event), 38);
+
+      let inPts = 0, outPts = 0;
+      for (let gw = t.event; gw <= windowEnd38; gw++) {
+        inPts  += playerPoints[t.element_in]?.[gw]  ?? 0;
+        outPts += playerPoints[t.element_out]?.[gw] ?? 0;
+      }
+
+      return {
+        event: t.event,
+        windowEnd: windowEnd38,
+        time: t.time,
+        playerIn:  { id: t.element_in,  webName: pIn?.web_name  ?? 'Unknown', cost: t.element_in_cost,  pointsInWindow: inPts  },
+        playerOut: { id: t.element_out, webName: pOut?.web_name ?? 'Unknown', cost: t.element_out_cost, pointsInWindow: outPts },
+        net: inPts - outPts,
+      };
+    });
+
+    res.json({ insights });
+  } catch (error) {
+    console.error('Error computing transfer insights:', error.message);
+    res.status(500).json({ error: 'Error computing transfer insights' });
+  }
+};
+
+/**
+ * GET /api/leagues-classic/:leagueId/race
+ * Returns per-GW cumulative totals for the top N teams in a classic league,
+ * enabling a bar-chart-race animation in the UI.
+ */
+const getLeagueRace = async (req, res) => {
+  const { leagueId } = req.params;
+  if (!/^\d+$/.test(leagueId)) {
+    return res.status(400).json({ error: 'Invalid leagueId format' });
+  }
+
+  let limit = 10;
+  if (req.query.limit !== undefined) {
+    if (!/^\d+$/.test(req.query.limit)) {
+      return res.status(400).json({ error: 'Invalid limit parameter' });
+    }
+    limit = parseInt(req.query.limit, 10);
+    if (limit < 1 || limit > 20) {
+      return res.status(400).json({ error: 'limit must be between 1 and 20' });
+    }
+  }
+
+  try {
+    const standingsData = await dataProvider.fetchLeagueStandings(leagueId);
+    const topEntries = (standingsData.standings?.results || []).slice(0, limit);
+
+    const histories = await Promise.allSettled(
+      topEntries.map(entry => dataProvider.fetchHistory(entry.entry))
+    );
+
+    const entries = topEntries.map((entry, i) => {
+      const histResult = histories[i];
+      const gwHistory = histResult.status === 'fulfilled'
+        ? (histResult.value.current || []).sort((a, b) => a.event - b.event)
+        : [];
+      return {
+        entryId:    entry.entry,
+        entryName:  entry.entry_name,
+        playerName: entry.player_name,
+        rank:       entry.rank,
+        total:      entry.total,
+        gwData: gwHistory.map(gw => ({
+          event:        gw.event,
+          points:       gw.points,
+          total_points: gw.total_points,
+        })),
+      };
+    });
+
+    res.json({ league: standingsData.league, entries });
+  } catch (error) {
+    console.error('Error fetching league race data:', error.message);
+    res.status(500).json({ error: 'Error fetching league race data' });
+  }
+};
+
 module.exports = {
   getBootstrapStatic,
   getFixtures,
@@ -1272,4 +1430,6 @@ module.exports = {
   getLeagueStandings,
   getPlayersForecast,
   getEntryTransfers,
+  getTransferInsights,
+  getLeagueRace,
 };
