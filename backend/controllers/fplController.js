@@ -1367,6 +1367,62 @@ const getTransferInsights = async (req, res) => {
   }
 };
 
+/**
+ * GET /api/leagues-classic/:leagueId/race
+ * Returns per-GW cumulative totals for the top N teams in a classic league,
+ * enabling a bar-chart-race animation in the UI.
+ */
+const getLeagueRace = async (req, res) => {
+  const { leagueId } = req.params;
+  if (!/^\d+$/.test(leagueId)) {
+    return res.status(400).json({ error: 'Invalid leagueId format' });
+  }
+
+  let limit = 10;
+  if (req.query.limit !== undefined) {
+    if (!/^\d+$/.test(req.query.limit)) {
+      return res.status(400).json({ error: 'Invalid limit parameter' });
+    }
+    limit = parseInt(req.query.limit, 10);
+    if (limit < 1 || limit > 20) {
+      return res.status(400).json({ error: 'limit must be between 1 and 20' });
+    }
+  }
+
+  try {
+    const standingsData = await dataProvider.fetchLeagueStandings(leagueId);
+    const topEntries = (standingsData.standings?.results || []).slice(0, limit);
+
+    const histories = await Promise.allSettled(
+      topEntries.map(entry => dataProvider.fetchHistory(entry.entry))
+    );
+
+    const entries = topEntries.map((entry, i) => {
+      const histResult = histories[i];
+      const gwHistory = histResult.status === 'fulfilled'
+        ? (histResult.value.current || []).sort((a, b) => a.event - b.event)
+        : [];
+      return {
+        entryId:    entry.entry,
+        entryName:  entry.entry_name,
+        playerName: entry.player_name,
+        rank:       entry.rank,
+        total:      entry.total,
+        gwData: gwHistory.map(gw => ({
+          event:        gw.event,
+          points:       gw.points,
+          total_points: gw.total_points,
+        })),
+      };
+    });
+
+    res.json({ league: standingsData.league, entries });
+  } catch (error) {
+    console.error('Error fetching league race data:', error.message);
+    res.status(500).json({ error: 'Error fetching league race data' });
+  }
+};
+
 module.exports = {
   getBootstrapStatic,
   getFixtures,
@@ -1385,4 +1441,5 @@ module.exports = {
   getPlayersForecast,
   getEntryTransfers,
   getTransferInsights,
+  getLeagueRace,
 };

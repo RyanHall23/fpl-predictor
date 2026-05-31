@@ -7,14 +7,20 @@ import Divider from '@mui/material/Divider';
 import Chip from '@mui/material/Chip';
 import CircularProgress from '@mui/material/CircularProgress';
 import Tooltip from '@mui/material/Tooltip';
-import { useTheme } from '@mui/material/styles';
+import { useTheme, alpha } from '@mui/material/styles';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import ChairIcon from '@mui/icons-material/Chair';
+import LeaderboardIcon from '@mui/icons-material/Leaderboard';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
 import axios from '../../api';
 import { FPL_CHIP_LABEL, FPL_CHIP_COLOR } from '../../constants/chips';
+import LeagueRaceChart from './LeagueRaceChart';
 
 /* ─── helpers ─────────────────────────────────────────────────── */
 
@@ -333,6 +339,312 @@ GWRow.propTypes = {
   chips: PropTypes.array.isRequired,
 };
 
+/* ─── GW points distribution chart ────────────────────────────── */
+
+const GW_BUCKETS = [
+  { label: '80+',   min: 80,  max: Infinity },
+  { label: '70–79', min: 70,  max: 79 },
+  { label: '60–69', min: 60,  max: 69 },
+  { label: '50–59', min: 50,  max: 59 },
+  { label: '40–49', min: 40,  max: 49 },
+  { label: '30–39', min: 30,  max: 39 },
+  { label: '0–29',  min: 0,   max: 29 },
+];
+
+const GWDistributionChart = ({ data }) => {
+  const theme = useTheme();
+  const counts = GW_BUCKETS.map(b => ({
+    ...b,
+    count: data.filter(d => d.value >= b.min && d.value <= b.max).length,
+  }));
+  const maxCount = Math.max(...counts.map(c => c.count), 1);
+
+  return (
+    <Box sx={ { display: 'flex', flexDirection: 'column', gap: 0.75 } }>
+      { counts.map(b => (
+        <Box key={ b.label } sx={ { display: 'flex', alignItems: 'center', gap: 1 } }>
+          <Typography variant='caption' color='text.secondary' sx={ { width: 44, textAlign: 'right', flexShrink: 0 } }>
+            { b.label }
+          </Typography>
+          <Box sx={ { flex: 1, height: 16, bgcolor: 'action.hover', borderRadius: 1, overflow: 'hidden' } }>
+            <Box sx={ {
+              height: '100%',
+              width: b.count === 0 ? 0 : `${(b.count / maxCount) * 100}%`,
+              bgcolor: b.count === maxCount
+                ? theme.palette.primary.main
+                : alpha(theme.palette.primary.main, 0.45),
+              borderRadius: 1,
+              transition: 'width 0.8s ease',
+            } } />
+          </Box>
+          <Typography variant='caption' color='text.secondary' sx={ { width: 20, textAlign: 'right', flexShrink: 0, fontWeight: b.count === maxCount ? 700 : 400 } }>
+            { b.count }
+          </Typography>
+        </Box>
+      )) }
+    </Box>
+  );
+};
+
+GWDistributionChart.propTypes = {
+  data: PropTypes.arrayOf(PropTypes.shape({ event: PropTypes.number, value: PropTypes.number })).isRequired,
+};
+
+/* ─── league comparison (podium + surroundings) ────────────────── */
+
+const MEDAL_COLOR = { 1: '#FFD700', 2: '#C0C0C0', 3: '#CD7F32' };
+const PODIUM_H    = { 1: 84,        2: 60,        3: 44        };
+
+const LeagueComparisonSection = ({ classicLeagues, entryId }) => {
+  const theme = useTheme();
+  const [selectedLeagueId, setSelectedLeagueId] = useState(classicLeagues[0]?.id ?? null);
+  const [standings, setStandings]               = useState(null);
+  const [loading,   setLoading]                 = useState(false);
+  const [error,     setError]                   = useState(null);
+  const [animated,  setAnimated]                = useState(false);
+
+  useEffect(() => {
+    if (!selectedLeagueId) return;
+    setLoading(true);
+    setError(null);
+    setAnimated(false);
+    setStandings(null);
+    axios.get(`/api/leagues-classic/${selectedLeagueId}/standings?gameweeksAhead=1`)
+      .then(res => {
+        setStandings(res.data);
+        setTimeout(() => setAnimated(true), 80);
+      })
+      .catch(() => setError('Could not load league standings.'))
+      .finally(() => setLoading(false));
+  }, [selectedLeagueId]);
+
+  const results      = standings?.standings?.results || [];
+  const top3         = results.slice(0, 3);
+  const userEntry    = results.find(e => String(e.entry) === String(entryId));
+  const pointsGap    = userEntry && results[0] ? results[0].total - userEntry.total : null;
+  const selectedLeague = classicLeagues.find(l => l.id === selectedLeagueId);
+
+  const podiumOrder = [top3[1], top3[0], top3[2]]
+    .map((e, i) => (e ? { ...e, displayRank: [2, 1, 3][i] } : null))
+    .filter(Boolean);
+
+  return (
+    <Paper variant='outlined' sx={ { p: 2 } }>
+
+      {/* ── Header ── */}
+      <Box sx={ { display: 'flex', alignItems: 'center', gap: 1, mb: 2, flexWrap: 'wrap' } }>
+        <LeaderboardIcon sx={ { color: 'primary.main', fontSize: 20 } } />
+        <Typography variant='subtitle1' fontWeight={ 700 }>League Standings</Typography>
+        { classicLeagues.length === 1 && selectedLeague && (
+          <Typography variant='body2' color='text.secondary' sx={ { ml: 0.5 } }>
+            — { selectedLeague.name }
+          </Typography>
+        ) }
+        { classicLeagues.length > 1 && (
+          <FormControl size='small' sx={ { minWidth: 160, ml: 'auto' } }>
+            <InputLabel>League</InputLabel>
+            <Select
+              value={ selectedLeagueId || '' }
+              onChange={ e => setSelectedLeagueId(e.target.value) }
+              label='League'
+            >
+              { classicLeagues.map(l => (
+                <MenuItem key={ l.id } value={ l.id }>{ l.name }</MenuItem>
+              )) }
+            </Select>
+          </FormControl>
+        ) }
+      </Box>
+
+      { loading && (
+        <Box sx={ { display: 'flex', justifyContent: 'center', py: 3 } }>
+          <CircularProgress size={ 24 } />
+        </Box>
+      ) }
+
+      { error && (
+        <Typography variant='body2' color='error'>{ error }</Typography>
+      ) }
+
+      { !loading && standings && (
+        <>
+          {/* ── Animated podium ── */}
+          { top3.length >= 1 && (
+            <Box sx={ { display: 'flex', justifyContent: 'center', alignItems: 'flex-end', gap: 1.5, mb: 3 } }>
+              { podiumOrder.map(p => {
+                const isUser = String(p.entry) === String(entryId);
+                const delay  = p.displayRank === 1 ? 0 : p.displayRank === 2 ? 0.15 : 0.3;
+                return (
+                  <Box
+                    key={ p.entry }
+                    sx={ {
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 0.5,
+                      flex: p.displayRank === 1 ? '0 0 140px' : '0 0 110px',
+                      '@keyframes podiumRise': {
+                        from: { transform: 'translateY(48px)', opacity: 0 },
+                        to:   { transform: 'translateY(0)',    opacity: 1 },
+                      },
+                      ...(animated
+                        ? { animation: `podiumRise 0.55s cubic-bezier(0.34,1.56,0.64,1) ${delay}s both` }
+                        : { opacity: 0 }),
+                    } }
+                  >
+                    <Typography
+                      variant='caption'
+                      fontWeight={ 700 }
+                      textAlign='center'
+                      sx={ {
+                        fontSize: p.displayRank === 1 ? '0.72rem' : '0.65rem',
+                        maxWidth: 130,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        color: isUser ? 'primary.main' : 'text.primary',
+                      } }
+                    >
+                      { p.entry_name }
+                    </Typography>
+                    <Typography variant='caption' color='text.secondary' sx={ { fontSize: '0.62rem' } }>
+                      { p.total.toLocaleString() } pts
+                    </Typography>
+                    <Box
+                      sx={ {
+                        width: '100%',
+                        height: PODIUM_H[p.displayRank],
+                        bgcolor: MEDAL_COLOR[p.displayRank],
+                        borderRadius: '6px 6px 0 0',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: isUser
+                          ? `0 0 0 3px ${theme.palette.primary.main}, 0 4px 14px rgba(0,0,0,0.25)`
+                          : '0 2px 8px rgba(0,0,0,0.15)',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          inset: 0,
+                          background: 'linear-gradient(180deg, rgba(255,255,255,0.28) 0%, transparent 55%)',
+                        },
+                      } }
+                    >
+                      <Typography fontSize='1.5rem' sx={ { zIndex: 1, lineHeight: 1 } }>
+                        { p.displayRank === 1 ? '🥇' : p.displayRank === 2 ? '🥈' : '🥉' }
+                      </Typography>
+                    </Box>
+                  </Box>
+                );
+              }) }
+            </Box>
+          ) }
+
+          {/* ── Unified standings list ── */}
+          <Box sx={ { display: 'flex', flexDirection: 'column', gap: 0.5, maxHeight: 420, overflowY: 'auto' } }>
+            { results.map(e => {
+              const isUser  = String(e.entry) === String(entryId);
+              const ptsDiff = userEntry ? e.total - userEntry.total : 0;
+              return (
+                <Box
+                  key={ e.entry }
+                  sx={ {
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    py: isUser ? 1 : 0.6,
+                    px: 1,
+                    borderRadius: 1,
+                    bgcolor: isUser ? alpha(theme.palette.primary.main, 0.1) : 'action.hover',
+                    border: isUser
+                      ? `1px solid ${alpha(theme.palette.primary.main, 0.35)}`
+                      : '1px solid transparent',
+                  } }
+                >
+                  {/* Rank — medal emoji for top 3, number otherwise */}
+                  <Typography
+                    variant='caption'
+                    sx={ {
+                      width: 28,
+                      textAlign: 'center',
+                      flexShrink: 0,
+                      fontSize: e.rank <= 3 ? '1rem' : '0.68rem',
+                      fontWeight: isUser ? 700 : 400,
+                      color: isUser ? 'primary.main' : 'text.secondary',
+                      lineHeight: 1,
+                    } }
+                  >
+                    { e.rank === 1 ? '🥇' : e.rank === 2 ? '🥈' : e.rank === 3 ? '🥉' : e.rank }
+                  </Typography>
+
+                  {/* Name + YOU chip */}
+                  <Box sx={ { flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 0.75 } }>
+                    <Typography
+                      variant='body2'
+                      fontWeight={ isUser ? 700 : 400 }
+                      sx={ {
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        color: isUser ? 'primary.main' : 'text.primary',
+                      } }
+                    >
+                      { e.entry_name }
+                    </Typography>
+                    { isUser && (
+                      <Chip
+                        label='YOU'
+                        size='small'
+                        color='primary'
+                        sx={ { height: 16, fontSize: '0.55rem', fontWeight: 700, flexShrink: 0, '& .MuiChip-label': { px: 0.75 } } }
+                      />
+                    ) }
+                  </Box>
+
+                  {/* Total points */}
+                  <Typography
+                    variant='body2'
+                    fontWeight={ isUser ? 700 : 400 }
+                    sx={ { flexShrink: 0, color: isUser ? 'primary.main' : 'text.primary', fontVariantNumeric: 'tabular-nums' } }
+                  >
+                    { e.total.toLocaleString() }
+                  </Typography>
+
+                  {/* Diff column: gap to user for others; gap to 1st for user row */}
+                  <Typography
+                    variant='caption'
+                    sx={ {
+                      width: 52,
+                      textAlign: 'right',
+                      flexShrink: 0,
+                      fontWeight: 600,
+                      color: isUser
+                        ? (pointsGap === 0 ? 'warning.main' : 'text.disabled')
+                        : (ptsDiff > 0 ? 'error.main' : 'success.main'),
+                    } }
+                  >
+                    { isUser
+                      ? (pointsGap === 0 ? '🏆' : pointsGap != null ? `−${pointsGap}` : '')
+                      : (ptsDiff > 0 ? `+${ptsDiff}` : ptsDiff)
+                    }
+                  </Typography>
+                </Box>
+              );
+            }) }
+          </Box>
+        </>
+      ) }
+    </Paper>
+  );
+};
+
+LeagueComparisonSection.propTypes = {
+  classicLeagues: PropTypes.array.isRequired,
+  entryId:        PropTypes.string,
+};
+
 /* ─── main component ──────────────────────────────────────────── */
 
 const SeasonHighlights = ({ entryId }) => {
@@ -395,6 +707,11 @@ const SeasonHighlights = ({ entryId }) => {
     const gwPointsData  = history.map(h => ({ event: h.event, value: h.points }));
     const gwRankData    = history.filter(h => h.overall_rank > 0).map(h => ({ event: h.event, value: h.overall_rank }));
 
+    const variance = history.reduce((s, h) => s + Math.pow(h.points - avgPoints, 2), 0) / history.length;
+    const stdDev   = Math.sqrt(variance);
+
+    const classicLeagues = (profile.classicLeagues || []).filter(l => l.league_type !== 's');
+
     return {
       history, chips, entry,
       totalPoints, bestGW, worstGW,
@@ -403,6 +720,7 @@ const SeasonHighlights = ({ entryId }) => {
       bestStreak, rankDelta, startRank,
       top5GWs, bot5GWs,
       gwPointsData, gwRankData,
+      stdDev, classicLeagues,
     };
   }, [profile]);
 
@@ -441,7 +759,8 @@ const SeasonHighlights = ({ entryId }) => {
           peakRank, finalRank, finalValue,
           bestStreak, rankDelta,
           top5GWs, bot5GWs,
-          gwPointsData, gwRankData } = stats;
+          gwPointsData, gwRankData,
+          stdDev, classicLeagues } = stats;
 
   return (
     <Box sx={ { display: 'flex', flexDirection: 'column', gap: 2 } }>
@@ -504,6 +823,13 @@ const SeasonHighlights = ({ entryId }) => {
           sub='Points missed from bench'
           icon={ <ChairIcon /> }
           color={ theme.palette.warning.dark || theme.palette.warning.main }
+        />
+        <StatCard
+          label='Consistency'
+          value={ `±${stdDev.toFixed(1)}` }
+          sub='Std deviation of GW points'
+          icon={ <TrendingUpIcon /> }
+          color={ theme.palette.info.main }
         />
         { finalValue != null && (
           <StatCard
@@ -653,6 +979,24 @@ const SeasonHighlights = ({ entryId }) => {
         </Box>
         <TransferInsightsPanel entryId={ entryId } />
       </Paper>
+
+      {/* ── GW Points Distribution ── */}
+      <Paper variant='outlined' sx={ { p: 2 } }>
+        <Typography variant='subtitle2' fontWeight={ 700 } sx={ { mb: 1.5 } }>
+          GW Points Distribution
+        </Typography>
+        <GWDistributionChart data={ gwPointsData } />
+      </Paper>
+
+      {/* ── League Comparison ── */}
+      { classicLeagues.length > 0 && (
+        <LeagueComparisonSection classicLeagues={ classicLeagues } entryId={ entryId } />
+      ) }
+
+      {/* ── GW Race ── */}
+      { classicLeagues.length > 0 && (
+        <LeagueRaceChart classicLeagues={ classicLeagues } entryId={ entryId } />
+      ) }
 
     </Box>
   );
