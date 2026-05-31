@@ -4,17 +4,22 @@ import Box from '@mui/material/Box';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import Badge from '@mui/material/Badge';
+import Tooltip from '@mui/material/Tooltip';
 import { useTheme } from '@mui/material/styles';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import EventNoteIcon from '@mui/icons-material/EventNote';
 import SportsSoccerIcon from '@mui/icons-material/SportsSoccer';
 import SkipNextIcon from '@mui/icons-material/SkipNext';
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 
-const USER_SECTIONS = ['active', 'planning', 'overview'];
 const HIGHEST_SECTIONS = ['active', 'next'];
 
-const SectionBar = ({ activeSection, onSectionChange, isLive, isHighestPredictedTeam }) => {
+const SectionBar = ({ activeSection, onSectionChange, isLive, isHighestPredictedTeam, hasUserEntry, currentGameweek }) => {
   const theme = useTheme();
+  const isSeasonComplete = currentGameweek >= 38;
+
+  const USER_SECTIONS = ['active', 'planning', 'overview', ...(isSeasonComplete && hasUserEntry ? ['highlights'] : [])];
   const sections = isHighestPredictedTeam ? HIGHEST_SECTIONS : USER_SECTIONS;
   const activeIndex = sections.indexOf(activeSection);
 
@@ -73,17 +78,36 @@ const SectionBar = ({ activeSection, onSectionChange, isLive, isHighestPredicted
             label='Next'
           />
         ) : (
-          <Tab
-            icon={ <EventNoteIcon sx={ { fontSize: 18 } } /> }
-            iconPosition='start'
-            label='Planning'
-          />
+          <Tooltip
+            title={ isSeasonComplete ? 'Season complete — no further gameweeks to plan' : '' }
+            placement='bottom'
+          >
+            <span>
+              <Tab
+                icon={ isSeasonComplete
+                  ? <EmojiEventsIcon sx={ { fontSize: 18 } } />
+                  : <EventNoteIcon sx={ { fontSize: 18 } } />
+                }
+                iconPosition='start'
+                label='Planning'
+                disabled={ isSeasonComplete }
+              />
+            </span>
+          </Tooltip>
         ) }
         { !isHighestPredictedTeam && (
           <Tab
             icon={ <BarChartIcon sx={ { fontSize: 18 } } /> }
             iconPosition='start'
             label='Overview'
+          />
+        ) }
+        { !isHighestPredictedTeam && isSeasonComplete && hasUserEntry && (
+          <Tab
+            icon={ <AutoAwesomeIcon sx={ { fontSize: 18 } } /> }
+            iconPosition='start'
+            label='Highlights'
+            sx={ { color: 'warning.main', '&.Mui-selected': { color: 'warning.main' } } }
           />
         ) }
       </Tabs>
@@ -96,6 +120,8 @@ SectionBar.propTypes = {
   onSectionChange: PropTypes.func.isRequired,
   isLive: PropTypes.bool,
   isHighestPredictedTeam: PropTypes.bool,
+  hasUserEntry: PropTypes.bool,
+  currentGameweek: PropTypes.number,
 };
 
 export default SectionBar;

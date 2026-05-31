@@ -24,6 +24,8 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import CircularProgress from '@mui/material/CircularProgress';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import Tooltip from '@mui/material/Tooltip';
+import Alert from '@mui/material/Alert';
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import TeamFormation from './components/TeamFormation/TeamFormation';
 import TeamListView from './components/TeamListView/TeamListView';
 import LiveBanner from './components/LiveBanner/LiveBanner';
@@ -37,6 +39,7 @@ import TeamActivityPanel from './components/TeamActivityPanel';
 import PlannedTransfers from './components/PlannedTransfers';
 import SectionBar from './components/SectionBar';
 import GWTransfersPanel, { useGWTransfers } from './components/GWTransfers/GWTransfers';
+import SeasonHighlights from './components/SeasonHighlights';
 
 const TEAM_VIEW = {
   USER: 'user',
@@ -313,12 +316,12 @@ const App = () => {
   useEffect(() => {
     const allowedSections = isHighestPredictedTeam
       ? ['active', 'next']
-      : ['active', 'planning', 'overview'];
+      : ['active', 'planning', 'overview', ...(currentGameweek >= 38 && userEntryId ? ['highlights'] : [])];
     if (!allowedSections.includes(activeSection)) {
       setActiveSection(allowedSections[0]);
       userOverriddenSection.current = false;
     }
-  }, [activeSection, isHighestPredictedTeam]);
+  }, [activeSection, isHighestPredictedTeam, currentGameweek, userEntryId]);
 
   // Track whether the CURRENT (not selected) gameweek is still active.
   // This is kept independently so the Active tab dot doesn't flicker off
@@ -355,6 +358,7 @@ const App = () => {
     } else if (section === 'planning' || section === 'next') {
       setSelectedGameweek(currentGameweek != null && currentGameweek < 38 ? currentGameweek + 1 : null);
     } else {
+      // 'overview' and 'highlights' — no gameweek navigation
       setSelectedGameweek(null);
     }
   };
@@ -718,8 +722,13 @@ const App = () => {
         onSectionChange={ handleSectionChange }
         isLive={ currentGwIsActive }
         isHighestPredictedTeam={ isHighestPredictedTeam }
+        hasUserEntry={ !!userEntryId }
+        currentGameweek={ currentGameweek }
       />
       <Container maxWidth={ false } sx={ { flex: 1, marginTop: '8px', display: 'flex', flexDirection: 'column', px: { xs: 1, sm: 2 } } }>
+        { activeSection === 'highlights' ? (
+          <SeasonHighlights entryId={ userEntryId } />
+        ) : (
         <Box sx={ { display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, gap: 2, flex: 1, alignItems: 'flex-start' } }>
           { /* Left - Pitch */ }
           <Box sx={ { flex: { xs: '1 1 auto', lg: '0 0 43%' }, width: { xs: '100%', lg: 'auto' }, display: 'flex', flexDirection: 'column' } }>
@@ -1039,6 +1048,15 @@ const App = () => {
           { /* Middle - Panel */ }
           <Box sx={ { flex: { xs: '1 1 auto', lg: '0 0 28%' }, width: { xs: '100%', lg: 'auto' }, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: { xs: 'auto', lg: '600px' } } }>
             { activeSection === 'planning' ? (
+              currentGameweek >= 38 ? (
+                <Paper sx={ { backgroundColor: theme.palette.background.paper, borderRadius: 1, p: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, textAlign: 'center' } }>
+                  <EmojiEventsIcon sx={ { fontSize: 48, color: 'warning.main' } } />
+                  <Typography variant='h6' fontWeight={ 700 }>Season Complete</Typography>
+                  <Typography variant='body2' color='text.secondary'>
+                    Gameweek 38 was the final round of the season. No further transfers or adjustments can be made.
+                  </Typography>
+                </Paper>
+              ) : (
               <Box sx={ { display: 'flex', flexDirection: 'column', gap: 2, width: '100%' } }>
                 { currentEntryId && !viewingOpponentId && currentGameweek && (
                   <Paper sx={ { backgroundColor: theme.palette.background.paper, borderRadius: 1, p: 2 } }>
@@ -1069,6 +1087,7 @@ const App = () => {
                   </Paper>
                 ) }
               </Box>
+              )
             ) : (
               <RightPanel
                 entryId={ viewingOpponentId || currentEntryId }
@@ -1095,6 +1114,7 @@ const App = () => {
             />
           </Box>
         </Box>
+        ) }
         <Snackbar
           key={ localSnackbar || snackbar.key }
           open={ snackbarOpen }
