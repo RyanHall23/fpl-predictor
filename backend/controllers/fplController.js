@@ -558,6 +558,16 @@ const getUserProfile = async (req, res) => {
   }
 };
 
+// Element type constants (mirrors POSITION in frontend/src/utils/substitution.js)
+const ELEMENT_TYPE_GK      = 1;
+const ELEMENT_TYPE_DEF     = 2;
+const ELEMENT_TYPE_MID     = 3;
+const ELEMENT_TYPE_FWD     = 4;
+const ELEMENT_TYPE_MANAGER = 5;
+
+// Minimum mandatory outfield starters: 3 DEF + 3 MID + 1 FWD
+const MIN_MANDATORY_OUTFIELD = 7;
+
 /**
  * Compute points missed from bench for a single gameweek.
  *
@@ -591,7 +601,9 @@ const computeBenchPointsMissedForGW = (picksData, liveData, elementTypeMap) => {
     minutesMap.set(el.id, el.stats?.minutes ?? 0);
   }
 
-  // Build a flat player list from the picks, skipping manager placeholders
+  // Build a flat player list from the picks, skipping manager placeholders.
+  // Players absent from the live data (transferred out mid-season) default to
+  // 0 points and 0 minutes, which is correct — they cannot have scored.
   const allPlayers = (picksData.picks || [])
     .map(p => ({
       element:     p.element,
@@ -603,7 +615,7 @@ const computeBenchPointsMissedForGW = (picksData, liveData, elementTypeMap) => {
       rawPoints:   rawPointsMap.get(p.element) ?? 0,
       minutes:     minutesMap.get(p.element) ?? 0,
     }))
-    .filter(p => p.elementType != null && p.elementType !== 5); // skip unknowns / managers
+    .filter(p => p.elementType != null && p.elementType !== ELEMENT_TYPE_MANAGER);
 
   if (allPlayers.length === 0) return 0;
 
@@ -625,10 +637,10 @@ const computeBenchPointsMissedForGW = (picksData, liveData, elementTypeMap) => {
   // Build optimal XI from all (non-manager) players in the squad.
   const sortDesc = arr => [...arr].sort((a, b) => b.rawPoints - a.rawPoints);
 
-  const gks  = sortDesc(allPlayers.filter(p => p.elementType === 1));
-  const defs = sortDesc(allPlayers.filter(p => p.elementType === 2));
-  const mids = sortDesc(allPlayers.filter(p => p.elementType === 3));
-  const fwds = sortDesc(allPlayers.filter(p => p.elementType === 4));
+  const gks  = sortDesc(allPlayers.filter(p => p.elementType === ELEMENT_TYPE_GK));
+  const defs = sortDesc(allPlayers.filter(p => p.elementType === ELEMENT_TYPE_DEF));
+  const mids = sortDesc(allPlayers.filter(p => p.elementType === ELEMENT_TYPE_MID));
+  const fwds = sortDesc(allPlayers.filter(p => p.elementType === ELEMENT_TYPE_FWD));
 
   const optimalGK = gks[0];
   if (!optimalGK) return 0;
@@ -639,7 +651,7 @@ const computeBenchPointsMissedForGW = (picksData, liveData, elementTypeMap) => {
     ...mids.slice(0, 3),
     ...fwds.slice(0, 1),
   ];
-  if (mandatory.length < 7) return 0; // fewer than the required minimum outfield
+  if (mandatory.length < MIN_MANDATORY_OUTFIELD) return 0;
 
   // 3 flex slots from the remaining outfield pool (best by raw points)
   const flex = sortDesc([
@@ -652,8 +664,9 @@ const computeBenchPointsMissedForGW = (picksData, liveData, elementTypeMap) => {
   if (optimalXI.length < 11) return 0;
 
   // Optimal captain = highest raw scorer in the optimal XI
-  const optimalCap = optimalXI.reduce((best, p) =>
-    p.rawPoints > best.rawPoints ? p : best
+  const optimalCap = optimalXI.reduce(
+    (best, p) => (p.rawPoints > best.rawPoints ? p : best),
+    optimalXI[0],
   );
 
   const optimalRaw      = optimalXI.reduce((s, p) => s + p.rawPoints, 0);

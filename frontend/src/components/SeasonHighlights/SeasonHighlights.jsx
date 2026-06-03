@@ -672,14 +672,14 @@ const SeasonHighlights = ({ entryId }) => {
   }, [entryId]);
 
   useEffect(() => {
-    if (!entryId || !profile) return;
+    if (!entryId) return;
     setBenchMissed(null);
     setBenchMissedLoading(true);
     axios.get(`/api/entry/${entryId}/bench-points-missed`)
       .then(res => setBenchMissed(res.data.total))
       .catch(() => setBenchMissed(null))
       .finally(() => setBenchMissedLoading(false));
-  }, [entryId, profile]);
+  }, [entryId]);
 
   const stats = useMemo(() => {
     if (!profile) return null;
