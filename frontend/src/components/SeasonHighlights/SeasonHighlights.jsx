@@ -247,22 +247,28 @@ const TransferInsightsPanel = ({ entryId }) => {
     <Typography variant='body2' color='text.secondary'>No transfers recorded this season.</Typography>
   );
 
-  const TransferCard = ({ label, insight, color }) => (
-    <Paper variant='outlined' sx={ { px: 2, py: 1.5, flex: '1 1 160px', borderLeft: `4px solid ${color}` } }>
-      <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 600, textTransform: 'uppercase', display: 'block', mb: 0.5 } }>
-        { label }
-      </Typography>
-      <Typography variant='body2' fontWeight={ 700 }>
-        { insight.playerOut.webName } → { insight.playerIn.webName }
-      </Typography>
-      <Typography variant='caption' color='text.secondary'>
-        GW{ insight.event }
-      </Typography>
-      <Typography variant='body2' fontWeight={ 700 } sx={ { color, mt: 0.25 } }>
-        { insight.net > 0 ? `+${insight.net}` : insight.net } pts
-      </Typography>
-    </Paper>
-  );
+  const TransferCard = ({ label, insight, color }) => {
+    const numGWs = insight.windowEnd - insight.event + 1;
+    return (
+      <Paper variant='outlined' sx={ { px: 2, py: 1.5, flex: '1 1 160px', borderLeft: `4px solid ${color}` } }>
+        <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 600, textTransform: 'uppercase', display: 'block', mb: 0.5 } }>
+          { label }
+        </Typography>
+        <Typography variant='body2' fontWeight={ 700 }>
+          { insight.playerOut.webName } → { insight.playerIn.webName }
+        </Typography>
+        <Typography variant='caption' color='text.secondary'>
+          GW{ insight.event }
+        </Typography>
+        <Typography variant='body2' fontWeight={ 700 } sx={ { color, mt: 0.25 } }>
+          { insight.net > 0 ? `+${insight.net}` : insight.net } pts
+        </Typography>
+        <Typography variant='caption' color='text.secondary'>
+          over { numGWs } GW{ numGWs !== 1 ? 's' : '' }
+        </Typography>
+      </Paper>
+    );
+  };
 
   return (
     <Box sx={ { display: 'flex', flexWrap: 'wrap', gap: 1.5, alignItems: 'stretch' } }>
