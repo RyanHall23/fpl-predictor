@@ -658,6 +658,9 @@ const SeasonHighlights = ({ entryId }) => {
   const [loading, setLoading]   = useState(false);
   const [error,   setError]     = useState(null);
 
+  const [benchMissed,        setBenchMissed]        = useState(null);
+  const [benchMissedLoading, setBenchMissedLoading] = useState(false);
+
   useEffect(() => {
     if (!entryId) return;
     setLoading(true);
@@ -667,6 +670,16 @@ const SeasonHighlights = ({ entryId }) => {
       .catch(() => setError('Could not load season data.'))
       .finally(() => setLoading(false));
   }, [entryId]);
+
+  useEffect(() => {
+    if (!entryId || !profile) return;
+    setBenchMissed(null);
+    setBenchMissedLoading(true);
+    axios.get(`/api/entry/${entryId}/bench-points-missed`)
+      .then(res => setBenchMissed(res.data.total))
+      .catch(() => setBenchMissed(null))
+      .finally(() => setBenchMissedLoading(false));
+  }, [entryId, profile]);
 
   const stats = useMemo(() => {
     if (!profile) return null;
@@ -827,7 +840,7 @@ const SeasonHighlights = ({ entryId }) => {
         />
         <StatCard
           label='Bench Points'
-          value={ totalBench }
+          value={ benchMissedLoading ? '…' : (benchMissed ?? totalBench) }
           sub='Points missed from bench'
           icon={ <ChairIcon /> }
           color={ theme.palette.warning.dark || theme.palette.warning.main }
@@ -968,7 +981,9 @@ const SeasonHighlights = ({ entryId }) => {
             </Box>
             <Box sx={ { display: 'flex', justifyContent: 'space-between' } }>
               <Typography variant='body2' color='text.secondary'>Bench pts missed</Typography>
-              <Typography variant='body2' fontWeight={ 700 }>{ totalBench } pts</Typography>
+              <Typography variant='body2' fontWeight={ 700 }>
+                { benchMissedLoading ? '…' : `${benchMissed ?? totalBench} pts` }
+              </Typography>
             </Box>
           </Box>
         </Paper>
