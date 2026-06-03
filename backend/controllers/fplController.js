@@ -619,20 +619,12 @@ const computeBenchPointsMissedForGW = (picksData, liveData, elementTypeMap) => {
 
   if (allPlayers.length === 0) return 0;
 
-  const starters = allPlayers.filter(p => p.slot <= 11);
-
-  // Resolve the effective captain for the actual XI:
-  // If the captain played 0 minutes (didn't feature), the VC gets the bonus.
-  const captain = starters.find(p => p.isCaptain);
-  const vice    = starters.find(p => p.isVice);
-  const capDidNotPlay = captain && captain.minutes === 0;
-  const effectiveCaptain = (capDidNotPlay && vice) ? vice : captain;
-
-  const actualRaw    = starters.reduce((s, p) => s + p.rawPoints, 0);
-  const actualCapBonus = effectiveCaptain
-    ? (capMultiplier - 1) * effectiveCaptain.rawPoints
-    : 0;
-  const actualScore  = actualRaw + actualCapBonus;
+  // Sum live points using FPL's settled multiplier for every pick so auto-subs,
+  // captain/vice fallback, and Triple Captain are all handled correctly.
+  const actualScore = allPlayers.reduce(
+    (score, player) => score + (player.rawPoints * (player.multiplier ?? 0)),
+    0,
+  );
 
   // Build optimal XI from all (non-manager) players in the squad.
   const sortDesc = arr => [...arr].sort((a, b) => b.rawPoints - a.rawPoints);
@@ -703,9 +695,14 @@ const getBenchPointsMissed = async (req, res) => {
       fplModel.fetchBootstrapStatic(),
     ]);
 
+    const finishedEvents = new Set(
+      (bootstrap.events || [])
+        .filter(event => event.finished)
+        .map(event => event.id),
+    );
     const completedGWs = (historyData.current || [])
       .map(h => h.event)
-      .filter(Boolean);
+      .filter(eventId => eventId && finishedEvents.has(eventId));
 
     if (completedGWs.length === 0) {
       return res.json({ total: 0, perGW: [] });
@@ -717,7 +714,7 @@ const getBenchPointsMissed = async (req, res) => {
     );
 
     // Fetch picks + live data for every completed GW in parallel
-    const gwResults = await Promise.allSettled(
+    const perGW = await Promise.all(
       completedGWs.map(async (gw) => {
         const [picksData, liveData] = await Promise.all([
           dataProvider.fetchPlayerPicks(entryId, gw),
@@ -728,14 +725,7 @@ const getBenchPointsMissed = async (req, res) => {
       })
     );
 
-    let total = 0;
-    const perGW = [];
-    for (const result of gwResults) {
-      if (result.status === 'fulfilled') {
-        total += result.value.missed;
-        perGW.push(result.value);
-      }
-    }
+    const total = perGW.reduce((sum, result) => sum + result.missed, 0);
 
     res.json({ total, perGW });
   } catch (error) {

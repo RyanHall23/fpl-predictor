@@ -839,7 +839,7 @@ const SeasonHighlights = ({ entryId }) => {
           color={ theme.palette.info.main }
         />
         <StatCard
-          label='Bench Points'
+          label='Bench Points Missed'
           value={ benchMissedLoading ? '…' : (benchMissed ?? totalBench) }
           sub='Points missed from bench'
           icon={ <ChairIcon /> }
