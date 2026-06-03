@@ -558,6 +558,182 @@ const getUserProfile = async (req, res) => {
   }
 };
 
+// Element type constants (mirrors POSITION in frontend/src/utils/substitution.js)
+const ELEMENT_TYPE_GK      = 1;
+const ELEMENT_TYPE_DEF     = 2;
+const ELEMENT_TYPE_MID     = 3;
+const ELEMENT_TYPE_FWD     = 4;
+const ELEMENT_TYPE_MANAGER = 5;
+
+// Minimum mandatory outfield starters: 3 DEF + 3 MID + 1 FWD
+const MIN_MANDATORY_OUTFIELD = 7;
+
+/**
+ * Compute points missed from bench for a single gameweek.
+ *
+ * Finds the optimal starting XI from all 15 squad players (by actual raw
+ * points, respecting FPL formation rules: 1 GK, ≥3 DEF, ≥3 MID, ≥1 FWD)
+ * and returns the non-negative difference between what that optimal XI would
+ * have scored (including the best available captain) versus what the manager's
+ * actual XI scored.
+ *
+ * Returns 0 when no improvement was possible (i.e. the actual XI was already
+ * the best selection from the squad) or when the Bench Boost chip is active
+ * (all 15 players score so nothing is "missed").
+ *
+ * @param {Object}       picksData      - fetchPlayerPicks() result
+ * @param {Object}       liveData       - fetchLiveGameweek() result
+ * @param {Map<number,number>} elementTypeMap  - element id → element_type (1-4)
+ * @returns {number}
+ */
+const computeBenchPointsMissedForGW = (picksData, liveData, elementTypeMap) => {
+  // On Bench Boost all 15 players' points count — nothing is missed.
+  if (picksData.active_chip === 'bboost') return 0;
+
+  const isTripleCap = picksData.active_chip === '3xc';
+  const capMultiplier = isTripleCap ? 3 : 2;
+
+  // Build per-element maps from live data
+  const rawPointsMap = new Map();
+  const minutesMap   = new Map();
+  for (const el of (liveData.elements || [])) {
+    rawPointsMap.set(el.id, el.stats?.total_points ?? 0);
+    minutesMap.set(el.id, el.stats?.minutes ?? 0);
+  }
+
+  // Build a flat player list from the picks, skipping manager placeholders.
+  // Players absent from the live data (transferred out mid-season) default to
+  // 0 points and 0 minutes, which is correct — they cannot have scored.
+  const allPlayers = (picksData.picks || [])
+    .map(p => ({
+      element:     p.element,
+      slot:        p.position,       // 1–11 starter, 12–15 bench
+      multiplier:  p.multiplier,     // 2 for captain (on picks; 3 effective on TC)
+      isCaptain:   !!p.is_captain,
+      isVice:      !!p.is_vice_captain,
+      elementType: elementTypeMap.get(p.element),
+      rawPoints:   rawPointsMap.get(p.element) ?? 0,
+      minutes:     minutesMap.get(p.element) ?? 0,
+    }))
+    .filter(p => p.elementType !== null && p.elementType !== undefined && p.elementType !== ELEMENT_TYPE_MANAGER);
+
+  if (allPlayers.length === 0) return 0;
+
+  // Sum live points using FPL's settled multiplier for every pick so auto-subs,
+  // captain/vice fallback, and Triple Captain are all handled correctly.
+  const actualScore = allPlayers.reduce(
+    (score, player) => score + (player.rawPoints * (player.multiplier ?? 0)),
+    0,
+  );
+
+  // Build optimal XI from all (non-manager) players in the squad.
+  const sortDesc = arr => [...arr].sort((a, b) => b.rawPoints - a.rawPoints);
+
+  const gks  = sortDesc(allPlayers.filter(p => p.elementType === ELEMENT_TYPE_GK));
+  const defs = sortDesc(allPlayers.filter(p => p.elementType === ELEMENT_TYPE_DEF));
+  const mids = sortDesc(allPlayers.filter(p => p.elementType === ELEMENT_TYPE_MID));
+  const fwds = sortDesc(allPlayers.filter(p => p.elementType === ELEMENT_TYPE_FWD));
+
+  const optimalGK = gks[0];
+  if (!optimalGK) {
+    console.error('computeBenchPointsMissedForGW: no goalkeeper found in squad');
+    return 0;
+  }
+
+  // Mandatory outfield starters to satisfy minimum formation constraints
+  const mandatory = [
+    ...defs.slice(0, 3),
+    ...mids.slice(0, 3),
+    ...fwds.slice(0, 1),
+  ];
+  if (mandatory.length < MIN_MANDATORY_OUTFIELD) return 0;
+
+  // 3 flex slots from the remaining outfield pool (best by raw points)
+  const flex = sortDesc([
+    ...defs.slice(3),
+    ...mids.slice(3),
+    ...fwds.slice(1),
+  ]).slice(0, 3);
+
+  const optimalXI = [optimalGK, ...mandatory, ...flex].filter(Boolean);
+  if (optimalXI.length < 11) return 0;
+
+  // Optimal captain = highest raw scorer in the optimal XI
+  const optimalCap = optimalXI.reduce(
+    (best, p) => (p.rawPoints > best.rawPoints ? p : best),
+    optimalXI[0],
+  );
+
+  const optimalRaw      = optimalXI.reduce((s, p) => s + p.rawPoints, 0);
+  const optimalCapBonus = (capMultiplier - 1) * optimalCap.rawPoints;
+  const optimalScore    = optimalRaw + optimalCapBonus;
+
+  return Math.max(0, optimalScore - actualScore);
+};
+
+/**
+ * GET /api/entry/:entryId/bench-points-missed
+ *
+ * Returns the total points missed from the bench across the season — i.e., the
+ * sum of how many more points the manager could have scored each gameweek by
+ * picking the best possible starting XI from their 15-player squad.
+ *
+ * Only completed gameweeks are included.  The Bench Boost gameweek is excluded
+ * (all 15 players' points count, so nothing is "missed" on that GW).
+ */
+const getBenchPointsMissed = async (req, res) => {
+  const { entryId } = req.params;
+
+  if (!/^\d+$/.test(entryId)) {
+    return res.status(400).json({ error: 'Invalid entryId format' });
+  }
+
+  try {
+    // Fetch history (to find completed GWs) and bootstrap (for element types) in parallel
+    const [historyData, bootstrap] = await Promise.all([
+      dataProvider.fetchHistory(entryId),
+      fplModel.fetchBootstrapStatic(),
+    ]);
+
+    const finishedEvents = new Set(
+      (bootstrap.events || [])
+        .filter(event => event.finished)
+        .map(event => event.id),
+    );
+    const completedGWs = (historyData.current || [])
+      .map(h => h.event)
+      .filter(eventId => eventId && finishedEvents.has(eventId));
+
+    if (completedGWs.length === 0) {
+      return res.json({ total: 0, perGW: [] });
+    }
+
+    // Build element-type lookup once from bootstrap (id → element_type)
+    const elementTypeMap = new Map(
+      (bootstrap.elements || []).map(el => [el.id, el.element_type])
+    );
+
+    // Fetch picks + live data for every completed GW in parallel
+    const perGW = await Promise.all(
+      completedGWs.map(async (gw) => {
+        const [picksData, liveData] = await Promise.all([
+          dataProvider.fetchPlayerPicks(entryId, gw),
+          dataProvider.fetchLiveGameweek(gw),
+        ]);
+        const missed = computeBenchPointsMissedForGW(picksData, liveData, elementTypeMap);
+        return { gw, missed };
+      })
+    );
+
+    const total = perGW.reduce((sum, result) => sum + result.missed, 0);
+
+    res.json({ total, perGW });
+  } catch (error) {
+    console.error('Error computing bench points missed:', error);
+    res.status(500).json({ error: 'Error computing bench points missed' });
+  }
+};
+
 const getAllPlayersEnriched = async (req, res) => {
   try {
     const data = await fplModel.fetchBootstrapStatic();
@@ -1446,6 +1622,7 @@ module.exports = {
   getUserTeam,
   getUserTeamForEntry,
   getUserProfile,
+  getBenchPointsMissed,
   getAllPlayersEnriched,
   validateSwap,
   getAvailableTransfers,
