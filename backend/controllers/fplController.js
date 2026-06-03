@@ -615,7 +615,7 @@ const computeBenchPointsMissedForGW = (picksData, liveData, elementTypeMap) => {
       rawPoints:   rawPointsMap.get(p.element) ?? 0,
       minutes:     minutesMap.get(p.element) ?? 0,
     }))
-    .filter(p => p.elementType != null && p.elementType !== ELEMENT_TYPE_MANAGER);
+    .filter(p => p.elementType !== null && p.elementType !== undefined && p.elementType !== ELEMENT_TYPE_MANAGER);
 
   if (allPlayers.length === 0) return 0;
 
@@ -643,7 +643,10 @@ const computeBenchPointsMissedForGW = (picksData, liveData, elementTypeMap) => {
   const fwds = sortDesc(allPlayers.filter(p => p.elementType === ELEMENT_TYPE_FWD));
 
   const optimalGK = gks[0];
-  if (!optimalGK) return 0;
+  if (!optimalGK) {
+    console.error('computeBenchPointsMissedForGW: no goalkeeper found in squad');
+    return 0;
+  }
 
   // Mandatory outfield starters to satisfy minimum formation constraints
   const mandatory = [
