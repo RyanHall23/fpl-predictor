@@ -261,6 +261,9 @@ const TransferInsightsPanel = ({ entryId }) => {
       <Typography variant='body2' fontWeight={ 700 } sx={ { color, mt: 0.25 } }>
         { insight.net > 0 ? `+${insight.net}` : insight.net } pts
       </Typography>
+      <Typography variant='caption' color='text.secondary'>
+        { (() => { const n = insight.windowEnd - insight.event + 1; return `over ${n} GW${n !== 1 ? 's' : ''}`; })() }
+      </Typography>
     </Paper>
   );
 
