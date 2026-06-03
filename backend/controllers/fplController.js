@@ -1270,9 +1270,10 @@ const getTransferInsights = async (req, res) => {
   }
 
   try {
-    const [bootstrap, allTransfers] = await Promise.all([
+    const [bootstrap, allTransfers, historyData] = await Promise.all([
       fplModel.fetchBootstrapStatic(),
       dataProvider.fetchEntryTransfers(entryId),
+      dataProvider.fetchHistory(entryId).catch(() => ({ chips: [] })),
     ]);
 
     if (!allTransfers.length) {
@@ -1281,6 +1282,14 @@ const getTransferInsights = async (req, res) => {
 
     const playerMap = {};
     for (const p of bootstrap.elements) playerMap[p.id] = p;
+
+    // Build a set of GWs where the Free Hit chip was active.
+    // Transfers in a Free Hit GW are temporary — the squad reverts afterwards.
+    const freeHitGWs = new Set(
+      (historyData.chips || [])
+        .filter(c => c.name === 'freehit')
+        .map(c => c.event)
+    );
 
     const playerIds = new Set();
     for (const t of allTransfers) {
@@ -1328,6 +1337,20 @@ const getTransferInsights = async (req, res) => {
     const insights = sortedTransfers.map((t, i) => {
       const pIn  = playerMap[t.element_in];
       const pOut = playerMap[t.element_out];
+
+      // Free Hit transfers are temporary: the player is only present for that one GW.
+      if (freeHitGWs.has(t.event)) {
+        const inPts  = playerPoints[t.element_in]?.[t.event]  ?? 0;
+        const outPts = playerPoints[t.element_out]?.[t.event] ?? 0;
+        return {
+          event: t.event,
+          windowEnd: t.event,
+          time: t.time,
+          playerIn:  { id: t.element_in,  webName: pIn?.web_name  ?? 'Unknown', cost: t.element_in_cost,  pointsInWindow: inPts  },
+          playerOut: { id: t.element_out, webName: pOut?.web_name ?? 'Unknown', cost: t.element_out_cost, pointsInWindow: outPts },
+          net: inPts - outPts,
+        };
+      }
 
       // Ownership window: from transfer GW until the player was sold (exclusive), or GW38.
       const soldTransfer = nextSaleByTransferIndex[i]; // null means held to GW38
