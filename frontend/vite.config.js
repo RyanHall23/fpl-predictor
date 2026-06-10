@@ -14,5 +14,13 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/setupTests.js',
+    server: {
+      deps: {
+        inline: [/@mui\//, /react-transition-group/],
+      },
+    },
+    alias: {
+      'react-transition-group/TransitionGroupContext': 'react-transition-group/cjs/TransitionGroupContext.js',
+    },
   },
 })
