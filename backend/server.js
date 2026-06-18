@@ -6,6 +6,7 @@ const fs = require('fs');
 const fplController = require('./controllers/fplController');
 const assistantController = require('./controllers/assistantController');
 const espnController = require('./controllers/espnController');
+const predictorTeamController = require('./controllers/predictorTeamController');
 const authRoutes = require('./routes/auth');
 const { apiLimiter } = require('./middleware/rateLimiter');
 const { withCacheHeaders } = require('./utils/cacheHeaders');
@@ -50,6 +51,11 @@ app.get('/api/espn/summary/:eventId', apiLimiter, espnController.getSummary);
 
 // Auth routes (user registration, login, profile management)
 app.use('/api/auth', authRoutes);
+
+// FPL Predictor's Team routes
+app.get('/api/predictor-team/state', apiLimiter, predictorTeamController.getTeamState);
+app.get('/api/predictor-team/recommendations', apiLimiter, predictorTeamController.getRecommendations);
+app.get('/api/predictor-team/history', apiLimiter, predictorTeamController.getHistory);
 
 // Serve built Vite frontend from the same process
 const distPath = path.join(__dirname, '..', 'frontend', 'dist');
