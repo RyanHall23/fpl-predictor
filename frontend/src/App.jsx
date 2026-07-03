@@ -40,6 +40,7 @@ import PlannedTransfers from './components/PlannedTransfers';
 import SectionBar from './components/SectionBar';
 import GWTransfersPanel, { useGWTransfers } from './components/GWTransfers/GWTransfers';
 import SeasonHighlights from './components/SeasonHighlights';
+import PredictorTeamPanel from './components/PredictorTeam/PredictorTeamPanel';
 
 const TEAM_VIEW = {
   USER: 'user',
@@ -315,7 +316,7 @@ const App = () => {
 
   useEffect(() => {
     const allowedSections = isHighestPredictedTeam
-      ? ['active', 'next']
+      ? ['active', 'next', 'predictor']
       : ['active', 'planning', 'overview', ...(currentGameweek >= 38 && userEntryId ? ['highlights'] : [])];
     if (!allowedSections.includes(activeSection)) {
       setActiveSection(allowedSections[0]);
@@ -728,6 +729,8 @@ const App = () => {
       <Container maxWidth={ false } sx={ { flex: 1, marginTop: '8px', display: 'flex', flexDirection: 'column', px: { xs: 1, sm: 2 } } }>
         { activeSection === 'highlights' ? (
           <SeasonHighlights entryId={ userEntryId } />
+        ) : activeSection === 'predictor' ? (
+          <PredictorTeamPanel />
         ) : (
         <Box sx={ { display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, gap: 2, flex: 1, alignItems: 'flex-start' } }>
           { /* Left - Pitch */ }
