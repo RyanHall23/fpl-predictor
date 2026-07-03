@@ -13,7 +13,7 @@ import IconButton from '@mui/material/IconButton';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
@@ -271,7 +271,7 @@ function RecommendedActions({ recommendations }) {
 
       {transfers.length === 0 && (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5, p: 1.5, borderRadius: 1, border: `1px solid ${theme.palette.divider}` }}>
-          <CheckCircleOutlineIcon sx={{ color: 'success.main', flexShrink: 0 }} />
+          <CheckCircleIcon sx={{ color: 'success.main', flexShrink: 0 }} />
           <Typography variant='body2'>No transfers recommended — current squad looks optimal for GW{gameweek}.</Typography>
         </Box>
       )}
