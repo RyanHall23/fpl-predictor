@@ -12,8 +12,9 @@ import SportsSoccerIcon from '@mui/icons-material/SportsSoccer';
 import SkipNextIcon from '@mui/icons-material/SkipNext';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import AutoGraphIcon from '@mui/icons-material/AutoGraph';
 
-const HIGHEST_SECTIONS = ['active', 'next'];
+const HIGHEST_SECTIONS = ['active', 'next', 'predictor'];
 
 const SectionBar = ({ activeSection, onSectionChange, isLive, isHighestPredictedTeam, hasUserEntry, currentGameweek }) => {
   const theme = useTheme();
@@ -108,6 +109,14 @@ const SectionBar = ({ activeSection, onSectionChange, isLive, isHighestPredicted
             iconPosition='start'
             label='Highlights'
             sx={ { color: 'warning.main', '&.Mui-selected': { color: 'warning.main' } } }
+          />
+        ) }
+        { isHighestPredictedTeam && (
+          <Tab
+            icon={ <AutoGraphIcon sx={ { fontSize: 18 } } /> }
+            iconPosition='start'
+            label="Predictor's Team"
+            sx={ { color: 'primary.main', '&.Mui-selected': { color: 'primary.main' } } }
           />
         ) }
       </Tabs>
