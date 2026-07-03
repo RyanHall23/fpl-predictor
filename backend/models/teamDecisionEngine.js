@@ -183,7 +183,11 @@ function recommendTransfers(squad, allPlayers, bank, freeTransfers, maxTransfers
     usedIn.add(swap.playerIn.id);
   }
 
-  return result;
+  return result.map((swap, idx) => ({
+    ...swap,
+    isFree: idx < freeTransfers,
+    pointsCost: idx < freeTransfers ? 0 : (idx + 1 - freeTransfers) * 4,
+  }));
 }
 
 // ── Chip recommendation ───────────────────────────────────────────────────────
@@ -193,7 +197,7 @@ function recommendTransfers(squad, allPlayers, bank, freeTransfers, maxTransfers
  *
  * Simple heuristics:
  *   - Bench Boost: bench has high total EP (> 20 pts combined)
- *   - Triple Captain: captain has very high EP (> 15 pts)
+ *   - Triple Captain: captain has very high EP (>= 12 pts)
  *   - Wildcard: squad has many low-EP players (average squad EP < 5 pts)
  *   - Free Hit: not recommended automatically (complex to reason about)
  *

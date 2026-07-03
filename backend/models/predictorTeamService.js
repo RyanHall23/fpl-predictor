@@ -170,6 +170,9 @@ async function regeneratePreSeasonSquad(players, fixtures, teams, targetGW) {
   enriched = await fplModel.applyPredictionsWithCache(enriched, fixtures, teams, targetGW, 'predictor-preseason');
 
   const squad = buildBudgetOptimizedSquad(enriched);
+  if (!Array.isArray(squad) || squad.length !== 15) {
+    throw new Error(`[predictorTeamService] Pre-season squad generation failed: expected 15 players, got ${squad?.length ?? 0}.`);
+  }
 
   const totalCost          = squad.reduce((s, p) => s + p.now_cost, 0);
   const bank               = SQUAD_BUDGET - totalCost;
@@ -455,16 +458,16 @@ async function getPredictorTeamRecommendations() {
     };
   }
 
-  // For recommendations we need enriched players (with EP predictions).
-  // Pre-season: regenerate enrichment inline; active: use what was loaded.
-  const [bootstrap, fixtures] = await Promise.all([
-    fplModel.fetchBootstrapStatic(),
-    fplModel.fetchFixtures(),
-  ]);
-  const allPlayersRaw = bootstrap.elements.map(p => ({ ...p, ep_next: parseFloat(p.ep_next) || 0 }));
-  let allPlayers = fplModel.enrichPlayersWithOpponents(allPlayersRaw, fixtures, bootstrap.teams, targetGW);
-  allPlayers = await fplModel.applyPredictionsWithCache(allPlayers, fixtures, bootstrap.teams, targetGW, 'predictor-recs');
-
+  let allPlayers = status._enrichedPlayers;
+  if (!Array.isArray(allPlayers) || allPlayers.length === 0) {
+    const [bootstrap, fixtures] = await Promise.all([
+      fplModel.fetchBootstrapStatic(),
+      fplModel.fetchFixtures(),
+    ]);
+    const allPlayersRaw = bootstrap.elements.map(p => ({ ...p, ep_next: parseFloat(p.ep_next) || 0 }));
+    allPlayers = fplModel.enrichPlayersWithOpponents(allPlayersRaw, fixtures, bootstrap.teams, targetGW);
+    allPlayers = await fplModel.applyPredictionsWithCache(allPlayers, fixtures, bootstrap.teams, targetGW, 'predictor-recs');
+  }
   // Resolve squad as enriched player objects
   const playerMap = {};
   allPlayers.forEach(p => { playerMap[p.id] = p; });

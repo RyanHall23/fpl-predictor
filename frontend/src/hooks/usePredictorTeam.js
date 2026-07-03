@@ -34,10 +34,12 @@ const usePredictorTeam = () => {
       if (statusRes.status === 'fulfilled')  setStatus(statusRes.value.data);
       else setError(statusRes.reason?.response?.data?.error ?? statusRes.reason?.message ?? 'Failed to load team status.');
 
-      if (recsRes.status === 'fulfilled')    setRecommendations(recsRes.value.data);
+      if (recsRes.status === 'fulfilled') setRecommendations(recsRes.value.data);
+      else setRecommendations(null);
       // recs failure is non-fatal — recommendations may be unavailable pre-season
 
       if (historyRes.status === 'fulfilled') setHistory(historyRes.value.data ?? []);
+      else setHistory([]);
     } catch (err) {
       setError(err.message ?? 'Unknown error');
     } finally {
