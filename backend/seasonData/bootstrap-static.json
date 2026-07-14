@@ -2300,7 +2300,7 @@
     "settings": {
       "entry_per_event": false,
       "timezone": "UTC",
-      "static_content_url": "https://fantasy.premierleague.com/gcs/plfpl-prod-static-content/plfpl-production/"
+      "static_content_url": "https://fantasy.premierleague.com/gcs/plfpl-prod-static-content/plfpl-production/2025_26/"
     },
     "rules": {
       "league_join_private_max": 30,
