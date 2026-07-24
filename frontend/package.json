@@ -14,8 +14,8 @@
     "@vercel/speed-insights": "^2.0.0",
     "axios": "^1.18.1",
     "prop-types": "^15.8.1",
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "web-vitals": "^6.0.0"
   },
   "scripts": {
