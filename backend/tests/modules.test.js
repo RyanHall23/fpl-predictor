@@ -123,3 +123,46 @@ describe('MAX_PREDICTION_AGE_MS — single source of truth', () => {
     assert.equal(threshold, 25 * 60 * 60 * 1000);
   });
 });
+
+describe('teamDecisionEngine', () => {
+  test('recommendLineup keeps the reserve goalkeeper on the bench only once', () => {
+    const { recommendLineup } = require(path.join(__dirname, '..', 'models/teamDecisionEngine.js'));
+    const makePlayer = (id, element_type, ep_next) => ({
+      id,
+      element_type,
+      ep_next,
+      now_cost: 50,
+      web_name: `P${id}`,
+      team: id,
+    });
+
+    const squad = [
+      makePlayer(1, 1, 5.0),
+      makePlayer(2, 1, 3.1),
+      makePlayer(3, 2, 6.8),
+      makePlayer(4, 2, 6.5),
+      makePlayer(5, 2, 6.2),
+      makePlayer(6, 2, 5.9),
+      makePlayer(7, 2, 5.7),
+      makePlayer(8, 3, 6.6),
+      makePlayer(9, 3, 6.5),
+      makePlayer(10, 3, 6.3),
+      makePlayer(11, 3, 6.2),
+      makePlayer(12, 3, 5.8),
+      makePlayer(13, 4, 6.4),
+      makePlayer(14, 4, 5.6),
+      makePlayer(15, 4, 4.5),
+    ];
+
+    const lineup = recommendLineup(squad);
+    const reserveGoalkeepers = lineup.reservePlayers.filter(p => p.element_type === 1);
+
+    assert.equal(lineup.reservePlayers.length, 4, 'bench should contain exactly four players');
+    assert.equal(reserveGoalkeepers.length, 1, 'bench should contain exactly one reserve goalkeeper');
+    assert.deepEqual(
+      reserveGoalkeepers.map(p => p.id),
+      [2],
+      'the second goalkeeper should appear only once on the bench',
+    );
+  });
+});

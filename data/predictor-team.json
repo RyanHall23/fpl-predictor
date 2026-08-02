@@ -1,0 +1,347 @@
+{
+  "phase": "pre-season",
+  "generatedAt": "2026-08-02T01:59:31.361Z",
+  "targetGW": 1,
+  "squad": [
+    {
+      "id": 109,
+      "code": 489639,
+      "web_name": "Verbruggen",
+      "element_type": 1,
+      "team": 5,
+      "teamShortName": "BHA",
+      "now_cost": 45,
+      "ep_next": 3.12,
+      "photo": "489639.jpg"
+    },
+    {
+      "id": 1,
+      "code": 154561,
+      "web_name": "Raya",
+      "element_type": 1,
+      "team": 1,
+      "teamShortName": "ARS",
+      "now_cost": 60,
+      "ep_next": 3.06,
+      "photo": "154561.jpg"
+    },
+    {
+      "id": 469,
+      "code": 215136,
+      "web_name": "N.Williams",
+      "element_type": 2,
+      "team": 18,
+      "teamShortName": "NFO",
+      "now_cost": 50,
+      "ep_next": 6.83,
+      "photo": "215136.jpg"
+    },
+    {
+      "id": 61,
+      "code": 494521,
+      "web_name": "Truffert",
+      "element_type": 2,
+      "team": 3,
+      "teamShortName": "BOU",
+      "now_cost": 55,
+      "ep_next": 6.31,
+      "photo": "494521.jpg"
+    },
+    {
+      "id": 204,
+      "code": 244723,
+      "web_name": "Mitchell",
+      "element_type": 2,
+      "team": 8,
+      "teamShortName": "CRY",
+      "now_cost": 45,
+      "ep_next": 6.22,
+      "photo": "244723.jpg"
+    },
+    {
+      "id": 88,
+      "code": 607464,
+      "web_name": "Kayode",
+      "element_type": 2,
+      "team": 4,
+      "teamShortName": "BRE",
+      "now_cost": 45,
+      "ep_next": 6.17,
+      "photo": "607464.jpg"
+    },
+    {
+      "id": 445,
+      "code": 465642,
+      "web_name": "Thiaw",
+      "element_type": 2,
+      "team": 17,
+      "teamShortName": "NEW",
+      "now_cost": 50,
+      "ep_next": 6.11,
+      "photo": "465642.jpg"
+    },
+    {
+      "id": 542,
+      "code": 484420,
+      "web_name": "E.Le Fée",
+      "element_type": 3,
+      "team": 20,
+      "teamShortName": "SUN",
+      "now_cost": 60,
+      "ep_next": 6.59,
+      "photo": "484420.jpg"
+    },
+    {
+      "id": 426,
+      "code": 141746,
+      "web_name": "B.Fernandes",
+      "element_type": 3,
+      "team": 16,
+      "teamShortName": "MUN",
+      "now_cost": 120,
+      "ep_next": 6.45,
+      "photo": "141746.jpg"
+    },
+    {
+      "id": 155,
+      "code": 448047,
+      "web_name": "Enzo",
+      "element_type": 3,
+      "team": 6,
+      "teamShortName": "CHE",
+      "now_cost": 70,
+      "ep_next": 6.41,
+      "photo": "448047.jpg"
+    },
+    {
+      "id": 481,
+      "code": 215379,
+      "web_name": "Anderson",
+      "element_type": 3,
+      "team": 15,
+      "teamShortName": "MCI",
+      "now_cost": 65,
+      "ep_next": 6.39,
+      "photo": "215379.jpg"
+    },
+    {
+      "id": 40,
+      "code": 244850,
+      "web_name": "Rogers",
+      "element_type": 3,
+      "team": 6,
+      "teamShortName": "CHE",
+      "now_cost": 75,
+      "ep_next": 6.38,
+      "photo": "244850.jpg"
+    },
+    {
+      "id": 106,
+      "code": 502500,
+      "web_name": "Thiago",
+      "element_type": 4,
+      "team": 4,
+      "teamShortName": "BRE",
+      "now_cost": 80,
+      "ep_next": 6.54,
+      "photo": "502500.jpg"
+    },
+    {
+      "id": 55,
+      "code": 178301,
+      "web_name": "Watkins",
+      "element_type": 4,
+      "team": 2,
+      "teamShortName": "AVL",
+      "now_cost": 80,
+      "ep_next": 5.5,
+      "photo": "178301.jpg"
+    },
+    {
+      "id": 165,
+      "code": 475168,
+      "web_name": "João Pedro",
+      "element_type": 4,
+      "team": 6,
+      "teamShortName": "CHE",
+      "now_cost": 75,
+      "ep_next": 4.41,
+      "photo": "475168.jpg"
+    }
+  ],
+  "activePlayers": [
+    {
+      "id": 109,
+      "code": 489639,
+      "web_name": "Verbruggen",
+      "element_type": 1,
+      "team": 5,
+      "teamShortName": "BHA",
+      "now_cost": 45,
+      "ep_next": 3.12,
+      "photo": "489639.jpg"
+    },
+    {
+      "id": 469,
+      "code": 215136,
+      "web_name": "N.Williams",
+      "element_type": 2,
+      "team": 18,
+      "teamShortName": "NFO",
+      "now_cost": 50,
+      "ep_next": 6.83,
+      "photo": "215136.jpg"
+    },
+    {
+      "id": 61,
+      "code": 494521,
+      "web_name": "Truffert",
+      "element_type": 2,
+      "team": 3,
+      "teamShortName": "BOU",
+      "now_cost": 55,
+      "ep_next": 6.31,
+      "photo": "494521.jpg"
+    },
+    {
+      "id": 204,
+      "code": 244723,
+      "web_name": "Mitchell",
+      "element_type": 2,
+      "team": 8,
+      "teamShortName": "CRY",
+      "now_cost": 45,
+      "ep_next": 6.22,
+      "photo": "244723.jpg"
+    },
+    {
+      "id": 88,
+      "code": 607464,
+      "web_name": "Kayode",
+      "element_type": 2,
+      "team": 4,
+      "teamShortName": "BRE",
+      "now_cost": 45,
+      "ep_next": 6.17,
+      "photo": "607464.jpg"
+    },
+    {
+      "id": 542,
+      "code": 484420,
+      "web_name": "E.Le Fée",
+      "element_type": 3,
+      "team": 20,
+      "teamShortName": "SUN",
+      "now_cost": 60,
+      "ep_next": 6.59,
+      "photo": "484420.jpg"
+    },
+    {
+      "id": 426,
+      "code": 141746,
+      "web_name": "B.Fernandes",
+      "element_type": 3,
+      "team": 16,
+      "teamShortName": "MUN",
+      "now_cost": 120,
+      "ep_next": 6.45,
+      "photo": "141746.jpg"
+    },
+    {
+      "id": 155,
+      "code": 448047,
+      "web_name": "Enzo",
+      "element_type": 3,
+      "team": 6,
+      "teamShortName": "CHE",
+      "now_cost": 70,
+      "ep_next": 6.41,
+      "photo": "448047.jpg"
+    },
+    {
+      "id": 481,
+      "code": 215379,
+      "web_name": "Anderson",
+      "element_type": 3,
+      "team": 15,
+      "teamShortName": "MCI",
+      "now_cost": 65,
+      "ep_next": 6.39,
+      "photo": "215379.jpg"
+    },
+    {
+      "id": 40,
+      "code": 244850,
+      "web_name": "Rogers",
+      "element_type": 3,
+      "team": 6,
+      "teamShortName": "CHE",
+      "now_cost": 75,
+      "ep_next": 6.38,
+      "photo": "244850.jpg"
+    },
+    {
+      "id": 106,
+      "code": 502500,
+      "web_name": "Thiago",
+      "element_type": 4,
+      "team": 4,
+      "teamShortName": "BRE",
+      "now_cost": 80,
+      "ep_next": 6.54,
+      "photo": "502500.jpg"
+    }
+  ],
+  "reservePlayers": [
+    {
+      "id": 1,
+      "code": 154561,
+      "web_name": "Raya",
+      "element_type": 1,
+      "team": 1,
+      "teamShortName": "ARS",
+      "now_cost": 60,
+      "ep_next": 3.06,
+      "photo": "154561.jpg"
+    },
+    {
+      "id": 445,
+      "code": 465642,
+      "web_name": "Thiaw",
+      "element_type": 2,
+      "team": 17,
+      "teamShortName": "NEW",
+      "now_cost": 50,
+      "ep_next": 6.11,
+      "photo": "465642.jpg"
+    },
+    {
+      "id": 55,
+      "code": 178301,
+      "web_name": "Watkins",
+      "element_type": 4,
+      "team": 2,
+      "teamShortName": "AVL",
+      "now_cost": 80,
+      "ep_next": 5.5,
+      "photo": "178301.jpg"
+    },
+    {
+      "id": 165,
+      "code": 475168,
+      "web_name": "João Pedro",
+      "element_type": 4,
+      "team": 6,
+      "teamShortName": "CHE",
+      "now_cost": 75,
+      "ep_next": 4.41,
+      "photo": "475168.jpg"
+    }
+  ],
+  "captainId": 469,
+  "viceCaptainId": 542,
+  "bank": 25,
+  "totalCost": 975,
+  "totalPredictedPoints": 86.49,
+  "savedAt": "2026-08-02T01:59:31.361Z"
+}
