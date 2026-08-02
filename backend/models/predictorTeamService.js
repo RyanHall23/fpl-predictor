@@ -25,6 +25,9 @@ const SQUAD_BUDGET         = 1000;   // £100.0m (FPL stores prices in tenths of
 const POSITION_QUOTAS      = { 1: 2, 2: 5, 3: 5, 4: 3 };
 const MAX_PLAYERS_PER_CLUB = 3;
 
+// Multi-GW planning horizon (GWs ahead to consider for transfers/chips)
+const PLANNING_HORIZON = 5;
+
 // ── Season phase detection ────────────────────────────────────────────────────
 
 /**
@@ -78,8 +81,10 @@ function getApplicationTeamId() {
  * @param {Object[]} players - All FPL players, enriched with ep_next
  * @returns {Object[]}       - 15 selected player objects
  */
-function buildBudgetOptimizedSquad(players) {
+function buildBudgetOptimizedSquad(players, multiGwEpMap = null) {
+  // Prefer multi-GW total when available; fall back to next-GW ep_next
   const getEp = (p) => {
+    if (multiGwEpMap && multiGwEpMap[p.id]) return multiGwEpMap[p.id].total;
     const v = parseFloat(p.ep_next ?? p.computed_ep_next ?? p.ep_this ?? 0);
     return Number.isFinite(v) ? v : 0;
   };
@@ -133,6 +138,90 @@ function minimalPlayer(player) {
   };
 }
 
+// ── Multi-GW planning helpers ─────────────────────────────────────────────────
+
+/**
+ * Compute expected points for each player over the next `horizon` gameweeks
+ * by running the prediction engine for each GW in parallel (each is cached
+ * independently).
+ *
+ * @param {Object[]} players   - Base player list (from bootstrap-static)
+ * @param {Object[]} fixtures  - All fixtures
+ * @param {Object[]} teams     - Teams from bootstrap-static
+ * @param {number}   startGW   - First GW to include (typically targetGW)
+ * @param {number}   [horizon] - Number of GWs to look ahead
+ * @returns {Promise<{ epMap: Object, computedGws: number[] }>}
+ *   epMap: { [playerId]: { total: number, gwEp: { [gw]: number }, hasDgw: number[] } }
+ */
+async function computeMultiGwEp(players, fixtures, teams, startGW, horizon = PLANNING_HORIZON) {
+  const gws = [];
+  for (let gw = startGW; gw < startGW + horizon && gw <= 38; gw++) {
+    gws.push(gw);
+  }
+
+  const results = await Promise.all(
+    gws.map(async (gw) => {
+      try {
+        const gwPlayers = fplModel.enrichPlayersWithOpponents(players, fixtures, teams, gw);
+        const enriched  = await fplModel.applyPredictionsWithCache(gwPlayers, fixtures, teams, gw, `predictor-mg-${gw}`);
+        return { gw, enriched };
+      } catch (err) {
+        console.warn(`[predictorTeamService] Multi-GW EP failed for GW${gw}:`, err.message);
+        return { gw, enriched: [] };
+      }
+    })
+  );
+
+  const epMap = {};
+  for (const { gw, enriched } of results) {
+    for (const p of enriched) {
+      if (!epMap[p.id]) epMap[p.id] = { total: 0, gwEp: {}, hasDgw: [] };
+      const gwEp = parseFloat(p.ep_next ?? 0) || 0;
+      epMap[p.id].gwEp[gw] = gwEp;
+      epMap[p.id].total += gwEp;
+      // Flag DGW: player's team has >1 fixture in this GW
+      if (Array.isArray(p.opponents) && p.opponents.length > 1) {
+        epMap[p.id].hasDgw.push(gw);
+      }
+    }
+  }
+
+  return { epMap, computedGws: gws };
+}
+
+/**
+ * Detect Double Gameweeks (teams playing twice) and Blank Gameweeks (teams
+ * not playing) for a range of gameweeks.
+ *
+ * @param {Object[]} fixtures
+ * @param {Object[]} teams
+ * @param {number}   startGW
+ * @param {number}   [horizon]
+ * @returns {Object} { [gw]: { dgwTeams: number[], bgwTeams: number[] } }
+ */
+function detectSpecialGws(fixtures, teams, startGW, horizon = PLANNING_HORIZON) {
+  const allTeamIds = teams.map(t => t.id);
+  const result = {};
+
+  for (let gw = startGW; gw < startGW + horizon && gw <= 38; gw++) {
+    const gwFixtures = fixtures.filter(f => f.event === gw);
+    const teamFixtureCounts = {};
+    for (const f of gwFixtures) {
+      teamFixtureCounts[f.team_h] = (teamFixtureCounts[f.team_h] || 0) + 1;
+      teamFixtureCounts[f.team_a] = (teamFixtureCounts[f.team_a] || 0) + 1;
+    }
+
+    result[gw] = {
+      dgwTeams: Object.entries(teamFixtureCounts)
+        .filter(([, c]) => c > 1)
+        .map(([id]) => parseInt(id)),
+      bgwTeams: allTeamIds.filter(id => !teamFixtureCounts[id]),
+    };
+  }
+
+  return result;
+}
+
 // ── Pre-season squad generation ───────────────────────────────────────────────
 
 /**
@@ -166,18 +255,22 @@ async function getOrGeneratePreSeasonSquad(players, fixtures, teams, targetGW, f
 async function regeneratePreSeasonSquad(players, fixtures, teams, targetGW) {
   console.log(`[predictorTeamService] Generating pre-season squad for GW${targetGW}…`);
 
+  // Enrich for the target GW (provides ep_next and opponents for each player)
   let enriched = fplModel.enrichPlayersWithOpponents(players, fixtures, teams, targetGW);
   enriched = await fplModel.applyPredictionsWithCache(enriched, fixtures, teams, targetGW, 'predictor-preseason');
 
-  const squad = buildBudgetOptimizedSquad(enriched);
+  // Compute multi-GW EP so squad selection is based on the full planning horizon
+  const { epMap } = await computeMultiGwEp(players, fixtures, teams, targetGW);
+
+  const squad = buildBudgetOptimizedSquad(enriched, epMap);
   if (!Array.isArray(squad) || squad.length !== 15) {
     throw new Error(`[predictorTeamService] Pre-season squad generation failed: expected 15 players, got ${squad?.length ?? 0}.`);
   }
 
-  const totalCost          = squad.reduce((s, p) => s + p.now_cost, 0);
-  const bank               = SQUAD_BUDGET - totalCost;
-  const getEp              = (p) => parseFloat(p.ep_next ?? 0) || 0;
-  const totalPredictedPts  = squad.reduce((s, p) => s + getEp(p), 0);
+  const totalCost         = squad.reduce((s, p) => s + p.now_cost, 0);
+  const bank              = SQUAD_BUDGET - totalCost;
+  const getEp             = (p) => parseFloat(p.ep_next ?? 0) || 0;
+  const totalPredictedPts = squad.reduce((s, p) => s + getEp(p), 0);
 
   // Determine the active / reserve split
   const lineup = teamDecisionEngine.recommendLineup(squad);
@@ -473,15 +566,27 @@ async function getPredictorTeamRecommendations() {
   }
 
   let allPlayers = status._enrichedPlayers;
+
+  // Always fetch bootstrap/fixtures (in-memory cached from the getPredictorTeamStatus call above)
+  const [bootstrap, fixtures] = await Promise.all([
+    fplModel.fetchBootstrapStatic(),
+    fplModel.fetchFixtures(),
+  ]);
+  const allTeams = bootstrap.teams;
+
   if (!Array.isArray(allPlayers) || allPlayers.length === 0) {
-    const [bootstrap, fixtures] = await Promise.all([
-      fplModel.fetchBootstrapStatic(),
-      fplModel.fetchFixtures(),
-    ]);
     const allPlayersRaw = bootstrap.elements.map(p => ({ ...p, ep_next: parseFloat(p.ep_next) || 0 }));
-    allPlayers = fplModel.enrichPlayersWithOpponents(allPlayersRaw, fixtures, bootstrap.teams, targetGW);
-    allPlayers = await fplModel.applyPredictionsWithCache(allPlayers, fixtures, bootstrap.teams, targetGW, 'predictor-recs');
+    allPlayers = fplModel.enrichPlayersWithOpponents(allPlayersRaw, fixtures, allTeams, targetGW);
+    allPlayers = await fplModel.applyPredictionsWithCache(allPlayers, fixtures, allTeams, targetGW, 'predictor-recs');
   }
+
+  // Compute multi-GW EP map and detect special GWs — run in parallel
+  const allPlayersBase = bootstrap.elements.map(p => ({ ...p, ep_next: parseFloat(p.ep_next) || 0 }));
+  const [{ epMap }, specialGws] = await Promise.all([
+    computeMultiGwEp(allPlayersBase, fixtures, allTeams, targetGW),
+    Promise.resolve(detectSpecialGws(fixtures, allTeams, targetGW)),
+  ]);
+
   // Resolve squad as enriched player objects
   const playerMap = {};
   allPlayers.forEach(p => { playerMap[p.id] = p; });
@@ -498,14 +603,26 @@ async function getPredictorTeamRecommendations() {
   const lineup      = teamDecisionEngine.recommendLineup(enrichedSquad);
   const captainInfo = teamDecisionEngine.recommendCaptain(lineup.activePlayers);
 
-  // Transfer recommendations
+  // Transfer recommendations (multi-GW EP aware)
   const bank          = savedState.bank ?? 0;
   const freeTransfers = savedState.freeTransfers ?? 1;
   const usedChips     = savedState.usedChips ?? [];
-  const transfers     = teamDecisionEngine.recommendTransfers(enrichedSquad, allPlayers, bank, freeTransfers);
+  const transfers     = teamDecisionEngine.recommendTransfers(
+    enrichedSquad, allPlayers, bank, freeTransfers, 2,
+    { multiGwEpMap: epMap, specialGws, currentGW }
+  );
 
-  // Chip recommendation
-  const chipSuggestion = teamDecisionEngine.recommendChip(lineup.activePlayers, lineup.reservePlayers, usedChips);
+  // Chip recommendation (DGW/BGW aware)
+  const chipSuggestion = teamDecisionEngine.recommendChip(
+    lineup.activePlayers, lineup.reservePlayers, usedChips,
+    { multiGwEpMap: epMap, specialGws, currentGW }
+  );
+
+  // Season plan: chip schedule + transfer outlook for the full remaining season
+  const seasonPlan = teamDecisionEngine.generateSeasonPlan(
+    enrichedSquad, allPlayers, freeTransfers, usedChips,
+    currentGW, specialGws, epMap
+  );
 
   const predictedPoints = lineup.activePlayers.reduce((s, p) => {
     const ep = parseFloat(p.ep_next ?? 0) || 0;
@@ -529,6 +646,8 @@ async function getPredictorTeamRecommendations() {
     currentGameweek: currentGW,
     unavailable:   false,
     unavailableReason: null,
+    planningHorizon: PLANNING_HORIZON,
+    specialGws,
     transfers,
     captain:       captainInfo.captain   ? { player: minimalPlayer(captainInfo.captain),    reason: captainInfo.captainReason } : null,
     viceCaptain:   captainInfo.viceCaptain ? { player: minimalPlayer(captainInfo.viceCaptain), reason: captainInfo.vcReason } : null,
@@ -537,6 +656,7 @@ async function getPredictorTeamRecommendations() {
       reservePlayers: lineup.reservePlayers.map(p => ({ ...minimalPlayer(p), ep_next: parseFloat(p.ep_next ?? 0) || 0 })),
     },
     chipSuggestion,
+    seasonPlan,
     predictedPoints: Math.round(predictedPoints * 10) / 10,
   };
 }
@@ -546,6 +666,8 @@ module.exports = {
   getCurrentGameweek,
   getApplicationTeamId,
   buildBudgetOptimizedSquad,
+  computeMultiGwEp,
+  detectSpecialGws,
   getOrGeneratePreSeasonSquad,
   regeneratePreSeasonSquad,
   getPredictorTeamStatus,
