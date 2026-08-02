@@ -49,9 +49,11 @@ const TEAM_VIEW = {
 
 const App = () => {
   const theme = useTheme();
+  // A valid FPL team ID is a positive integer string
+  const isValidStoredTeamId = (id) => /^\d+$/.test(id) && parseInt(id, 10) > 0;
   const [userEntryId, setUserEntryId] = useState(() => localStorage.getItem('teamId') || '');
   const [currentEntryId, setCurrentEntryId] = useState(() => localStorage.getItem('teamId') || '');
-  const [teamView, setTeamView] = useState(() => localStorage.getItem('teamId') ? TEAM_VIEW.USER : TEAM_VIEW.HIGHEST);
+  const [teamView, setTeamView] = useState(() => { const id = localStorage.getItem('teamId'); return isValidStoredTeamId(id) ? TEAM_VIEW.USER : TEAM_VIEW.HIGHEST; });
   const [selectedGameweek, setSelectedGameweek] = useState(null); // null means current gameweek
   const [currentGameweek, setCurrentGameweek] = useState(null);
   const [seasonPhase, setSeasonPhase] = useState(null);
@@ -74,6 +76,7 @@ const App = () => {
     reservePlayers,
     snackbar,
     handlePlayerClick,
+    fillPreSeasonSlot,
     calculateTotalPredictedPoints,
     toggleTeamView,
     isHighestPredictedTeam,
@@ -389,13 +392,6 @@ const App = () => {
 
   const isPreSeason = seasonPhase === 'pre-season';
 
-  useEffect(() => {
-    if (!isPreSeason || teamView !== TEAM_VIEW.USER) return;
-    setTeamView(TEAM_VIEW.HIGHEST);
-    setCurrentEntryId('');
-    setViewingOpponentId(null);
-    if (!isHighestPredictedTeam) toggleTeamView();
-  }, [isPreSeason, teamView, isHighestPredictedTeam, toggleTeamView]);
 
   const handleSnackbarClose = () => { setSnackbarOpen(false); setLocalSnackbar(''); };
 
@@ -616,15 +612,9 @@ const App = () => {
     if (teamId) {
       localStorage.setItem('teamId', teamId);
       setUserEntryId(teamId);
-      if (isPreSeason) {
-        setCurrentEntryId('');
-        setTeamView(TEAM_VIEW.HIGHEST);
-        if (!isHighestPredictedTeam) toggleTeamView();
-      } else {
-        setCurrentEntryId(teamId);
-        setTeamView(TEAM_VIEW.USER);
-        if (isHighestPredictedTeam) toggleTeamView();
-      }
+      setCurrentEntryId(teamId);
+      setTeamView(TEAM_VIEW.USER);
+      if (isHighestPredictedTeam) toggleTeamView();
     } else {
       localStorage.removeItem('teamId');
       setUserEntryId('');
@@ -710,6 +700,11 @@ const App = () => {
   };
 
   const handleTransfer = (playerOut, playerIn, gameweek) => {
+    if (playerOut?.isPlaceholder || (isPreSeason && !gameweek)) {
+      // Pre-season slot fill — replace placeholder or real player directly without a planned transfer
+      fillPreSeasonSlot(playerOut.code, playerIn);
+      return;
+    }
     if (!gameweek || !currentGameweek) return;
     // Block transfers for active or past gameweeks
     if (gameweek <= currentGameweek && isLockedGameweek) return;
@@ -1046,6 +1041,7 @@ const App = () => {
                     team={ [...effectiveActivePlayers, ...effectiveReservePlayers] }
                     allPlayers={ allPlayers }
                     isHighestPredictedTeam={ isHighestPredictedTeam }
+                    isPreSeason={ isPreSeason }
                     onSetCaptain={ (!isHighestPredictedTeam && !isLockedGameweek) ? setCaptain : undefined }
                     currentGameweek={ currentGameweek }
                     isFutureGameweek={ !!gameweekInfo?.isFuture }
@@ -1063,6 +1059,7 @@ const App = () => {
                     team={ [...effectiveActivePlayers, ...effectiveReservePlayers] }
                     allPlayers={ allPlayers }
                     isHighestPredictedTeam={ isHighestPredictedTeam }
+                    isPreSeason={ isPreSeason }
                     onSetCaptain={ (!isHighestPredictedTeam && !isLockedGameweek) ? setCaptain : undefined }
                     currentGameweek={ currentGameweek }
                     isFutureGameweek={ !!gameweekInfo?.isFuture }

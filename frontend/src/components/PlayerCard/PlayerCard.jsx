@@ -20,6 +20,7 @@ import PlayerStatsDialog from '../PlayerStatsDialog/PlayerStatsDialog';
 
 const POSITION_GK = 1;
 const POSITION_MANAGER = 5;
+const POSITION_NAMES = { 1: 'Goalkeeper', 2: 'Defender', 3: 'Midfielder', 4: 'Forward' };
 
 const STATUS_META = {
   d: { label: 'Doubtful',     color: '#ff9800' },
@@ -28,9 +29,52 @@ const STATUS_META = {
   u: { label: 'Unavailable',  color: '#9e9e9e' },
 };
 
-const PlayerCard = ({ player, isCaptain, isViceCaptain, team, allPlayers, onTransfer, showTransferButtons = true, teamType, onPlayerClick, selectedPlayer, activePlayers, reservePlayers, onSetCaptain, currentGameweek, isFutureGameweek, viewedGameweek, plannedTransfers, onRemovePlannedTransfer }) => {
+const PlayerCard = ({ player, isCaptain, isViceCaptain, team, allPlayers, onTransfer, showTransferButtons = true, teamType, onPlayerClick, selectedPlayer, activePlayers, reservePlayers, onSetCaptain, currentGameweek, isFutureGameweek, isPreSeason, viewedGameweek, plannedTransfers, onRemovePlannedTransfer }) => {
   const [transferDialogOpen, setTransferDialogOpen] = React.useState(false);
   const [statsDialogOpen, setStatsDialogOpen] = React.useState(false);
+
+  // Placeholder slots (pre-season squad building) render as empty pick-able cards
+  if (player.isPlaceholder) {
+    const posLabel = POSITION_NAMES[player.position] || 'Player';
+    return (
+      <Card
+        className='player-card'
+        sx={ { width: 105, display: 'flex', flexDirection: 'column', padding: '6px', margin: '0 auto', opacity: 0.65, border: '1px dashed', borderColor: 'divider', cursor: team && allPlayers && onTransfer ? 'pointer' : 'default' } }
+      >
+        <CardContent sx={ { p: '4px !important', textAlign: 'center' } }>
+          <Box sx={ { height: 46, display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
+            <Typography variant='caption' color='text.disabled' sx={ { fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 } }>
+              { posLabel }
+            </Typography>
+          </Box>
+          { team && allPlayers && onTransfer && (
+            <ButtonBase
+              onClick={ () => setTransferDialogOpen(true) }
+              sx={ { width: '100%', borderRadius: 1, py: 0.5 } }
+              aria-label={ `Pick ${posLabel}` }
+            >
+              <Typography variant='caption' sx={ { color: 'text.disabled', fontSize: '0.7rem' } }>
+                + Pick Player
+              </Typography>
+            </ButtonBase>
+          ) }
+        </CardContent>
+        { transferDialogOpen && team && allPlayers && onTransfer && (
+          <TransferPlayer
+            team={ team }
+            allPlayers={ allPlayers }
+            playerOut={ player }
+            onTransfer={ (pOut, pIn, gw) => onTransfer(pOut, pIn, gw) }
+            open={ transferDialogOpen }
+            onClose={ () => setTransferDialogOpen(false) }
+            currentGameweek={ null }
+            viewedGameweek={ null }
+            isPreSeason={ true }
+          />
+        ) }
+      </Card>
+    );
+  }
 
   // predictedPoints is fully resolved by the backend (basePoints × multiplier).
   const predictedPoints = parseFloat(player.predictedPoints) || 0;
@@ -318,7 +362,7 @@ const PlayerCard = ({ player, isCaptain, isViceCaptain, team, allPlayers, onTran
         </Box>
 
         { /* Action Buttons — only render if at least one button is interactive */ }
-        { showTransferButtons && team && allPlayers && onTransfer && (isCaptainEligible || onPlayerClick || isFutureGameweek) && (
+        { showTransferButtons && team && allPlayers && onTransfer && (isCaptainEligible || onPlayerClick || isFutureGameweek || isPreSeason) && (
           <Grid container spacing={ 1 } sx={ { mt: 0.5 } }>
 
             { /* 1. Captain */ }
@@ -400,6 +444,21 @@ const PlayerCard = ({ player, isCaptain, isViceCaptain, team, allPlayers, onTran
                     </Box>
                   </IconButton>
                 )
+              ) : isPreSeason ? (
+                <IconButton
+                  size='small'
+                  className='action-button-small transfer-button'
+                  title='Change Player'
+                  onClick={ () => setTransferDialogOpen(true) }
+                  sx={ { padding: '3px !important' } }
+                >
+                  <Box sx={ { display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
+                    <svg width='20' height='20' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                      <path d='M3 8 L12 8 L12 6 L18 10 L12 14 L12 12 L3 12 Z' fill='#4caf50' />
+                      <path d='M21 16 L12 16 L12 18 L6 14 L12 10 L12 12 L21 12 Z' fill='#f44336' />
+                    </svg>
+                  </Box>
+                </IconButton>
               ) : (
                 <IconButton size='small' disabled sx={ { visibility: 'hidden', padding: '4px !important' } }>
                   <SyncIcon sx={ { fontSize: 20 } } />
@@ -440,8 +499,9 @@ const PlayerCard = ({ player, isCaptain, isViceCaptain, team, allPlayers, onTran
           } }
           open={ transferDialogOpen }
           onClose={ () => setTransferDialogOpen(false) }
-          currentGameweek={ currentGameweek }
-          viewedGameweek={ viewedGameweek }
+          currentGameweek={ isPreSeason ? null : currentGameweek }
+          viewedGameweek={ isPreSeason ? null : viewedGameweek }
+          isPreSeason={ isPreSeason }
         />
       ) }
 
@@ -460,7 +520,7 @@ PlayerCard.propTypes = {
     webName: PropTypes.string.isRequired,
     predictedPoints: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     inDreamteam: PropTypes.bool,
-    code: PropTypes.number.isRequired,
+    code: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
     position: PropTypes.number.isRequired,
     teamCode: PropTypes.number,
     user_team: PropTypes.bool,
@@ -472,12 +532,13 @@ PlayerCard.propTypes = {
       is_home: PropTypes.bool,
       difficulty: PropTypes.number,
     })),
-    team: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+    team: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     difficulty: PropTypes.number,
     status: PropTypes.string,
     chanceOfPlayingNextRound: PropTypes.number,
     news: PropTypes.string,
     nowCost: PropTypes.number,
+    isPlaceholder: PropTypes.bool,
   }).isRequired,
   isCaptain: PropTypes.bool,
   isViceCaptain: PropTypes.bool,
@@ -496,6 +557,7 @@ PlayerCard.propTypes = {
   onSetCaptain: PropTypes.func,
   currentGameweek: PropTypes.number,
   isFutureGameweek: PropTypes.bool,
+  isPreSeason: PropTypes.bool,
   viewedGameweek: PropTypes.number,
   plannedTransfers: PropTypes.array,
   onRemovePlannedTransfer: PropTypes.func,

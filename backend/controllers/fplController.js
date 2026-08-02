@@ -398,7 +398,90 @@ const getUserTeamForEntry = async (req, res) => {
     }
     const fixtures = fixturesResult.value;
 
+    const isPreSeason = bootstrap.events.every(e => !e.finished && !e.is_current);
+
     if (picksResult.status === 'rejected') {
+      if (isPreSeason) {
+        // No picks exist yet — return 15 positional placeholder slots for squad building
+        const PLACEHOLDER_SLOTS = [
+          { slot: 1,  position: 1, isActive: true  }, // GK
+          { slot: 2,  position: 2, isActive: true  }, // DEF
+          { slot: 3,  position: 2, isActive: true  }, // DEF
+          { slot: 4,  position: 2, isActive: true  }, // DEF
+          { slot: 5,  position: 2, isActive: true  }, // DEF
+          { slot: 6,  position: 3, isActive: true  }, // MID
+          { slot: 7,  position: 3, isActive: true  }, // MID
+          { slot: 8,  position: 3, isActive: true  }, // MID
+          { slot: 9,  position: 3, isActive: true  }, // MID
+          { slot: 10, position: 4, isActive: true  }, // FWD
+          { slot: 11, position: 4, isActive: true  }, // FWD
+          { slot: 12, position: 1, isActive: false }, // GK bench
+          { slot: 13, position: 2, isActive: false }, // DEF bench
+          { slot: 14, position: 3, isActive: false }, // MID bench
+          { slot: 15, position: 4, isActive: false }, // FWD bench
+        ];
+        const POS_NAMES = { 1: 'Goalkeeper', 2: 'Defender', 3: 'Midfielder', 4: 'Forward' };
+        const placeholders = PLACEHOLDER_SLOTS.map(({ slot, position, isActive }) => ({
+          id:                       `placeholder_${slot}`,
+          code:                     `placeholder_${slot}`,
+          name:                     POS_NAMES[position] || 'Player',
+          webName:                  POS_NAMES[position] || 'Player',
+          position,
+          team:                     null,
+          teamCode:                 null,
+          nowCost:                  null,
+          purchasePrice:            null,
+          sellingPrice:             null,
+          status:                   null,
+          chanceOfPlayingNextRound: null,
+          news:                     '',
+          totalPoints:              0,
+          lastGwPoints:             0,
+          inDreamteam:              false,
+          basePoints:               0,
+          multiplier:               1,
+          predictedPoints:          0,
+          is_captain:               false,
+          is_vice_captain:          false,
+          opponent:                 '-',
+          is_home:                  null,
+          opponents:                [],
+          opponentDisplay:          '-',
+          difficulty:               null,
+          teamName:                 null,
+          gameweekStats:            null,
+          isActive,
+          slot,
+          user_team:                true,
+          isPlaceholder:            true,
+        }));
+
+        let teamName = '';
+        try {
+          const entryData = await dataProvider.fetchEntry(entryId);
+          if (entryData.player_first_name) {
+            teamName = `${entryData.player_first_name} ${entryData.player_last_name}`;
+          }
+        } catch { /* non-fatal */ }
+
+        return res.json({
+          squad:           placeholders,
+          activePlayers:   placeholders.filter(p => p.isActive),
+          reservePlayers:  placeholders.filter(p => !p.isActive),
+          mainPoints:      0,
+          benchPoints:     0,
+          teamName,
+          gameweek:        1,
+          currentGameweek: 1,
+          isPastGameweek:  false,
+          isActiveGameweek: false,
+          isFutureGameweek: false,
+          gameweekData:    targetEventData,
+          freeTransfers:   null,
+          bank:            null,
+          isPreSeason:     true,
+        });
+      }
       console.error(`Error fetching picks for gameweek ${picksEventId}:`, picksResult.reason?.message);
       return res.status(500).json({ error: 'Error fetching team picks' });
     }

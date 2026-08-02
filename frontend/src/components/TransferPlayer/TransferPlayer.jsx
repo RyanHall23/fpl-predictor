@@ -16,8 +16,8 @@ import MenuItem from '@mui/material/MenuItem';
 import Box from '@mui/material/Box';
 import { useTheme } from '@mui/material/styles';
 
-// props: team, allPlayers, onTransfer, playerOut, open, onClose, currentGameweek, viewedGameweek
-const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut, open, onClose, currentGameweek, viewedGameweek }) => {
+// props: team, allPlayers, onTransfer, playerOut, open, onClose, currentGameweek, viewedGameweek, isPreSeason
+const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut, open, onClose, currentGameweek, viewedGameweek, isPreSeason = false }) => {
     const theme = useTheme();
     // This dialog is only reachable from a future-GW view, so the earliest
     // plannable gameweek is always the one after the current GW.
@@ -83,13 +83,13 @@ const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut, open, onClose
                     }
                 } }
             >
-                <DialogTitle sx={ { color: theme.palette.text.primary } }>Transfer Player</DialogTitle>
+                <DialogTitle sx={ { color: theme.palette.text.primary } }>{ isPreSeason ? 'Pick Player' : 'Transfer Player' }</DialogTitle>
                 <DialogContent>
                     { /* Player Out: fixed, not a dropdown */ }
                     <ListItem>
                         <ListItemText
-                            primary={ playerOut.name }
-                            secondary={ `${ { 1: 'Goalkeeper', 2: 'Defender', 3: 'Midfielder', 4: 'Forward', 5: 'Manager' }[playerOut.position] ?? playerOut.position }${ (playerOut.sellingPrice ?? playerOut.nowCost) != null ? ` · £${((playerOut.sellingPrice ?? playerOut.nowCost) / 10).toFixed(1)}m` : '' }` }
+                            primary={ isPreSeason ? 'Empty slot' : playerOut.name }
+                            secondary={ `${ { 1: 'Goalkeeper', 2: 'Defender', 3: 'Midfielder', 4: 'Forward', 5: 'Manager' }[playerOut.position] ?? playerOut.position }${ !isPreSeason && (playerOut.sellingPrice ?? playerOut.nowCost) != null ? ` · £${((playerOut.sellingPrice ?? playerOut.nowCost) / 10).toFixed(1)}m` : '' }` }
                         />
                     </ListItem>
                     { /* Player In: dropdown, only matching position */ }
@@ -143,7 +143,7 @@ const TransferPlayer = ({ team, allPlayers, onTransfer, playerOut, open, onClose
                 <DialogActions sx={ { pb: 2, px: 3 } }>
                     <Button onClick={ handleCloseDialog } variant='outlined'>Cancel</Button>
                     <Button onClick={ handleTransfer } disabled={ !selectedIn } variant='contained' color='primary'>
-                        Confirm Transfer
+                        { isPreSeason ? 'Add to Squad' : 'Confirm Transfer' }
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -165,6 +165,7 @@ TransferPlayer.propTypes = {
     onClose: PropTypes.func,
     currentGameweek: PropTypes.number,
     viewedGameweek: PropTypes.number,
+    isPreSeason: PropTypes.bool,
 };
 
 export default TransferPlayer;

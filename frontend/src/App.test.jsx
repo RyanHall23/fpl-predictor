@@ -94,11 +94,11 @@ beforeEach(() => {
 
 // ── Existing tests (kept as-is) ──────────────────────────────────────────────
 
-test('hides My Team button during pre-season even when teamId is stored in localStorage', async () => {
+test('shows My Team button during pre-season when teamId is stored in localStorage', async () => {
   localStorage.setItem('teamId', '12345');
   render(<App />);
   await waitFor(() => {
-    expect(screen.queryByText(/My Team/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/My Team/i)).toBeInTheDocument();
   });
 });
 
@@ -155,7 +155,7 @@ test('"Set ID" affordance is present when no teamId in localStorage', () => {
 
 // ── localStorage teamId interactions ─────────────────────────────────────────
 
-test('with teamId "0" — My Team button is still hidden in pre-season', async () => {
+test('with teamId "0" — My Team button is still hidden when no valid teamId', async () => {
   localStorage.setItem('teamId', '0');
   render(<App />);
   await waitFor(() => {
