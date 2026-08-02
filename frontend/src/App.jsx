@@ -95,23 +95,15 @@ const App = () => {
   const { allPlayers } = useAllPlayers(selectedGameweek);
 
   useEffect(() => {
-    let cancelled = false;
+    if (!gameweekInfo) return;
 
-    axios.get('/api/predicted-team')
-      .then(({ data }) => {
-        if (cancelled) return;
-        const isPreSeasonPhase = data?.currentGameweek === 1
-          && !data?.isPastGameweek
-          && !data?.isActiveGameweek
-          && !data?.isFutureGameweek;
-        setSeasonPhase(isPreSeasonPhase ? 'pre-season' : 'active');
-      })
-      .catch(() => {
-        if (!cancelled) setSeasonPhase('active');
-      });
+    const isPreSeasonPhase = gameweekInfo.current === 1
+      && !gameweekInfo.isPast
+      && !gameweekInfo.isActive
+      && !gameweekInfo.isFuture;
 
-    return () => { cancelled = true; };
-  }, []);
+    setSeasonPhase(isPreSeasonPhase ? 'pre-season' : 'active');
+  }, [gameweekInfo]);
 
   // GW Transfers — shown in active/overview sections for non-future user/opponent views
   const showGWTransfers = !isHighestPredictedTeam && !gameweekInfo?.isFuture && (activeSection === 'active' || activeSection === 'overview') && !!(viewingOpponentId || currentEntryId) && !!currentGameweek;
