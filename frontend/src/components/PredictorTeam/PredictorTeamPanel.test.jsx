@@ -32,9 +32,8 @@ vi.mock('../../hooks/usePredictorTeam', () => ({
 }));
 
 describe('PredictorTeamPanel', () => {
-  it('labels preseason recommendations as before GW1', () => {
+  it('does not show recommendations section during pre-season', () => {
     render(<PredictorTeamPanel />);
-    expect(screen.getByText('Recommended Actions — Before GW1')).toBeInTheDocument();
-    expect(screen.getByText('These recommendations are for the generated squad before the GW1 deadline.')).toBeInTheDocument();
+    expect(screen.queryByText(/Recommended Actions/)).not.toBeInTheDocument();
   });
 });
