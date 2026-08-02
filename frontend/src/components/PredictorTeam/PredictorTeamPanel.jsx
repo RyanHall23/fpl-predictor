@@ -476,7 +476,9 @@ function PredictorTeamPanel() {
       {status && (
         <>
           <TeamOverview status={status} />
-          <RecommendedActions recommendations={recommendations} status={status} />
+          {status.phase !== 'pre-season' && (
+            <RecommendedActions recommendations={recommendations} status={status} />
+          )}
           <DecisionHistory history={history} />
         </>
       )}

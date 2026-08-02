@@ -444,6 +444,20 @@ async function getPredictorTeamRecommendations() {
   const currentGW = status.currentGameweek;
   const targetGW  = status.targetGameweek;
 
+  // Pre-season: squad was just built as optimal — no transfers make sense yet
+  if (status.phase === 'pre-season') {
+    return {
+      gameweek:          targetGW,
+      unavailable:       true,
+      unavailableReason: 'pre-season',
+      transfers:         [],
+      captain:           null,
+      viceCaptain:       null,
+      lineup:            null,
+      chipSuggestion:    null,
+    };
+  }
+
   // Recommendations are unavailable without a configured team in an active season
   if (status.phase === 'active' && !status.applicationTeamConfigured) {
     return {
