@@ -81,8 +81,10 @@ function getApplicationTeamId() {
  * @param {Object[]} players - All FPL players, enriched with ep_next
  * @returns {Object[]}       - 15 selected player objects
  */
-function buildBudgetOptimizedSquad(players) {
+function buildBudgetOptimizedSquad(players, multiGwEpMap = null) {
+  // Prefer multi-GW total when available; fall back to next-GW ep_next
   const getEp = (p) => {
+    if (multiGwEpMap && multiGwEpMap[p.id]) return multiGwEpMap[p.id].total;
     const v = parseFloat(p.ep_next ?? p.computed_ep_next ?? p.ep_this ?? 0);
     return Number.isFinite(v) ? v : 0;
   };
@@ -253,18 +255,22 @@ async function getOrGeneratePreSeasonSquad(players, fixtures, teams, targetGW, f
 async function regeneratePreSeasonSquad(players, fixtures, teams, targetGW) {
   console.log(`[predictorTeamService] Generating pre-season squad for GW${targetGW}…`);
 
+  // Enrich for the target GW (provides ep_next and opponents for each player)
   let enriched = fplModel.enrichPlayersWithOpponents(players, fixtures, teams, targetGW);
   enriched = await fplModel.applyPredictionsWithCache(enriched, fixtures, teams, targetGW, 'predictor-preseason');
 
-  const squad = buildBudgetOptimizedSquad(enriched);
+  // Compute multi-GW EP so squad selection is based on the full planning horizon
+  const { epMap } = await computeMultiGwEp(players, fixtures, teams, targetGW);
+
+  const squad = buildBudgetOptimizedSquad(enriched, epMap);
   if (!Array.isArray(squad) || squad.length !== 15) {
     throw new Error(`[predictorTeamService] Pre-season squad generation failed: expected 15 players, got ${squad?.length ?? 0}.`);
   }
 
-  const totalCost          = squad.reduce((s, p) => s + p.now_cost, 0);
-  const bank               = SQUAD_BUDGET - totalCost;
-  const getEp              = (p) => parseFloat(p.ep_next ?? 0) || 0;
-  const totalPredictedPts  = squad.reduce((s, p) => s + getEp(p), 0);
+  const totalCost         = squad.reduce((s, p) => s + p.now_cost, 0);
+  const bank              = SQUAD_BUDGET - totalCost;
+  const getEp             = (p) => parseFloat(p.ep_next ?? 0) || 0;
+  const totalPredictedPts = squad.reduce((s, p) => s + getEp(p), 0);
 
   // Determine the active / reserve split
   const lineup = teamDecisionEngine.recommendLineup(squad);
