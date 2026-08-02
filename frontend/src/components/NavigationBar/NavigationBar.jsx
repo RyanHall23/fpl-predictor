@@ -54,7 +54,7 @@ const NavigationBar = ({
   const [highestTeamClickCount, setHighestTeamClickCount] = React.useState(0);
   const highestTeamClickTimerRef = React.useRef(null);
   const EASTER_EGG_CLICK_RESET_MS = 2000;
-  const isValidTeamId = (val) => /^\d+$/.test(val);
+  const isValidTeamId = (val) => /^\d+$/.test(val) && parseInt(val, 10) > 0;
 
   React.useEffect(() => {
     return () => {
@@ -145,7 +145,7 @@ const NavigationBar = ({
           <Box sx={ { display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 }, flexShrink: 0, ml: 'auto' } }>
             { /* Team view toggle buttons */ }
             <Box sx={ { display: 'flex', gap: 0.5 } }>
-              { userTeamId && (
+              { isValidTeamId(userTeamId) && (
                 <Button
                   variant={ teamView === TEAM_VIEW.USER ? 'contained' : 'outlined' }
                   color='secondary'

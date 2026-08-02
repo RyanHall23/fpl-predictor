@@ -49,9 +49,11 @@ const TEAM_VIEW = {
 
 const App = () => {
   const theme = useTheme();
+  // A valid FPL team ID is a positive integer string
+  const isValidStoredTeamId = (id) => /^\d+$/.test(id) && parseInt(id, 10) > 0;
   const [userEntryId, setUserEntryId] = useState(() => localStorage.getItem('teamId') || '');
   const [currentEntryId, setCurrentEntryId] = useState(() => localStorage.getItem('teamId') || '');
-  const [teamView, setTeamView] = useState(() => localStorage.getItem('teamId') ? TEAM_VIEW.USER : TEAM_VIEW.HIGHEST);
+  const [teamView, setTeamView] = useState(() => { const id = localStorage.getItem('teamId'); return isValidStoredTeamId(id) ? TEAM_VIEW.USER : TEAM_VIEW.HIGHEST; });
   const [selectedGameweek, setSelectedGameweek] = useState(null); // null means current gameweek
   const [currentGameweek, setCurrentGameweek] = useState(null);
   const [seasonPhase, setSeasonPhase] = useState(null);
