@@ -82,7 +82,7 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
       // internally — no separate /api/bootstrap-static call needed.
       const gameweekParam = selectedGameweek ? `?gameweek=${selectedGameweek}` : '';
       const response = await axios.get(`/api/entry/${entryId}/team${gameweekParam}`);
-      const { activePlayers: active, reservePlayers: reserve, teamName: fetchedTeamName, gameweek, currentGameweek, isPastGameweek, isFutureGameweek, isActiveGameweek, gameweekData, freeTransfers: ft, bank: bankBalance } = response.data;
+      const { activePlayers: active, reservePlayers: reserve, teamName: fetchedTeamName, gameweek, currentGameweek, isPastGameweek, isFutureGameweek, isActiveGameweek, gameweekData, freeTransfers: ft, bank: bankBalance, isPreSeason } = response.data;
 
       setGameweekInfo({
         selected: gameweek,
@@ -100,12 +100,30 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
         setCurrentSquadCodes(new Set([...active, ...reserve].map((p) => p.code)));
       }
 
+      let finalActive = active;
+      let finalReserve = reserve;
+
+      if (isPreSeason && entryId) {
+        // Restore any previously saved squad selections from localStorage
+        try {
+          const saved = localStorage.getItem(`preseason_squad_${entryId}`);
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed.active) && Array.isArray(parsed.reserve)) {
+              finalActive = parsed.active;
+              finalReserve = parsed.reserve;
+            }
+          }
+        } catch { /* ignore storage errors */ }
+      } else if (!isPreSeason && entryId) {
+        // Season has started — discard saved pre-season selections so real picks take over
+        try { localStorage.removeItem(`preseason_squad_${entryId}`); } catch { /* ignore */ }
+      }
+
       // For future gameweeks, attempt to restore a previously saved lineup
       // selection (substitutions, bench order, captain).  If the squad
       // fingerprint no longer matches (transfer was made), the stored data is
       // discarded and the fresh API data is used as-is.
-      let finalActive = active;
-      let finalReserve = reserve;
       if (isFutureGameweek && entryId) {
         const stored = loadLineup(entryId, gameweek);
         // Pass currentSquadCodes (last real GW) as the comparison base so that
@@ -216,9 +234,73 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
   // @param {string} zone             - The effective zone ('active'|'reserve') from the UI.
   // @param {Array}  [effectiveActive]  - Effective starting XI; falls back to activePlayers.
   // @param {Array}  [effectiveReserve] - Effective bench;      falls back to reservePlayers.
-  const handlePlayerClick = isHighestPredictedTeam
+  const fillPreSeasonSlot = useCallback((slotCode, newPlayer) => {
+  const basePoints = Math.round(parseFloat(newPlayer.ep_next) || 0);
+  const makePlayerObj = (placeholder) => ({
+    id:                       newPlayer.id,
+    code:                     newPlayer.code,
+    name:                     newPlayer.name ?? `${newPlayer.first_name ?? ''} ${newPlayer.second_name ?? ''}`.trim(),
+    webName:                  newPlayer.webName ?? newPlayer.web_name,
+    position:                 newPlayer.position ?? newPlayer.element_type,
+    team:                     newPlayer.team,
+    teamCode:                 newPlayer.teamCode ?? newPlayer.team_code,
+    nowCost:                  newPlayer.nowCost ?? newPlayer.now_cost,
+    purchasePrice:            newPlayer.nowCost ?? newPlayer.now_cost,
+    sellingPrice:             newPlayer.nowCost ?? newPlayer.now_cost,
+    status:                   newPlayer.status ?? null,
+    chanceOfPlayingNextRound: newPlayer.chance_of_playing_next_round ?? newPlayer.chanceOfPlayingNextRound ?? null,
+    news:                     newPlayer.news ?? '',
+    totalPoints:              newPlayer.total_points ?? newPlayer.totalPoints ?? 0,
+    lastGwPoints:             newPlayer.event_points ?? newPlayer.lastGwPoints ?? 0,
+    inDreamteam:              newPlayer.in_dreamteam ?? newPlayer.inDreamteam ?? false,
+    basePoints,
+    multiplier:               1,
+    predictedPoints:          basePoints,
+    is_captain:               false,
+    is_vice_captain:          false,
+    opponent:                 newPlayer.opponent ?? '-',
+    is_home:                  newPlayer.is_home ?? null,
+    opponents:                newPlayer.opponents ?? [],
+    opponentDisplay:          newPlayer.opponentDisplay ?? '-',
+    difficulty:               newPlayer.difficulty ?? null,
+    teamName:                 newPlayer.teamName ?? null,
+    gameweekStats:            null,
+    isActive:                 placeholder.isActive,
+    slot:                     placeholder.slot,
+    user_team:                true,
+    isPlaceholder:            false,
+  });
+
+  let newActive = activePlayers;
+  let newReserve = reservePlayers;
+
+  const activeIdx = activePlayers.findIndex(p => p.code === slotCode);
+  if (activeIdx !== -1) {
+    newActive = [...activePlayers];
+    newActive[activeIdx] = makePlayerObj(activePlayers[activeIdx]);
+  } else {
+    const reserveIdx = reservePlayers.findIndex(p => p.code === slotCode);
+    if (reserveIdx !== -1) {
+      newReserve = [...reservePlayers];
+      newReserve[reserveIdx] = makePlayerObj(reservePlayers[reserveIdx]);
+    }
+  }
+
+  setActivePlayers(newActive);
+  setReservePlayers(newReserve);
+
+  if (entryId) {
+    try {
+      localStorage.setItem(`preseason_squad_${entryId}`, JSON.stringify({ active: newActive, reserve: newReserve }));
+    } catch { /* ignore storage errors */ }
+  }
+}, [activePlayers, reservePlayers, entryId]);
+
+const handlePlayerClick = isHighestPredictedTeam
   ? undefined
   : async (player, zone, effectiveActive, effectiveReserve) => {
+      // Placeholder slots use the TransferPlayer 'add' flow — skip swap handling
+      if (player.isPlaceholder) return;
       const currentActive  = effectiveActive  ?? activePlayers;
       const currentReserve = effectiveReserve ?? reservePlayers;
 
@@ -389,6 +471,7 @@ const calculateTotalPredictedPoints = (team) => {
     reservePlayers,
     snackbar,
     handlePlayerClick,
+    fillPreSeasonSlot,
     calculateTotalPredictedPoints,
     toggleTeamView,
     isHighestPredictedTeam,

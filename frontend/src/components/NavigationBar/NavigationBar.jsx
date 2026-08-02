@@ -36,7 +36,6 @@ const NavigationBar = ({
   teamView,
   onSwitchTeamView,
   userTeamId,
-  isPreSeason,
   onSetTeamId,
   selectedGameweek,
   setSelectedGameweek,
@@ -146,7 +145,7 @@ const NavigationBar = ({
           <Box sx={ { display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 }, flexShrink: 0, ml: 'auto' } }>
             { /* Team view toggle buttons */ }
             <Box sx={ { display: 'flex', gap: 0.5 } }>
-              { userTeamId && !isPreSeason && (
+              { userTeamId && (
                 <Button
                   variant={ teamView === TEAM_VIEW.USER ? 'contained' : 'outlined' }
                   color='secondary'
@@ -279,7 +278,6 @@ NavigationBar.propTypes = {
   teamView: PropTypes.string,
   onSwitchTeamView: PropTypes.func,
   userTeamId: PropTypes.string,
-  isPreSeason: PropTypes.bool,
   onSetTeamId: PropTypes.func,
   selectedGameweek: PropTypes.number,
   setSelectedGameweek: PropTypes.func,

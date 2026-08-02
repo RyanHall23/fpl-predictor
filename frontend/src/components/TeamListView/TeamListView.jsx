@@ -50,6 +50,7 @@ const ListRow = ({
   onPlayerClick,
   onSetCaptain,
   isFutureGameweek,
+  isPreSeason,
   viewedGameweek,
   plannedTransfers,
   onRemovePlannedTransfer,
@@ -312,6 +313,13 @@ const ListRow = ({
                     </svg>
                   </IconButton>
                 )
+              ) : isPreSeason && !player.isPlaceholder ? (
+                <IconButton size='small' aria-label='Change player' onClick={ (e) => { e.stopPropagation(); setTransferDialogOpen(true); } }>
+                  <svg width='17' height='17' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg' aria-hidden='true'>
+                    <path d='M3 8 L12 8 L12 6 L18 10 L12 14 L12 12 L3 12 Z' fill='#4caf50' />
+                    <path d='M21 16 L12 16 L12 18 L6 14 L12 10 L12 12 L21 12 Z' fill='#f44336' />
+                  </svg>
+                </IconButton>
               ) : (
                 <IconButton size='small' disabled sx={ { visibility: 'hidden' } } aria-hidden='true'>
                   <SyncIcon fontSize='small' />
@@ -362,8 +370,9 @@ const ListRow = ({
           onTransfer={ (playerOut, playerIn, gameweek) => { onTransfer(playerOut, playerIn, gameweek); } }
           open={ transferDialogOpen }
           onClose={ () => setTransferDialogOpen(false) }
-          currentGameweek={ currentGameweek }
-          viewedGameweek={ viewedGameweek }
+          currentGameweek={ isPreSeason ? null : currentGameweek }
+          viewedGameweek={ isPreSeason ? null : viewedGameweek }
+          isPreSeason={ isPreSeason }
         />
       ) }
 
@@ -386,6 +395,7 @@ const TeamListView = ({
   allPlayers,
   onTransfer,
   isHighestPredictedTeam,
+  isPreSeason,
   onPlayerClick,
   onSetCaptain,
   currentGameweek,
@@ -413,7 +423,7 @@ const TeamListView = ({
 
   const sharedRowProps = {
     selectedPlayer, team, allPlayers, onTransfer, onPlayerClick,
-    isFutureGameweek, viewedGameweek, plannedTransfers, onRemovePlannedTransfer,
+    isFutureGameweek, isPreSeason, viewedGameweek, plannedTransfers, onRemovePlannedTransfer,
     currentGameweek, showTransferButtons: !isHighestPredictedTeam,
     liveMatches,
   };
