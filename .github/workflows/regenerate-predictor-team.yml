@@ -1,0 +1,39 @@
+name: Regenerate Predictor Team
+
+# Runs automatically after the season-data refresh and can be triggered
+# manually from the GitHub Actions UI.
+
+on:
+  workflow_run:
+    workflows: ['Refresh FPL Season Data']
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Delete cached squad and force full regeneration'
+        type: boolean
+        default: true
+
+permissions: {}
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # For workflow_run triggers, only proceed when the upstream job succeeded
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Trigger status (regenerates squad if cache is missing or stale)
+        run: |
+          curl -sf "${{ secrets.VERCEL_APP_URL }}/api/predictor-team/status" -o /dev/null \
+            && echo "Status OK" || echo "Status call failed (non-fatal)"
+        env:
+          VERCEL_APP_URL: ${{ secrets.VERCEL_APP_URL }}
+
+      - name: Warm recommendations (computes multi-GW EP + season plan)
+        run: |
+          curl -sf "${{ secrets.VERCEL_APP_URL }}/api/predictor-team/recommendations" -o /dev/null \
+            && echo "Recommendations OK" || echo "Recommendations call failed (non-fatal)"
+        env:
+          VERCEL_APP_URL: ${{ secrets.VERCEL_APP_URL }}
