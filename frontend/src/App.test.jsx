@@ -18,6 +18,21 @@ vi.mock('./theme/ThemeContext', () => ({
   ThemeProvider: ({ children }) => children,
 }));
 
+vi.mock('./components/TeamFormation/TeamFormation', () => ({ default: () => <div data-testid="team-formation" /> }));
+vi.mock('./components/TeamListView/TeamListView', () => ({ default: () => <div data-testid="team-list-view" /> }));
+vi.mock('./components/LiveBanner/LiveBanner', () => ({ default: () => null }));
+vi.mock('./components/RightPanel', () => ({ default: () => <div data-testid="right-panel" /> }));
+vi.mock('./components/RecommendedTransfers', () => ({ default: () => <div data-testid="recommended-transfers" /> }));
+vi.mock('./components/TeamActivityPanel', () => ({ default: () => <div data-testid="team-activity-panel" /> }));
+vi.mock('./components/PlannedTransfers', () => ({ default: () => <div data-testid="planned-transfers" /> }));
+vi.mock('./components/SectionBar', () => ({ default: () => <div data-testid="section-bar" /> }));
+vi.mock('./components/SeasonHighlights', () => ({ default: () => <div data-testid="season-highlights" /> }));
+vi.mock('./components/PredictorTeam/PredictorTeamPanel', () => ({ default: () => <div data-testid="predictor-team-panel" /> }));
+vi.mock('./components/GWTransfers/GWTransfers', () => ({
+  default: () => <div data-testid="gw-transfers-panel" />,
+  useGWTransfers: () => ({ transfers: [], meta: null, loading: false }),
+}));
+
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { vi, expect, test, beforeEach } from 'vitest';
@@ -41,6 +56,34 @@ const defaultApiResponse = (url) => {
       },
     });
   }
+  if (url && /\/api\/entry\/.+\/team/.test(url)) {
+    return Promise.resolve({
+      data: {
+        activePlayers: [],
+        reservePlayers: [],
+        teamName: 'Test Team',
+        gameweek: 1,
+        currentGameweek: 1,
+        isPastGameweek: false,
+        isFutureGameweek: false,
+        isActiveGameweek: false,
+        gameweekData: null,
+        freeTransfers: 1,
+        bank: 0,
+      },
+    });
+  }
+  if (url && /\/api\/entry\/.+\/profile/.test(url)) {
+    return Promise.resolve({
+      data: {
+        player_first_name: 'Test',
+        player_last_name: 'User',
+        name: 'Test Team',
+        chips: [],
+        current: [],
+      },
+    });
+  }
   return Promise.resolve({ data: { events: [], elements: [], teams: [] } });
 };
 
@@ -51,10 +94,12 @@ beforeEach(() => {
 
 // ── Existing tests (kept as-is) ──────────────────────────────────────────────
 
-test('shows My Team button when teamId is stored in localStorage', () => {
+test('hides My Team button during pre-season even when teamId is stored in localStorage', async () => {
   localStorage.setItem('teamId', '12345');
   render(<App />);
-  expect(screen.getByText(/My Team/i)).toBeInTheDocument();
+  await waitFor(() => {
+    expect(screen.queryByText(/My Team/i)).not.toBeInTheDocument();
+  });
 });
 
 test('does not show My Team button when no teamId is stored', () => {
@@ -62,10 +107,10 @@ test('does not show My Team button when no teamId is stored', () => {
   expect(screen.queryByText(/My Team/i)).not.toBeInTheDocument();
 });
 
-test('shows stored teamId in nav bar immediately on render', () => {
+test('shows edit team id affordance when a teamId is stored', () => {
   localStorage.setItem('teamId', '99999');
   render(<App />);
-  expect(screen.getByText(/ID: 99999/i)).toBeInTheDocument();
+  expect(screen.getByText(/Edit Team ID/i)).toBeInTheDocument();
 });
 
 // ── App boot / no-crash rendering ────────────────────────────────────────────
@@ -110,18 +155,60 @@ test('"Set ID" affordance is present when no teamId in localStorage', () => {
 
 // ── localStorage teamId interactions ─────────────────────────────────────────
 
-test('with teamId "0" — My Team button IS visible (passes /^\\d+$/ regex)', () => {
+test('with teamId "0" — My Team button is still hidden in pre-season', async () => {
   localStorage.setItem('teamId', '0');
   render(<App />);
-  expect(screen.getByText(/My Team/i)).toBeInTheDocument();
+  await waitFor(() => {
+    expect(screen.queryByText(/My Team/i)).not.toBeInTheDocument();
+  });
 });
 
-test('with non-empty teamId "abc" — My Team button is visible (userTeamId is truthy)', () => {
-  // NavigationBar renders My Team whenever userTeamId is truthy.
-  // The isValidTeamId guard applies only to saving the ID, not displaying the button.
+test('with non-empty teamId "abc" — edit team id affordance is shown in pre-season', () => {
   localStorage.setItem('teamId', 'abc');
   render(<App />);
-  expect(screen.getByText(/My Team/i)).toBeInTheDocument();
+  expect(screen.getByText(/Edit Team ID/i)).toBeInTheDocument();
+});
+
+test('shows My Team button outside pre-season when teamId is stored', async () => {
+  api.get.mockImplementation((url) => {
+    if (url === '/api/predicted-team') {
+      return Promise.resolve({
+        data: {
+          activePlayers: [],
+          reservePlayers: [],
+          gameweek: 2,
+          currentGameweek: 2,
+          isPastGameweek: false,
+          isFutureGameweek: false,
+          isActiveGameweek: true,
+          gameweekData: null,
+        },
+      });
+    }
+    if (url === '/api/entry/12345/team') {
+      return Promise.resolve({
+        data: {
+          activePlayers: [],
+          reservePlayers: [],
+          teamName: 'Test Team',
+          gameweek: 2,
+          currentGameweek: 2,
+          isPastGameweek: false,
+          isFutureGameweek: false,
+          isActiveGameweek: true,
+          gameweekData: null,
+          freeTransfers: 1,
+          bank: 0,
+        },
+      });
+    }
+    return Promise.resolve({ data: { events: [], elements: [], teams: [] } });
+  });
+  localStorage.setItem('teamId', '12345');
+  render(<App />);
+  await waitFor(() => {
+    expect(screen.getByText(/My Team/i)).toBeInTheDocument();
+  });
 });
 
 // ── API mock behaviour ────────────────────────────────────────────────────────

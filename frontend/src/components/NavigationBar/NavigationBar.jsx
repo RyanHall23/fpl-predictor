@@ -36,6 +36,7 @@ const NavigationBar = ({
   teamView,
   onSwitchTeamView,
   userTeamId,
+  isPreSeason,
   onSetTeamId,
   selectedGameweek,
   setSelectedGameweek,
@@ -145,7 +146,7 @@ const NavigationBar = ({
           <Box sx={ { display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 }, flexShrink: 0, ml: 'auto' } }>
             { /* Team view toggle buttons */ }
             <Box sx={ { display: 'flex', gap: 0.5 } }>
-              { userTeamId && (
+              { userTeamId && !isPreSeason && (
                 <Button
                   variant={ teamView === TEAM_VIEW.USER ? 'contained' : 'outlined' }
                   color='secondary'
@@ -231,14 +232,14 @@ const NavigationBar = ({
                 </IconButton>
               </Tooltip>
               <Button color='inherit' onClick={ handleOpenTeamIdDialog } size='small' sx={ { fontSize: { xs: '0.7rem', sm: '0.875rem' }, px: { xs: 0.5, sm: 1 } } }>
-                { userTeamId ? `ID: ${userTeamId}` : 'Set ID' }
+                { userTeamId ? 'Edit Team ID' : 'Set ID' }
               </Button>
             </Box>
           </Box>
         </Toolbar>
       </Container>
       <Dialog open={ teamIdDialogOpen } onClose={ handleCloseTeamIdDialog }>
-        <DialogTitle>{ userTeamId ? 'Update Team ID' : 'Set Team ID' }</DialogTitle>
+        <DialogTitle>{ userTeamId ? 'Edit Team ID' : 'Set Team ID' }</DialogTitle>
         <form onSubmit={ (e) => { e.preventDefault(); handleSaveTeamId(); } }>
           <DialogContent>
             <TextField
@@ -278,6 +279,7 @@ NavigationBar.propTypes = {
   teamView: PropTypes.string,
   onSwitchTeamView: PropTypes.func,
   userTeamId: PropTypes.string,
+  isPreSeason: PropTypes.bool,
   onSetTeamId: PropTypes.func,
   selectedGameweek: PropTypes.number,
   setSelectedGameweek: PropTypes.func,

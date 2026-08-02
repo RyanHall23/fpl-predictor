@@ -54,6 +54,7 @@ const App = () => {
   const [teamView, setTeamView] = useState(() => localStorage.getItem('teamId') ? TEAM_VIEW.USER : TEAM_VIEW.HIGHEST);
   const [selectedGameweek, setSelectedGameweek] = useState(null); // null means current gameweek
   const [currentGameweek, setCurrentGameweek] = useState(null);
+  const [seasonPhase, setSeasonPhase] = useState(null);
   const [viewingOpponentId, setViewingOpponentId] = useState(null); // opponent team being viewed
   const [viewingOpponentTeamName, setViewingOpponentTeamName] = useState('');
   const [viewingOpponentPlayerName, setViewingOpponentPlayerName] = useState('');
@@ -92,6 +93,25 @@ const App = () => {
   );
 
   const { allPlayers } = useAllPlayers(selectedGameweek);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    axios.get('/api/predicted-team')
+      .then(({ data }) => {
+        if (cancelled) return;
+        const isPreSeasonPhase = data?.currentGameweek === 1
+          && !data?.isPastGameweek
+          && !data?.isActiveGameweek
+          && !data?.isFutureGameweek;
+        setSeasonPhase(isPreSeasonPhase ? 'pre-season' : 'active');
+      })
+      .catch(() => {
+        if (!cancelled) setSeasonPhase('active');
+      });
+
+    return () => { cancelled = true; };
+  }, []);
 
   // GW Transfers — shown in active/overview sections for non-future user/opponent views
   const showGWTransfers = !isHighestPredictedTeam && !gameweekInfo?.isFuture && (activeSection === 'active' || activeSection === 'overview') && !!(viewingOpponentId || currentEntryId) && !!currentGameweek;
@@ -375,6 +395,16 @@ const App = () => {
     }
   }, [gameweekInfo]);
 
+  const isPreSeason = seasonPhase === 'pre-season';
+
+  useEffect(() => {
+    if (!isPreSeason || teamView !== TEAM_VIEW.USER) return;
+    setTeamView(TEAM_VIEW.HIGHEST);
+    setCurrentEntryId('');
+    setViewingOpponentId(null);
+    if (!isHighestPredictedTeam) toggleTeamView();
+  }, [isPreSeason, teamView, isHighestPredictedTeam, toggleTeamView]);
+
   const handleSnackbarClose = () => { setSnackbarOpen(false); setLocalSnackbar(''); };
 
   useEffect(() => {
@@ -594,9 +624,15 @@ const App = () => {
     if (teamId) {
       localStorage.setItem('teamId', teamId);
       setUserEntryId(teamId);
-      setCurrentEntryId(teamId);
-      setTeamView(TEAM_VIEW.USER);
-      if (isHighestPredictedTeam) toggleTeamView();
+      if (isPreSeason) {
+        setCurrentEntryId('');
+        setTeamView(TEAM_VIEW.HIGHEST);
+        if (!isHighestPredictedTeam) toggleTeamView();
+      } else {
+        setCurrentEntryId(teamId);
+        setTeamView(TEAM_VIEW.USER);
+        if (isHighestPredictedTeam) toggleTeamView();
+      }
     } else {
       localStorage.removeItem('teamId');
       setUserEntryId('');
@@ -707,6 +743,7 @@ const App = () => {
         teamView={ teamView }
         onSwitchTeamView={ handleSwitchTeamView }
         userTeamId={ userEntryId }
+        isPreSeason={ isPreSeason }
         onSetTeamId={ handleSetTeamId }
         selectedGameweek={ selectedGameweek }
         setSelectedGameweek={ setSelectedGameweek }

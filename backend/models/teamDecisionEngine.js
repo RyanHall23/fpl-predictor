@@ -100,7 +100,7 @@ function recommendLineup(squad) {
   startFwds.sort((a, b) => ep(b) - ep(a));
 
   const activePlayers = [...startingGK, ...startDefs, ...startMids, ...startFwds];
-  const usedIds = new Set(activePlayers.map(p => p.id));
+  const usedIds = new Set([...activePlayers, ...benchGK].map(p => p.id));
   const reservePlayers = [
     ...benchGK,
     ...squad.filter(p => !usedIds.has(p.id)).sort((a, b) => ep(b) - ep(a)),

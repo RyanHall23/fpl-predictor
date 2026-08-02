@@ -227,7 +227,7 @@ function CaptainCard({ caption, player, reason, isVice }) {
 }
 CaptainCard.propTypes = { caption: PropTypes.string, player: PropTypes.object.isRequired, reason: PropTypes.string, isVice: PropTypes.bool };
 
-function RecommendedActions({ recommendations }) {
+function RecommendedActions({ recommendations, status }) {
   const theme = useTheme();
 
   if (!recommendations) return null;
@@ -244,12 +244,21 @@ function RecommendedActions({ recommendations }) {
   }
 
   const { transfers, captain, viceCaptain, lineup, chipSuggestion, predictedPoints, gameweek } = recommendations;
+  const heading = status?.phase === 'pre-season'
+    ? `Recommended Actions — Before GW${gameweek}`
+    : `Recommended Actions — Ahead of GW${gameweek}`;
 
   return (
     <Paper variant='outlined' sx={{ p: 2, mb: 2 }}>
       <SectionHeading>
-        Recommended Actions — GW{gameweek}
+        {heading}
       </SectionHeading>
+
+      {status?.phase === 'pre-season' && (
+        <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mb: 1.5 }}>
+          These recommendations are for the generated squad before the GW{gameweek} deadline.
+        </Typography>
+      )}
 
       {/* Predicted points */}
       {predictedPoints != null && (
@@ -331,7 +340,7 @@ function RecommendedActions({ recommendations }) {
     </Paper>
   );
 }
-RecommendedActions.propTypes = { recommendations: PropTypes.object };
+RecommendedActions.propTypes = { recommendations: PropTypes.object, status: PropTypes.object };
 
 // ── Decision History section ──────────────────────────────────────────────────
 
@@ -467,7 +476,7 @@ function PredictorTeamPanel() {
       {status && (
         <>
           <TeamOverview status={status} />
-          <RecommendedActions recommendations={recommendations} />
+          <RecommendedActions recommendations={recommendations} status={status} />
           <DecisionHistory history={history} />
         </>
       )}
