@@ -1,0 +1,71 @@
+name: Dependency Cleanup
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 8 * * 1"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  cleanup:
+    name: Remove unused npm dependencies
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install depcheck
+        run: npm install --no-save depcheck
+
+      - name: Run dependency cleanup
+        run: |
+          chmod +x scripts/check-unused-deps.sh
+          ./scripts/check-unused-deps.sh --fix
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run tests
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          npm --workspace frontend test -- --run
+          npm --workspace backend test
+
+      - name: Create cleanup PR
+        if: steps.changes.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: chore/dependency-cleanup
+          delete-branch: true
+          commit-message: "chore: remove unused npm dependencies"
+          title: "chore: remove unused npm dependencies"
+          body: |
+            ## Automated dependency cleanup
+
+            This PR was generated automatically.
+
+            Changes:
+            - Removed unused npm dependencies
+            - Updated package-lock.json
+            - Verified dependencies with depcheck
+            - Ran frontend and backend tests
