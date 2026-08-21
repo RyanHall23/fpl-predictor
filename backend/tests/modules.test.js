@@ -166,3 +166,17 @@ describe('teamDecisionEngine', () => {
     );
   });
 });
+
+describe('predictorTeamService', () => {
+  test('reports current remaining free transfers', () => {
+    const { calculateFreeTransfers } = require(path.join(__dirname, '..', 'models/predictorTeamService.js'));
+    const history = {
+      current: [
+        { event: 1, event_transfers: 0 },
+        { event: 2, event_transfers: 1 },
+      ],
+    };
+
+    assert.equal(calculateFreeTransfers(history, history.current[1], 2), 1);
+  });
+});

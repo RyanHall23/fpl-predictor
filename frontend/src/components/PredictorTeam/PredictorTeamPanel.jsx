@@ -108,11 +108,12 @@ function TeamOverview({ status }) {
       <SectionHeading>Squad</SectionHeading>
 
       {/* Finance row */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1, mb: 2, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 1, mb: 2, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
         <FinanceStat label='Team Value'    value={status.totalCost != null ? costLabel(status.totalCost) : '—'} />
         <FinanceStat label='In the Bank'   value={status.bank      != null ? costLabel(status.bank)      : '—'} />
         <FinanceStat label='Free Transfers' value={status.freeTransfers ?? (status.phase === 'pre-season' ? '1' : '—')} />
         <FinanceStat label='Overall Rank'  value={status.overallRank != null ? `#${status.overallRank.toLocaleString()}` : '—'} />
+        <FinanceStat label='Cumulative Points' value={status.overallPoints != null ? `${status.overallPoints.toLocaleString()} pts` : '—'} />
       </Box>
 
       {/* Starting XI */}
