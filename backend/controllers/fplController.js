@@ -1,6 +1,7 @@
 const fplModel = require('../models/fplModel');
 const dataProvider = require('../models/dataProvider');
 const { buildBreakdown } = require('../utils/statsBreakdown');
+const { getSeasonState } = require('../utils/season');
 
 /**
  * Format a player's opponent(s) as a human-readable display string.
@@ -178,7 +179,8 @@ const getPredictedTeam = async (req, res) => {
       fplModel.fetchBootstrapStatic(),
       fplModel.fetchFixtures(),
     ]);
-    const currentEvent = data.events.find(e => e.is_current) || data.events[0];
+    const seasonState = getSeasonState(data.events);
+    const currentEvent = seasonState.currentEvent;
 
     let targetEvent;
     if (gameweek !== undefined) {
@@ -198,7 +200,7 @@ const getPredictedTeam = async (req, res) => {
     
     const targetEventData = data.events.find(e => e.id === targetEvent);
     const isPastGameweek = !!(targetEventData && targetEventData.finished);
-    const isActiveGameweek = !!(targetEventData && targetEventData.is_current && !targetEventData.finished);
+    const isActiveGameweek = seasonState.isEventActive(targetEventData);
     const isFutureGameweek = targetEvent > currentEvent.id;
     
     let players = data.elements.map((p) => ({
@@ -269,7 +271,8 @@ const getUserTeam = async (req, res) => {
       return res.status(400).json({ error: 'Gameweek must be between 1 and 38' });
     }
     
-    const currentEvent = bootstrap.events.find(e => e.is_current) || bootstrap.events[0];
+    const seasonState = getSeasonState(bootstrap.events);
+    const currentEvent = seasonState.currentEvent;
     const targetEventData = bootstrap.events.find(e => e.id === targetEvent);
     
     // For future gameweeks, use current picks since future picks don't exist yet
@@ -292,7 +295,7 @@ const getUserTeam = async (req, res) => {
     // For past gameweeks, use actual points; for future, use predicted
     const isPastGameweek = !!(targetEventData && targetEventData.finished);
     // Active gameweek: deadline has passed (is_current) but games not yet finished
-    const isActiveGameweek = !!(targetEventData && targetEventData.is_current && !targetEventData.finished);
+    const isActiveGameweek = seasonState.isEventActive(targetEventData);
     
     // For past or active gameweeks, enrich with live/actual points
     if (isPastGameweek || isActiveGameweek) {
@@ -356,7 +359,8 @@ const getUserTeamForEntry = async (req, res) => {
 
   try {
     const bootstrap = await fplModel.fetchBootstrapStatic();
-    const currentEvent = bootstrap.events.find(e => e.is_current) || bootstrap.events.find(e => !e.finished) || bootstrap.events[0];
+    const seasonState = getSeasonState(bootstrap.events);
+    const currentEvent = seasonState.currentEvent;
     if (!currentEvent) {
       return res.status(500).json({ error: 'Could not determine current gameweek' });
     }
@@ -398,7 +402,7 @@ const getUserTeamForEntry = async (req, res) => {
     }
     const fixtures = fixturesResult.value;
 
-    const isPreSeason = bootstrap.events.every(e => !e.finished && !e.is_current);
+    const isPreSeason = !seasonState.seasonStarted;
 
     if (picksResult.status === 'rejected') {
       if (isPreSeason) {
@@ -522,7 +526,7 @@ const getUserTeamForEntry = async (req, res) => {
     });
 
     const isPastGameweek = !!(targetEventData && targetEventData.finished);
-    const isActiveGameweek = !!(targetEventData && targetEventData.is_current && !targetEventData.finished);
+    const isActiveGameweek = seasonState.isEventActive(targetEventData);
 
     if (isPastGameweek || isActiveGameweek) {
       players = await fplModel.enrichPlayersWithGameweekStats(players, targetEvent);

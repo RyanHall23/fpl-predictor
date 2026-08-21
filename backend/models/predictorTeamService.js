@@ -19,6 +19,7 @@ const fplModel             = require('./fplModel');
 const dataProvider         = require('./dataProvider');
 const teamStateRepository  = require('./teamStateRepository');
 const teamDecisionEngine   = require('./teamDecisionEngine');
+const { getSeasonState }    = require('../utils/season');
 
 // FPL squad rules
 const SQUAD_BUDGET         = 1000;   // £100.0m (FPL stores prices in tenths of £m)
@@ -37,8 +38,7 @@ const PLANNING_HORIZON = 5;
  * @returns {'pre-season' | 'active'}
  */
 function detectSeasonPhase(events) {
-  if (!Array.isArray(events) || events.length === 0) return 'active';
-  return events.some(e => e.finished || e.is_current) ? 'active' : 'pre-season';
+  return getSeasonState(events).seasonStarted ? 'active' : 'pre-season';
 }
 
 /**
@@ -48,12 +48,7 @@ function detectSeasonPhase(events) {
  * @returns {number}
  */
 function getCurrentGameweek(events) {
-  const current = events.find(e => e.is_current);
-  if (current) return current.id;
-  const finished = events.filter(e => e.finished);
-  if (finished.length) return finished[finished.length - 1].id;
-  // Pre-season: return the first event
-  return events[0]?.id ?? 1;
+  return getSeasonState(events).currentGameweek;
 }
 
 /**
