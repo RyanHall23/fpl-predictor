@@ -138,6 +138,7 @@ EventRow.propTypes = {
 const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme, assisters }) => {
   const isFinished   = fixture.finished;
   const isStarted    = fixture.started;
+  const hasKickedOff = fixture.kickoffDate && fixture.kickoffDate <= new Date();
   const fplHomeScore = fixture.team_h_score;
   const fplAwayScore = fixture.team_a_score;
   const timeStr      = fixture.kickoffDate ? formatTime(fixture.kickoffDate) : 'TBC';
@@ -155,11 +156,11 @@ const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme, assisters }
   const isLive    = hasEspn ? espnMatch.isLive : (!isFinished && isStarted);
   const isOver    = hasEspn ? espnMatch.isFinished : isFinished;
   const clock     = (!isOver && hasEspn) ? espnMatch.clock : null;
-  const hasEvents = (hasEspn && (isLive || espnMatch.details.some(d => d.icon !== 'other'))) ||
+  const hasEvents = (hasEspn && (isLive || espnMatch.details?.some(d => d.icon !== 'other'))) ||
     (assisters?.espnAssisters?.length > 0 || assisters?.fplOnlyAssisters?.length > 0);
   // Event data is loaded after expansion, so started/finished fixtures must
   // remain clickable even when ESPN has not matched them yet.
-  const canExpand = hasEvents || isStarted || isFinished;
+  const canExpand = hasEvents || isStarted || isFinished || hasKickedOff;
 
   const teamNameSx = { flex: 1, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
 
@@ -245,7 +246,7 @@ const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme, assisters }
               borderLeftColor: 'divider',
             } }
           >
-            { isLive && espnMatch.clock && (
+            { isLive && espnMatch?.clock && (
               <Chip
                 label={ espnMatch.clock }
                 size='small'
