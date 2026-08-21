@@ -358,14 +358,37 @@ const fetchLiveGameweek = async (eventId) => {
   }
 
   if (CACHE_STATIC) {
-    // Try the committed per-GW file first
+    // The current gameweek must come from FPL so its provisional points stay
+    // current. Committed snapshots are appropriate for completed gameweeks,
+    // and remain a fallback if the live request is unavailable.
+    let isActiveGameweek = false;
+    try {
+      const bootstrap = await loadJsonFile(SEASON_DATA_DIR, 'bootstrap-static.json');
+      const event = bootstrap.events?.find(item => item.id === validatedEventId);
+      const deadlineMs = Date.parse(event?.deadline_time);
+      isActiveGameweek = !!event && !event.finished && (
+        event.is_current || (Number.isFinite(deadlineMs) && deadlineMs <= Date.now())
+      );
+    } catch (_) {
+      // Missing static bootstrap data is handled by the live API fallback.
+    }
+
+    if (isActiveGameweek) {
+      try {
+        return await cachedGet(`${FPL_API_BASE}/event/${validatedEventId}/live/`, TTL_LIVE);
+      } catch (_) {
+        // Fall through to the committed snapshot if the API is unavailable.
+      }
+    }
+
+    // Try the committed per-GW file for completed gameweeks or as a fallback.
     try {
       return await loadJsonFile(
         path.join(SEASON_DATA_DIR, 'live'),
         `gw-${validatedEventId}.json`,
       );
     } catch (_) {
-      // Not yet committed (current / future GW) — fetch live
+      // Not yet committed (current / future GW) — fetch live.
     }
   }
 

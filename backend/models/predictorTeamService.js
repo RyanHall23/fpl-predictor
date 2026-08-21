@@ -129,6 +129,8 @@ function minimalPlayer(player) {
     teamShortName: player.teamShortName ?? null,
     now_cost:     player.now_cost,
     ep_next:      parseFloat(player.ep_next ?? 0) || 0,
+    predictedPoints: parseFloat(player.ep_next ?? 0) || 0,
+    actualPoints:  parseFloat(player.event_points ?? 0) || 0,
     photo:        player.photo ?? null,
   };
 }
@@ -356,17 +358,22 @@ async function loadActiveTeamState(teamId, players, fixtures, teams, currentGW, 
 
   enrichedPlayers = fplModel.enrichPlayersWithOpponents(enrichedPlayers, fixtures, teams, targetGW);
   enrichedPlayers = await fplModel.applyPredictionsWithCache(enrichedPlayers, fixtures, teams, targetGW, 'predictor-active');
+  const actualPlayers = await fplModel.enrichPlayersWithGameweekStats(enrichedPlayers, currentGW);
 
   // Build the player map for squad lookup
   const playerMap = {};
+  const actualPlayerMap = {};
   enrichedPlayers.forEach(p => { playerMap[p.id] = p; });
+  actualPlayers.forEach(p => { actualPlayerMap[p.id] = p; });
 
   // Map picks to enriched player objects
   const squad = picks.map(pick => {
     const player = playerMap[pick.element];
+    const actualPlayer = actualPlayerMap[pick.element];
     if (!player) return null;
     return {
       ...player,
+      event_points: actualPlayer?.event_points ?? 0,
       pick_position:   pick.position,
       is_captain:      !!pick.is_captain,
       is_vice_captain: !!pick.is_vice_captain,
@@ -382,9 +389,9 @@ async function loadActiveTeamState(teamId, players, fixtures, teams, currentGW, 
       let ft = 1;
       for (const gw of gwHistory) {
         if (gw.event >= targetGW) break;
-        if (gw.event_chip === 'freehit')   { ft = Math.min(2, ft + 1); }
+        if (gw.event_chip === 'freehit')   { ft = Math.min(5, ft + 1); }
         else if (gw.event_chip === 'wildcard') { ft = 1; }
-        else { ft = Math.min(2, Math.max(0, ft - (gw.event_transfers || 0)) + 1); }
+        else { ft = Math.min(5, Math.max(0, ft - (gw.event_transfers || 0)) + 1); }
       }
       freeTransfers = ft;
     } catch (_) { freeTransfers = 1; }
@@ -405,6 +412,14 @@ async function loadActiveTeamState(teamId, players, fixtures, teams, currentGW, 
   // Active / reserve split
   const activePlayers  = squad.filter(p => p.pick_position <= 11).sort((a, b) => a.pick_position - b.pick_position);
   const reservePlayers = squad.filter(p => p.pick_position > 11).sort((a, b) => a.pick_position - b.pick_position);
+  const totalPredictedPoints = activePlayers.reduce((sum, player) => {
+    const multiplier = player.is_captain ? (player.multiplier ?? 1) : 1;
+    return sum + (parseFloat(player.ep_next ?? 0) || 0) * multiplier;
+  }, 0);
+  const totalActualPoints = activePlayers.reduce((sum, player) => {
+    const multiplier = player.is_captain ? (player.multiplier ?? 1) : 1;
+    return sum + (parseFloat(player.event_points ?? 0) || 0) * multiplier;
+  }, 0);
 
   return {
     squad:           squad.map(minimalPlayer),
@@ -415,6 +430,8 @@ async function loadActiveTeamState(teamId, players, fixtures, teams, currentGW, 
     bank:            entryHistory.bank ?? null,
     totalCost:       entryHistory.value ?? null,
     freeTransfers,
+    totalPredictedPoints: Math.round(totalPredictedPoints * 10) / 10,
+    totalActualPoints: Math.round(totalActualPoints * 10) / 10,
     usedChips,
     overallPoints,
     overallRank,
@@ -502,6 +519,8 @@ async function getPredictorTeamStatus() {
     bank:           liveState.bank,
     totalCost:      liveState.totalCost,
     freeTransfers:  liveState.freeTransfers,
+    totalPredictedPoints: liveState.totalPredictedPoints,
+    totalActualPoints: liveState.totalActualPoints,
     usedChips:      liveState.usedChips,
     overallPoints:  liveState.overallPoints,
     overallRank:    liveState.overallRank,
