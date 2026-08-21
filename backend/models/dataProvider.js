@@ -317,11 +317,13 @@ const fetchFixtures = async () => {
     return await loadMockData('fixtures.json');
   }
   if (CACHE_STATIC) {
-    return await loadStaticOrFetch(
-      'fixtures.json',
-      `${FPL_API_BASE}/fixtures/`,
-      TTL_FIXTURES,
-    );
+    // Fixture status and match stats change during the current gameweek, so
+    // prefer the live feed even when the rest of the season data is static.
+    try {
+      return await cachedGet(`${FPL_API_BASE}/fixtures/`, TTL_FIXTURES);
+    } catch (_) {
+      return await loadJsonFile(SEASON_DATA_DIR, 'fixtures.json');
+    }
   }
   return await cachedGet(`${FPL_API_BASE}/fixtures/`, TTL_FIXTURES);
 };
