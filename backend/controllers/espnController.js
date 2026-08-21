@@ -12,7 +12,7 @@
 const axios = require('axios');
 const dataProvider = require('../models/dataProvider');
 
-const ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1';
+const ESPN_BASE = 'https://site.web.api.espn.com/apis/site/v2/sports/soccer/eng.1';
 
 // TTLs for ESPN responses.  Scoreboard changes every ~30 s during a live match;
 // completed-day scoreboards are stable.  Match summaries are fully static once
