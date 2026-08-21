@@ -157,6 +157,9 @@ const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme, assisters }
   const clock     = (!isOver && hasEspn) ? espnMatch.clock : null;
   const hasEvents = (hasEspn && (isLive || espnMatch.details.some(d => d.icon !== 'other'))) ||
     (assisters?.espnAssisters?.length > 0 || assisters?.fplOnlyAssisters?.length > 0);
+  // Event data is loaded after expansion, so started/finished fixtures must
+  // remain clickable even when ESPN has not matched them yet.
+  const canExpand = hasEvents || isStarted || isFinished;
 
   const teamNameSx = { flex: 1, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
 
@@ -165,8 +168,8 @@ const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme, assisters }
       { /* ── Fixture header row ── */ }
       <ButtonBase
         component='div'
-        onClick={ hasEvents ? onToggle : undefined }
-        disableRipple={ !hasEvents }
+        onClick={ canExpand ? onToggle : undefined }
+        disableRipple={ !canExpand }
         sx={ {
           display: 'flex',
           alignItems: 'center',
@@ -174,8 +177,8 @@ const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme, assisters }
           py: 0.5,
           px: 1,
           borderRadius: 1,
-          cursor: hasEvents ? 'pointer' : 'default',
-          '&:hover': hasEvents ? { backgroundColor: theme.palette.action.hover } : {},
+          cursor: canExpand ? 'pointer' : 'default',
+          '&:hover': canExpand ? { backgroundColor: theme.palette.action.hover } : {},
           textAlign: 'left',
         } }
       >
@@ -216,7 +219,7 @@ const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme, assisters }
         </Typography>
 
         { /* Expand / collapse chevron */ }
-        { hasEvents ? (
+        { canExpand ? (
           <Box sx={ { ml: 0.5, color: 'text.disabled', display: 'flex', alignItems: 'center' } }>
             { expanded
               ? <KeyboardArrowUpIcon sx={ { fontSize: 16 } } />
@@ -228,7 +231,7 @@ const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme, assisters }
       </ButtonBase>
 
       { /* ── Expanded events ── */ }
-      { hasEvents && (
+      { canExpand && (
         <Collapse in={ expanded } timeout='auto' unmountOnExit>
           <Box
             sx={ {
@@ -325,7 +328,11 @@ const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme, assisters }
 FixtureRow.propTypes = {
   fixture:   PropTypes.object.isRequired,
   espnMatch: PropTypes.object,
-  assisters: PropTypes.array,
+  assisters: PropTypes.shape({
+    espnAssisters: PropTypes.array,
+    fplOnlyAssisters: PropTypes.array,
+    summaryEventMap: PropTypes.object,
+  }),
   expanded:  PropTypes.bool,
   onToggle:  PropTypes.func,
   theme:     PropTypes.object.isRequired,

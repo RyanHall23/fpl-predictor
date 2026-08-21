@@ -145,11 +145,15 @@ function TeamOverview({ status }) {
         </Typography>
       )}
 
-      {/* Predicted GW score */}
-      {status.totalPredictedPoints != null && (
-        <Box sx={{ mt: 1.5, pt: 1, borderTop: `1px solid ${theme.palette.divider}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant='caption' color='text.secondary'>Predicted GW Score</Typography>
-          <Typography variant='body2' fontWeight={700}>{parseFloat(status.totalPredictedPoints).toFixed(1)} pts</Typography>
+      {/* Current gameweek score comparison */}
+      {(status.totalPredictedPoints != null || status.totalActualPoints != null) && (
+        <Box sx={{ mt: 1.5, pt: 1, borderTop: `1px solid ${theme.palette.divider}`, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
+          {status.totalPredictedPoints != null && (
+            <FinanceStat label='Predicted GW Score' value={`${parseFloat(status.totalPredictedPoints).toFixed(1)} pts`} />
+          )}
+          {status.totalActualPoints != null && status.phase !== 'pre-season' && (
+            <FinanceStat label='Actual GW Score' value={`${parseFloat(status.totalActualPoints).toFixed(1)} pts`} />
+          )}
         </Box>
       )}
     </Paper>
