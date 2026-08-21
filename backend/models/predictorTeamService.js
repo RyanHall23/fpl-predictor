@@ -64,6 +64,30 @@ function getApplicationTeamId() {
   return /^\d+$/.test(trimmed) ? trimmed : null;
 }
 
+function calculateFreeTransfers(historyData, entryHistory, currentGW) {
+  const gwHistory = [...(historyData?.current || [])].sort((a, b) => a.event - b.event);
+  let freeTransfers = 1;
+
+  for (const gw of gwHistory) {
+    if (gw.event >= currentGW) break;
+    if (gw.event_chip === 'freehit') {
+      freeTransfers = Math.min(2, freeTransfers + 1);
+    } else if (gw.event_chip === 'wildcard') {
+      freeTransfers = 1;
+    } else {
+      freeTransfers = Math.min(2, Math.max(0, freeTransfers - (gw.event_transfers || 0)) + 1);
+    }
+  }
+
+  const currentGameweek = gwHistory.find(gw => gw.event === currentGW);
+  if (currentGameweek?.event_chip === 'wildcard') return 1;
+  if (currentGameweek?.event_chip !== 'freehit') {
+    const transfers = currentGameweek?.event_transfers ?? entryHistory?.event_transfers ?? 0;
+    freeTransfers = Math.max(0, freeTransfers - transfers);
+  }
+  return freeTransfers;
+}
+
 // ── Budget-aware squad generation ─────────────────────────────────────────────
 
 /**
@@ -381,19 +405,11 @@ async function loadActiveTeamState(teamId, players, fixtures, teams, currentGW, 
     };
   }).filter(Boolean);
 
-  // Calculate free transfers from history
+  // Calculate current remaining free transfers from history
   let freeTransfers = 1;
   if (historyResult.status === 'fulfilled') {
     try {
-      const gwHistory = (historyResult.value.current || []).sort((a, b) => a.event - b.event);
-      let ft = 1;
-      for (const gw of gwHistory) {
-        if (gw.event >= targetGW) break;
-        if (gw.event_chip === 'freehit')   { ft = Math.min(5, ft + 1); }
-        else if (gw.event_chip === 'wildcard') { ft = 1; }
-        else { ft = Math.min(5, Math.max(0, ft - (gw.event_transfers || 0)) + 1); }
-      }
-      freeTransfers = ft;
+      freeTransfers = calculateFreeTransfers(historyResult.value, entryHistory, currentGW);
     } catch (_) { freeTransfers = 1; }
   }
 
@@ -428,7 +444,9 @@ async function loadActiveTeamState(teamId, players, fixtures, teams, currentGW, 
     captainId:       picks.find(p => p.is_captain)?.element ?? null,
     viceCaptainId:   picks.find(p => p.is_vice_captain)?.element ?? null,
     bank:            entryHistory.bank ?? null,
-    totalCost:       entryHistory.value ?? null,
+    totalCost:       squad.length > 0
+      ? squad.reduce((sum, player) => sum + (player.now_cost || 0), 0)
+      : (entryHistory.value ?? null),
     freeTransfers,
     totalPredictedPoints: Math.round(totalPredictedPoints * 10) / 10,
     totalActualPoints: Math.round(totalActualPoints * 10) / 10,
@@ -676,6 +694,7 @@ async function getPredictorTeamRecommendations() {
 }
 
 module.exports = {
+  calculateFreeTransfers,
   detectSeasonPhase,
   getCurrentGameweek,
   getApplicationTeamId,
