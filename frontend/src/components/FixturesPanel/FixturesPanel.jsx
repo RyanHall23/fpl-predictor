@@ -138,6 +138,7 @@ EventRow.propTypes = {
 const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme, assisters }) => {
   const isFinished   = fixture.finished;
   const isStarted    = fixture.started;
+  const hasKickedOff = fixture.kickoffDate && fixture.kickoffDate <= new Date();
   const fplHomeScore = fixture.team_h_score;
   const fplAwayScore = fixture.team_a_score;
   const timeStr      = fixture.kickoffDate ? formatTime(fixture.kickoffDate) : 'TBC';
@@ -159,7 +160,7 @@ const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme, assisters }
     (assisters?.espnAssisters?.length > 0 || assisters?.fplOnlyAssisters?.length > 0);
   // Event data is loaded after expansion, so started/finished fixtures must
   // remain clickable even when ESPN has not matched them yet.
-  const canExpand = hasEvents || isStarted || isFinished;
+  const canExpand = hasEvents || isStarted || isFinished || hasKickedOff;
 
   const teamNameSx = { flex: 1, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
 
