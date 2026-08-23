@@ -35,6 +35,7 @@ const posLabel  = (type) => POSITION_LABEL[type] ?? '?';
 const posColor  = (type) => POSITION_COLOR[type] ?? '#6b7280';
 const costLabel = (v)    => v != null ? `£${(v / 10).toFixed(1)}m` : '—';
 const epLabel   = (v)    => v != null ? `${parseFloat(v).toFixed(1)} pts` : '—';
+const pointsLabel = (v) => v != null ? `${parseFloat(v).toFixed(1)} pts` : '—';
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
@@ -94,6 +95,40 @@ function FinanceStat({ label, value }) {
 }
 FinanceStat.propTypes = { label: PropTypes.string.isRequired, value: PropTypes.node };
 
+function TransferRevealCountdown({ revealAt, onReveal }) {
+  const getRemaining = () => Math.max(0, Date.parse(revealAt) - Date.now());
+  const [remaining, setRemaining] = React.useState(getRemaining);
+
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      const nextRemaining = getRemaining();
+      setRemaining(nextRemaining);
+      if (nextRemaining === 0) {
+        clearInterval(timer);
+        onReveal();
+      }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [revealAt, onReveal]);
+
+  const totalSeconds = Math.floor(remaining / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const countdown = days > 0
+    ? `${days}d ${hours}h ${minutes}m`
+    : `${hours}h ${minutes}m ${seconds}s`;
+
+  return (
+    <Alert severity='info' sx={{ mb: 1.5 }} icon={<CircularProgress size={18} color='inherit' />}>
+      <Typography variant='body2' fontWeight={700}>Calculating transfers</Typography>
+      <Typography variant='caption' display='block'>Recommendations reveal in {countdown} and will then be recalculated for the latest data.</Typography>
+    </Alert>
+  );
+}
+TransferRevealCountdown.propTypes = { revealAt: PropTypes.string.isRequired, onReveal: PropTypes.func.isRequired };
+
 // ── Team Overview section ─────────────────────────────────────────────────────
 
 function TeamOverview({ status }) {
@@ -113,7 +148,7 @@ function TeamOverview({ status }) {
         <FinanceStat label='In the Bank'   value={status.bank      != null ? costLabel(status.bank)      : '—'} />
         <FinanceStat label='Free Transfers' value={status.freeTransfers ?? (status.phase === 'pre-season' ? '1' : '—')} />
         <FinanceStat label='Overall Rank'  value={status.overallRank != null ? `#${status.overallRank.toLocaleString()}` : '—'} />
-        <FinanceStat label='Cumulative Points' value={status.overallPoints != null ? `${status.overallPoints.toLocaleString()} pts` : '—'} />
+        <FinanceStat label='Total Points'     value={status.overallPoints != null ? pointsLabel(status.overallPoints) : '—'} />
       </Box>
 
       {/* Starting XI */}
@@ -150,10 +185,17 @@ function TeamOverview({ status }) {
       {(status.totalPredictedPoints != null || status.totalActualPoints != null) && (
         <Box sx={{ mt: 1.5, pt: 1, borderTop: `1px solid ${theme.palette.divider}`, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
           {status.totalPredictedPoints != null && (
-            <FinanceStat label='Predicted GW Score' value={`${parseFloat(status.totalPredictedPoints).toFixed(1)} pts`} />
+            <FinanceStat label='Predicted GW Points' value={pointsLabel(status.totalPredictedPoints)} />
           )}
           {status.totalActualPoints != null && status.phase !== 'pre-season' && (
-            <FinanceStat label='Actual GW Score' value={`${parseFloat(status.totalActualPoints).toFixed(1)} pts`} />
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography variant='caption' color='text.secondary' fontWeight={500} display='block'>
+                Actual GW Points
+              </Typography>
+              <Typography variant='body2' fontWeight={700} color={status.currentGameweekFinished ? 'success.main' : 'warning.main'}>
+                {pointsLabel(status.totalActualPoints)}
+              </Typography>
+            </Box>
           )}
         </Box>
       )}
@@ -166,6 +208,7 @@ TeamOverview.propTypes = { status: PropTypes.object.isRequired };
 
 function TransferCard({ transfer, index }) {
   const theme = useTheme();
+  const confidenceColor = transfer.confidence === 'high' ? 'success' : transfer.confidence === 'medium' ? 'warning' : 'default';
   return (
     <Box sx={{ p: 1.5, mb: 1, borderRadius: 1, border: `1px solid ${theme.palette.divider}`, bgcolor: 'background.paper' }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
@@ -201,6 +244,13 @@ function TransferCard({ transfer, index }) {
           variant='outlined'
           sx={{ fontSize: '0.65rem', height: 18 }}
         />
+        <Chip
+          label={`${transfer.confidence ?? 'low'} confidence`}
+          size='small'
+          color={confidenceColor}
+          variant='outlined'
+          sx={{ fontSize: '0.65rem', height: 18, textTransform: 'capitalize' }}
+        />
         <Typography variant='caption' color='text.secondary' sx={{ flex: 1 }}>{transfer.reason}</Typography>
       </Box>
     </Box>
@@ -232,7 +282,7 @@ function CaptainCard({ caption, player, reason, isVice }) {
 }
 CaptainCard.propTypes = { caption: PropTypes.string, player: PropTypes.object.isRequired, reason: PropTypes.string, isVice: PropTypes.bool };
 
-function RecommendedActions({ recommendations, status }) {
+function RecommendedActions({ recommendations, status, onReveal }) {
   const theme = useTheme();
 
   if (!recommendations) return null;
@@ -248,7 +298,8 @@ function RecommendedActions({ recommendations, status }) {
     );
   }
 
-  const { transfers, captain, viceCaptain, lineup, chipSuggestion, predictedPoints, gameweek } = recommendations;
+  const { transfers, captain, viceCaptain, lineup, chipSuggestion, predictedPoints, gameweek, pendingTransferReviews = 0, transferWindowOpen = true, transferRevealAt } = recommendations;
+  const isTransferCalculating = transferWindowOpen === false && transferRevealAt;
   const heading = status?.phase === 'pre-season'
     ? `Recommended Actions — Before GW${gameweek}`
     : `Recommended Actions — Ahead of GW${gameweek}`;
@@ -265,6 +316,16 @@ function RecommendedActions({ recommendations, status }) {
         </Typography>
       )}
 
+      {isTransferCalculating && (
+        <TransferRevealCountdown revealAt={transferRevealAt} onReveal={onReveal} />
+      )}
+
+      {!isTransferCalculating && pendingTransferReviews > 0 && (
+        <Alert severity='info' sx={{ mb: 1.5 }}>
+          Transfer suggestions are held until {pendingTransferReviews} squad player{pendingTransferReviews === 1 ? '' : 's'} finish their current-GW fixture, then recalculated.
+        </Alert>
+      )}
+
       {/* Predicted points */}
       {predictedPoints != null && (
         <Box sx={{ mb: 1.5, p: 1, bgcolor: 'action.hover', borderRadius: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -274,7 +335,7 @@ function RecommendedActions({ recommendations, status }) {
       )}
 
       {/* Transfers */}
-      {transfers.length > 0 && (
+      {!isTransferCalculating && transfers.length > 0 && (
         <>
           <Typography variant='caption' fontWeight={600} color='text.secondary' sx={{ display: 'block', mb: 0.5, fontSize: '0.7rem', textTransform: 'uppercase' }}>
             Suggested Transfers
@@ -283,7 +344,7 @@ function RecommendedActions({ recommendations, status }) {
         </>
       )}
 
-      {transfers.length === 0 && (
+      {!isTransferCalculating && transfers.length === 0 && (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5, p: 1.5, borderRadius: 1, border: `1px solid ${theme.palette.divider}` }}>
           <CheckCircleIcon sx={{ color: 'success.main', flexShrink: 0 }} />
           <Typography variant='body2'>No transfers recommended — current squad looks optimal for GW{gameweek}.</Typography>
@@ -345,7 +406,7 @@ function RecommendedActions({ recommendations, status }) {
     </Paper>
   );
 }
-RecommendedActions.propTypes = { recommendations: PropTypes.object, status: PropTypes.object };
+RecommendedActions.propTypes = { recommendations: PropTypes.object, status: PropTypes.object, onReveal: PropTypes.func.isRequired };
 
 // ── Decision History section ──────────────────────────────────────────────────
 
@@ -482,7 +543,7 @@ function PredictorTeamPanel() {
         <>
           <TeamOverview status={status} />
           {status.phase !== 'pre-season' && (
-            <RecommendedActions recommendations={recommendations} status={status} />
+            <RecommendedActions recommendations={recommendations} status={status} onReveal={refresh} />
           )}
           <DecisionHistory history={history} />
         </>

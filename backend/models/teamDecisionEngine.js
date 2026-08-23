@@ -43,6 +43,18 @@ const epMg = (player, multiGwEpMap) => {
 
 const posLabel = (type) => ({ 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' }[type] || '?');
 
+const outgoingReady = (player) => {
+  if (!Array.isArray(player.currentGameweekFixtures)) return true;
+  return player.currentGameweekFixtures.length === 0
+    || player.currentGameweekFixtures.every(fixture => fixture.finished);
+};
+
+const transferConfidence = (epGain, nextGwGain) => {
+  const score = Math.max(0, Math.min(100, Math.round(50 + (epGain * 4) + (nextGwGain * 8))));
+  const level = score >= 75 ? 'high' : score >= 55 ? 'medium' : 'low';
+  return { level, score };
+};
+
 /**
  * Return the first upcoming DGW (double gameweek) from specialGws with at
  * least minTeams teams playing twice, after currentGW.
@@ -175,6 +187,9 @@ function recommendTransfers(squad, allPlayers, bank, freeTransfers, maxTransfers
   const swaps = [];
 
   for (const playerOut of squad) {
+    // Wait for the player's current fixture to finish before reassessing them.
+    if (!outgoingReady(playerOut)) continue;
+
     const budget = (playerOut.selling_price ?? playerOut.now_cost) + bank;
     const teamCountsWithoutOut = { ...squadTeamCounts };
     teamCountsWithoutOut[playerOut.team] = Math.max(0, (teamCountsWithoutOut[playerOut.team] || 0) - 1);
@@ -192,6 +207,7 @@ function recommendTransfers(squad, allPlayers, bank, freeTransfers, maxTransfers
       const inDgw  = (multiGwEpMap?.[playerIn.id]?.hasDgw?.length  ?? 0) > 0;
       const outDgw = (multiGwEpMap?.[playerOut.id]?.hasDgw?.length ?? 0) > 0;
       const singleGwGain = ep(playerIn) - ep(playerOut);
+      const confidence = transferConfidence(epGain, singleGwGain);
 
       const reasonParts = [
         `${playerIn.web_name} (${posLabel(playerIn.element_type)}, £${(playerIn.now_cost / 10).toFixed(1)}m)`,
@@ -218,6 +234,8 @@ function recommendTransfers(squad, allPlayers, bank, freeTransfers, maxTransfers
         },
         epGain,
         epGainNextGw: singleGwGain,
+        confidence: confidence.level,
+        confidenceScore: confidence.score,
         costDelta: playerIn.now_cost - (playerOut.selling_price ?? playerOut.now_cost),
         reason: reasonParts.join(' ') + '.',
       });
@@ -247,7 +265,7 @@ function recommendTransfers(squad, allPlayers, bank, freeTransfers, maxTransfers
       pointsCost,
       netEpGain:  Math.round((swap.epGain - pointsCost) * 10) / 10,
     };
-  });
+  }).filter(transfer => transfer.netEpGain > 0 && transfer.confidence !== 'low');
 }
 
 // ── Chip recommendation ───────────────────────────────────────────────────────
