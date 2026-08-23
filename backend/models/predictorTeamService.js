@@ -509,6 +509,7 @@ async function getPredictorTeamStatus() {
   const targetGW    = phase === 'pre-season' ? 1 : Math.min(currentGW + 1, 38);
   const teamId      = getApplicationTeamId();
   const transferWindow = getTransferWindow(events, targetGW);
+  const currentGameweekFinished = !!events.find(event => event.id === currentGW)?.finished;
 
   const players = bootstrap.elements.map(p => ({
     ...p,
@@ -523,6 +524,7 @@ async function getPredictorTeamStatus() {
       applicationTeamConfigured: false,
       applicationTeamId:        null,
       currentGameweek:          currentGW,
+      currentGameweekFinished,
       targetGameweek:           targetGW,
       ...transferWindow,
       warning:                  null,
@@ -539,6 +541,7 @@ async function getPredictorTeamStatus() {
       applicationTeamConfigured: false,
       applicationTeamId:        null,
       currentGameweek:          currentGW,
+      currentGameweekFinished,
       targetGameweek:           targetGW,
       ...transferWindow,
       warning:                  'APPLICATION_TEAM is not configured. FPL Predictor\'s Team has generated its initial squad but cannot continue autonomous tracking until APPLICATION_TEAM is set.',
@@ -579,6 +582,7 @@ async function getPredictorTeamStatus() {
     applicationTeamConfigured: true,
     applicationTeamId:         teamId,
     currentGameweek:           currentGW,
+    currentGameweekFinished,
     targetGameweek:            targetGW,
     ...transferWindow,
     warning:                   null,

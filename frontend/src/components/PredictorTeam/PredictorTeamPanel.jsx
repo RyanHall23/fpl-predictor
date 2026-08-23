@@ -35,6 +35,7 @@ const posLabel  = (type) => POSITION_LABEL[type] ?? '?';
 const posColor  = (type) => POSITION_COLOR[type] ?? '#6b7280';
 const costLabel = (v)    => v != null ? `£${(v / 10).toFixed(1)}m` : '—';
 const epLabel   = (v)    => v != null ? `${parseFloat(v).toFixed(1)} pts` : '—';
+const pointsLabel = (v) => v != null ? `${parseFloat(v).toFixed(1)} pts` : '—';
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
@@ -147,7 +148,7 @@ function TeamOverview({ status }) {
         <FinanceStat label='In the Bank'   value={status.bank      != null ? costLabel(status.bank)      : '—'} />
         <FinanceStat label='Free Transfers' value={status.freeTransfers ?? (status.phase === 'pre-season' ? '1' : '—')} />
         <FinanceStat label='Overall Rank'  value={status.overallRank != null ? `#${status.overallRank.toLocaleString()}` : '—'} />
-        <FinanceStat label='Cumulative Points' value={status.overallPoints != null ? `${status.overallPoints.toLocaleString()} pts` : '—'} />
+        <FinanceStat label='Total Points'     value={status.overallPoints != null ? pointsLabel(status.overallPoints) : '—'} />
       </Box>
 
       {/* Starting XI */}
@@ -184,10 +185,17 @@ function TeamOverview({ status }) {
       {(status.totalPredictedPoints != null || status.totalActualPoints != null) && (
         <Box sx={{ mt: 1.5, pt: 1, borderTop: `1px solid ${theme.palette.divider}`, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
           {status.totalPredictedPoints != null && (
-            <FinanceStat label='Predicted GW Score' value={`${parseFloat(status.totalPredictedPoints).toFixed(1)} pts`} />
+            <FinanceStat label='Predicted GW Points' value={pointsLabel(status.totalPredictedPoints)} />
           )}
           {status.totalActualPoints != null && status.phase !== 'pre-season' && (
-            <FinanceStat label='Actual GW Score' value={`${parseFloat(status.totalActualPoints).toFixed(1)} pts`} />
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography variant='caption' color='text.secondary' fontWeight={500} display='block'>
+                Actual GW Points
+              </Typography>
+              <Typography variant='body2' fontWeight={700} color={status.currentGameweekFinished ? 'success.main' : 'warning.main'}>
+                {pointsLabel(status.totalActualPoints)}
+              </Typography>
+            </Box>
           )}
         </Box>
       )}
