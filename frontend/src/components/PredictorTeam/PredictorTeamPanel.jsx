@@ -166,6 +166,7 @@ TeamOverview.propTypes = { status: PropTypes.object.isRequired };
 
 function TransferCard({ transfer, index }) {
   const theme = useTheme();
+  const confidenceColor = transfer.confidence === 'high' ? 'success' : transfer.confidence === 'medium' ? 'warning' : 'default';
   return (
     <Box sx={{ p: 1.5, mb: 1, borderRadius: 1, border: `1px solid ${theme.palette.divider}`, bgcolor: 'background.paper' }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
@@ -200,6 +201,13 @@ function TransferCard({ transfer, index }) {
           color={transfer.isFree ? 'default' : 'warning'}
           variant='outlined'
           sx={{ fontSize: '0.65rem', height: 18 }}
+        />
+        <Chip
+          label={`${transfer.confidence ?? 'low'} confidence`}
+          size='small'
+          color={confidenceColor}
+          variant='outlined'
+          sx={{ fontSize: '0.65rem', height: 18, textTransform: 'capitalize' }}
         />
         <Typography variant='caption' color='text.secondary' sx={{ flex: 1 }}>{transfer.reason}</Typography>
       </Box>
@@ -248,7 +256,7 @@ function RecommendedActions({ recommendations, status }) {
     );
   }
 
-  const { transfers, captain, viceCaptain, lineup, chipSuggestion, predictedPoints, gameweek } = recommendations;
+  const { transfers, captain, viceCaptain, lineup, chipSuggestion, predictedPoints, gameweek, pendingTransferReviews = 0 } = recommendations;
   const heading = status?.phase === 'pre-season'
     ? `Recommended Actions — Before GW${gameweek}`
     : `Recommended Actions — Ahead of GW${gameweek}`;
@@ -263,6 +271,12 @@ function RecommendedActions({ recommendations, status }) {
         <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mb: 1.5 }}>
           These recommendations are for the generated squad before the GW{gameweek} deadline.
         </Typography>
+      )}
+
+      {pendingTransferReviews > 0 && (
+        <Alert severity='info' sx={{ mb: 1.5 }}>
+          Transfer suggestions are held until {pendingTransferReviews} squad player{pendingTransferReviews === 1 ? '' : 's'} finish their current-GW fixture, then recalculated.
+        </Alert>
       )}
 
       {/* Predicted points */}

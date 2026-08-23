@@ -390,6 +390,20 @@ async function loadActiveTeamState(teamId, players, fixtures, teams, currentGW, 
   enrichedPlayers.forEach(p => { playerMap[p.id] = p; });
   actualPlayers.forEach(p => { actualPlayerMap[p.id] = p; });
 
+  const currentFixturesByTeam = {};
+  fixtures
+    .filter(fixture => fixture.event === currentGW)
+    .forEach(fixture => {
+      [fixture.team_h, fixture.team_a].forEach(teamIdForFixture => {
+        if (!currentFixturesByTeam[teamIdForFixture]) currentFixturesByTeam[teamIdForFixture] = [];
+        currentFixturesByTeam[teamIdForFixture].push({
+          hasFixture: true,
+          started: !!fixture.started,
+          finished: !!(fixture.finished || fixture.finished_provisional),
+        });
+      });
+    });
+
   // Map picks to enriched player objects
   const squad = picks.map(pick => {
     const player = playerMap[pick.element];
@@ -398,6 +412,7 @@ async function loadActiveTeamState(teamId, players, fixtures, teams, currentGW, 
     return {
       ...player,
       event_points: actualPlayer?.event_points ?? 0,
+      currentGameweekFixtures: currentFixturesByTeam[player.team] ?? [],
       pick_position:   pick.position,
       is_captain:      !!pick.is_captain,
       is_vice_captain: !!pick.is_vice_captain,
@@ -643,6 +658,10 @@ async function getPredictorTeamRecommendations() {
     enrichedSquad, allPlayers, bank, freeTransfers, 2,
     { multiGwEpMap: epMap, specialGws, currentGW }
   );
+  const pendingTransferReviews = enrichedSquad.filter(player =>
+    Array.isArray(player.currentGameweekFixtures)
+    && player.currentGameweekFixtures.some(fixture => !fixture.finished)
+  ).length;
 
   // Chip recommendation (DGW/BGW aware)
   const chipSuggestion = teamDecisionEngine.recommendChip(
@@ -681,6 +700,7 @@ async function getPredictorTeamRecommendations() {
     planningHorizon: PLANNING_HORIZON,
     specialGws,
     transfers,
+    pendingTransferReviews,
     captain:       captainInfo.captain   ? { player: minimalPlayer(captainInfo.captain),    reason: captainInfo.captainReason } : null,
     viceCaptain:   captainInfo.viceCaptain ? { player: minimalPlayer(captainInfo.viceCaptain), reason: captainInfo.vcReason } : null,
     lineup: {
