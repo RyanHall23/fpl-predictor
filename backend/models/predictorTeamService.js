@@ -29,6 +29,17 @@ const MAX_PLAYERS_PER_CLUB = 3;
 // Multi-GW planning horizon (GWs ahead to consider for transfers/chips)
 const PLANNING_HORIZON = 5;
 
+const getTransferWindow = (events, targetGW) => {
+  const targetEvent = events.find(event => event.id === targetGW);
+  const deadline = targetEvent?.deadline_time ?? null;
+  const deadlineMs = deadline ? Date.parse(deadline) : NaN;
+  const revealAt = Number.isFinite(deadlineMs)
+    ? new Date(deadlineMs - (24 * 60 * 60 * 1000)).toISOString()
+    : null;
+
+  return { targetGameweekDeadline: deadline, transferRevealAt: revealAt };
+};
+
 // ── Season phase detection ────────────────────────────────────────────────────
 
 /**
@@ -497,6 +508,7 @@ async function getPredictorTeamStatus() {
   const currentGW   = getCurrentGameweek(events);
   const targetGW    = phase === 'pre-season' ? 1 : Math.min(currentGW + 1, 38);
   const teamId      = getApplicationTeamId();
+  const transferWindow = getTransferWindow(events, targetGW);
 
   const players = bootstrap.elements.map(p => ({
     ...p,
@@ -512,6 +524,7 @@ async function getPredictorTeamStatus() {
       applicationTeamId:        null,
       currentGameweek:          currentGW,
       targetGameweek:           targetGW,
+      ...transferWindow,
       warning:                  null,
       ...state,
     };
@@ -527,6 +540,7 @@ async function getPredictorTeamStatus() {
       applicationTeamId:        null,
       currentGameweek:          currentGW,
       targetGameweek:           targetGW,
+      ...transferWindow,
       warning:                  'APPLICATION_TEAM is not configured. FPL Predictor\'s Team has generated its initial squad but cannot continue autonomous tracking until APPLICATION_TEAM is set.',
       ...(saved || {}),
       squad:          saved?.squad          ?? [],
@@ -566,6 +580,7 @@ async function getPredictorTeamStatus() {
     applicationTeamId:         teamId,
     currentGameweek:           currentGW,
     targetGameweek:            targetGW,
+    ...transferWindow,
     warning:                   null,
     // Expose enriched data for the recommendations endpoint (stripped from persistence)
     _enrichedSquad:    liveState.enrichedSquad,
@@ -583,11 +598,18 @@ async function getPredictorTeamRecommendations() {
   const status = await getPredictorTeamStatus();
   const currentGW = status.currentGameweek;
   const targetGW  = status.targetGameweek;
+  const transferWindowOpen = !status.transferRevealAt || Date.now() >= Date.parse(status.transferRevealAt);
 
   // Pre-season: squad was just built as optimal — no transfers make sense yet
   if (status.phase === 'pre-season') {
     return {
       gameweek:          targetGW,
+      transferWindowOpen,
+      transferRevealAt: status.transferRevealAt,
+      targetGameweekDeadline: status.targetGameweekDeadline,
+      transferWindowOpen,
+      transferRevealAt: status.transferRevealAt,
+      targetGameweekDeadline: status.targetGameweekDeadline,
       unavailable:       true,
       unavailableReason: 'pre-season',
       transfers:         [],
@@ -685,7 +707,7 @@ async function getPredictorTeamRecommendations() {
   teamStateRepository.upsertDecisionHistory({
     gameweek:         targetGW,
     computedAt:       new Date().toISOString(),
-    suggestedTransfers: transfers.map(t => ({ out: t.playerOut.web_name, in: t.playerIn.web_name, epGain: t.epGain })),
+    suggestedTransfers: transferWindowOpen ? transfers.map(t => ({ out: t.playerOut.web_name, in: t.playerIn.web_name, epGain: t.epGain })) : [],
     suggestedCaptain: captainInfo.captain?.web_name ?? null,
     predictedPoints:  Math.round(predictedPoints * 10) / 10,
     actualPoints:     null,
@@ -699,7 +721,10 @@ async function getPredictorTeamRecommendations() {
     unavailableReason: null,
     planningHorizon: PLANNING_HORIZON,
     specialGws,
-    transfers,
+    transferWindowOpen,
+    transferRevealAt: status.transferRevealAt,
+    targetGameweekDeadline: status.targetGameweekDeadline,
+    transfers: transferWindowOpen ? transfers : [],
     pendingTransferReviews,
     captain:       captainInfo.captain   ? { player: minimalPlayer(captainInfo.captain),    reason: captainInfo.captainReason } : null,
     viceCaptain:   captainInfo.viceCaptain ? { player: minimalPlayer(captainInfo.viceCaptain), reason: captainInfo.vcReason } : null,
