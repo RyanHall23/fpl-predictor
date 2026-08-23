@@ -4,7 +4,6 @@ import Box from '@mui/material/Box';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import Badge from '@mui/material/Badge';
-import Tooltip from '@mui/material/Tooltip';
 import { useTheme } from '@mui/material/styles';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import EventNoteIcon from '@mui/icons-material/EventNote';
@@ -79,22 +78,16 @@ const SectionBar = ({ activeSection, onSectionChange, isLive, isHighestPredicted
             label='Next'
           />
         ) : (
-          <Tooltip
-            title={ isSeasonComplete ? 'Season complete — no further gameweeks to plan' : '' }
-            placement='bottom'
-          >
-            <span>
-              <Tab
-                icon={ isSeasonComplete
-                  ? <EmojiEventsIcon sx={ { fontSize: 18 } } />
-                  : <EventNoteIcon sx={ { fontSize: 18 } } />
-                }
-                iconPosition='start'
-                label='Planning'
-                disabled={ isSeasonComplete }
-              />
-            </span>
-          </Tooltip>
+          <Tab
+            icon={ isSeasonComplete
+              ? <EmojiEventsIcon sx={ { fontSize: 18 } } />
+              : <EventNoteIcon sx={ { fontSize: 18 } } />
+            }
+            iconPosition='start'
+            label='Planning'
+            disabled={ isSeasonComplete }
+            title={ isSeasonComplete ? 'Season complete — no further gameweeks to plan' : undefined }
+          />
         ) }
         { !isHighestPredictedTeam && (
           <Tab
