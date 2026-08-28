@@ -1,10 +1,9 @@
-import React, { useMemo, useRef, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import {
   Alert,
   Box,
   ButtonBase,
-  Chip,
   Collapse,
   CircularProgress,
   Typography,
@@ -20,6 +19,44 @@ const formatDateHeader = (date) =>
 
 const formatTime = (date) =>
   date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+
+const normaliseName = (name) => (name ?? '').toLowerCase().replace(/[^a-z]/g, '');
+
+const findSofaScoreMatch = (fixture, matches) => matches.find(match =>
+  (teamsMatch(fixture.team_h_name, match.homeName) || fixture.team_h_short === match.homeAbbr) &&
+  (teamsMatch(fixture.team_a_name, match.awayName) || fixture.team_a_short === match.awayAbbr)
+);
+
+const findEventMinute = (event, fixture, matches, eventMap, usedGoalEvents, usedAssistEvents) => {
+  const match = findSofaScoreMatch(fixture, matches);
+  if (!match) return null;
+  const playerName = normaliseName(event.player);
+  const details = [
+    ...(match.details ?? []).map((item, index) => ({ ...item, eventKey: `scoreboard-${index}` })),
+    ...(eventMap[match.sofaScoreId] ?? []).map((item, index) => ({ ...item, eventKey: `summary-${index}` })),
+  ];
+  const sofaScoreTeamId = String(event.teamId) === String(fixture.team_h) ? match.homeId : match.awayId;
+  const isSameTeam = (item) => item.teamId == null || String(item.teamId) === String(sofaScoreTeamId);
+  const matchesPlayer = (name) => {
+    const detailName = normaliseName(name);
+    return Boolean(playerName && detailName && (detailName.includes(playerName) || playerName.includes(detailName)));
+  };
+  const detail = details.find(item => {
+    const usedEvents = event.icon === 'assist' ? usedAssistEvents : usedGoalEvents;
+    if (usedEvents.has(item.eventKey) || !isSameTeam(item)) return false;
+    if (item.icon !== event.icon) return false;
+    return matchesPlayer(item.player);
+  }) ?? (event.icon === 'assist' ? details.find(item => {
+    if (usedAssistEvents.has(item.eventKey) || !isSameTeam(item)) return false;
+    return item.icon === 'goal' && matchesPlayer(item.secondPlayer);
+  }) ?? details.find(item => {
+    if (usedAssistEvents.has(item.eventKey) || !isSameTeam(item)) return false;
+    return item.icon === 'goal' && !item.ownGoal && !item.secondPlayer;
+  }) : null);
+  if (!detail) return null;
+  (event.icon === 'assist' ? usedAssistEvents : usedGoalEvents).add(detail.eventKey);
+  return detail.minute || null;
+};
 
 const getDeadlinePill = (deadline, theme) => {
   if (!deadline) return null;
@@ -45,15 +82,6 @@ const getDeadlinePill = (deadline, theme) => {
     + ' ' + dl.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 
   return { bg, color, label: `Deadline: ${formatted}` };
-};
-
-/** Find the ESPN match that corresponds to a FPL fixture by fuzzy team name. */
-const findEspnMatch = (fixture, liveMatches) => {
-  if (!liveMatches?.length) return null;
-  return liveMatches.find(m =>
-    teamsMatch(fixture.team_h_name, m.homeName) &&
-    teamsMatch(fixture.team_a_name, m.awayName)
-  ) ?? null;
 };
 
 // ─── Card icon (yellow / red rectangle) ──────────────────────────────────────
@@ -91,6 +119,8 @@ const EventRow = ({ event, homeId, homeAbbr, awayAbbr, assist }) => {
     );
   } else if (event.icon === 'yellow') {
     iconNode = <CardBox color='#ffc107' />;
+  } else if (event.icon === 'assist') {
+    iconNode = <Typography component='span' variant='caption' aria-label='Assist'>🅰️</Typography>;
   } else if (event.icon === 'red') {
     iconNode = <CardBox color='#f44336' />;
   } else {
@@ -103,7 +133,7 @@ const EventRow = ({ event, homeId, homeAbbr, awayAbbr, assist }) => {
         variant='caption'
         sx={ { color: 'text.disabled', minWidth: 34, flexShrink: 0, fontVariantNumeric: 'tabular-nums' } }
       >
-        { event.minute }
+        { event.minute != null ? String(event.minute).includes("'") ? event.minute : `${event.minute}'` : '—' }
       </Typography>
       <Box sx={ { width: 18, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
         { iconNode }
@@ -127,7 +157,7 @@ const EventRow = ({ event, homeId, homeAbbr, awayAbbr, assist }) => {
 
 EventRow.propTypes = {
   event:       PropTypes.object.isRequired,
-  homeId:      PropTypes.string,
+  homeId:      PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   homeAbbr:    PropTypes.string,
   awayAbbr:    PropTypes.string,
   assist:      PropTypes.string,
@@ -135,7 +165,7 @@ EventRow.propTypes = {
 
 // ─── Single fixture row (collapsible) ────────────────────────────────────────
 
-const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme, assisters }) => {
+const FixtureRow = ({ fixture, expanded, onToggle, theme, events }) => {
   const isFinished   = fixture.finished;
   const isStarted    = fixture.started;
   const hasKickedOff = fixture.kickoffDate && fixture.kickoffDate <= new Date();
@@ -143,23 +173,11 @@ const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme, assisters }
   const fplAwayScore = fixture.team_a_score;
   const timeStr      = fixture.kickoffDate ? formatTime(fixture.kickoffDate) : 'TBC';
 
-  // Prefer ESPN data for live/completed scores (more real-time).
-  const hasEspn   = !!espnMatch;
-  const scoreHome = hasEspn ? espnMatch.homeScore : fplHomeScore;
-  const scoreAway = hasEspn ? espnMatch.awayScore : fplAwayScore;
-  // Show a score if: ESPN has it (live or finished), FPL has it (started with
-  // non-null scores, or marked finished), or ESPN says it's a past match.
-  const showScore = hasEspn
-    ? espnMatch.isLive || espnMatch.isFinished || espnMatch.state === 'post'
-    : isFinished || (isStarted && fplHomeScore != null && fplAwayScore != null);
-
-  const isLive    = hasEspn ? espnMatch.isLive : (!isFinished && isStarted);
-  const isOver    = hasEspn ? espnMatch.isFinished : isFinished;
-  const clock     = (!isOver && hasEspn) ? espnMatch.clock : null;
-  const hasEvents = (hasEspn && (isLive || espnMatch.details?.some(d => d.icon !== 'other'))) ||
-    (assisters?.espnAssisters?.length > 0 || assisters?.fplOnlyAssisters?.length > 0);
-  // Event data is loaded after expansion, so started/finished fixtures must
-  // remain clickable even when ESPN has not matched them yet.
+  const scoreHome = fplHomeScore;
+  const scoreAway = fplAwayScore;
+  const showScore = isFinished || (isStarted && fplHomeScore != null && fplAwayScore != null);
+  const isLive = !isFinished && isStarted;
+  const hasEvents = events?.length > 0;
   const canExpand = hasEvents || isStarted || isFinished || hasKickedOff;
 
   const teamNameSx = { flex: 1, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
@@ -199,14 +217,6 @@ const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme, assisters }
               >
                 { scoreHome } – { scoreAway }
               </Typography>
-              { clock && (
-                <Typography
-                  variant='caption'
-                  sx={ { color: theme.palette.warning.main, lineHeight: 1, fontSize: '0.6rem' } }
-                >
-                  { clock }
-                </Typography>
-              ) }
             </Box>
           ) : (
             <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 600 } }>
@@ -246,78 +256,15 @@ const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme, assisters }
               borderLeftColor: 'divider',
             } }
           >
-            { isLive && espnMatch?.clock && (
-              <Chip
-                label={ espnMatch.clock }
-                size='small'
-                color='warning'
-                sx={ { mb: 0.75, height: 18, fontSize: '0.6rem', fontWeight: 700 } }
+            { events?.map((event, idx) => (
+              <EventRow
+                key={ `${event.icon}-${event.teamId}-${event.player}-${idx}` }
+                event={ event }
+                homeId={ fixture.team_h }
+                homeAbbr={ fixture.team_h_short }
+                awayAbbr={ fixture.team_a_short }
+                assist={ event.assist }
               />
-            ) }
-            { (() => {
-              // Build separate queues: ESPN for traditional assists, FPL for non-traditional
-              // (e.g. winning a penalty) which ESPN does not record.
-              const espnAssistersList = assisters?.espnAssisters ?? [];
-              const fplOnlyAssistersList = assisters?.fplOnlyAssisters ?? [];
-              const homeEspnQueue = espnAssistersList.filter(a => a.abbr === espnMatch?.homeAbbr).flatMap(a => Array(Math.trunc(a.value)).fill(a.name));
-              const awayEspnQueue = espnAssistersList.filter(a => a.abbr === espnMatch?.awayAbbr).flatMap(a => Array(Math.trunc(a.value)).fill(a.name));
-              const homeFplQueue  = fplOnlyAssistersList.filter(a => a.abbr === espnMatch?.homeAbbr).flatMap(a => Array(Math.trunc(a.value)).fill(a.name));
-              const awayFplQueue  = fplOnlyAssistersList.filter(a => a.abbr === espnMatch?.awayAbbr).flatMap(a => Array(Math.trunc(a.value)).fill(a.name));
-              // summaryEventMap uses minute+teamId keys from the ESPN summary's keyPlays,
-              // which reliably carries athletesInvolved[1] for penalties and OG forcers.
-              const summaryEventMap = assisters?.summaryEventMap ?? {};
-              const normN = (n) => (n ?? '').toLowerCase().replace(/[^a-z]/g, '');
-              const shiftFplByName = (queue, hint) => {
-                if (hint) {
-                  const idx = queue.findIndex(n => {
-                    const a = normN(n), b = normN(hint);
-                    return a.includes(b) || b.includes(a);
-                  });
-                  if (idx !== -1) return queue.splice(idx, 1)[0];
-                }
-                return queue.shift();
-              };
-              return espnMatch?.details
-                .filter(d => d.icon !== 'other')
-                .map((event, idx) => {
-                  let assist = undefined;
-                  if (event.icon === 'goal') {
-                    const isHome = event.teamId === espnMatch.homeId;
-                    if (event.ownGoal || event.penaltyKick) {
-                      // Prefer the richer summary keyPlays secondary player (keyed by minute+teamId)
-                      // over the scoreboard's athletesInvolved[1] which is often absent.
-                      const hint = summaryEventMap[`${event.minute}_${event.teamId}`] || event.secondPlayer;
-                      assist = shiftFplByName(isHome ? homeFplQueue : awayFplQueue, hint);
-                    } else {
-                      assist = isHome ? homeEspnQueue.shift() : awayEspnQueue.shift();
-                    }
-                  }
-                  return (
-                    <EventRow
-                      key={ `${event.minute ?? ''}-${event.teamId ?? ''}-${event.player ?? ''}-${event.icon}-${idx}` }
-                      event={ event }
-                      homeId={ espnMatch.homeId }
-                      homeAbbr={ espnMatch.homeAbbr }
-                      awayAbbr={ espnMatch.awayAbbr }
-                      assist={ assist }
-                    />
-                  );
-                });
-            })() }
-            { !espnMatch && assisters?.fplOnlyAssisters?.length > 0 && assisters.fplOnlyAssisters.map((a, idx) => (
-              <Box key={ idx } sx={ { display: 'flex', alignItems: 'center', gap: 0.75, py: '2px' } }>
-                <Typography variant='caption' sx={ { color: 'text.disabled', minWidth: 34, flexShrink: 0 } } />
-                <Box sx={ { width: 18, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
-                  <Typography component='span' variant='caption' aria-hidden='true'>🅰️</Typography>
-                  <Box component='span' sx={ { position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' } }>Assist:</Box>
-                </Box>
-                <Typography variant='caption' sx={ { flex: 1, color: 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }>
-                  { a.name }{ a.value > 1 ? ` ×${a.value}` : '' }
-                </Typography>
-                <Typography variant='caption' sx={ { color: 'text.secondary', flexShrink: 0 } }>
-                  { a.abbr }
-                </Typography>
-              </Box>
             )) }
           </Box>
         </Collapse>
@@ -328,12 +275,7 @@ const FixtureRow = ({ fixture, espnMatch, expanded, onToggle, theme, assisters }
 
 FixtureRow.propTypes = {
   fixture:   PropTypes.object.isRequired,
-  espnMatch: PropTypes.object,
-  assisters: PropTypes.shape({
-    espnAssisters: PropTypes.array,
-    fplOnlyAssisters: PropTypes.array,
-    summaryEventMap: PropTypes.object,
-  }),
+  events:    PropTypes.array,
   expanded:  PropTypes.bool,
   onToggle:  PropTypes.func,
   theme:     PropTypes.object.isRequired,
@@ -341,26 +283,16 @@ FixtureRow.propTypes = {
 
 // ─── Panel ────────────────────────────────────────────────────────────────────
 
-const FixturesPanel = ({ gameweek, deadline, liveMatches }) => {
+const FixturesPanel = ({ gameweek, deadline }) => {
   const theme = useTheme();
   const [fixtures, setFixtures]       = useState([]);
   const [loading, setLoading]         = useState(false);
   const [error, setError]             = useState(null);
   const [expandedId, setExpandedId]   = useState(null);
-  const [historicalMatches, setHistoricalMatches] = useState([]);
-  const [summaryAssistersMap, setSummaryAssistersMap] = useState({}); // espnId -> [{name, abbr, value}]
-  const fetchedDatesRef    = useRef(new Set());
-  const fetchedSummaryRef  = useRef(new Set());
+  const [espnMatches, setEspnMatches] = useState([]);
+  const [espnEvents, setEspnEvents] = useState({});
 
   const deadlinePill = getDeadlinePill(deadline, theme);
-
-  // Reset historical cache whenever the displayed gameweek changes.
-  useEffect(() => {
-    fetchedDatesRef.current = new Set();
-    fetchedSummaryRef.current = new Set();
-    setHistoricalMatches([]);
-    setSummaryAssistersMap({});
-  }, [gameweek]);
 
   useEffect(() => {
     if (!gameweek) return;
@@ -373,90 +305,24 @@ const FixturesPanel = ({ gameweek, deadline, liveMatches }) => {
       .finally(() => setLoading(false));
   }, [gameweek]);
 
-  // After fixtures load, fetch ESPN data for any date not already covered by
-  // liveMatches (which only holds today's polling data).
   useEffect(() => {
     if (!fixtures.length) return;
-    let cancelled = false;
-    const todayUtc = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-    const uniqueDates = [...new Set(
-      fixtures
-        .filter(f => f.kickoff_time)
-        .map(f => f.kickoff_time.slice(0, 10))
-        .filter(d => d !== todayUtc)
-    )];
-    const toFetch = uniqueDates.filter(d => !fetchedDatesRef.current.has(d));
-    if (!toFetch.length) return;
-    toFetch.forEach(d => fetchedDatesRef.current.add(d));
-    Promise.all(
-      toFetch.map(d =>
-        axios
-          .get(`/api/espn/scoreboard?dates=${d.replace(/-/g, '')}`)
-          .then(res => res.data)
-          .catch(() => [])
-      )
-    ).then(results => {
-      if (!cancelled) {
-        setHistoricalMatches(prev => [...prev, ...results.flat()]);
-      }
-    });
-    return () => { cancelled = true; };
+    const dates = [...new Set(fixtures.filter(f => f.kickoff_time).map(f => f.kickoff_time.slice(0, 10)))];
+    Promise.all(dates.map(date => axios
+      .get(`/api/sofascore/scoreboard?dates=${date.replace(/-/g, '')}`)
+      .then(response => response.data)
+      .catch(() => [])))
+      .then(results => setEspnMatches(results.flat()));
   }, [fixtures]);
 
-  // Combine today's live data with any fetched historical dates.
-  const allEspnMatches = useMemo(
-    () => [...(liveMatches ?? []), ...historicalMatches],
-    [liveMatches, historicalMatches]
-  );
-
-  // When a fixture is expanded, fetch the ESPN summary to get assister names.
-  // Falls back to enriched FPL fixture stats when no ESPN match is available.
   useEffect(() => {
-    if (!expandedId) return;
-    const fixture   = fixtures.find(f => f.id === expandedId);
-    if (!fixture) return;
-    const espnMatch = findEspnMatch(fixture, allEspnMatches);
-
-    if (espnMatch?.espnId) {
-      // ── ESPN primary ────────────────────────────────────────────────────────
-      if (fetchedSummaryRef.current.has(espnMatch.espnId)) return;
-      let cancelled = false;
-      // Pass FPL fixture context so the backend can compute fplOnlyAssisters
-      // (assisters recorded by FPL but absent from ESPN, e.g. penalty won).
-      const summaryUrl = `/api/espn/summary/${espnMatch.espnId}`
-        + `?fplFixtureId=${fixture.id}`
-        + `&homeAbbr=${encodeURIComponent(espnMatch.homeAbbr)}`
-        + `&awayAbbr=${encodeURIComponent(espnMatch.awayAbbr)}`;
-      axios
-        .get(summaryUrl)
-        .then(res => {
-          if (cancelled) return;
-          // fplOnlyAssisters is now computed server-side; fall back to empty
-          // array if the backend did not include the field for any reason.
-          const { espnAssisters, fplOnlyAssisters = [], summaryEventMap } = res.data;
-          fetchedSummaryRef.current.add(espnMatch.espnId);
-          setSummaryAssistersMap(prev => ({
-            ...prev,
-            [espnMatch.espnId]: { espnAssisters, fplOnlyAssisters, summaryEventMap },
-          }));
-        })
-        .catch(() => {});
-      return () => { cancelled = true; };
-    } else {
-      // ── FPL fallback ─────────────────────────────────────────────────────────
-      const assistStat = fixture.stats?.find(s => s.identifier === 'assists');
-      if (!assistStat) return;
-      const fplOnlyAssisters = [
-        ...(assistStat.h || []).map(e => ({ name: e.webName, abbr: fixture.team_h_short, value: e.value })),
-        ...(assistStat.a || []).map(e => ({ name: e.webName, abbr: fixture.team_a_short, value: e.value })),
-      ].filter(a => a.name && a.value > 0);
-      // Store under a synthetic key for FPL-only fixtures
-      setSummaryAssistersMap(prev => ({
-        ...prev,
-        [`fpl-${fixture.id}`]: { espnAssisters: [], fplOnlyAssisters },
-      }));
-    }
-  }, [expandedId, fixtures, allEspnMatches]);
+    if (!espnMatches.length) return;
+    Promise.all(espnMatches.map(match => axios
+      .get(`/api/sofascore/summary/${match.sofaScoreId}`)
+      .then(response => [match.sofaScoreId, response.data.events ?? []])
+      .catch(() => [match.sofaScoreId, []])))
+      .then(entries => setEspnEvents(Object.fromEntries(entries)));
+  }, [espnMatches]);
 
   if (!gameweek) return null;
 
@@ -524,15 +390,56 @@ const FixturesPanel = ({ gameweek, deadline, liveMatches }) => {
           </Typography>
 
           { dayFixtures.map((fixture) => {
-            const espnMatch = findEspnMatch(fixture, allEspnMatches);
-            const assistKey = espnMatch?.espnId ?? `fpl-${fixture.id}`;
-            const assisters = summaryAssistersMap[assistKey] ?? null;
+            const usedGoalEvents = new Set();
+            const usedAssistEvents = new Set();
+            const eventStats = fixture.stats?.filter(s => [
+              'goals_scored', 'assists', 'own_goals', 'yellow_cards', 'red_cards',
+            ].includes(s.identifier)) ?? [];
+            const events = eventStats.flatMap(stat => [
+              ...(stat.h || []).flatMap(entry => Array.from({ length: entry.value || 1 }, () => ({
+                icon: stat.identifier === 'goals_scored' || stat.identifier === 'own_goals' ? 'goal' : stat.identifier === 'assists' ? 'assist' : stat.identifier === 'yellow_cards' ? 'yellow' : 'red',
+                player: entry.webName,
+                teamId: fixture.team_h,
+                ownGoal: stat.identifier === 'own_goals',
+                minute: entry.minute ?? null,
+              }))),
+              ...(stat.a || []).flatMap(entry => Array.from({ length: entry.value || 1 }, () => ({
+                icon: stat.identifier === 'goals_scored' || stat.identifier === 'own_goals' ? 'goal' : stat.identifier === 'assists' ? 'assist' : stat.identifier === 'yellow_cards' ? 'yellow' : 'red',
+                player: entry.webName,
+                teamId: fixture.team_a,
+                ownGoal: stat.identifier === 'own_goals',
+                minute: entry.minute ?? null,
+              }))),
+            ]).map(event => ({
+              ...event,
+              minute: findEventMinute(event, fixture, espnMatches, espnEvents, usedGoalEvents, usedAssistEvents) ?? event.minute,
+            })).sort((left, right) => {
+              if (left.minute == null && right.minute == null) return 0;
+              if (left.minute == null) return 1;
+              if (right.minute == null) return -1;
+              return parseFloat(left.minute) - parseFloat(right.minute);
+            });
+            const displayEvents = [];
+            events.forEach(event => {
+              if (event.icon === 'assist') {
+                const goal = displayEvents.find(item =>
+                  item.icon === 'goal' &&
+                  item.teamId === event.teamId &&
+                  item.minute === event.minute &&
+                  !item.assist
+                );
+                if (goal) {
+                  goal.assist = event.player;
+                  return;
+                }
+              }
+              displayEvents.push({ ...event });
+            });
             return (
               <FixtureRow
                 key={ fixture.id }
                 fixture={ fixture }
-                espnMatch={ espnMatch }
-                assisters={ assisters }
+                events={ displayEvents }
                 expanded={ expandedId === fixture.id }
                 onToggle={ () => setExpandedId(prev => prev === fixture.id ? null : fixture.id) }
                 theme={ theme }
@@ -548,7 +455,6 @@ const FixturesPanel = ({ gameweek, deadline, liveMatches }) => {
 FixturesPanel.propTypes = {
   gameweek:    PropTypes.number,
   deadline:    PropTypes.string,
-  liveMatches: PropTypes.array,
 };
 
 export default FixturesPanel;

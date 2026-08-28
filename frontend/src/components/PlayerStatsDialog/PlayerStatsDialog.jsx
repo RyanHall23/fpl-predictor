@@ -17,7 +17,6 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import PropTypes from 'prop-types';
 import axios from '../../api';
-import { teamsMatch } from '../../hooks/useLiveScores';
 
 const STAT_LABELS = {
   minutes:                 'Minutes played',
@@ -61,7 +60,7 @@ const getSettledBreakdownRows = (entry, provisionalBonusValue) => {
 /**
  * Compact inline match summary pill.
  */
-const MatchCard = ({ fixture, playerTeamShort, espnClock }) => {
+const MatchCard = ({ fixture, playerTeamShort }) => {
   if (!fixture) return null;
 
   const {
@@ -82,9 +81,7 @@ const MatchCard = ({ fixture, playerTeamShort, espnClock }) => {
   if (finished || minutes >= 90) {
     statusLabel = 'FT';
   } else if (started) {
-    if (espnClock) {
-      statusLabel = espnClock;
-    } else if (!minutes) {
+    if (!minutes) {
       statusLabel = 'Live';
     } else if (minutes >= 45 && minutes <= 46) {
       statusLabel = 'HT';
@@ -146,7 +143,6 @@ const MatchCard = ({ fixture, playerTeamShort, espnClock }) => {
 MatchCard.propTypes = {
   fixture: PropTypes.object,
   playerTeamShort: PropTypes.string,
-  espnClock: PropTypes.string,
 };
 
 const BreakdownTable = ({ rows }) => {
@@ -213,7 +209,7 @@ BreakdownTable.propTypes = {
  * Fetches element-summary for the player and shows match info + per-stat
  * points breakdown for the viewed gameweek.
  */
-const PlayerStatsDialog = ({ open, onClose, player, viewedGameweek, liveMatches }) => {
+const PlayerStatsDialog = ({ open, onClose, player, viewedGameweek }) => {
   const [summary, setSummary] = React.useState(null);
   const [loading, setLoading] = React.useState(false);
   const [summaryError, setSummaryError] = React.useState(false);
@@ -232,11 +228,6 @@ const PlayerStatsDialog = ({ open, onClose, player, viewedGameweek, liveMatches 
   if (!player) return null;
 
   const { name, webName, teamName, opponents, gameweekStats } = player;
-
-  const espnMatch = liveMatches?.find(m =>
-    teamsMatch(teamName, m.homeName) || teamsMatch(teamName, m.awayName)
-  ) ?? null;
-  const espnClock = espnMatch?.isLive ? espnMatch.clock : null;
 
   // History entries for the viewed gameweek (settled data from element-summary)
   const historyEntries = viewedGameweek
@@ -283,7 +274,7 @@ const PlayerStatsDialog = ({ open, onClose, player, viewedGameweek, liveMatches 
         { opponents && opponents.length > 0 ? (
           <Box sx={ { display: 'flex', gap: 0.75, flexWrap: 'wrap', mb: 1.5 } }>
             { opponents.map((opp, i) => (
-              <MatchCard key={ opp.fixture_id ?? i } fixture={ opp } playerTeamShort={ teamName } espnClock={ espnClock } />
+              <MatchCard key={ opp.fixture_id ?? i } fixture={ opp } playerTeamShort={ teamName } />
             )) }
           </Box>
         ) : (
@@ -383,7 +374,6 @@ PlayerStatsDialog.propTypes = {
   open: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
   viewedGameweek: PropTypes.number,
-  liveMatches: PropTypes.array,
   player: PropTypes.shape({
     id: PropTypes.number,
     webName: PropTypes.string,

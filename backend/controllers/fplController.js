@@ -67,18 +67,22 @@ const getFixtures = async (req, res) => {
     const enrichStats = (stats) => {
       if (!stats?.length) return [];
       return stats
-        .filter(s => s.identifier === 'goals_scored' || s.identifier === 'assists')
+        .filter(s => [
+          'goals_scored', 'assists', 'own_goals', 'yellow_cards', 'red_cards',
+        ].includes(s.identifier))
         .map(s => ({
           identifier: s.identifier,
           h: (s.h || []).map(entry => ({
             element: entry.element,
             value: entry.value,
+            minute: entry.minute ?? null,
             webName: elementsById[entry.element]?.web_name || '',
             shortName: elementsById[entry.element]?.web_name || '',
           })),
           a: (s.a || []).map(entry => ({
             element: entry.element,
             value: entry.value,
+            minute: entry.minute ?? null,
             webName: elementsById[entry.element]?.web_name || '',
             shortName: elementsById[entry.element]?.web_name || '',
           })),
