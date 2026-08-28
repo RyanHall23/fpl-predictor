@@ -16,8 +16,10 @@ const fetchSofaScore = (path, ttlMs) =>
   dataProvider.cachedGet(`${SOFASCORE_BASE}${path}`, ttlMs, SOFASCORE_HEADERS);
 
 const minuteLabel = (incident) => {
-  if (incident.time == null) return '';
-  return incident.addedTime ? `${incident.time}'+${incident.addedTime}'` : `${incident.time}'`;
+  const minute = incident.time ?? incident.minute;
+  if (minute == null) return '';
+  const addedTime = incident.addedTime ?? incident.injuryTime;
+  return addedTime ? `${minute}'+${addedTime}'` : `${minute}'`;
 };
 
 const parseGoal = (incident, event) => ({

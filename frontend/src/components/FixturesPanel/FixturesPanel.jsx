@@ -20,7 +20,11 @@ const formatDateHeader = (date) =>
 const formatTime = (date) =>
   date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 
-const normaliseName = (name) => (name ?? '').toLowerCase().replace(/[^a-z]/g, '');
+const normaliseName = (name) => (name ?? '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase()
+  .replace(/[^a-z0-9]/g, '');
 
 const findSofaScoreMatch = (fixture, matches) => matches.find(match =>
   (teamsMatch(fixture.team_h_name, match.homeName) || fixture.team_h_short === match.homeAbbr) &&
@@ -41,18 +45,25 @@ const findEventMinute = (event, fixture, matches, eventMap, usedGoalEvents, used
     const detailName = normaliseName(name);
     return Boolean(playerName && detailName && (detailName.includes(playerName) || playerName.includes(detailName)));
   };
-  const detail = details.find(item => {
+  const matchingDetails = details.filter(item => {
     const usedEvents = event.icon === 'assist' ? usedAssistEvents : usedGoalEvents;
     if (usedEvents.has(item.eventKey) || !isSameTeam(item)) return false;
     if (item.icon !== event.icon) return false;
     return matchesPlayer(item.player);
-  }) ?? (event.icon === 'assist' ? details.find(item => {
+  });
+  const detail = matchingDetails[0] ?? (event.icon === 'assist' ? details.find(item => {
     if (usedAssistEvents.has(item.eventKey) || !isSameTeam(item)) return false;
     return item.icon === 'goal' && matchesPlayer(item.secondPlayer);
   }) ?? details.find(item => {
     if (usedAssistEvents.has(item.eventKey) || !isSameTeam(item)) return false;
     return item.icon === 'goal' && !item.ownGoal && !item.secondPlayer;
-  }) : null);
+  }) : (matchingDetails.length === 0 ? (() => {
+    const candidates = details.filter(item => {
+      const usedEvents = event.icon === 'assist' ? usedAssistEvents : usedGoalEvents;
+      return !usedEvents.has(item.eventKey) && isSameTeam(item) && item.icon === event.icon;
+    });
+    return candidates.length === 1 ? candidates[0] : null;
+  })() : null));
   if (!detail) return null;
   (event.icon === 'assist' ? usedAssistEvents : usedGoalEvents).add(detail.eventKey);
   return detail.minute || null;
