@@ -12,51 +12,12 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import { useTheme } from '@mui/material/styles';
 import axios from '../../api';
-import { teamsMatch } from '../../hooks/useLiveScores';
 
 const formatDateHeader = (date) =>
   date.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
 
 const formatTime = (date) =>
   date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-
-const normaliseName = (name) => (name ?? '').toLowerCase().replace(/[^a-z]/g, '');
-
-const findSofaScoreMatch = (fixture, matches) => matches.find(match =>
-  (teamsMatch(fixture.team_h_name, match.homeName) || fixture.team_h_short === match.homeAbbr) &&
-  (teamsMatch(fixture.team_a_name, match.awayName) || fixture.team_a_short === match.awayAbbr)
-);
-
-const findEventMinute = (event, fixture, matches, eventMap, usedGoalEvents, usedAssistEvents) => {
-  const match = findSofaScoreMatch(fixture, matches);
-  if (!match) return null;
-  const playerName = normaliseName(event.player);
-  const details = [
-    ...(match.details ?? []).map((item, index) => ({ ...item, eventKey: `scoreboard-${index}` })),
-    ...(eventMap[match.sofaScoreId] ?? []).map((item, index) => ({ ...item, eventKey: `summary-${index}` })),
-  ];
-  const sofaScoreTeamId = String(event.teamId) === String(fixture.team_h) ? match.homeId : match.awayId;
-  const isSameTeam = (item) => item.teamId == null || String(item.teamId) === String(sofaScoreTeamId);
-  const matchesPlayer = (name) => {
-    const detailName = normaliseName(name);
-    return Boolean(playerName && detailName && (detailName.includes(playerName) || playerName.includes(detailName)));
-  };
-  const detail = details.find(item => {
-    const usedEvents = event.icon === 'assist' ? usedAssistEvents : usedGoalEvents;
-    if (usedEvents.has(item.eventKey) || !isSameTeam(item)) return false;
-    if (item.icon !== event.icon) return false;
-    return matchesPlayer(item.player);
-  }) ?? (event.icon === 'assist' ? details.find(item => {
-    if (usedAssistEvents.has(item.eventKey) || !isSameTeam(item)) return false;
-    return item.icon === 'goal' && matchesPlayer(item.secondPlayer);
-  }) ?? details.find(item => {
-    if (usedAssistEvents.has(item.eventKey) || !isSameTeam(item)) return false;
-    return item.icon === 'goal' && !item.ownGoal && !item.secondPlayer;
-  }) : null);
-  if (!detail) return null;
-  (event.icon === 'assist' ? usedAssistEvents : usedGoalEvents).add(detail.eventKey);
-  return detail.minute || null;
-};
 
 const getDeadlinePill = (deadline, theme) => {
   if (!deadline) return null;
@@ -165,7 +126,7 @@ EventRow.propTypes = {
 
 // ─── Single fixture row (collapsible) ────────────────────────────────────────
 
-const FixtureRow = ({ fixture, expanded, onToggle, theme, events }) => {
+const FixtureRow = ({ fixture, expanded, onToggle, theme }) => {
   const isFinished   = fixture.finished;
   const isStarted    = fixture.started;
   const hasKickedOff = fixture.kickoffDate && fixture.kickoffDate <= new Date();
@@ -177,7 +138,7 @@ const FixtureRow = ({ fixture, expanded, onToggle, theme, events }) => {
   const scoreAway = fplAwayScore;
   const showScore = isFinished || (isStarted && fplHomeScore != null && fplAwayScore != null);
   const isLive = !isFinished && isStarted;
-  const hasEvents = events?.length > 0;
+  const hasEvents = fixture.events?.length > 0;
   const canExpand = hasEvents || isStarted || isFinished || hasKickedOff;
 
   const teamNameSx = { flex: 1, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
@@ -217,6 +178,11 @@ const FixtureRow = ({ fixture, expanded, onToggle, theme, events }) => {
               >
                 { scoreHome } – { scoreAway }
               </Typography>
+              { isLive && fixture.minutes != null && (
+                <Typography variant='caption' color='text.secondary' sx={ { lineHeight: 1 } }>
+                  { fixture.minutes }'
+                </Typography>
+              ) }
             </Box>
           ) : (
             <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 600 } }>
@@ -256,7 +222,7 @@ const FixtureRow = ({ fixture, expanded, onToggle, theme, events }) => {
               borderLeftColor: 'divider',
             } }
           >
-            { events?.map((event, idx) => (
+            { fixture.events?.map((event, idx) => (
               <EventRow
                 key={ `${event.icon}-${event.teamId}-${event.player}-${idx}` }
                 event={ event }
@@ -275,7 +241,6 @@ const FixtureRow = ({ fixture, expanded, onToggle, theme, events }) => {
 
 FixtureRow.propTypes = {
   fixture:   PropTypes.object.isRequired,
-  events:    PropTypes.array,
   expanded:  PropTypes.bool,
   onToggle:  PropTypes.func,
   theme:     PropTypes.object.isRequired,
@@ -289,40 +254,42 @@ const FixturesPanel = ({ gameweek, deadline }) => {
   const [loading, setLoading]         = useState(false);
   const [error, setError]             = useState(null);
   const [expandedId, setExpandedId]   = useState(null);
-  const [espnMatches, setEspnMatches] = useState([]);
-  const [espnEvents, setEspnEvents] = useState({});
 
   const deadlinePill = getDeadlinePill(deadline, theme);
 
   useEffect(() => {
     if (!gameweek) return;
-    setLoading(true);
-    setError(null);
-    axios
-      .get(`/api/fixtures?gameweek=${gameweek}`)
-      .then((res) => setFixtures(res.data))
-      .catch(() => setError('Failed to load fixtures.'))
-      .finally(() => setLoading(false));
+    let cancelled = false;
+    let firstRequest = true;
+
+    const loadFixtures = () => {
+      if (firstRequest) {
+        setLoading(true);
+        setError(null);
+      }
+      axios
+        .get(`/api/fixtures?gameweek=${gameweek}&_=${Date.now()}`)
+        .then((res) => {
+          if (!cancelled) setFixtures(res.data);
+        })
+        .catch(() => {
+          if (!cancelled && firstRequest) setError('Failed to load fixtures.');
+        })
+        .finally(() => {
+          if (!cancelled && firstRequest) {
+            setLoading(false);
+            firstRequest = false;
+          }
+        });
+    };
+
+    loadFixtures();
+    const pollId = setInterval(loadFixtures, 30_000);
+    return () => {
+      cancelled = true;
+      clearInterval(pollId);
+    };
   }, [gameweek]);
-
-  useEffect(() => {
-    if (!fixtures.length) return;
-    const dates = [...new Set(fixtures.filter(f => f.kickoff_time).map(f => f.kickoff_time.slice(0, 10)))];
-    Promise.all(dates.map(date => axios
-      .get(`/api/sofascore/scoreboard?dates=${date.replace(/-/g, '')}`)
-      .then(response => response.data)
-      .catch(() => [])))
-      .then(results => setEspnMatches(results.flat()));
-  }, [fixtures]);
-
-  useEffect(() => {
-    if (!espnMatches.length) return;
-    Promise.all(espnMatches.map(match => axios
-      .get(`/api/sofascore/summary/${match.sofaScoreId}`)
-      .then(response => [match.sofaScoreId, response.data.events ?? []])
-      .catch(() => [match.sofaScoreId, []])))
-      .then(entries => setEspnEvents(Object.fromEntries(entries)));
-  }, [espnMatches]);
 
   if (!gameweek) return null;
 
@@ -390,56 +357,10 @@ const FixturesPanel = ({ gameweek, deadline }) => {
           </Typography>
 
           { dayFixtures.map((fixture) => {
-            const usedGoalEvents = new Set();
-            const usedAssistEvents = new Set();
-            const eventStats = fixture.stats?.filter(s => [
-              'goals_scored', 'assists', 'own_goals', 'yellow_cards', 'red_cards',
-            ].includes(s.identifier)) ?? [];
-            const events = eventStats.flatMap(stat => [
-              ...(stat.h || []).flatMap(entry => Array.from({ length: entry.value || 1 }, () => ({
-                icon: stat.identifier === 'goals_scored' || stat.identifier === 'own_goals' ? 'goal' : stat.identifier === 'assists' ? 'assist' : stat.identifier === 'yellow_cards' ? 'yellow' : 'red',
-                player: entry.webName,
-                teamId: fixture.team_h,
-                ownGoal: stat.identifier === 'own_goals',
-                minute: entry.minute ?? null,
-              }))),
-              ...(stat.a || []).flatMap(entry => Array.from({ length: entry.value || 1 }, () => ({
-                icon: stat.identifier === 'goals_scored' || stat.identifier === 'own_goals' ? 'goal' : stat.identifier === 'assists' ? 'assist' : stat.identifier === 'yellow_cards' ? 'yellow' : 'red',
-                player: entry.webName,
-                teamId: fixture.team_a,
-                ownGoal: stat.identifier === 'own_goals',
-                minute: entry.minute ?? null,
-              }))),
-            ]).map(event => ({
-              ...event,
-              minute: findEventMinute(event, fixture, espnMatches, espnEvents, usedGoalEvents, usedAssistEvents) ?? event.minute,
-            })).sort((left, right) => {
-              if (left.minute == null && right.minute == null) return 0;
-              if (left.minute == null) return 1;
-              if (right.minute == null) return -1;
-              return parseFloat(left.minute) - parseFloat(right.minute);
-            });
-            const displayEvents = [];
-            events.forEach(event => {
-              if (event.icon === 'assist') {
-                const goal = displayEvents.find(item =>
-                  item.icon === 'goal' &&
-                  item.teamId === event.teamId &&
-                  item.minute === event.minute &&
-                  !item.assist
-                );
-                if (goal) {
-                  goal.assist = event.player;
-                  return;
-                }
-              }
-              displayEvents.push({ ...event });
-            });
             return (
               <FixtureRow
                 key={ fixture.id }
                 fixture={ fixture }
-                events={ displayEvents }
                 expanded={ expandedId === fixture.id }
                 onToggle={ () => setExpandedId(prev => prev === fixture.id ? null : fixture.id) }
                 theme={ theme }

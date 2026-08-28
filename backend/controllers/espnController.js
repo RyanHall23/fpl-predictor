@@ -77,6 +77,14 @@ const parseMatch = (event) => {
   };
 };
 
+const fetchScoreboard = async (dates) => {
+  const url = dates
+    ? `${ESPN_BASE}/scoreboard?dates=${dates}`
+    : `${ESPN_BASE}/scoreboard`;
+  const data = await dataProvider.cachedGet(url, TTL_ESPN_SCOREBOARD);
+  return (data.events ?? []).map(parseMatch).filter(Boolean);
+};
+
 // ─── Controllers ──────────────────────────────────────────────────────────────
 
 /**
@@ -96,13 +104,7 @@ const getScoreboard = async (req, res) => {
       return res.status(400).json({ error: 'Invalid dates parameter — expected YYYYMMDD' });
     }
 
-    const url = dates
-      ? `${ESPN_BASE}/scoreboard?dates=${dates}`
-      : `${ESPN_BASE}/scoreboard`;
-
-    const data = await dataProvider.cachedGet(url, TTL_ESPN_SCOREBOARD);
-    const parsed = (data.events ?? []).map(parseMatch).filter(Boolean);
-    res.json(parsed);
+    res.json(await fetchScoreboard(dates));
   } catch (error) {
     console.error('[ESPN] getScoreboard error:', error.message);
     res.status(502).json({ error: 'Failed to fetch ESPN scoreboard' });
@@ -271,4 +273,4 @@ const getSummary = async (req, res) => {
   }
 };
 
-module.exports = { getScoreboard, getSummary };
+module.exports = { getScoreboard, getSummary, fetchScoreboard, parseMatch };

@@ -108,6 +108,42 @@ describe('module loading — no syntax or require errors', () => {
   });
 });
 
+describe('fixture event enrichment', () => {
+  test('buildFixtureEvents pairs assists and falls back to FPL minutes', () => {
+    const { buildFixtureEvents } = require(path.join(__dirname, '..', 'controllers/sofaScoreController.js'));
+    const fixture = {
+      team_h: 1,
+      team_a: 2,
+      stats: [
+        {
+          identifier: 'goals_scored',
+          h: [{ value: 1, minute: null, webName: 'Striker' }],
+          a: [],
+        },
+        {
+          identifier: 'assists',
+          h: [{ value: 1, minute: 12, webName: 'Creator' }],
+          a: [],
+        },
+      ],
+    };
+
+    assert.deepEqual(buildFixtureEvents(fixture, [{
+      scorerName: 'Striker',
+      assisterName: 'Creator',
+      minute: 12,
+      addedTime: 2,
+    }]), [{
+      icon: 'goal',
+      minute: "12'+2'",
+      teamId: 1,
+      player: 'Striker',
+      ownGoal: false,
+      assist: 'Creator',
+    }]);
+  });
+});
+
 // ---------------------------------------------------------------------------
 // MAX_PREDICTION_AGE_MS single source of truth
 // ---------------------------------------------------------------------------

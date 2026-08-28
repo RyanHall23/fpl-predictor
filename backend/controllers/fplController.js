@@ -2,6 +2,25 @@ const fplModel = require('../models/fplModel');
 const dataProvider = require('../models/dataProvider');
 const { buildBreakdown } = require('../utils/statsBreakdown');
 const { getSeasonState } = require('../utils/season');
+const { fetchScoreboard } = require('./espnController');
+const { enrichFixturesWithIncidents, buildFixtureEvents, mergeFixtureEvents } = require('./sofaScoreController');
+
+const normaliseTeamName = (name) => (name ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+const teamNamesMatch = (left, right) => {
+  const a = normaliseTeamName(left);
+  const b = normaliseTeamName(right);
+  return Boolean(a && b && (a === b || a.includes(b) || b.includes(a)));
+};
+
+const findEspnMatch = (fixture, matches) => matches.find(match =>
+  teamNamesMatch(fixture.team_h_name, match.homeName)
+  && teamNamesMatch(fixture.team_a_name, match.awayName)
+);
+
+const parseElapsedMinutes = (clock) => {
+  const match = String(clock ?? '').match(/^(\d+)/);
+  return match ? Number(match[1]) : null;
+};
 
 /**
  * Format a player's opponent(s) as a human-readable display string.
@@ -95,6 +114,7 @@ const getFixtures = async (req, res) => {
       kickoff_time: f.kickoff_time,
       started: f.started,
       finished: f.finished,
+      minutes: f.minutes ?? null,
       team_h: f.team_h,
       team_a: f.team_a,
       team_h_score: f.team_h_score,
@@ -106,7 +126,50 @@ const getFixtures = async (req, res) => {
       stats: enrichStats(f.stats),
     }));
 
-    res.json(result);
+    let espnMatches = [];
+    try {
+      espnMatches = await fetchScoreboard();
+    } catch (error) {
+      console.warn('ESPN fixture enrichment unavailable:', error.message);
+    }
+
+    const liveResult = result.map(fixture => {
+      const match = findEspnMatch(fixture, espnMatches);
+      if (!match) return fixture;
+      return {
+        ...fixture,
+        started: match.isLive || match.isFinished || fixture.started,
+        finished: match.isFinished || fixture.finished,
+        team_h_score: match.homeScore,
+        team_a_score: match.awayScore,
+        minutes: parseElapsedMinutes(match.clock) ?? fixture.minutes,
+        clock: match.clock,
+        statusDetail: match.statusDetail,
+        espnHomeId: match.homeId,
+        espnAwayId: match.awayId,
+        espnDetails: match.details,
+      };
+    });
+
+    try {
+      const enriched = await enrichFixturesWithIncidents(liveResult);
+      res.json(enriched.map(fixture => ({
+        ...fixture,
+        events: mergeFixtureEvents(fixture, fixture.events ?? [], fixture.espnDetails ?? []),
+        espnHomeId: undefined,
+        espnAwayId: undefined,
+        espnDetails: undefined,
+      })));
+    } catch (error) {
+      console.warn('Fixture event enrichment unavailable:', error.message);
+      res.json(liveResult.map(fixture => ({
+        ...fixture,
+        events: mergeFixtureEvents(fixture, buildFixtureEvents(fixture), fixture.espnDetails ?? []),
+        espnHomeId: undefined,
+        espnAwayId: undefined,
+        espnDetails: undefined,
+      })));
+    }
   } catch (error) {
     console.error('Error fetching fixtures:', error);
     res.status(500).json({ error: 'Error fetching fixtures' });
