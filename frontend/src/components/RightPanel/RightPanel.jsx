@@ -22,7 +22,6 @@ const RightPanel = ({
   currentGameweek,
   selectedGameweek,
   gameweekDeadline,
-  liveMatches,
 }) => {
   const theme = useTheme();
   const displayGameweek = selectedGameweek || currentGameweek;
@@ -135,7 +134,7 @@ const RightPanel = ({
         <>
           { entryId && invLeagues.length > 0 && <Divider sx={ { my: 1 } } /> }
           <Box sx={ { p: 2 } }>
-            <FixturesPanel gameweek={ displayGameweek } deadline={ gameweekDeadline } liveMatches={ liveMatches } />
+            <FixturesPanel gameweek={ displayGameweek } deadline={ gameweekDeadline } />
           </Box>
         </>
       ) }
@@ -150,7 +149,6 @@ RightPanel.propTypes = {
   currentGameweek: PropTypes.number,
   selectedGameweek: PropTypes.number,
   gameweekDeadline: PropTypes.string,
-  liveMatches: PropTypes.array,
 };
 
 export default RightPanel;

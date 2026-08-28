@@ -32,7 +32,6 @@ import LiveBanner from './components/LiveBanner/LiveBanner';
 import useTeamData from './hooks/useTeamData';
 import useAllPlayers from './hooks/useAllPlayers';
 import usePlannedTransfers from './hooks/usePlannedTransfers';
-import useLiveScores from './hooks/useLiveScores';
 import RightPanel from './components/RightPanel';
 import RecommendedTransfers from './components/RecommendedTransfers';
 import TeamActivityPanel from './components/TeamActivityPanel';
@@ -156,28 +155,6 @@ const App = () => {
       });
     }
   };
-
-  // Squad team names used to filter relevant ESPN score change notifications.
-  const squadTeamNames = useMemo(() => {
-    const names = new Set();
-    [...activePlayers, ...reservePlayers].forEach(p => { if (p.teamName) names.add(p.teamName); });
-    return [...names];
-  }, [activePlayers, reservePlayers]);
-
-  // Only trigger an immediate FPL re-fetch when the current gameweek is active.
-  const handleRelevantScoreChange = useCallback(() => {
-    if (gameweekInfo?.isActive) refresh();
-  }, [gameweekInfo?.isActive, refresh]);
-
-  // Only poll ESPN when the current gameweek is active to avoid unnecessary
-  // network traffic when viewing past or future gameweeks.
-  const liveScoresEnabled = !!gameweekInfo?.isActive;
-
-  const { matches: liveMatches } = useLiveScores({
-    enabled: liveScoresEnabled,
-    onRelevantChange: handleRelevantScoreChange,
-    squadTeamNames,
-  });
 
   const {
     plannedTransfers,
@@ -1068,7 +1045,6 @@ const App = () => {
                     plannedTransfers={ !isHighestPredictedTeam ? displayPlannedTransfers : undefined }
                     onRemovePlannedTransfer={ (!isHighestPredictedTeam && !isLockedGameweek) ? removePlannedTransfer : undefined }
                     onTransfer={ handleTransfer }
-                    liveMatches={ liveMatches }
                   />
                 ) }
               </Box>
@@ -1128,7 +1104,6 @@ const App = () => {
                 currentEntryId={ currentEntryId }
                 userEntryId={ userEntryId }
                 gameweekDeadline={ gameweekInfo?.data?.deadline_time }
-                liveMatches={ liveMatches }
               />
             ) }
           </Box>

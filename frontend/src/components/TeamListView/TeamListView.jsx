@@ -7,7 +7,6 @@ import TransferPlayer from '../TransferPlayer/TransferPlayer';
 import FixturePill from '../FixturePill/FixturePill';
 import { validateSubstitution } from '../../utils/substitution';
 import PlayerStatsDialog from '../PlayerStatsDialog/PlayerStatsDialog';
-import { teamsMatch } from '../../hooks/useLiveScores';
 
 const POSITION_MANAGER = 5;
 const POSITION_GK  = 1;
@@ -56,17 +55,12 @@ const ListRow = ({
   onRemovePlannedTransfer,
   currentGameweek,
   showTransferButtons,
-  liveMatches,
 }) => {
   const [transferDialogOpen, setTransferDialogOpen] = React.useState(false);
   const [statsDialogOpen, setStatsDialogOpen] = React.useState(false);
 
   const predictedPoints = parseFloat(player.predictedPoints) || 0;
   const kickoff = formatKickoff(player.fixtureKickoff);
-  const espnMatch = liveMatches?.find(m =>
-    teamsMatch(player.teamName, m.homeName) || teamsMatch(player.teamName, m.awayName)
-  ) ?? null;
-  const liveClock = espnMatch?.isLive ? espnMatch.clock : null;
 
   // Per-player points colour: future GW → purple (secondary), all fixtures done → green, otherwise → amber
   const allFixturesDone = !isFutureGameweek && player.opponents?.length > 0 && player.opponents.every(o => o.finished);
@@ -208,14 +202,7 @@ const ListRow = ({
               );
             })() }
             <Box sx={ { width: 52, flexShrink: 0, textAlign: 'left' } }>
-              { liveClock ? (
-                <Chip
-                  label={ liveClock }
-                  size='small'
-                  color='warning'
-                  sx={ { fontSize: '9px', height: 18, '& .MuiChip-label': { px: '5px' } } }
-                />
-              ) : kickoff && (
+              { kickoff && (
                 <Typography variant='caption' color='text.disabled' noWrap>{ kickoff }</Typography>
               ) }
             </Box>
@@ -381,7 +368,6 @@ const ListRow = ({
         onClose={ () => setStatsDialogOpen(false) }
         player={ player }
         viewedGameweek={ viewedGameweek }
-        liveMatches={ liveMatches }
       />
     </>
   );
@@ -403,7 +389,6 @@ const TeamListView = ({
   viewedGameweek,
   plannedTransfers,
   onRemovePlannedTransfer,
-  liveMatches,
 }) => {
   const captain = activePlayers?.length ? activePlayers.find(p => p.is_captain) ?? null : null;
   const viceCaptain = !isFutureGameweek && activePlayers?.length ? activePlayers.find(p => p.is_vice_captain) ?? null : null;
@@ -425,7 +410,6 @@ const TeamListView = ({
     selectedPlayer, team, allPlayers, onTransfer, onPlayerClick,
     isFutureGameweek, isPreSeason, viewedGameweek, plannedTransfers, onRemovePlannedTransfer,
     currentGameweek, showTransferButtons: !isHighestPredictedTeam,
-    liveMatches,
   };
 
   return (
@@ -543,7 +527,6 @@ ListRow.propTypes = {
   onRemovePlannedTransfer: PropTypes.func,
   currentGameweek: PropTypes.number,
   showTransferButtons: PropTypes.bool,
-  liveMatches: PropTypes.array,
 };
 
 TeamListView.propTypes = {
@@ -561,7 +544,6 @@ TeamListView.propTypes = {
   viewedGameweek: PropTypes.number,
   plannedTransfers: PropTypes.array,
   onRemovePlannedTransfer: PropTypes.func,
-  liveMatches: PropTypes.array,
 };
 
 export default TeamListView;

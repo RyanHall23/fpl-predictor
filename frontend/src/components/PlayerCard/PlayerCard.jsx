@@ -76,8 +76,13 @@ const PlayerCard = ({ player, isCaptain, isViceCaptain, team, allPlayers, onTran
     );
   }
 
-  // predictedPoints is fully resolved by the backend (basePoints × multiplier).
+  // FPL gameweek totals are authoritative for active and completed weeks.
+  // Predictions remain the source for future weeks.
   const predictedPoints = parseFloat(player.predictedPoints) || 0;
+  const actualPoints = parseFloat(player.gameweekStats?.points ?? player.lastGwPoints);
+  const displayedPoints = !isFutureGameweek && Number.isFinite(actualPoints)
+    ? actualPoints * (player.multiplier || 1)
+    : predictedPoints;
 
   // Derive per-player points colour state from fixture data:
   //   future GW       → purple (predicted)
@@ -357,7 +362,7 @@ const PlayerCard = ({ player, isCaptain, isViceCaptain, team, allPlayers, onTran
             size='sm'
           />
           <Typography variant='h6' className={ `points-display${pointsColorClass}` } sx={ { fontSize: '14px', fontWeight: 700, textAlign: 'center', width: '100%', letterSpacing: '0.5px', padding: '1px 0' } }>
-            { predictedPoints }
+            { displayedPoints }
           </Typography>
         </Box>
 
