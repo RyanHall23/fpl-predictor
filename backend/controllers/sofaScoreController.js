@@ -70,11 +70,12 @@ const parseEvent = (event, incidents = []) => ({
 const getScoreboard = async (req, res) => {
   try {
     const { dates } = req.query;
-    if (dates !== undefined && (typeof dates !== 'string' || !/^\d{8}$/.test(dates))) {
+    const dateParam = typeof dates === 'string' && /^\d{8}$/.test(dates) ? dates : null;
+    if (dates !== undefined && dateParam === null) {
       return res.status(400).json({ error: 'Invalid dates parameter — expected YYYYMMDD' });
     }
-    const date = dates
-      ? `${dates.slice(0, 4)}-${dates.slice(4, 6)}-${dates.slice(6)}`
+    const date = dateParam
+      ? `${dateParam.slice(0, 4)}-${dateParam.slice(4, 6)}-${dateParam.slice(6)}`
       : new Date().toISOString().slice(0, 10);
     const data = await fetchSofaScore(`/sport/football/scheduled-events/${date}`, TTL_EVENTS);
     const events = (data.events ?? []).filter(event => event.tournament?.uniqueTournament?.id === PREMIER_LEAGUE_ID);
@@ -96,12 +97,13 @@ const getScoreboard = async (req, res) => {
 
 const getSummary = async (req, res) => {
   try {
-    if (!/^\d+$/.test(req.params.eventId)) {
+    const { eventId } = req.params;
+    if (typeof eventId !== 'string' || !/^\d+$/.test(eventId)) {
       return res.status(400).json({ error: 'Invalid SofaScore event ID' });
     }
     const [eventData, incidentsData] = await Promise.all([
-      fetchSofaScore(`/event/${req.params.eventId}`, TTL_EVENTS),
-      fetchSofaScore(`/event/${req.params.eventId}/incidents`, TTL_INCIDENTS),
+      fetchSofaScore(`/event/${eventId}`, TTL_EVENTS),
+      fetchSofaScore(`/event/${eventId}/incidents`, TTL_INCIDENTS),
     ]);
     const event = eventData.event;
     if (!event) return res.status(404).json({ error: 'SofaScore event not found' });
