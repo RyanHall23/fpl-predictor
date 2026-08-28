@@ -31,6 +31,7 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
   // under the new entry's localStorage key immediately after an entryId change).
   const [loadedEntryId, setLoadedEntryId] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
+  const fetchRequestRef = useRef(0);
   // Set of player codes from the most recently loaded current/past/active GW.
   // Used as the fingerprint comparison baseline when restoring a future-GW
   // lineup, because the future-GW API re-optimises the squad ordering and
@@ -44,9 +45,11 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
 
   // Fetch the highest predicted team from the backend
   const fetchHighestPredictedTeam = useCallback(async () => {
+    const requestId = ++fetchRequestRef.current;
     try {
       const gameweekParam = selectedGameweek ? `?gameweek=${selectedGameweek}` : '';
       const response = await axios.get(`/api/predicted-team${gameweekParam}`);
+      if (requestId !== fetchRequestRef.current) return;
       const { activePlayers: active, reservePlayers: reserve, gameweek, currentGameweek, isPastGameweek, isFutureGameweek, isActiveGameweek, gameweekData } = response.data;
       
       setGameweekInfo({
@@ -76,12 +79,14 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
   // Fetch the user's actual team (already sorted/grouped by backend)
   const fetchData = useCallback(async () => {
     if (!entryId) return;
+    const requestId = ++fetchRequestRef.current;
 
     try {
       // The /api/entry/:entryId/team endpoint resolves the current gameweek
       // internally — no separate /api/bootstrap-static call needed.
       const gameweekParam = selectedGameweek ? `?gameweek=${selectedGameweek}` : '';
       const response = await axios.get(`/api/entry/${entryId}/team${gameweekParam}`);
+      if (requestId !== fetchRequestRef.current) return;
       const { activePlayers: active, reservePlayers: reserve, teamName: fetchedTeamName, gameweek, currentGameweek, isPastGameweek, isFutureGameweek, isActiveGameweek, gameweekData, freeTransfers: ft, bank: bankBalance, isPreSeason } = response.data;
 
       setGameweekInfo({
@@ -145,6 +150,7 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
       setLoadedEntryId(entryId);
       setLastUpdated(Date.now());
     } catch (error) {
+      if (requestId !== fetchRequestRef.current) return;
       setTeamName('');
       setGameweekInfo(null);
       setFreeTransfers(null);

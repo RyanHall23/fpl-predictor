@@ -80,6 +80,7 @@ const App = () => {
     calculateTotalPredictedPoints,
     toggleTeamView,
     isHighestPredictedTeam,
+    teamName,
     selectedPlayer,
     gameweekInfo,
     setCaptain,
