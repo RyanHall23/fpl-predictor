@@ -24,13 +24,10 @@ const fs   = require('fs');
 const path = require('path');
 
 // Path is configurable for deployments where the code directory is read-only.
-// Defaults:
-// - Vercel/serverless: /tmp/calibration.json
-// - Local/dev:         backend/calibration.json
-const IS_VERCEL        = Boolean(process.env.VERCEL || process.env.NOW_REGION);
-const CALIBRATION_DIR  = process.env.CALIBRATION_DATA_DIR || (IS_VERCEL
-  ? '/tmp'
-  : path.join(__dirname, '..', '..'));
+// Keep the checked-in calibration available in serverless deployments; /tmp is
+// ephemeral and otherwise makes every cold start use default multipliers.
+const CALIBRATION_DIR  = process.env.CALIBRATION_DATA_DIR ||
+  path.join(__dirname, '..', '..');
 const CALIBRATION_FILE = process.env.CALIBRATION_FILE_PATH ||
   path.join(CALIBRATION_DIR, 'calibration.json');
 

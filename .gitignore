@@ -38,5 +38,4 @@ yarn-error.log*
 **/yarn-debug.log*
 **/yarn-error.log*
 
-# Prediction calibration — generated at runtime, not committed
-backend/calibration.json
+# Prediction calibration is deployed with the prediction engine.
