@@ -3,40 +3,35 @@
 /**
  * Resolve season and gameweek state from bootstrap events.
  *
- * FPL's committed/static bootstrap data can lag behind the deadline flags,
- * so deadline_time is used as a fallback for the current clock.
+ * FPL's committed/static bootstrap data identifies the current event with
+ * is_current. The deadline marks the end of planning, not the start of an
+ * active gameweek for this application's display.
  */
 const getSeasonState = (events, now = new Date()) => {
   if (!Array.isArray(events) || events.length === 0) {
     return { seasonStarted: true, currentEvent: null, currentGameweek: 1 };
   }
 
-  const nowMs = now.getTime();
-  const deadlinePassed = event => {
-    const deadlineMs = Date.parse(event.deadline_time);
-    return Number.isFinite(deadlineMs) && deadlineMs <= nowMs;
-  };
-
   const activeEvents = events.filter(event =>
-    !event.finished && (event.is_current || deadlinePassed(event))
+    !event.finished && event.is_current
   );
-  const currentEvent = events.find(event => event.is_current && !event.finished)
-    || activeEvents.sort((left, right) => right.id - left.id)[0]
-    || events.find(event => !event.finished)
-    || events[events.length - 1];
   const startedEvents = events.filter(event =>
-    event.finished || event.is_current || deadlinePassed(event)
+    event.finished || event.is_current
   );
   const currentGameweek = startedEvents.length
     ? startedEvents.reduce((latest, event) => Math.max(latest, event.id), 0)
     : events[0].id;
+  const currentEvent = events.find(event => event.is_current && !event.finished)
+    || activeEvents.sort((left, right) => right.id - left.id)[0]
+    || events.find(event => event.id === currentGameweek)
+    || events[0];
 
   return {
     seasonStarted: startedEvents.length > 0,
     currentEvent,
     currentGameweek,
     isEventActive: event => !!event && !event.finished &&
-      (event.is_current || deadlinePassed(event)),
+      event.is_current,
   };
 };
 

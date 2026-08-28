@@ -487,7 +487,13 @@ const getUserTeamForEntry = async (req, res) => {
         });
       }
       console.error(`Error fetching picks for gameweek ${picksEventId}:`, picksResult.reason?.message);
-      return res.status(500).json({ error: 'Error fetching team picks' });
+      const upstreamStatus = picksResult.reason?.response?.status;
+      const status = upstreamStatus === 400 || upstreamStatus === 404 ? upstreamStatus : 502;
+      return res.status(status).json({
+        error: status === 404 ? 'Team ID was not found in the FPL API' : 'Unable to fetch team picks from the FPL API',
+        entryId,
+        gameweek: picksEventId,
+      });
     }
     const picksData = picksResult.value;
 
