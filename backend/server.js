@@ -25,7 +25,7 @@ app.use(express.json());
 app.get('/api/bootstrap-static', apiLimiter, withCacheHeaders(300, 60), fplController.getBootstrapStatic);
 app.get('/api/bootstrap-static/forecast', apiLimiter, withCacheHeaders(300, 60), fplController.getPlayersForecast);
 app.get('/api/bootstrap-static/enriched', apiLimiter, withCacheHeaders(300, 60), fplController.getAllPlayersEnriched);
-app.get('/api/fixtures', apiLimiter, withCacheHeaders(600, 120), fplController.getFixtures);
+app.get('/api/fixtures', apiLimiter, withCacheHeaders(30, 10), fplController.getFixtures);
 app.get('/api/element-summary/:playerId', apiLimiter, withCacheHeaders(120), fplController.getElementSummary);
 app.get('/api/event/:eventId/live', apiLimiter, fplController.getLiveGameweek);
 app.get('/api/predicted-team', apiLimiter, withCacheHeaders(300, 60), fplController.getPredictedTeam);
@@ -49,7 +49,7 @@ app.get('/api/assistant/:entryId', apiLimiter, withCacheHeaders(120, 60), assist
 // ESPN API proxy routes — browser never calls ESPN directly
 app.get('/api/espn/scoreboard', apiLimiter, espnController.getScoreboard);
 app.get('/api/espn/summary/:eventId', apiLimiter, espnController.getSummary);
-app.get('/api/sofascore/scoreboard', apiLimiter, sofaScoreController.getScoreboard);
+app.post('/api/sofascore/incidents', apiLimiter, sofaScoreController.getFixtureIncidents);
 app.get('/api/sofascore/summary/:eventId', apiLimiter, sofaScoreController.getSummary);
 
 // FPL Predictor's Team routes
