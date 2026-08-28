@@ -40,7 +40,7 @@
     "@vitest/ui": "^4.1.10",
     "jsdom": "^30.0.1",
     "vite": "^8.2.2",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.11"
   },
   "overrides": {
     "nth-check": "^2.1.1",
