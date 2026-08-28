@@ -361,31 +361,35 @@ const fetchLiveGameweek = async (eventId) => {
 
   if (CACHE_STATIC) {
     // The current gameweek must come from FPL so its provisional points stay
-    // current. Committed snapshots are appropriate for completed gameweeks,
-    // and remain a fallback if the live request is unavailable.
-    let isActiveGameweek = false;
+    // current. Completed gameweeks use the player snapshot, which contains
+    // the settled event_points and stat fields used by the UI.
+    let event = null;
     try {
       const bootstrap = await loadJsonFile(SEASON_DATA_DIR, 'bootstrap-static.json');
-      const event = bootstrap.events?.find(item => item.id === validatedEventId);
-      isActiveGameweek = !!event && !event.finished && event.is_current && !event.is_next;
+      event = bootstrap.events?.find(item => item.id === validatedEventId) ?? null;
     } catch (_) {
       // Missing static bootstrap data is handled by the live API fallback.
     }
 
-    if (isActiveGameweek) {
+    if (event && !event.finished) {
       try {
         return await cachedGet(`${FPL_API_BASE}/event/${validatedEventId}/live/`, TTL_LIVE);
       } catch (_) {
-        // Fall through to the committed snapshot if the API is unavailable.
+        // Fall through to the committed player snapshot if available.
       }
     }
 
-    // Try the committed per-GW file for completed gameweeks or as a fallback.
+    // Player snapshots are the settled source for completed gameweeks. Adapt
+    // their element shape to the event/live response consumed by fplModel.
     try {
-      return await loadJsonFile(
-        path.join(SEASON_DATA_DIR, 'live'),
-        `gw-${validatedEventId}.json`,
-      );
+      const snapshot = await loadJsonFile(path.join(SEASON_DATA_DIR, 'players'), `gw-${validatedEventId}.json`);
+      return {
+        elements: (snapshot.elements ?? []).map(element => ({
+          id: element.id,
+          stats: element,
+          explain: [],
+        })),
+      };
     } catch (_) {
       // Not yet committed (current / future GW) — fetch live.
     }
