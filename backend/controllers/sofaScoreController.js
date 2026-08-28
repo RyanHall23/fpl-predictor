@@ -70,9 +70,6 @@ const parseEvent = (event, incidents = []) => ({
 const getScoreboard = async (req, res) => {
   try {
     const { dates } = req.query;
-    if (dates !== undefined && typeof dates !== 'string') {
-      return res.status(400).json({ error: 'Invalid dates parameter — expected YYYYMMDD' });
-    }
     if (dates !== undefined && (typeof dates !== 'string' || !/^\d{8}$/.test(dates))) {
       return res.status(400).json({ error: 'Invalid dates parameter — expected YYYYMMDD' });
     }
