@@ -151,11 +151,15 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
       setLastUpdated(Date.now());
     } catch (error) {
       if (requestId !== fetchRequestRef.current) return;
+      const message = error.response?.data?.error || 'Unable to fetch team data.';
+      setActivePlayers([]);
+      setReservePlayers([]);
       setTeamName('');
       setGameweekInfo(null);
       setFreeTransfers(null);
       setBank(null);
-      console.error('Error fetching team data:', error);
+      setSnackbar(prev => ({ message, key: prev.key + 1 }));
+      console.error('Error fetching team data:', error.response?.data || error.message);
     }
   }, [entryId, selectedGameweek]);
 
