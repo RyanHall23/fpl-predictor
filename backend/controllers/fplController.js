@@ -898,7 +898,7 @@ const getAllPlayersEnriched = async (req, res) => {
   try {
     const data = await fplModel.fetchBootstrapStatic();
     const fixtures = await fplModel.fetchFixtures();
-    const currentEvent = data.events.find(e => e.is_current) || data.events[0];
+    const seasonState = getSeasonState(data.events);
 
     // Optional ?gameweek= param so the transfer dropdown can request predictions
     // for the specific gameweek the user is currently viewing.  Without it,
@@ -915,7 +915,7 @@ const getAllPlayersEnriched = async (req, res) => {
     } else {
       // Default: next upcoming event; fall back to current if no next
       const nextEvent = data.events.find(e => e.is_next);
-      targetEvent = nextEvent ? nextEvent.id : currentEvent.id;
+      targetEvent = nextEvent ? nextEvent.id : seasonState.currentEvent.id;
     }
 
     let players = data.elements.map((p) => ({
@@ -925,8 +925,7 @@ const getAllPlayersEnriched = async (req, res) => {
 
     // For past or active gameweeks, enrich with actual points from the live endpoint
     // so that event_points reflects the correct GW score for every player.
-    const targetEventData = data.events.find(e => e.id === targetEvent);
-    const isPastOrActive = !!(targetEventData && (targetEventData.finished || targetEventData.is_current));
+    const isPastOrActive = targetEvent <= seasonState.currentGameweek;
     if (isPastOrActive) {
       players = await fplModel.enrichPlayersWithGameweekStats(players, targetEvent);
     }

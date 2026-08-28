@@ -95,7 +95,10 @@ const App = () => {
     selectedGameweek
   );
 
-  const { allPlayers } = useAllPlayers(selectedGameweek);
+  // Active-GW transfer points must come from the current event. A null
+  // selectedGameweek otherwise makes useAllPlayers request the next event.
+  const playersGameweek = selectedGameweek ?? currentGameweek;
+  const { allPlayers } = useAllPlayers(playersGameweek);
 
   useEffect(() => {
     if (!gameweekInfo) return;
