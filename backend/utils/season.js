@@ -13,15 +13,15 @@ const getSeasonState = (events, now = new Date()) => {
   }
 
   const activeEvents = events.filter(event =>
-    !event.finished && event.is_current
+    !event.finished && event.is_current && !event.is_next
   );
   const startedEvents = events.filter(event =>
-    event.finished || event.is_current
+    event.finished || (event.is_current && !event.is_next)
   );
   const currentGameweek = startedEvents.length
     ? startedEvents.reduce((latest, event) => Math.max(latest, event.id), 0)
     : events[0].id;
-  const currentEvent = events.find(event => event.is_current && !event.finished)
+  const currentEvent = events.find(event => event.is_current && !event.finished && !event.is_next)
     || activeEvents.sort((left, right) => right.id - left.id)[0]
     || events.find(event => event.id === currentGameweek)
     || events[0];
@@ -31,7 +31,7 @@ const getSeasonState = (events, now = new Date()) => {
     currentEvent,
     currentGameweek,
     isEventActive: event => !!event && !event.finished &&
-      event.is_current,
+      event.is_current && !event.is_next,
   };
 };
 

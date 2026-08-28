@@ -21,6 +21,15 @@ All endpoints require authentication via JWT token in the `Authorization` header
 Authorization: Bearer <jwt_token>
 ```
 
+## Football Events
+
+The fixture event feed uses SofaScore incidents for goal, assister, booking,
+and minute data. No API token is required.
+
+**GET** `/api/sofascore/scoreboard?dates=YYYYMMDD`
+
+**GET** `/api/sofascore/summary/:eventId`
+
 ---
 
 ## Squad Endpoints

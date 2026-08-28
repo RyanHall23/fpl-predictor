@@ -55,11 +55,11 @@ const BASE_DELAY_MS = 500; // doubles each attempt: 500 → 1000 → 2000 → 40
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const fetchWithRetry = async (url, attempt = 1) => {
+const fetchWithRetry = async (url, attempt = 1, headers = {}) => {
   try {
     const response = await axios.get(url, {
       timeout: 15_000, // 15-second socket timeout per request
-      headers: { 'User-Agent': 'fpl-predictor/1.0' },
+      headers: { 'User-Agent': 'fpl-predictor/1.0', ...headers },
     });
     return response;
   } catch (err) {
@@ -79,7 +79,7 @@ const fetchWithRetry = async (url, attempt = 1) => {
         `[dataProvider] ${status ?? 'Network error'} on ${url} — retry ${attempt}/${MAX_RETRIES} in ${backoff}ms`,
       );
       await sleep(backoff);
-      return fetchWithRetry(url, attempt + 1);
+      return fetchWithRetry(url, attempt + 1, headers);
     }
 
     throw err;
@@ -92,7 +92,7 @@ const fetchWithRetry = async (url, attempt = 1) => {
  * Concurrent callers hitting the same URL while a fetch is in-flight all
  * await the same Promise rather than each firing a separate request.
  */
-const cachedGet = async (url, ttlMs) => {
+const cachedGet = async (url, ttlMs, headers = {}) => {
   const now = Date.now();
   const hit = cache.get(url);
   if (hit) {
@@ -112,7 +112,7 @@ const cachedGet = async (url, ttlMs) => {
     return _inFlight.get(url);
   }
 
-  const fetchPromise = fetchWithRetry(url).then((response) => {
+  const fetchPromise = fetchWithRetry(url, 1, headers).then((response) => {
     cache.set(url, { data: response.data, expiresAt: Date.now() + ttlMs });
     enforceCacheSize();
     _inFlight.delete(url);
@@ -367,10 +367,7 @@ const fetchLiveGameweek = async (eventId) => {
     try {
       const bootstrap = await loadJsonFile(SEASON_DATA_DIR, 'bootstrap-static.json');
       const event = bootstrap.events?.find(item => item.id === validatedEventId);
-      const deadlineMs = Date.parse(event?.deadline_time);
-      isActiveGameweek = !!event && !event.finished && (
-        event.is_current || (Number.isFinite(deadlineMs) && deadlineMs <= Date.now())
-      );
+      isActiveGameweek = !!event && !event.finished && event.is_current && !event.is_next;
     } catch (_) {
       // Missing static bootstrap data is handled by the live API fallback.
     }

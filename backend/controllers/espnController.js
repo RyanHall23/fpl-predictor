@@ -182,11 +182,27 @@ const getSummary = async (req, res) => {
     // Maps minute+teamId -> secondary player name.  More reliable than the
     // scoreboard's athletesInvolved[1] for penalty kicks and own goals.
     const summaryEventMap = {};
-    for (const play of (data.keyPlays ?? data.plays ?? [])) {
+    const summaryEvents = (data.keyEvents ?? data.keyPlays ?? data.plays ?? [])
+      .filter(event => event.scoringPlay || /card/i.test(event.type?.text ?? ''))
+      .map(event => {
+        const typeText = (event.type?.text ?? '').toLowerCase();
+        return {
+          icon: event.scoringPlay ? 'goal' : typeText.includes('red') ? 'red' : 'yellow',
+          minute: event.clock?.displayValue ?? '',
+          teamId: event.team?.id,
+          player: event.participants?.[0]?.athlete?.displayName ?? '',
+          secondPlayer: event.participants?.[1]?.athlete?.displayName ?? '',
+          ownGoal: /own goal/i.test(event.text ?? ''),
+          penaltyKick: /penalty/i.test(event.text ?? ''),
+        };
+      });
+
+    for (const play of (data.keyEvents ?? data.keyPlays ?? data.plays ?? [])) {
       if (!play.scoringPlay) continue;
       const min    = play.clock?.displayValue ?? '';
       const tid    = play.team?.id ?? '';
-      const second = play.athletesInvolved?.[1]?.shortName
+      const second = play.participants?.[1]?.athlete?.displayName
+        ?? play.athletesInvolved?.[1]?.shortName
         ?? play.athletesInvolved?.[1]?.displayName ?? '';
       if (second && min && tid) {
         summaryEventMap[`${min}_${tid}`] = second;
@@ -248,7 +264,7 @@ const getSummary = async (req, res) => {
       }
     }
 
-    res.json({ espnAssisters, fplOnlyAssisters, summaryEventMap });
+    res.json({ espnAssisters, fplOnlyAssisters, summaryEventMap, events: summaryEvents });
   } catch (error) {
     console.error('[ESPN] getSummary error:', error.message);
     res.status(502).json({ error: 'Failed to fetch ESPN summary' });
