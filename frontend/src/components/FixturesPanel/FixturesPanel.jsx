@@ -65,10 +65,7 @@ CardBox.propTypes = { color: PropTypes.string.isRequired };
 
 // ─── Single event row inside the expanded section ────────────────────────────
 
-const EventRow = ({ event, homeId, homeAbbr, awayAbbr, assist }) => {
-  const isHome = event.teamId === homeId;
-  const abbr   = isHome ? homeAbbr : awayAbbr;
-
+const EventRow = ({ event, assist, align = 'left' }) => {
   let iconNode = null;
   let nameSuffix = '';
   if (event.icon === 'goal') {
@@ -89,7 +86,7 @@ const EventRow = ({ event, homeId, homeAbbr, awayAbbr, assist }) => {
   }
 
   return (
-    <Box sx={ { display: 'flex', alignItems: 'flex-start', gap: 0.75, py: '2px' } }>
+    <Box sx={ { display: 'flex', alignItems: 'flex-start', gap: 0.75, py: '2px', flexDirection: align === 'right' ? 'row-reverse' : 'row' } }>
       <Typography
         variant='caption'
         sx={ { color: 'text.disabled', minWidth: 34, flexShrink: 0, fontVariantNumeric: 'tabular-nums' } }
@@ -99,7 +96,7 @@ const EventRow = ({ event, homeId, homeAbbr, awayAbbr, assist }) => {
       <Box sx={ { width: 18, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' } }>
         { iconNode }
       </Box>
-      <Box sx={ { flex: 1, overflow: 'hidden' } }>
+      <Box sx={ { flex: 1, overflow: 'hidden', textAlign: align } }>
         <Typography variant='caption' sx={ { color: 'text.primary', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }>
           { event.player || '—' }{ nameSuffix }
         </Typography>
@@ -109,19 +106,14 @@ const EventRow = ({ event, homeId, homeAbbr, awayAbbr, assist }) => {
           </Typography>
         ) }
       </Box>
-      <Typography variant='caption' sx={ { color: 'text.secondary', flexShrink: 0 } }>
-        { abbr }
-      </Typography>
     </Box>
   );
 };
 
 EventRow.propTypes = {
   event:       PropTypes.object.isRequired,
-  homeId:      PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-  homeAbbr:    PropTypes.string,
-  awayAbbr:    PropTypes.string,
   assist:      PropTypes.string,
+  align:       PropTypes.oneOf(['left', 'right']),
 };
 
 // ─── Single fixture row (collapsible) ────────────────────────────────────────
@@ -222,16 +214,45 @@ const FixtureRow = ({ fixture, expanded, onToggle, theme }) => {
               borderLeftColor: 'divider',
             } }
           >
-            { fixture.events?.map((event, idx) => (
-              <EventRow
-                key={ `${event.icon}-${event.teamId}-${event.player}-${idx}` }
-                event={ event }
-                homeId={ fixture.team_h }
-                homeAbbr={ fixture.team_h_short }
-                awayAbbr={ fixture.team_a_short }
-                assist={ event.assist }
-              />
-            )) }
+            <Box sx={ { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 1 } }>
+              { [
+                { id: fixture.team_h, name: fixture.team_h_name, align: 'left' },
+                { id: fixture.team_a, name: fixture.team_a_name, align: 'right' },
+              ].map(({ id, name, align }) => {
+                const teamEvents = (fixture.events ?? []).filter(event => String(event.teamId) === String(id));
+                return (
+                  <Box key={ id } sx={ { minWidth: 0 } }>
+                    <Typography
+                      variant='caption'
+                      sx={ {
+                        display: 'block',
+                        pb: 0.25,
+                        color: 'text.secondary',
+                        fontWeight: 700,
+                        textAlign: align,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      } }
+                    >
+                      { name }
+                    </Typography>
+                    { teamEvents.length > 0 ? teamEvents.map((event, idx) => (
+                      <EventRow
+                        key={ `${event.icon}-${event.teamId}-${event.player}-${idx}` }
+                        event={ event }
+                        assist={ event.assist }
+                        align={ align }
+                      />
+                    )) : (
+                      <Typography variant='caption' color='text.disabled' sx={ { display: 'block', textAlign: align } }>
+                        —
+                      </Typography>
+                    ) }
+                  </Box>
+                );
+              }) }
+            </Box>
           </Box>
         </Collapse>
       ) }

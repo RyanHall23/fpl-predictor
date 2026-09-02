@@ -78,10 +78,7 @@ export default function useLiveScores({ enabled = true, onRelevantChange, squadT
 
           if (prev) {
             const scoreChanged = m.homeScore !== prev.homeScore || m.awayScore !== prev.awayScore;
-            const newDetails   = m.details.slice(prev.detailCount);
-            const newRed       = newDetails.some(d => d.icon === 'red');
-
-            if (scoreChanged || newRed) {
+            if (scoreChanged) {
               const squad = squadNamesRef.current;
               const relevant =
                 squad.length === 0 ||
@@ -93,7 +90,6 @@ export default function useLiveScores({ enabled = true, onRelevantChange, squadT
           prevRef.current[m.espnId] = {
             homeScore:   m.homeScore,
             awayScore:   m.awayScore,
-            detailCount: m.details.length,
           };
         }
 
