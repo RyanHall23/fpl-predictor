@@ -23,25 +23,15 @@ Authorization: Bearer <jwt_token>
 
 ## Football Events
 
-The fixture event feed uses SofaScore incidents for goal, assister, booking,
-and minute data. No API token is required. Event enrichment is performed by
-the backend; clients should use the `events` array returned by `/api/fixtures`.
+Fixture events are read exclusively from the FPL fixture stats. Clients should
+use the `events` array returned by `/api/fixtures`; each row belongs to either
+the home or away team through its `teamId`.
 
 **GET** `/api/fixtures?gameweek=1`
 
 Each fixture includes an `events` array containing normalized goal, assist,
-yellow-card, and red-card rows. SofaScore is queried internally by the backend,
-and FPL event minutes are used when SofaScore data is unavailable.
-
-**POST** `/api/sofascore/incidents`
-
-Accepts `{ "fixtures": [...] }` using the fixtures returned by `/api/fixtures`.
-The response contains runtime-only SofaScore event IDs and goal/assist minutes.
-
-SofaScore is queried only for the supplied Premier League fixtures; no
-date-wide football feed is used.
-
-**GET** `/api/sofascore/summary/:eventId`
+yellow-card, and red-card rows from FPL. The fixture display is two-sided:
+`Home | Away`, using `team_h_name` and `team_a_name`.
 
 ---
 

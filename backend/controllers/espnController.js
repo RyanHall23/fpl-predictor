@@ -9,24 +9,12 @@
  * ESPN response shape.
  */
 
-const axios = require('axios');
 const dataProvider = require('../models/dataProvider');
 
 const ESPN_BASE = 'https://site.web.api.espn.com/apis/site/v2/sports/soccer/eng.1';
 
-// TTLs for ESPN responses.  Scoreboard changes every ~30 s during a live match;
-// completed-day scoreboards are stable.  Match summaries are fully static once
-// the game finishes; use a short TTL while it may still be live.
+// The scoreboard is polled while matches are live and changes frequently.
 const TTL_ESPN_SCOREBOARD = 30 * 1000;   // 30 s
-const TTL_ESPN_SUMMARY    = 60 * 1000;   // 60 s
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-/**
- * Normalise a player name for fuzzy comparison:
- * lower-case, strip everything that isn't a letter.
- */
-const normName = (n) => (n ?? '').toLowerCase().replace(/[^a-z]/g, '');
 
 // ─── parseMatch ───────────────────────────────────────────────────────────────
 // Transforms one raw ESPN event object into the internal match shape consumed
@@ -40,23 +28,6 @@ const parseMatch = (event) => {
   const home = comp.competitors?.find((c) => c.homeAway === 'home');
   const away = comp.competitors?.find((c) => c.homeAway === 'away');
   const st   = comp.status;
-
-  const details = (comp.details ?? []).map((d) => {
-    let icon = 'other';
-    if (d.scoringPlay)     icon = 'goal';
-    else if (d.redCard)    icon = 'red';
-    else if (d.yellowCard) icon = 'yellow';
-
-    return {
-      icon,
-      minute:       d.clock?.displayValue ?? '',
-      teamId:       d.team?.id,
-      player:       d.athletesInvolved?.[0]?.shortName ?? d.athletesInvolved?.[0]?.displayName ?? '',
-      secondPlayer: d.athletesInvolved?.[1]?.shortName ?? d.athletesInvolved?.[1]?.displayName ?? '',
-      penaltyKick:  d.penaltyKick ?? false,
-      ownGoal:      d.ownGoal ?? false,
-    };
-  });
 
   return {
     espnId:       event.id,
@@ -73,7 +44,6 @@ const parseMatch = (event) => {
     isFinished:   st?.type?.state === 'post',
     clock:        st?.displayClock ?? '',
     statusDetail: st?.type?.shortDetail ?? '',
-    details,
   };
 };
 
@@ -111,166 +81,4 @@ const getScoreboard = async (req, res) => {
   }
 };
 
-/**
- * GET /api/espn/summary/:eventId[?fplFixtureId=X&homeAbbr=X&awayAbbr=X]
- *
- * Fetches the ESPN match summary for a completed or in-progress game and
- * returns a structured object containing:
- *   espnAssisters    – traditional assists recorded by ESPN (roster goal-assist
- *                      stats), shaped as [{ name, abbr, value }].
- *   fplOnlyAssisters – assists recorded by FPL but absent from ESPN (e.g.
- *                      winning a penalty).  Computed server-side when the
- *                      optional fplFixtureId, homeAbbr, and awayAbbr query
- *                      params are provided; empty array otherwise.
- *   summaryEventMap  – minute+teamId keyed map of secondary player names from
- *                      key plays, used to attribute assists for penalties/OGs.
- *
- * Optional query params:
- *   fplFixtureId – FPL fixture ID (integer) used to look up FPL assist stats.
- *   homeAbbr     – ESPN abbreviation for the home team (e.g. "LIV").
- *   awayAbbr     – ESPN abbreviation for the away team (e.g. "MCI").
- *
- * When fplFixtureId, homeAbbr, and awayAbbr are all supplied the backend
- * fetches FPL fixture stats, diffs them against the ESPN assister list, and
- * returns the delta as fplOnlyAssisters — moving this reconciliation logic
- * out of the frontend FixturesPanel component.
- */
-const getSummary = async (req, res) => {
-  try {
-    const { eventId } = req.params;
-    const { fplFixtureId, homeAbbr, awayAbbr } = req.query;
-
-    // Validate eventId — ESPN event IDs are numeric strings
-    if (!eventId || !/^\d+$/.test(eventId)) {
-      return res.status(400).json({ error: 'Invalid ESPN event ID' });
-    }
-
-    // Validate optional FPL fixture params when any is provided
-    const hasFplParams = fplFixtureId !== undefined || homeAbbr !== undefined || awayAbbr !== undefined;
-    const validFplParams = hasFplParams
-      && /^\d+$/.test(fplFixtureId)
-      && /^[A-Za-z0-9]{1,10}$/.test(homeAbbr)
-      && /^[A-Za-z0-9]{1,10}$/.test(awayAbbr);
-
-    // If the caller supplied any FPL params but not a complete valid set,
-    // return 400 so they get a clear error rather than a silent empty result.
-    if (hasFplParams && !validFplParams) {
-      return res.status(400).json({
-        error: 'When supplying FPL fixture context all three params are required and must be valid: fplFixtureId (integer), homeAbbr (1-10 alphanumeric), awayAbbr (1-10 alphanumeric)',
-      });
-    }
-
-    const url  = `${ESPN_BASE}/summary?event=${eventId}`;
-    const data = await dataProvider.cachedGet(url, TTL_ESPN_SUMMARY);
-
-    // ── Extract espnAssisters from roster stats ──────────────────────────────
-    const espnAssisters = [];
-    for (const team of data.rosters ?? []) {
-      const abbr = team.team?.abbreviation ?? '';
-      for (const ath of team.roster ?? []) {
-        const gaStat = (ath.stats ?? []).find((s) => s.name === 'goalAssists');
-        const gaVal  = parseFloat(gaStat?.value ?? 0);
-        if (gaVal > 0) {
-          espnAssisters.push({
-            name:  ath.athlete?.shortName ?? ath.athlete?.displayName ?? '',
-            abbr,
-            value: gaVal,
-          });
-        }
-      }
-    }
-
-    // ── Build summaryEventMap from key plays ─────────────────────────────────
-    // Maps minute+teamId -> secondary player name.  More reliable than the
-    // scoreboard's athletesInvolved[1] for penalty kicks and own goals.
-    const summaryEventMap = {};
-    const summaryEvents = (data.keyEvents ?? data.keyPlays ?? data.plays ?? [])
-      .filter(event => event.scoringPlay || /card/i.test(event.type?.text ?? ''))
-      .map(event => {
-        const typeText = (event.type?.text ?? '').toLowerCase();
-        return {
-          icon: event.scoringPlay ? 'goal' : typeText.includes('red') ? 'red' : 'yellow',
-          minute: event.clock?.displayValue ?? '',
-          teamId: event.team?.id,
-          player: event.participants?.[0]?.athlete?.displayName ?? '',
-          secondPlayer: event.participants?.[1]?.athlete?.displayName ?? '',
-          ownGoal: /own goal/i.test(event.text ?? ''),
-          penaltyKick: /penalty/i.test(event.text ?? ''),
-        };
-      });
-
-    for (const play of (data.keyEvents ?? data.keyPlays ?? data.plays ?? [])) {
-      if (!play.scoringPlay) continue;
-      const min    = play.clock?.displayValue ?? '';
-      const tid    = play.team?.id ?? '';
-      const second = play.participants?.[1]?.athlete?.displayName
-        ?? play.athletesInvolved?.[1]?.shortName
-        ?? play.athletesInvolved?.[1]?.displayName ?? '';
-      if (second && min && tid) {
-        summaryEventMap[`${min}_${tid}`] = second;
-      }
-    }
-
-    // ── Compute fplOnlyAssisters when FPL fixture context is supplied ────────
-    // FPL records non-traditional assists that ESPN omits (e.g. winning a
-    // penalty).  The frontend previously computed this diff; it is now done
-    // here so the FixturesPanel component receives the final data directly.
-    let fplOnlyAssisters = [];
-    if (validFplParams) {
-      try {
-        const [allFixtures, bootstrap] = await Promise.all([
-          dataProvider.fetchFixtures(),
-          dataProvider.fetchBootstrapStatic(),
-        ]);
-
-        const fixture = allFixtures.find(f => f.id === parseInt(fplFixtureId, 10));
-        if (fixture) {
-          // Build a quick element-ID → webName lookup
-          const elementsById = {};
-          (bootstrap.elements || []).forEach(e => { elementsById[e.id] = e.web_name || ''; });
-
-          const assistStat = (fixture.stats ?? []).find(s => s.identifier === 'assists');
-          if (assistStat) {
-            // Tag home assists with homeAbbr, away assists with awayAbbr
-            const fplAssisters = [
-              ...(assistStat.h || []).map(e => ({
-                name:  elementsById[e.element] || '',
-                abbr:  homeAbbr,
-                value: e.value,
-              })),
-              ...(assistStat.a || []).map(e => ({
-                name:  elementsById[e.element] || '',
-                abbr:  awayAbbr,
-                value: e.value,
-              })),
-            ].filter(a => a.name && a.value > 0);
-
-            // Diff: keep FPL assisters not matched (or under-counted) in ESPN
-            for (const fplA of fplAssisters) {
-              const espnA = espnAssisters.find(e =>
-                e.abbr === fplA.abbr &&
-                (normName(e.name).includes(normName(fplA.name)) ||
-                  normName(fplA.name).includes(normName(e.name)))
-              );
-              if (!espnA) {
-                fplOnlyAssisters.push({ ...fplA });
-              } else if (fplA.value > espnA.value) {
-                fplOnlyAssisters.push({ ...fplA, value: fplA.value - espnA.value });
-              }
-            }
-          }
-        }
-      } catch (fplErr) {
-        // Non-fatal: log and return empty fplOnlyAssisters rather than failing the request
-        console.warn('[ESPN] getSummary: failed to compute fplOnlyAssisters:', fplErr.message);
-      }
-    }
-
-    res.json({ espnAssisters, fplOnlyAssisters, summaryEventMap, events: summaryEvents });
-  } catch (error) {
-    console.error('[ESPN] getSummary error:', error.message);
-    res.status(502).json({ error: 'Failed to fetch ESPN summary' });
-  }
-};
-
-module.exports = { getScoreboard, getSummary, fetchScoreboard, parseMatch };
+module.exports = { getScoreboard, fetchScoreboard, parseMatch };

@@ -3,7 +3,7 @@ const dataProvider = require('../models/dataProvider');
 const { buildBreakdown } = require('../utils/statsBreakdown');
 const { getSeasonState } = require('../utils/season');
 const { fetchScoreboard } = require('./espnController');
-const { enrichFixturesWithIncidents, buildFixtureEvents, mergeFixtureEvents } = require('./sofaScoreController');
+const { buildFixtureEvents } = require('./fplEventsController');
 
 const normaliseTeamName = (name) => (name ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
 const teamNamesMatch = (left, right) => {
@@ -152,10 +152,9 @@ const getFixtures = async (req, res) => {
     });
 
     try {
-      const enriched = await enrichFixturesWithIncidents(liveResult);
-      res.json(enriched.map(fixture => ({
+      res.json(liveResult.map(fixture => ({
         ...fixture,
-        events: mergeFixtureEvents(fixture, fixture.events ?? [], fixture.espnDetails ?? []),
+        events: buildFixtureEvents(fixture),
         espnHomeId: undefined,
         espnAwayId: undefined,
         espnDetails: undefined,
@@ -164,7 +163,7 @@ const getFixtures = async (req, res) => {
       console.warn('Fixture event enrichment unavailable:', error.message);
       res.json(liveResult.map(fixture => ({
         ...fixture,
-        events: mergeFixtureEvents(fixture, buildFixtureEvents(fixture), fixture.espnDetails ?? []),
+        events: buildFixtureEvents(fixture),
         espnHomeId: undefined,
         espnAwayId: undefined,
         espnDetails: undefined,

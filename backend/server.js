@@ -6,7 +6,6 @@ const fs = require('fs');
 const fplController = require('./controllers/fplController');
 const assistantController = require('./controllers/assistantController');
 const espnController = require('./controllers/espnController');
-const sofaScoreController = require('./controllers/sofaScoreController');
 const predictorTeamController = require('./controllers/predictorTeamController');
 const authRoutes = require('./routes/auth');
 const { apiLimiter } = require('./middleware/rateLimiter');
@@ -48,9 +47,6 @@ app.get('/api/assistant/:entryId', apiLimiter, withCacheHeaders(120, 60), assist
 
 // ESPN API proxy routes — browser never calls ESPN directly
 app.get('/api/espn/scoreboard', apiLimiter, espnController.getScoreboard);
-app.get('/api/espn/summary/:eventId', apiLimiter, espnController.getSummary);
-app.post('/api/sofascore/incidents', apiLimiter, sofaScoreController.getFixtureIncidents);
-app.get('/api/sofascore/summary/:eventId', apiLimiter, sofaScoreController.getSummary);
 
 // FPL Predictor's Team routes
 app.get('/api/predictor-team/status',          apiLimiter, withCacheHeaders(120, 60), predictorTeamController.getStatus);
