@@ -110,6 +110,15 @@ const fetchEventFixtures = dataProvider.fetchEventFixtures;
 const fetchLiveGameweek = dataProvider.fetchLiveGameweek;
 
 /**
+ * Read the authoritative FPL points total for one player in a gameweek.
+ * ESPN match scores are intentionally not involved in fantasy-point scoring.
+ */
+const getFplEventPoints = (element) => {
+  const points = Number(element?.stats?.total_points);
+  return Number.isFinite(points) ? points : null;
+};
+
+/**
  * Estimate bonus points from BPS standings for a single fixture's stats array.
  * Handles ties per FPL rules: tied players share the higher prize,
  * consuming that many prize positions before awarding the next tier.
@@ -194,21 +203,22 @@ const enrichPlayersWithGameweekStats = async (players, targetEventId) => {
   
     // Build map of player ID to their stats for this gameweek
     liveData.elements.forEach(element => {
+      const stats = element.stats ?? {};
       playerStatsMap[element.id] = {
-        points: element.stats.total_points,
-        minutes: element.stats.minutes,
-        goals_scored: element.stats.goals_scored,
-        assists: element.stats.assists,
-        clean_sheets: element.stats.clean_sheets,
-        goals_conceded: element.stats.goals_conceded,
-        own_goals: element.stats.own_goals,
-        penalties_saved: element.stats.penalties_saved,
-        penalties_missed: element.stats.penalties_missed,
-        yellow_cards: element.stats.yellow_cards,
-        red_cards: element.stats.red_cards,
-        saves: element.stats.saves,
-        bonus: element.stats.bonus,
-        bps: element.stats.bps,
+        points: getFplEventPoints(element),
+        minutes: stats.minutes,
+        goals_scored: stats.goals_scored,
+        assists: stats.assists,
+        clean_sheets: stats.clean_sheets,
+        goals_conceded: stats.goals_conceded,
+        own_goals: stats.own_goals,
+        penalties_saved: stats.penalties_saved,
+        penalties_missed: stats.penalties_missed,
+        yellow_cards: stats.yellow_cards,
+        red_cards: stats.red_cards,
+        saves: stats.saves,
+        bonus: stats.bonus,
+        bps: stats.bps,
         provisional_bonus: element.id in provisionalBonusMap
           ? provisionalBonusMap[element.id].total
           : null,
@@ -236,16 +246,16 @@ const enrichPlayersWithGameweekStats = async (players, targetEventId) => {
       }
       return {
         ...player,
-        event_points: 0
+        event_points: null,
+        gameweek_stats: { points: null, error: true },
       };
     });
   } catch (error) {
     console.error(`Error fetching gameweek ${targetEventId} data:`, error.message);
-    // Return players with zero points if API fails
-    return players.map(player => ({
-      ...player,
-      event_points: 0
-    }));
+    // Do not manufacture a zero score when the FPL source is unavailable.
+    // Callers must surface the failed FPL request instead of showing a wrong
+    // fantasy-point total.
+    throw error;
   }
 };
 
@@ -882,6 +892,7 @@ module.exports = {
   fetchFixtures,
   fetchEventFixtures,
   fetchLiveGameweek,
+  getFplEventPoints,
   enrichPlayersWithOpponents,
   enrichPlayersWithGameweekStats,
   recalculatePointsForGameweek,

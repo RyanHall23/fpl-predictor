@@ -4,6 +4,7 @@ const { test, describe } = require('node:test');
 const assert = require('node:assert/strict');
 const { getSeasonState } = require('../utils/season');
 const { buildBreakdown } = require('../utils/statsBreakdown');
+const { getFplEventPoints } = require('../models/fplModel');
 
 describe('season state', () => {
   test('advances when the next deadline has passed despite a stale current flag', () => {
@@ -19,6 +20,12 @@ describe('season state', () => {
 });
 
 describe('settled GW1 player points', () => {
+  test('uses FPL total_points and ignores match-score sources', () => {
+    assert.equal(getFplEventPoints({ stats: { total_points: 12 } }), 12);
+    assert.equal(getFplEventPoints({ stats: { total_points: '7' } }), 7);
+    assert.equal(getFplEventPoints({ stats: {} }), null);
+  });
+
   test('matches the authoritative player snapshot for Raya and Gabriel', () => {
     const raya = { minutes: 90, clean_sheets: 1, saves: 1, bonus: 0 };
     const gabriel = { minutes: 90, clean_sheets: 1, yellow_cards: 1, defensive_contribution: 4, bonus: 0 };
