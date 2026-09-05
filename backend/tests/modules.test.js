@@ -211,3 +211,16 @@ describe('predictorTeamService', () => {
     assert.equal(calculateFreeTransfers(history, history.current[1], 2), 1);
   });
 });
+
+describe('entry transfer filtering', () => {
+  test('matches FPL gameweeks regardless of numeric serialization', () => {
+    const { filterEntryTransfersByGameweek } = require(path.join(__dirname, '..', 'controllers/fplController.js'));
+    const transfers = [
+      { event: '3', element_in: 10 },
+      { event: 4, element_in: 11 },
+    ];
+
+    assert.deepEqual(filterEntryTransfersByGameweek(transfers, 3), [transfers[0]]);
+    assert.deepEqual(filterEntryTransfersByGameweek(transfers, undefined), transfers);
+  });
+});

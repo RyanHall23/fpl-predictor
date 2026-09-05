@@ -22,6 +22,11 @@ const parseElapsedMinutes = (clock) => {
   return match ? Number(match[1]) : null;
 };
 
+const filterEntryTransfersByGameweek = (transfers, gameweek) => {
+  if (gameweek === undefined) return transfers;
+  return transfers.filter(transfer => Number(transfer.event) === Number(gameweek));
+};
+
 /**
  * Format a player's opponent(s) as a human-readable display string.
  * E.g. "MCI (H)" or "LIV (A) ARS (H)" for a DGW.
@@ -1550,9 +1555,7 @@ const getEntryTransfers = async (req, res) => {
       playerMap[p.id] = p;
     }
 
-    const filtered = filterGW !== undefined
-      ? allTransfers.filter(t => t.event === filterGW)
-      : allTransfers;
+    const filtered = filterEntryTransfersByGameweek(allTransfers, filterGW);
 
     const transfers = filtered.map(t => {
       const pIn  = playerMap[t.element_in];
@@ -1788,6 +1791,7 @@ module.exports = {
   getLeagueStandings,
   getPlayersForecast,
   getEntryTransfers,
+  filterEntryTransfersByGameweek,
   getTransferInsights,
   getLeagueRace,
 };
