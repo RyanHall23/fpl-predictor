@@ -49,7 +49,7 @@ class Player {
 
     // Historical / season stats
     this.totalPoints  = raw.total_points;
-    this.lastGwPoints = raw.event_points ?? 0;
+    this.lastGwPoints = raw.event_points ?? null;
     this.inDreamteam  = raw.in_dreamteam ?? false;
 
     // Derived display points — resolved here so the frontend reads them directly.
@@ -66,8 +66,9 @@ class Player {
       gwStats?.provisional_bonus != null
         ? Math.max(0, gwStats.provisional_bonus - (gwStats.bonus ?? 0))
         : 0;
+    const hasActualPoints = Number.isFinite(Number(raw.event_points));
     const rawBase          = useActualPoints
-      ? (raw.event_points ?? 0) + unassignedProvisionalBonus
+      ? (hasActualPoints ? Number(raw.event_points) + unassignedProvisionalBonus : null)
       : (raw.ep_next       ?? 0);
 
     // For bench players (isActive explicitly false), always use ×1 for display.
@@ -76,8 +77,8 @@ class Player {
     const isActivePick = enrichment.isActive ?? true; // null/undefined → treat as active
     const pickMultiplier = enrichment.multiplier ?? 1;
     this.multiplier        = isActivePick ? (pickMultiplier || 1) : 1;
-    this.basePoints        = Math.round(rawBase);
-    this.predictedPoints   = this.basePoints * this.multiplier;
+    this.basePoints        = rawBase == null ? null : Math.round(rawBase);
+    this.predictedPoints   = this.basePoints == null ? null : this.basePoints * this.multiplier;
 
     // Captain / vice-captain flags
     this.is_captain        = enrichment.is_captain      ?? false;
