@@ -80,8 +80,10 @@ const PlayerCard = ({ player, isCaptain, isViceCaptain, team, allPlayers, onTran
   // Predictions remain the source for future weeks.
   const predictedPoints = parseFloat(player.predictedPoints) || 0;
   const actualPoints = parseFloat(player.gameweekStats?.points ?? player.lastGwPoints);
-  const displayedPoints = !isFutureGameweek && Number.isFinite(actualPoints)
-    ? actualPoints * (player.multiplier || 1)
+  const hasActualData = player.gameweekStats != null || player.lastGwPoints != null;
+  const hasActualPoints = Number.isFinite(actualPoints);
+  const displayedPoints = !isFutureGameweek && hasActualData
+    ? (hasActualPoints ? actualPoints * (player.multiplier || 1) : '-')
     : predictedPoints;
 
   // Derive per-player points colour state from fixture data:

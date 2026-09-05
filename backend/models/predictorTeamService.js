@@ -165,7 +165,9 @@ function minimalPlayer(player) {
     now_cost:     player.now_cost,
     ep_next:      parseFloat(player.ep_next ?? 0) || 0,
     predictedPoints: parseFloat(player.ep_next ?? 0) || 0,
-    actualPoints:  parseFloat(player.event_points ?? 0) || 0,
+    actualPoints:  Number.isFinite(Number(player.event_points))
+      ? Number(player.event_points)
+      : '-',
     photo:        player.photo ?? null,
   };
 }
@@ -422,7 +424,7 @@ async function loadActiveTeamState(teamId, players, fixtures, teams, currentGW, 
     if (!player) return null;
     return {
       ...player,
-      event_points: actualPlayer?.event_points ?? 0,
+      event_points: actualPlayer?.event_points ?? null,
       currentGameweekFixtures: currentFixturesByTeam[player.team] ?? [],
       pick_position:   pick.position,
       is_captain:      !!pick.is_captain,
@@ -458,10 +460,15 @@ async function loadActiveTeamState(teamId, players, fixtures, teams, currentGW, 
     const multiplier = player.is_captain ? (player.multiplier ?? 1) : 1;
     return sum + (parseFloat(player.ep_next ?? 0) || 0) * multiplier;
   }, 0);
-  const totalActualPoints = activePlayers.reduce((sum, player) => {
-    const multiplier = player.is_captain ? (player.multiplier ?? 1) : 1;
-    return sum + (parseFloat(player.event_points ?? 0) || 0) * multiplier;
-  }, 0);
+  // FPL calculates the official team score, including substitutions, captain
+  // multipliers, chips, and transfer deductions. Never recreate it from the
+  // player rows because that can disagree with the entry history API.
+  const currentHistory = historyResult.status === 'fulfilled'
+    ? (historyResult.value.current || []).find(gw => gw.event === currentGW)
+    : null;
+  const totalActualPoints = Number.isFinite(Number(currentHistory?.points))
+    ? Number(currentHistory.points)
+    : null;
 
   return {
     squad:           squad.map(minimalPlayer),
