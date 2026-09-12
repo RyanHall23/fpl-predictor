@@ -541,17 +541,24 @@ const App = () => {
   // (e.g. Bench Boost already played — bench points should be merged into total).
   const displayTotalPoints = useMemo(() => {
     const active = calculateTotalPredictedPoints(effectiveActivePlayers);
+    const lockedGw = !!(gameweekInfo?.isPast || gameweekInfo?.isActive);
+
+    if (lockedGw) return active;
+
     const chipInEffect = effectiveActiveChip ?? viewedGwChip;
     if (chipInEffect === 'bench_boost') return active + calculateTotalPredictedPoints(effectiveReservePlayers);
     if (chipInEffect === 'triple_captain') return active + captainBasePoints; // +1× extra → 3× total
     return active;
-  }, [effectiveActiveChip, viewedGwChip, effectiveActivePlayers, effectiveReservePlayers, calculateTotalPredictedPoints, captainBasePoints]);
+  }, [gameweekInfo, effectiveActiveChip, viewedGwChip, effectiveActivePlayers, effectiveReservePlayers, calculateTotalPredictedPoints, captainBasePoints]);
 
   const displayBenchPoints = useMemo(() => {
+    const lockedGw = !!(gameweekInfo?.isPast || gameweekInfo?.isActive);
+    if (lockedGw) return calculateTotalPredictedPoints(effectiveReservePlayers);
+
     const chipInEffect = effectiveActiveChip ?? viewedGwChip;
     if (chipInEffect === 'bench_boost') return 0; // bench points are merged into total
     return calculateTotalPredictedPoints(effectiveReservePlayers);
-  }, [effectiveActiveChip, viewedGwChip, effectiveReservePlayers, calculateTotalPredictedPoints]);
+  }, [gameweekInfo, effectiveActiveChip, viewedGwChip, effectiveReservePlayers, calculateTotalPredictedPoints]);
 
   // Free Transfers remaining for the viewed GW, after planned transfers are applied.
   // null = not applicable (highest predicted team or opponent view).

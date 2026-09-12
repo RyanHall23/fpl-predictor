@@ -24,10 +24,10 @@ export const teamsMatch = (fplName, espnName) => {
 };
 
 /**
- * Polls the ESPN PL scoreboard every 30 s via the backend proxy.
+ * Polls the current FPL fixtures list every 30 s via the backend proxy.
  *
- * The backend parses raw ESPN events and returns an array of match objects
- * matching the same shape this hook previously produced with parseMatch.
+ * The backend exposes the same simplified match shape the UI expects, but it is
+ * derived from the FPL fixtures/live data rather than a third-party ESPN feed.
  *
  * @param {Object}   options
  * @param {boolean}  [options.enabled=true]         - When false, polling is
@@ -65,8 +65,23 @@ export default function useLiveScores({ enabled = true, onRelevantChange, squadT
       const ac = new AbortController();
       controller = ac;
       try {
-        const res    = await api.get('/api/espn/scoreboard', { signal: ac.signal });
-        const parsed = res.data;
+        const res = await api.get('/api/fixtures', { signal: ac.signal });
+        const parsed = Array.isArray(res.data)
+          ? res.data.map((fixture) => ({
+              espnId: String(fixture.id),
+              homeName: fixture.team_h_name,
+              awayName: fixture.team_a_name,
+              homeScore: Number.isFinite(fixture.team_h_score) ? Number(fixture.team_h_score) : 0,
+              awayScore: Number.isFinite(fixture.team_a_score) ? Number(fixture.team_a_score) : 0,
+              homeId: fixture.team_h,
+              awayId: fixture.team_a,
+              state: fixture.finished ? 'post' : fixture.started ? 'in' : 'pre',
+              isLive: Boolean(fixture.started && !fixture.finished),
+              isFinished: Boolean(fixture.finished),
+              clock: fixture.minutes != null ? `${fixture.minutes}'` : '',
+              statusDetail: fixture.finished ? 'FT' : fixture.started ? `${fixture.minutes ?? 0}'` : 'Scheduled',
+            }))
+          : [];
         if (cancelled) return;
 
         setMatches(parsed);

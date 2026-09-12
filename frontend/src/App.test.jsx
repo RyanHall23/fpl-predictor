@@ -130,6 +130,71 @@ test('App renders when nested inside an additional provider without crashing', (
   ).not.toThrow();
 });
 
+test('past gameweeks do not reapply the Triple Captain bonus to the already-scored total', async () => {
+  api.get.mockImplementation((url) => {
+    if (url === '/api/entry/528230/team') {
+      return Promise.resolve({
+        data: {
+          activePlayers: [
+            { id: 1, code: 'p1', webName: 'Haaland', name: 'Erling Haaland', position: 4, team: 1, teamCode: 1, is_captain: true, multiplier: 3, predictedPoints: 27, basePoints: 9, isActive: true, slot: 1 },
+            { id: 2, code: 'p2', webName: 'Semenyo', name: 'Semenyo', position: 3, team: 2, teamCode: 2, is_captain: false, multiplier: 1, predictedPoints: 6, basePoints: 6, isActive: true, slot: 2 },
+            { id: 3, code: 'p3', webName: 'Ødegaard', name: 'Ødegaard', position: 3, team: 3, teamCode: 3, is_captain: false, multiplier: 1, predictedPoints: 10, basePoints: 10, isActive: true, slot: 3 },
+            { id: 4, code: 'p4', webName: 'Kelleher', name: 'Kelleher', position: 1, team: 4, teamCode: 4, is_captain: false, multiplier: 1, predictedPoints: 2, basePoints: 2, isActive: true, slot: 4 },
+            { id: 5, code: 'p5', webName: 'Calafiori', name: 'Calafiori', position: 2, team: 5, teamCode: 5, is_captain: false, multiplier: 1, predictedPoints: 2, basePoints: 2, isActive: true, slot: 5 },
+            { id: 6, code: 'p6', webName: 'Gvardiol', name: 'Gvardiol', position: 2, team: 6, teamCode: 6, is_captain: false, multiplier: 1, predictedPoints: 8, basePoints: 8, isActive: true, slot: 6 },
+            { id: 7, code: 'p7', webName: 'Kayode', name: 'Kayode', position: 2, team: 7, teamCode: 7, is_captain: false, multiplier: 1, predictedPoints: 1, basePoints: 1, isActive: true, slot: 7 },
+            { id: 8, code: 'p8', webName: 'Dedić', name: 'Dedić', position: 2, team: 8, teamCode: 8, is_captain: false, multiplier: 1, predictedPoints: 1, basePoints: 1, isActive: true, slot: 8 },
+            { id: 9, code: 'p9', webName: 'B.Fernandes', name: 'B.Fernandes', position: 3, team: 9, teamCode: 9, is_captain: false, multiplier: 1, predictedPoints: 2, basePoints: 2, isActive: true, slot: 9 },
+            { id: 10, code: 'p10', webName: 'Evanilson', name: 'Evanilson', position: 4, team: 10, teamCode: 10, is_captain: false, multiplier: 1, predictedPoints: 2, basePoints: 2, isActive: true, slot: 10 },
+            { id: 11, code: 'p11', webName: 'João Pedro', name: 'João Pedro', position: 3, team: 11, teamCode: 11, is_captain: false, multiplier: 1, predictedPoints: 1, basePoints: 1, isActive: true, slot: 11 },
+          ],
+          reservePlayers: [],
+          teamName: 'Ryan Hall',
+          gameweek: 3,
+          currentGameweek: 3,
+          isPastGameweek: true,
+          isFutureGameweek: false,
+          isActiveGameweek: false,
+          gameweekData: null,
+          freeTransfers: 1,
+          bank: 0,
+        },
+      });
+    }
+    if (url === '/api/entry/528230/profile') {
+      return Promise.resolve({
+        data: {
+          chips: [
+            { name: '3xc', event: 3 },
+          ],
+        },
+      });
+    }
+    if (url && url.startsWith('/api/predicted-team')) {
+      return Promise.resolve({
+        data: {
+          activePlayers: [],
+          reservePlayers: [],
+          gameweek: 3,
+          currentGameweek: 3,
+          isPastGameweek: true,
+          isFutureGameweek: false,
+          isActiveGameweek: false,
+          gameweekData: null,
+        },
+      });
+    }
+    return Promise.resolve({ data: { events: [], elements: [], teams: [] } });
+  });
+
+  localStorage.setItem('teamId', '528230');
+  render(<App />);
+
+  await waitFor(() => {
+    expect(screen.getByText('62')).toBeInTheDocument();
+  });
+});
+
 test('no React error boundary fallback text visible', () => {
   render(<App />);
   expect(screen.queryByText(/something went wrong/i)).not.toBeInTheDocument();
