@@ -99,6 +99,17 @@ function calculateFreeTransfers(historyData, entryHistory, currentGW) {
   return freeTransfers;
 }
 
+function calculateSeasonTotalPoints(historyData) {
+  const gwHistory = [...(historyData?.current || [])].sort((a, b) => a.event - b.event);
+  if (gwHistory.length === 0) return null;
+
+  const latest = gwHistory[gwHistory.length - 1];
+  const total = Number(latest?.total_points ?? latest?.points ?? NaN);
+  if (Number.isFinite(total)) return total;
+
+  return gwHistory.reduce((sum, gw) => sum + (Number(gw.points) || 0), 0);
+}
+
 // ── Budget-aware squad generation ─────────────────────────────────────────────
 
 /**
@@ -447,7 +458,7 @@ async function loadActiveTeamState(teamId, players, fixtures, teams, currentGW, 
   // Entry summary
   const entry         = entryResult.status === 'fulfilled' ? entryResult.value : null;
   const overallPoints = historyResult.status === 'fulfilled'
-    ? (historyResult.value.current || []).reduce((s, gw) => s + gw.points, 0)
+    ? calculateSeasonTotalPoints(historyResult.value)
     : null;
   const overallRank   = entry?.summary_overall_rank ?? null;
 
@@ -744,6 +755,7 @@ async function getPredictorTeamRecommendations() {
 
 module.exports = {
   calculateFreeTransfers,
+  calculateSeasonTotalPoints,
   detectSeasonPhase,
   getCurrentGameweek,
   getApplicationTeamId,

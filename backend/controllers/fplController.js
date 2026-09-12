@@ -678,7 +678,9 @@ const getUserProfile = async (req, res) => {
     const entryData = await dataProvider.fetchEntry(entryId);
     const historyData = await dataProvider.fetchHistory(entryId);
 
-    const totalPoints = historyData.current.reduce((sum, gw) => sum + gw.points, 0);
+    const totalPoints = historyData.current.length
+      ? historyData.current[historyData.current.length - 1].total_points ?? historyData.current.reduce((sum, gw) => sum + (Number(gw.points) || 0), 0)
+      : 0;
     const futureEvent = historyData.future?.[0] || null;
     const futurePoints = futureEvent ? futureEvent.event : null;
 

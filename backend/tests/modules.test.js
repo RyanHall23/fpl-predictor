@@ -210,4 +210,18 @@ describe('predictorTeamService', () => {
 
     assert.equal(calculateFreeTransfers(history, history.current[1], 2), 1);
   });
+
+  test('uses the authoritative cumulative total for active-season totals instead of summing the live current GW', () => {
+    const { calculateSeasonTotalPoints } = require(path.join(__dirname, '..', 'models/predictorTeamService.js'));
+    const history = {
+      current: [
+        { event: 1, points: 46, total_points: 46 },
+        { event: 2, points: 98, total_points: 144 },
+        { event: 3, points: 62, total_points: 202 },
+        { event: 4, points: 0, total_points: 202 },
+      ],
+    };
+
+    assert.equal(calculateSeasonTotalPoints(history), 202);
+  });
 });
