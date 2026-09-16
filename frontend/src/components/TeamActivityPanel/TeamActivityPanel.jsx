@@ -9,7 +9,15 @@ import axios from '../../api';
 import AssistantManagerPanel from '../AssistantManagerPanel';
 import { FPL_CHIP_LABEL, FPL_CHIP_COLOR } from '../../constants/chips';
 
-const normalizeHistoryPoints = (history) => {
+const normalizeHistoryPoints = (history, seasonTotal) => {
+  const numericSeasonTotal = Number(seasonTotal);
+  const pointsSum = history.reduce((sum, gameweek) => sum + (Number(gameweek.points) || 0), 0);
+  const lastPoints = Number(history[history.length - 1]?.points);
+  const pointsAreCumulative = history.length > 1
+    && Number.isFinite(numericSeasonTotal)
+    && Number.isFinite(lastPoints)
+    && lastPoints === numericSeasonTotal
+    && pointsSum !== numericSeasonTotal;
   let previousTotal = null;
 
   return history.map(gameweek => {
@@ -19,9 +27,12 @@ const normalizeHistoryPoints = (history) => {
       && Number.isFinite(cumulativeTotal);
     const points = hasCumulativeTotal
       ? cumulativeTotal - (previousTotal ?? 0)
+      : pointsAreCumulative
+        ? Number(gameweek.points || 0) - (previousTotal ?? 0)
       : Number(gameweek.points) || 0;
 
     if (hasCumulativeTotal) previousTotal = cumulativeTotal;
+    else if (pointsAreCumulative) previousTotal = Number(gameweek.points) || 0;
 
     return { ...gameweek, points };
   });
@@ -48,7 +59,7 @@ const TeamActivityPanel = ({
     axios.get(`/api/entry/${entryId}/profile`)
       .then(res => {
         setProfile(res.data);
-        setHistory(normalizeHistoryPoints(res.data.history || []));
+        setHistory(normalizeHistoryPoints(res.data.history || [], res.data.totalPoints));
       })
       .catch(err => {
         console.error('Error fetching profile:', err);
