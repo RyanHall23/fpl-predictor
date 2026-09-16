@@ -26,11 +26,16 @@ const normalizeHistoryPoints = (history, seasonTotal) => {
   const numericSeasonTotal = Number(seasonTotal);
   const pointsSum = history.reduce((sum, gameweek) => sum + (Number(gameweek.points) || 0), 0);
   const lastPoints = Number(history[history.length - 1]?.points);
-  const pointsAreCumulative = history.length > 1
-    && Number.isFinite(numericSeasonTotal)
+  const seasonTotalDrift = Math.max(10, Math.abs(numericSeasonTotal) * 0.05);
+  const lastPointMatchesSeasonTotal = Number.isFinite(numericSeasonTotal)
     && Number.isFinite(lastPoints)
-    && lastPoints === numericSeasonTotal
-    && pointsSum !== numericSeasonTotal;
+    && Math.abs(lastPoints - numericSeasonTotal) <= seasonTotalDrift;
+  const pointsAreNonDecreasing = history.every((gameweek, index) =>
+    index === 0 || Number(gameweek.points) >= Number(history[index - 1].points)
+  );
+  const pointsAreCumulative = history.length > 1
+    && pointsSum !== numericSeasonTotal
+    && (lastPointMatchesSeasonTotal || pointsAreNonDecreasing);
   let previousTotal = null;
 
   return history.map(gameweek => {
