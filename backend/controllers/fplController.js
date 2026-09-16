@@ -22,6 +22,35 @@ const parseElapsedMinutes = (clock) => {
   return match ? Number(match[1]) : null;
 };
 
+const normalizeHistoryPoints = (history, seasonTotal) => {
+  const numericSeasonTotal = Number(seasonTotal);
+  const pointsSum = history.reduce((sum, gameweek) => sum + (Number(gameweek.points) || 0), 0);
+  const lastPoints = Number(history[history.length - 1]?.points);
+  const pointsAreCumulative = history.length > 1
+    && Number.isFinite(numericSeasonTotal)
+    && Number.isFinite(lastPoints)
+    && lastPoints === numericSeasonTotal
+    && pointsSum !== numericSeasonTotal;
+  let previousTotal = null;
+
+  return history.map(gameweek => {
+    const cumulativeTotal = Number(gameweek.total_points);
+    const hasCumulativeTotal = gameweek.total_points != null
+      && gameweek.total_points !== ''
+      && Number.isFinite(cumulativeTotal);
+    const points = hasCumulativeTotal
+      ? cumulativeTotal - (previousTotal ?? 0)
+      : pointsAreCumulative
+        ? Number(gameweek.points || 0) - (previousTotal ?? 0)
+        : Number(gameweek.points) || 0;
+
+    if (hasCumulativeTotal) previousTotal = cumulativeTotal;
+    else if (pointsAreCumulative) previousTotal = Number(gameweek.points) || 0;
+
+    return { ...gameweek, points };
+  });
+};
+
 /**
  * Format a player's opponent(s) as a human-readable display string.
  * E.g. "MCI (H)" or "LIV (A) ARS (H)" for a DGW.
@@ -677,10 +706,12 @@ const getUserProfile = async (req, res) => {
   try {
     const entryData = await dataProvider.fetchEntry(entryId);
     const historyData = await dataProvider.fetchHistory(entryId);
+    const history = normalizeHistoryPoints(
+      historyData.current || [],
+      entryData.summary_overall_points,
+    );
 
-    const totalPoints = historyData.current.length
-      ? historyData.current[historyData.current.length - 1].total_points ?? historyData.current.reduce((sum, gw) => sum + (Number(gw.points) || 0), 0)
-      : 0;
+    const totalPoints = history.reduce((sum, gameweek) => sum + gameweek.points, 0);
     const futureEvent = historyData.future?.[0] || null;
     const futurePoints = futureEvent ? futureEvent.event : null;
 
@@ -710,7 +741,7 @@ const getUserProfile = async (req, res) => {
       totalPoints,
       futurePoints,
       classicLeagues,
-      history: historyData.current || [],
+      history,
       chips: historyData.chips || [],
     });
   } catch (error) {
@@ -1792,4 +1823,5 @@ module.exports = {
   getEntryTransfers,
   getTransferInsights,
   getLeagueRace,
+  normalizeHistoryPoints,
 };
