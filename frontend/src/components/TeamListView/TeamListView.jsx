@@ -60,6 +60,10 @@ const ListRow = ({
   const [statsDialogOpen, setStatsDialogOpen] = React.useState(false);
 
   const predictedPoints = parseFloat(player.predictedPoints) || 0;
+  const actualPoints = parseFloat(player.gameweekPoints ?? player.gameweekStats?.points ?? player.lastGwPoints);
+  const displayedPoints = !isFutureGameweek && Number.isFinite(actualPoints)
+    ? actualPoints * (player.multiplier || 1)
+    : predictedPoints;
   const kickoff = formatKickoff(player.fixtureKickoff);
 
   // Per-player points colour: future GW → purple (secondary), all fixtures done → green, otherwise → amber
@@ -174,7 +178,7 @@ const ListRow = ({
               }),
             } }
           >
-            { predictedPoints }
+            { displayedPoints }
           </Typography>
         </TableCell>
 

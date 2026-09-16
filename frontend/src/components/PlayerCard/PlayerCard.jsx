@@ -79,7 +79,7 @@ const PlayerCard = ({ player, isCaptain, isViceCaptain, team, allPlayers, onTran
   // FPL gameweek totals are authoritative for active and completed weeks.
   // Predictions remain the source for future weeks.
   const predictedPoints = parseFloat(player.predictedPoints) || 0;
-  const actualPoints = parseFloat(player.gameweekStats?.points ?? player.lastGwPoints);
+  const actualPoints = parseFloat(player.gameweekPoints ?? player.gameweekStats?.points ?? player.lastGwPoints);
   const displayedPoints = !isFutureGameweek && Number.isFinite(actualPoints)
     ? actualPoints * (player.multiplier || 1)
     : predictedPoints;
