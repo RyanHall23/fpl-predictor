@@ -9,6 +9,24 @@ import axios from '../../api';
 import AssistantManagerPanel from '../AssistantManagerPanel';
 import { FPL_CHIP_LABEL, FPL_CHIP_COLOR } from '../../constants/chips';
 
+const normalizeHistoryPoints = (history) => {
+  let previousTotal = null;
+
+  return history.map(gameweek => {
+    const cumulativeTotal = Number(gameweek.total_points);
+    const hasCumulativeTotal = gameweek.total_points != null
+      && gameweek.total_points !== ''
+      && Number.isFinite(cumulativeTotal);
+    const points = hasCumulativeTotal
+      ? cumulativeTotal - (previousTotal ?? 0)
+      : Number(gameweek.points) || 0;
+
+    if (hasCumulativeTotal) previousTotal = cumulativeTotal;
+
+    return { ...gameweek, points };
+  });
+};
+
 const TeamActivityPanel = ({
   entryId,
   currentGameweek,
@@ -30,7 +48,7 @@ const TeamActivityPanel = ({
     axios.get(`/api/entry/${entryId}/profile`)
       .then(res => {
         setProfile(res.data);
-        setHistory(res.data.history || []);
+        setHistory(normalizeHistoryPoints(res.data.history || []));
       })
       .catch(err => {
         console.error('Error fetching profile:', err);
@@ -55,8 +73,8 @@ const TeamActivityPanel = ({
 
   // Exclude the current GW from recent form while it's still active (scores are partial)
   const recentHistory = history
-    .filter(h => !(isCurrentGwActive && h.event === currentGameweek))
-    .slice(-5);
+    .filter(h => !(isCurrentGwActive && h.event === currentGameweek));
+  const displayedHistory = activeSection === 'overview' ? recentHistory : recentHistory.slice(-5);
 
   // Average points across all history for colour coding
   const avgPoints = history.length
@@ -199,7 +217,7 @@ const TeamActivityPanel = ({
             </Box>
 
             { /* Recent Performance - condensed inline */ }
-            { recentHistory.length > 0 && (
+            { displayedHistory.length > 0 && (
               <>
                 <Divider />
                 <Typography variant='caption' color='text.secondary' sx={ { fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 } }>
@@ -207,8 +225,8 @@ const TeamActivityPanel = ({
                 </Typography>
                 { (() => {
                   return (
-                    <Box sx={ { display: 'flex', gap: 0.75 } }>
-                      { recentHistory.map((gw) => {
+                    <Box sx={ { display: 'flex', flexWrap: 'wrap', gap: 0.75 } }>
+                      { displayedHistory.map((gw) => {
                         const prevGw = history.find(h => h.event === gw.event - 1);
                         let rankColor = theme.palette.text.secondary;
                         if (prevGw?.overall_rank != null && gw.overall_rank != null) {
@@ -225,7 +243,7 @@ const TeamActivityPanel = ({
                           <Box
                             key={ gw.event }
                             sx={ {
-                              flex: 1,
+                              flex: '1 1 54px',
                               display: 'flex',
                               flexDirection: 'column',
                               alignItems: 'center',
