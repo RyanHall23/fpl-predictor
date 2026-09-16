@@ -86,6 +86,7 @@ const App = () => {
     autoPickLineup,
     freeTransfers,
     bank,
+    gameweekPoints,
     isLive,
     lastUpdated,
     refresh,
@@ -540,12 +541,13 @@ const App = () => {
   // effectiveActiveChip covers future GWs; viewedGwChip also covers active/historic GWs
   // (e.g. Bench Boost already played — bench points should be merged into total).
   const displayTotalPoints = useMemo(() => {
+    if (!gameweekInfo?.isFuture && gameweekPoints != null) return gameweekPoints;
     const active = calculateTotalPredictedPoints(effectiveActivePlayers);
     const chipInEffect = effectiveActiveChip ?? viewedGwChip;
     if (chipInEffect === 'bench_boost') return active + calculateTotalPredictedPoints(effectiveReservePlayers);
     if (chipInEffect === 'triple_captain') return active + captainBasePoints; // +1× extra → 3× total
     return active;
-  }, [effectiveActiveChip, viewedGwChip, effectiveActivePlayers, effectiveReservePlayers, calculateTotalPredictedPoints, captainBasePoints]);
+  }, [gameweekInfo?.isFuture, gameweekPoints, effectiveActiveChip, viewedGwChip, effectiveActivePlayers, effectiveReservePlayers, calculateTotalPredictedPoints, captainBasePoints]);
 
   const displayBenchPoints = useMemo(() => {
     const chipInEffect = effectiveActiveChip ?? viewedGwChip;

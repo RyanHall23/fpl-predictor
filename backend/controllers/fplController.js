@@ -433,6 +433,7 @@ const getUserTeam = async (req, res) => {
       isActiveGameweek,
       isFutureGameweek,
       gameweekData: targetEventData,
+      gameweekPoints: picksData.entry_history?.points ?? null,
     });
   } catch (error) {
     console.error('Error building user team:', error);
@@ -693,6 +694,7 @@ const getUserTeamForEntry = async (req, res) => {
       gameweekData: targetEventData,
       freeTransfers,
       bank: picksData.entry_history?.bank ?? null,
+      gameweekPoints: picksData.entry_history?.points ?? null,
     });
   } catch (error) {
     console.error('Error building user team:', error);

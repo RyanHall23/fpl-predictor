@@ -19,6 +19,7 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
   const [gameweekInfo, setGameweekInfo] = useState(null);
   const [freeTransfers, setFreeTransfers] = useState(null);
   const [bank, setBank] = useState(null);
+  const [gameweekPoints, setGameweekPoints] = useState(null);
   // Incremented each time the user successfully performs a manual substitution.
   // App.jsx watches this to skip selectOptimalLineup after a manual sub.
   const [swapVersion, setSwapVersion] = useState(0);
@@ -50,7 +51,7 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
       const gameweekParam = selectedGameweek ? `?gameweek=${selectedGameweek}` : '';
       const response = await axios.get(`/api/predicted-team${gameweekParam}`);
       if (requestId !== fetchRequestRef.current) return;
-      const { activePlayers: active, reservePlayers: reserve, gameweek, currentGameweek, isPastGameweek, isFutureGameweek, isActiveGameweek, gameweekData } = response.data;
+      const { activePlayers: active, reservePlayers: reserve, gameweek, currentGameweek, isPastGameweek, isFutureGameweek, isActiveGameweek, gameweekData, gameweekPoints: points } = response.data;
       
       setGameweekInfo({
         selected: gameweek,
@@ -61,6 +62,7 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
         data: gameweekData
       });
       setLoadedGameweek(null); // highest predicted team is never persisted
+      setGameweekPoints(points ?? null);
       
       setActivePlayers(active);
       setReservePlayers(reserve);
@@ -87,7 +89,7 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
       const gameweekParam = selectedGameweek ? `?gameweek=${selectedGameweek}` : '';
       const response = await axios.get(`/api/entry/${entryId}/team${gameweekParam}`);
       if (requestId !== fetchRequestRef.current) return;
-      const { activePlayers: active, reservePlayers: reserve, teamName: fetchedTeamName, gameweek, currentGameweek, isPastGameweek, isFutureGameweek, isActiveGameweek, gameweekData, freeTransfers: ft, bank: bankBalance, isPreSeason } = response.data;
+      const { activePlayers: active, reservePlayers: reserve, teamName: fetchedTeamName, gameweek, currentGameweek, isPastGameweek, isFutureGameweek, isActiveGameweek, gameweekData, freeTransfers: ft, bank: bankBalance, isPreSeason, gameweekPoints: points } = response.data;
 
       setGameweekInfo({
         selected: gameweek,
@@ -145,6 +147,7 @@ const useTeamData = (entryId, isHighestPredictedTeamInit = true, selectedGamewee
       setTeamName(fetchedTeamName || '');
       setFreeTransfers(ft ?? null);
       setBank(bankBalance ?? null);
+      setGameweekPoints(points ?? null);
       // Mark which entry's data is now in state so the persist effect can guard
       // against writing the old lineup under a newly-switched entry's key.
       setLoadedEntryId(entryId);
@@ -483,6 +486,7 @@ const calculateTotalPredictedPoints = (team) => {
     handlePlayerClick,
     fillPreSeasonSlot,
     calculateTotalPredictedPoints,
+    gameweekPoints,
     toggleTeamView,
     isHighestPredictedTeam,
     selectedPlayer,
