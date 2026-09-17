@@ -340,7 +340,7 @@ function RecommendedActions({ recommendations, status, onReveal }) {
           <Typography variant='caption' fontWeight={600} color='text.secondary' sx={{ display: 'block', mb: 0.5, fontSize: '0.7rem', textTransform: 'uppercase' }}>
             Suggested Transfers
           </Typography>
-          {transfers.map((t, i) => <TransferCard key={i} transfer={t} index={i} />)}
+          {transfers.map((t, i) => <TransferCard key={`${t.playerOut.id}-${t.playerIn.id}`} transfer={t} index={i} />)}
         </>
       )}
 
@@ -443,7 +443,7 @@ function DecisionHistory({ history }) {
                   <Box component='td'>
                     {(row.suggestedTransfers ?? []).length > 0
                       ? row.suggestedTransfers.map((t, i) => (
-                          <Box key={i} sx={{ mb: 0.25, whiteSpace: 'nowrap' }}>
+                          <Box key={`${t.out}-${t.in}-${i}`} sx={{ mb: 0.25, whiteSpace: 'nowrap' }}>
                             {t.out} → {t.in}
                             {t.epGain != null && (
                               <Chip label={`+${parseFloat(t.epGain).toFixed(1)}`} size='small' color='success' sx={{ ml: 0.5, fontSize: '0.6rem', height: 16 }} />

@@ -128,6 +128,8 @@ const getSquad = async (req, res) => {
       const currentPlayer = playerMap[player.playerId];
       if (currentPlayer) {
         player.currentPrice = currentPlayer.now_cost;
+      } else {
+        console.warn(`Player ${player.playerId} not found in bootstrap data; using stale currentPrice`);
       }
       
       const sellingPrice = getSellingPrice(player.purchasePrice, player.currentPrice);

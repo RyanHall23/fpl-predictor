@@ -105,7 +105,7 @@ function useForecastData(plannedTransfers, currentGameweek) {
           setForecastMap((prev) => ({ ...prev, ...updates }));
         }
       })
-      .catch(() => {})
+      .catch((err) => console.error('Failed to load transfer forecasts:', err))
       .finally(() => {
         // Always release all requested GWs so they can be retried on the next render.
         toFetch.forEach((gw) => fetchingRef.current.delete(gw));
@@ -129,7 +129,7 @@ const AddTransferDialog = ({ open, onClose, onAdd, team, allPlayers, currentGame
   };
 
   const handleAdd = () => {
-    if (playerOut && playerIn) {
+    if (playerOut && playerIn && playerOut.code !== playerIn.code) {
       onAdd(playerOut, playerIn, gameweek);
       handleClose();
     }

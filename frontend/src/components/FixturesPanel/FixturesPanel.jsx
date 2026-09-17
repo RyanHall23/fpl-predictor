@@ -293,7 +293,8 @@ const FixturesPanel = ({ gameweek, deadline }) => {
         .then((res) => {
           if (!cancelled) setFixtures(res.data);
         })
-        .catch(() => {
+        .catch((err) => {
+          console.error('Failed to load fixtures:', err);
           if (!cancelled && firstRequest) setError('Failed to load fixtures.');
         })
         .finally(() => {
