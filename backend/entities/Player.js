@@ -48,8 +48,9 @@ class Player {
     this.news                      = raw.news ?? '';
 
     // Historical / season stats
-    this.totalPoints  = raw.total_points;
-    this.lastGwPoints = raw.event_points ?? 0;
+    this.totalPoints      = raw.total_points;
+    this.gameweekPoints   = raw.event_points ?? raw.gameweek_stats?.points ?? 0;
+    this.lastGwPoints     = this.gameweekPoints;
     this.inDreamteam  = raw.in_dreamteam ?? false;
 
     // Derived display points — resolved here so the frontend reads them directly.
@@ -67,7 +68,7 @@ class Player {
         ? Math.max(0, gwStats.provisional_bonus - (gwStats.bonus ?? 0))
         : 0;
     const rawBase          = useActualPoints
-      ? (raw.event_points ?? 0) + unassignedProvisionalBonus
+      ? this.gameweekPoints + unassignedProvisionalBonus
       : (raw.ep_next       ?? 0);
 
     // For bench players (isActive explicitly false), always use ×1 for display.
