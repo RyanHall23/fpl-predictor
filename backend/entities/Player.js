@@ -147,6 +147,7 @@ class Player {
       chanceOfPlayingNextRound:   this.chanceOfPlayingNextRound,
       news:                       this.news,
       totalPoints:                this.totalPoints,
+      gameweekPoints:             this.gameweekPoints,
       lastGwPoints:               this.lastGwPoints,
       inDreamteam:                this.inDreamteam,
       basePoints:                 this.basePoints,
