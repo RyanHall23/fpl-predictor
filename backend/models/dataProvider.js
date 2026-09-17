@@ -361,8 +361,8 @@ const fetchLiveGameweek = async (eventId) => {
 
   if (CACHE_STATIC) {
     // The current gameweek must come from FPL so its provisional points stay
-    // current. Completed gameweeks use the player snapshot, which contains
-    // the settled event_points and stat fields used by the UI.
+    // current. Completed gameweeks read the committed live snapshot, which
+    // contains settled per-gameweek stats.
     let event = null;
     try {
       const bootstrap = await loadJsonFile(SEASON_DATA_DIR, 'bootstrap-static.json');
@@ -375,12 +375,21 @@ const fetchLiveGameweek = async (eventId) => {
       try {
         return await cachedGet(`${FPL_API_BASE}/event/${validatedEventId}/live/`, TTL_LIVE);
       } catch (_) {
-        // Fall through to the committed player snapshot if available.
+        // Fall through to the committed live snapshot if available.
       }
     }
 
-    // Player snapshots are the settled source for completed gameweeks. Adapt
-    // their element shape to the event/live response consumed by fplModel.
+    // Committed live snapshots (seasonData/live/gw-{n}.json) are verbatim
+    // /event/{n}/live/ responses — per-gameweek stats, already in the exact
+    // shape fplModel expects. This is the settled source for completed GWs.
+    try {
+      return await loadJsonFile(path.join(SEASON_DATA_DIR, 'live'), `gw-${validatedEventId}.json`);
+    } catch (_) {
+      // Not yet committed — fall back to the bootstrap-shaped player
+      // snapshot. NOTE: that snapshot's fields (total_points, minutes, etc.)
+      // are season-cumulative, not per-gameweek — only usable as a rough
+      // last resort, not for accurate per-GW points.
+    }
     try {
       const snapshot = await loadJsonFile(path.join(SEASON_DATA_DIR, 'players'), `gw-${validatedEventId}.json`);
       return {
