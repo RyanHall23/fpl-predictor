@@ -149,19 +149,25 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
   for (const gw of completedGws) {
     const filePath = path.join(LIVE_DIR, `gw-${gw}.json`);
-    const expectedFixtureCount = (fixturesByEvent[gw] || []).length;
+    const expectedFixtureIds = (fixturesByEvent[gw] || []).map((f) => f.id).sort((a, b) => a - b);
+    const expectedFixtureCount = expectedFixtureIds.length;
 
-    // Skip if already present — but re-fetch if the fixture count has changed
-    // (handles rescheduled matches being added to a GW after the file was written).
+    // Skip if already present for this exact set of fixtures — but re-fetch if
+    // the fixture IDs differ (handles rescheduled matches, AND a new season
+    // starting fresh with the same GW numbers/fixture count as a prior one;
+    // comparing count alone can't tell those apart since both are ~10/GW).
     if (fs.existsSync(filePath)) {
       try {
         const existing = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-        const coveredFixtures = existing._fixture_count ?? 0; // legacy files treated as unknown — force re-fetch to backfill _fixture_count
-        if (coveredFixtures >= expectedFixtureCount) {
+        const coveredFixtureIds = existing._fixture_ids ?? null; // legacy files (no _fixture_ids) force re-fetch to backfill it
+        const idsMatch = Array.isArray(coveredFixtureIds) &&
+          coveredFixtureIds.length === expectedFixtureCount &&
+          coveredFixtureIds.every((id, i) => id === expectedFixtureIds[i]);
+        if (idsMatch) {
           process.stdout.write(`  GW${gw}: cached ✓\n`);
           continue;
         }
-        process.stdout.write(`  GW${gw}: fixture count changed (${coveredFixtures} → ${expectedFixtureCount}), re-fetching...\n`);
+        process.stdout.write(`  GW${gw}: fixtures changed, re-fetching...\n`);
       } catch (_) {
         // Corrupt file — re-fetch
       }
@@ -171,7 +177,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       await sleep(300); // be polite to the FPL API
       process.stdout.write(`  GW${gw}: fetching...`);
       const live = await fetchJson(`${API_BASE}/event/${gw}/live/`);
-      writeJson(filePath, { ...live, _fixture_count: expectedFixtureCount });
+      writeJson(filePath, { ...live, _fixture_count: expectedFixtureCount, _fixture_ids: expectedFixtureIds });
       process.stdout.write(` ${live.elements?.length ?? '?'} elements ✓\n`);
     } catch (err) {
       process.stdout.write(` FAILED: ${err.message}\n`);
