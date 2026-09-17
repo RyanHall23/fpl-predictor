@@ -1,26 +1,33 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
-const STORAGE_KEY = 'fpl_planned_transfers';
+const STORAGE_KEY_PREFIX = 'fpl_planned_transfers';
 
-const loadFromStorage = () => {
+const storageKey = (entryId) => `${STORAGE_KEY_PREFIX}_${entryId || 'default'}`;
+
+const loadFromStorage = (entryId) => {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const saved = localStorage.getItem(storageKey(entryId));
     return saved ? JSON.parse(saved) : [];
   } catch {
     return [];
   }
 };
 
-const saveToStorage = (transfers) => {
+const saveToStorage = (entryId, transfers) => {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(transfers));
+    localStorage.setItem(storageKey(entryId), JSON.stringify(transfers));
   } catch {
     // ignore storage errors
   }
 };
 
-const usePlannedTransfers = () => {
-  const [plannedTransfers, setPlannedTransfers] = useState(loadFromStorage);
+const usePlannedTransfers = (entryId) => {
+  const [plannedTransfers, setPlannedTransfers] = useState(() => loadFromStorage(entryId));
+
+  // Reload the planned transfers for the newly active team when entryId changes.
+  useEffect(() => {
+    setPlannedTransfers(loadFromStorage(entryId));
+  }, [entryId]);
 
   const addPlannedTransfer = useCallback((playerOut, playerIn, gameweek) => {
     setPlannedTransfers((prev) => {
@@ -48,31 +55,31 @@ const usePlannedTransfers = () => {
         gameweek,
       };
       const updated = [...filtered, entry];
-      saveToStorage(updated);
+      saveToStorage(entryId, updated);
       return updated;
     });
-  }, []);
+  }, [entryId]);
 
   const removePlannedTransfer = useCallback((id) => {
     setPlannedTransfers((prev) => {
       const updated = prev.filter((t) => t.id !== id);
-      saveToStorage(updated);
+      saveToStorage(entryId, updated);
       return updated;
     });
-  }, []);
+  }, [entryId]);
 
   const updateTransferGameweek = useCallback((id, gameweek) => {
     setPlannedTransfers((prev) => {
       const updated = prev.map((t) => (t.id === id ? { ...t, gameweek } : t));
-      saveToStorage(updated);
+      saveToStorage(entryId, updated);
       return updated;
     });
-  }, []);
+  }, [entryId]);
 
   const clearPlannedTransfers = useCallback(() => {
     setPlannedTransfers([]);
-    saveToStorage([]);
-  }, []);
+    saveToStorage(entryId, []);
+  }, [entryId]);
 
   return {
     plannedTransfers,
@@ -84,3 +91,4 @@ const usePlannedTransfers = () => {
 };
 
 export default usePlannedTransfers;
+

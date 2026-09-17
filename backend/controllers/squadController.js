@@ -224,7 +224,8 @@ const updateForNewGameweek = async (req, res) => {
     if (squad.active_chip === 'free_hit') {
       const previousHistory = await SquadHistory.findOne({ 
         userId: validatedUserId, 
-        gameweek: validatedGameweek - 1 
+        gameweek: validatedGameweek - 1,
+        snapshotType: 'pre_chip'
       });
       
       if (previousHistory) {

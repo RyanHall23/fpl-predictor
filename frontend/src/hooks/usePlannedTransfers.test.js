@@ -100,7 +100,7 @@ describe('usePlannedTransfers', () => {
     act(() => {
       result.current.addPlannedTransfer(playerOut, playerIn, 25);
     });
-    const stored = JSON.parse(localStorage.getItem('fpl_planned_transfers'));
+    const stored = JSON.parse(localStorage.getItem('fpl_planned_transfers_default'));
     expect(stored).toHaveLength(1);
     expect(stored[0].playerOut.code).toBe(1);
   });
@@ -112,7 +112,7 @@ describe('usePlannedTransfers', () => {
       playerIn: { code: 2, name: 'Haaland', position: 4, team: 11, predictedPoints: 9 },
       gameweek: 25,
     };
-    localStorage.setItem('fpl_planned_transfers', JSON.stringify([entry]));
+    localStorage.setItem('fpl_planned_transfers_default', JSON.stringify([entry]));
 
     const { result } = renderHook(() => usePlannedTransfers());
     expect(result.current.plannedTransfers).toHaveLength(1);
@@ -127,7 +127,7 @@ describe('usePlannedTransfers', () => {
     act(() => {
       result.current.clearPlannedTransfers();
     });
-    expect(localStorage.getItem('fpl_planned_transfers')).toBe('[]');
+    expect(localStorage.getItem('fpl_planned_transfers_default')).toBe('[]');
   });
 
   it('playerOut name is resolved from webName field when web_name is absent', () => {

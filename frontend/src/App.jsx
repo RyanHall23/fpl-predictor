@@ -165,7 +165,7 @@ const App = () => {
     addPlannedTransfer,
     removePlannedTransfer,
     updateTransferGameweek,
-  } = usePlannedTransfers();
+  } = usePlannedTransfers(userEntryId);
 
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [localSnackbar, setLocalSnackbar] = useState('');

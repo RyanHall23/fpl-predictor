@@ -364,9 +364,9 @@ const RecommendedTransfers = ({ entryId, currentGameweek, compact = false }) => 
             </Alert>
           ) }
 
-          { gameweeksAhead > 1 && (
+          { normalizedGameweeksAhead > 1 && (
             <Typography variant='caption' color='textSecondary' sx={ { display: 'block', mt: 1 } }>
-              * Points shown are cumulative across { gameweeksAhead } gameweeks (GW { recommendations.startGameweek } - { recommendations.endGameweek })
+              * Points shown are cumulative across { normalizedGameweeksAhead } gameweeks (GW { recommendations.startGameweek } - { recommendations.endGameweek })
             </Typography>
           ) }
         </Box>

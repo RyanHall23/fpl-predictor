@@ -545,7 +545,7 @@ const RULES = [
       return {
         id: 'differential-pick-dgw',
         type: 'opportunity',
-        title: `Double Gameweek Transfer Targets`,
+        title: 'Double Gameweek Transfer Targets',
         message: `${best.web_name} (£${price}m, ${ownership}% owned) is a standout differential for GW${dgwGW}'s double gameweek — predicted ${pts} pts with two fixtures.`,
         players: candidates.map((p) => ({
           id: p.id,

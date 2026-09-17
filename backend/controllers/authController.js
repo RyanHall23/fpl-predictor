@@ -46,7 +46,7 @@ exports.register = async (req, res) => {
   }
   
   // Validate password strength
-  if (password.length < 6) {
+  if (typeof password !== 'string' || password.length < 6) {
     return res.status(400).json({ error: 'Password must be at least 6 characters long' });
   }
   
@@ -176,7 +176,7 @@ exports.updatePassword = async (req, res) => {
   if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Current and new password required' });
   
   // Validate new password strength
-  if (newPassword.length < 6) {
+  if (typeof newPassword !== 'string' || newPassword.length < 6) {
     return res.status(400).json({ error: 'New password must be at least 6 characters long' });
   }
   

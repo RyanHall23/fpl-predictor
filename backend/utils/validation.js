@@ -85,7 +85,7 @@ function validateChipName(chipName) {
   const normalized = chipName.toLowerCase().trim();
   
   if (!allowedChips.includes(normalized)) {
-    throw new Error(`Invalid chip name: must be one of the allowed chip types`);
+    throw new Error('Invalid chip name: must be one of the allowed chip types');
   }
   
   return normalized;
@@ -127,7 +127,7 @@ function validateFplApiUrl(url) {
     return url;
   } catch (error) {
     if (error instanceof TypeError) {
-      throw new Error('Invalid URL format');
+      throw new Error('Invalid URL format', { cause: error });
     }
     throw error;
   }
