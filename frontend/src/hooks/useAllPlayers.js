@@ -39,7 +39,8 @@ export default function useAllPlayers(gameweek) {
       : '/api/bootstrap-static/enriched';
     axios.get(url)
       .then(res => {
-        setAllPlayers(res.data.elements.map(player => ({
+        const elements = res.data.elements ?? [];
+        setAllPlayers(elements.map(player => ({
           ...player,
           name: `${player.first_name} ${player.second_name}`,
           webName: player.web_name,
