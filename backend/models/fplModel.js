@@ -11,7 +11,7 @@ const Team   = require('../entities/Team');
 // INCLUDE_MANAGERS: 'true' | 'false' (enable manager placeholders in squads)
 // USE_FPL_API: 'true' | 'false' (use real FPL API vs local mock data)
 const USE_COMPUTED_EP = (process.env.USE_COMPUTED_EP ?? 'true') === 'true';
-const INCLUDE_MANAGERS_GLOBAL = (process.env.INCLUDE_MANAGERS ?? 'false') === 'false';
+const INCLUDE_MANAGERS_GLOBAL = (process.env.INCLUDE_MANAGERS ?? 'false') === 'true';
 
 /**
  * Compute head-to-head contribution from element-summary history.
@@ -489,7 +489,7 @@ const buildTeam = (players, picks = null, { filterZeroEp = false, includeManager
   };
 
   // Build pool: either user's picks mapped to player objects, or all players
-  let pool = [];
+  let pool;
   let captainInfo = null;
   
   if (Array.isArray(picks) && picks.length) {

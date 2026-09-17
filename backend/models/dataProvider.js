@@ -227,7 +227,7 @@ const loadMockData = async (filename) => {
     return await loadJsonFile(MOCK_DATA_DIR, filename);
   } catch (error) {
     console.error(`Error loading mock data from ${filename}:`, error.message);
-    throw new Error(`Failed to load mock data: ${filename}`);
+    throw new Error(`Failed to load mock data: ${filename}`, { cause: error });
   }
 };
 

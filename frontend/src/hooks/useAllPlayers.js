@@ -33,12 +33,14 @@ export default function useAllPlayers(gameweek) {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    let cancelled = false;
     setLoading(true);
     const url = gameweek
       ? `/api/bootstrap-static/enriched?gameweek=${gameweek}`
       : '/api/bootstrap-static/enriched';
     axios.get(url)
       .then(res => {
+        if (cancelled) return;
         const elements = res.data.elements ?? [];
         setAllPlayers(elements.map(player => ({
           ...player,
@@ -57,9 +59,11 @@ export default function useAllPlayers(gameweek) {
         setLoading(false);
       })
       .catch(err => {
+        if (cancelled) return;
         setError(err);
         setLoading(false);
       });
+    return () => { cancelled = true; };
   }, [gameweek]);
 
   return { allPlayers, loading, error };

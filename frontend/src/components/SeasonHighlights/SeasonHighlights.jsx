@@ -1018,7 +1018,7 @@ const SeasonHighlights = ({ entryId }) => {
 
       {/* ── GW Race ── */}
       { classicLeagues.length > 0 && (
-        <LeagueRaceChart classicLeagues={ classicLeagues } entryId={ entryId } />
+        <LeagueRaceChart key={ entryId } classicLeagues={ classicLeagues } entryId={ entryId } />
       ) }
 
     </Box>

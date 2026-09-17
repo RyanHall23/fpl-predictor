@@ -462,12 +462,9 @@ const calculateTotalPredictedPoints = (team) => {
   }, [activePlayers, reservePlayers]);
 
   const toggleTeamView = () => {
+    // Flipping this state alone triggers the effects above that fetch the
+    // corresponding team — an extra manual fetch here would double the request.
     setIsHighestPredictedTeam((prev) => !prev);
-    if (!isHighestPredictedTeam) {
-      fetchHighestPredictedTeam();
-    } else {
-      fetchData();
-    }
   };
 
   // Immediately re-fetch whichever team is currently shown.
