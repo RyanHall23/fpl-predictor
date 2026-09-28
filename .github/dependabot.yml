@@ -3,10 +3,17 @@ updates:
   - package-ecosystem: "npm"
     directory: "/" # Location of package.json
     schedule:
-      interval: "daily" # or "weekly", "monthly"
+      interval: "weekly"
     open-pull-requests-limit: 10
     commit-message:
       prefix: "deps"
+    # Security advisories always raise a PR regardless of these rules.
+    # Only allow routine version-update PRs for major bumps.
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-patch"
+          - "version-update:semver-minor"
     groups:
       react:
         patterns:
